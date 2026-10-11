@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)  # Specify CMake version
-project(serial-reader VERSION 1.0 LANGUAGES C)  # Project name and version
+project(io-master VERSION 1.0 LANGUAGES C)  # Project name and version
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -24,7 +24,7 @@ target_compile_definitions(main PRIVATE
 )
 
 set_target_properties(main PROPERTIES
-    OUTPUT_NAME "serial-reader"
+    OUTPUT_NAME "io-master"
 )
 
 # Include directories
