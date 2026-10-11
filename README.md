@@ -8,7 +8,7 @@ The project starts with serial device discovery and UART communication on Linux.
 
 **Project status:** Early development / MVP.
 
-> IO Master is a work in progress. The current implementation focuses on serial device discovery and reading data from serial ports. Broader workflow integration features are planned and are not yet implemented.
+> IO Master is a work in progress. The current implementation provides serial device discovery, project management backed by JSON files, and an interactive shell for reading from a UART port. Broader workflow integration features are planned and are not yet implemented.
 
 ## Motivation
 
@@ -35,14 +35,14 @@ Such a workflow could help researchers investigate a device without repeatedly s
 
 The current MVP provides:
 
-- **Serial device discovery** — enumerate supported serial devices and retrieve available device metadata.
-- **Device filtering** — scan supported devices or filter by device type.
-- **Interactive UART shell** — open the serial port of a project and read received bytes on demand.
-- **Project management** — create, list, select, and remove projects stored in a JSON file.
-- **Serial communication configuration** — set baud rate, data bits, parity, and stop bits in the project settings file.
-- **Non-blocking serial I/O** — read available data without waiting indefinitely on an individual read operation.
-- **Interruptible reading** — `Ctrl+C` stops reading without closing the shell.
-- **Linux-native device discovery** — use `libsystemd` and its `sd-device` API to enumerate supported devices.
+- **Serial device discovery** — list `/dev/ttyACM*` and `/dev/ttyUSB*` devices with their vendor, model, and serial number, optionally filtered by device type.
+- **Project management** — create projects, list them by status, select the project to work on, and remove projects. Removed projects are kept and marked as inactive.
+- **JSON configuration** — the project list and the settings of every project are stored in JSON files that are created automatically.
+- **Interactive UART shell** — running a UART project opens a shell with commands to scan for devices, select the serial port, get access to it, and read from it.
+- **Interruptible reading** — `Ctrl+C` stops reading and returns to the shell prompt instead of closing the program.
+- **Permission helper** — the shell can run the `sudo` command that grants access to the selected serial port.
+- **Damaged project detection** — a project whose settings file is missing is reported and cannot be selected or run.
+- **Protocol registry** — protocols are separate modules behind one interface. UART is the only protocol implemented so far.
 
 These features form the foundation for the broader workflow integration planned for the project.
 
@@ -64,7 +64,7 @@ Potential configuration capabilities include:
 
 The intended workflow is to configure an investigation once and subsequently invoke common operations with short, predictable commands.
 
-**Status:** In progress. Projects and their settings are stored in JSON files. Shared defaults and command-line overrides are not yet implemented.
+**Status:** In progress. Projects and their settings are stored in JSON files, and the selected project and its serial port are remembered between invocations. Shared defaults, profiles, and command-line overrides are not yet implemented.
 
 ### 2. Integration with existing tools
 
@@ -111,6 +111,8 @@ A shared timeline would help identify temporal relationships, but temporal proxi
 IO Master is intended to grow through separate modules or adapters for different interfaces and external tools.
 
 This approach should allow new integrations to be added without turning the project into a monolithic application or duplicating the functionality of established tools.
+
+**Status:** In progress. Protocols are registered through a common interface (see [Source layout](#source-layout)). Adapters for external tools are not yet implemented.
 
 ### 6. Complementary tools, not replacements
 
@@ -168,12 +170,47 @@ The build produces the `io-master` executable in the build directory:
 IO Master is organized around **projects**. A project has a name and a protocol, and its settings are stored in a JSON file instead of being passed as command-line options.
 
 ```text
+io-master --help
 io-master --scan [--type TYPE]
 io-master --display STATUS
 io-master project add NAME --protocol PROTOCOL
 io-master project select ID
 io-master project remove ID
 io-master run [--help]
+```
+
+### Quick start
+
+```bash
+./build/io-master project add "Arduino logger" --protocol uart
+./build/io-master project select 1
+./build/io-master run
+```
+
+`run` opens the UART shell. A new project has no serial port yet, so the shell first lists the available devices:
+
+```text
+No serial device selected.
+
+Available serial devices:
+
+PORT            PRODUCENT            MODEL                          SERIAL
+--------------- -------------------- ------------------------------ --------------------
+/dev/ttyACM0    Arduino              UNO_WiFi_R4_CMSIS-DAP          0123456789AB
+
+Select a device with: select PORT
+
+Type 'help' to list commands
+uart> select /dev/ttyACM0
+Selected /dev/ttyACM0
+Connected to /dev/ttyACM0
+uart> read
+Reading from /dev/ttyACM0 (press Ctrl+C to stop)
+...
+^C
+Reading stopped
+uart> exit
+Closing connection...
 ```
 
 ### Discover serial devices
@@ -204,11 +241,13 @@ Typical device paths include `/dev/ttyACM0` and `/dev/ttyUSB0`. The actual paths
 
 ### Manage projects
 
-Create a project. The protocol must be one of the supported protocols (currently `uart`):
+Create a project. The protocol must be one of the supported protocols (currently `uart`); its name is not case-sensitive:
 
 ```bash
 ./build/io-master project add "Arduino logger" --protocol uart
 ```
+
+The project receives the next free numeric id and starts as active. Its settings file is created with default values.
 
 Show the table of projects. `STATUS` is `active`, `inactive`, or `all`. The selected project is marked with `*`:
 
@@ -229,7 +268,7 @@ Remove a project:
 ./build/io-master project remove 1
 ```
 
-Projects are never deleted. Removing a project marks it as inactive; inactive projects are shown with `--display inactive` and cannot be selected.
+Projects are never deleted. Removing a project marks it as inactive; inactive projects are shown with `--display inactive` and cannot be selected. Removing the selected project clears the selection. There is no command to reactivate a project yet.
 
 ### Run a project
 
@@ -239,11 +278,15 @@ Start the selected project:
 ./build/io-master run
 ```
 
+`run` fails with an error when no project is selected.
+
 Show the help of the protocol used by the selected project:
 
 ```bash
 ./build/io-master run --help
 ```
+
+### UART shell
 
 For a UART project, `run` starts an interactive shell:
 
@@ -258,11 +301,17 @@ Commands:
   exit           Leave the shell and close the program
 ```
 
-When the project has no serial port yet, the shell lists the available devices at startup. `select PORT` stores the port in the project settings and connects to it.
+| Command | Behavior |
+|---|---|
+| `scan` | Lists the available `/dev/ttyACM*` and `/dev/ttyUSB*` devices. |
+| `select PORT` | Stores the port in the project settings and connects to it. The port is remembered the next time the project is run. |
+| `permission` | Runs `sudo chmod a+rw` on the selected port; `sudo` asks for your password in the same terminal. See [Permissions](#permissions). |
+| `read` | Prints the bytes received from the port until `Ctrl+C` is pressed. Data that arrived since the previous `read` is printed first. |
+| `exit` | Closes the connection and the program. `Ctrl+D` does the same. |
 
-`permission` runs `sudo chmod a+rw` on the selected port, so `sudo` asks for your password in the same terminal. The permission lasts until the device is reconnected; see [Permissions](#permissions) for the permanent solution.
+`Ctrl+C` stops reading and returns to the prompt; it does not close the shell.
 
-`Ctrl+C` stops reading and returns to the prompt; it does not close the shell. Use `exit` (or `Ctrl+D`) to close the program.
+When the project has no serial port yet, the shell lists the available devices at startup. When a port is already stored, the shell connects to it at startup and reports a missing permission or a missing device without closing.
 
 ### Configuration files
 
@@ -303,7 +352,19 @@ The default configuration is **9600 8N1**. The selected parameters must match th
 
 ## Permissions
 
-Linux controls access to serial devices through file permissions and system configuration.
+Linux controls access to serial devices through file permissions and system configuration. When the selected port cannot be opened, the UART shell reports `Permission denied`.
+
+### Temporary access
+
+The `permission` command of the UART shell runs:
+
+```bash
+sudo chmod a+rw -- /dev/ttyACM0
+```
+
+This gives every user of the machine read and write access to that device. The change lasts until the device is reconnected.
+
+### Permanent access
 
 Inspect the permissions of a device:
 
@@ -319,22 +380,41 @@ sudo usermod -aG dialout "$USER"
 
 Log out and log back in for the group membership change to take effect. If your device uses a different group, use the group shown by the system.
 
-Running the application with elevated privileges may help diagnose a permissions problem, but granting the appropriate device permissions is preferable for regular use.
+## Source layout
+
+| Path | Responsibility |
+|---|---|
+| `src/main.c` | Dispatches the parsed command |
+| `src/cli/` | Command-line parser and the implementations of the commands |
+| `src/project/` | Project list, selection, and project settings paths |
+| `src/storage/` | Location of `im_config` and reading and writing JSON files |
+| `src/discovery/` | Serial device discovery |
+| `src/protocol/` | Protocol interface and the table of supported protocols |
+| `src/protocol/uart/` | UART protocol: serial port access, the shell, and the shell parser |
+
+The headers in `include/` follow the same layout.
+
+A protocol is described by a `protocol_t` structure (`include/protocol/protocol.h`) with its name and three functions: `init` creates the settings file of a new project, `print_help` prints the protocol help, and `run` starts the project. A new protocol is added by implementing it in `src/protocol/<name>/` and adding its structure to the table in `src/protocol/protocol.c`.
 
 ## Current implementation and limitations
 
-The current MVP is focused on serial device discovery and raw serial data reading.
+The current MVP is focused on project management and raw serial data reading.
 
 Current limitations include:
 
+- Linux is the only supported platform.
+- UART is the only supported protocol.
 - Device discovery is limited to `/dev/ttyACM*` and `/dev/ttyUSB*`.
 - Only the baud rates listed above are supported.
-- Received data is written as raw bytes to standard output.
-- There is no built-in protocol decoding or message framing.
-- UART is the only supported protocol.
+- The UART shell can read from the serial port but cannot write to it.
+- Received data is written as raw bytes to standard output. There is no protocol decoding, message framing, or capture to a file.
 - Apart from the serial port, project settings are changed by editing the JSON files.
+- Projects cannot be renamed or reactivated from the command line.
+- Configuration is stored next to the executable, so it is tied to the build or installation directory.
+- The UART shell has no command history or line editing.
 - There is no unified session manager or cross-interface event timeline.
 - JTAG/SWD, Modbus, and external-tool orchestration are not yet implemented.
+- There are no automated tests yet.
 - There is no graphical user interface.
 
 These limitations describe the current implementation, not the full intended scope of IO Master.
@@ -345,8 +425,9 @@ The roadmap will evolve as the project develops and receives feedback. The items
 
 ### Configuration and usability
 
-- [ ] Design a persistent configuration format.
-- [ ] Add configuration file loading and validation.
+- [x] Design a persistent configuration format.
+- [x] Add configuration file loading and validation.
+- [ ] Add commands for changing project settings such as the baud rate.
 - [ ] Support named profiles for different devices and research projects.
 - [ ] Allow common settings to be configured once and reused across invocations.
 - [ ] Define predictable precedence between defaults, configuration files, profiles, and command-line overrides.
@@ -355,6 +436,8 @@ The roadmap will evolve as the project develops and receives feedback. The items
 
 ### Serial communication
 
+- [x] Provide an interactive shell for UART projects.
+- [ ] Add writing to the serial port.
 - [ ] Review serial device discovery and broaden device support where appropriate.
 - [ ] Improve capture options, including saving output to files.
 - [ ] Add useful capture metadata without changing the raw data unexpectedly.
@@ -362,6 +445,7 @@ The roadmap will evolve as the project develops and receives feedback. The items
 
 ### Tool integration
 
+- [x] Introduce a common interface for protocol modules.
 - [ ] Design a modular interface for integrating external tools.
 - [ ] Define how IO Master launches, configures, monitors, and stops external processes.
 - [ ] Investigate integration with OpenOCD for JTAG/SWD workflows.
