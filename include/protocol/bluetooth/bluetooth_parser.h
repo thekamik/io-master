@@ -18,11 +18,16 @@ typedef enum {
     BT_COMMAND_CARDS,   /* cards */
     BT_COMMAND_SELECT,  /* select CARD */
     BT_COMMAND_STATUS,  /* status */
+    BT_COMMAND_SCAN,    /* scan */
+    BT_COMMAND_DEVICES, /* devices */
+    BT_COMMAND_INFO,    /* info DEVICE */
+    BT_COMMAND_FORGET,  /* forget */
+    BT_COMMAND_CONNECT,     /* connect [DEVICE] */
+    BT_COMMAND_DISCONNECT,  /* disconnect [DEVICE] */
+    BT_COMMAND_PAIR,        /* pair DEVICE */
+    BT_COMMAND_UNPAIR,      /* unpair DEVICE */
     BT_COMMAND_EXIT     /* exit */
 
-    // TODO (stage 2): BT_COMMAND_SCAN, BT_COMMAND_INFO
-    // TODO (stage 3): BT_COMMAND_PAIR, BT_COMMAND_UNPAIR,
-    //                 BT_COMMAND_CONNECT, BT_COMMAND_DISCONNECT
     // TODO (stage 4): BT_COMMAND_SERVICES, BT_COMMAND_READ,
     //                 BT_COMMAND_WRITE, BT_COMMAND_NOTIFY,
     //                 BT_COMMAND_RFCOMM, BT_COMMAND_L2CAP

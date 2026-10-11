@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)  # Specify CMake version
-project(io-master VERSION 1.1 LANGUAGES C)  # Project name and version
+project(io-master VERSION 0.1 LANGUAGES C)  # Project name and version
 
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -23,7 +23,11 @@ add_executable(main
     ${PROJECT_SOURCE_DIR}/src/protocol/uart/serial.c
     ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/bluetooth.c
     ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/bluetooth_parser.c
+    ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/bluez.c
     ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/adapter.c
+    ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/device.c
+    ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/connection.c
+    ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/scan_table.c
     ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/sniffer.c
     ${PROJECT_SOURCE_DIR}/src/discovery/devices.c
 )

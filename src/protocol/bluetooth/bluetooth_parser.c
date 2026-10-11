@@ -100,13 +100,116 @@ static const shell_command_t shell_commands[] = {
         "it is still present and whether it is powered on.\n"
     },
 
-    // TODO (stage 2): "scan" - list Bluetooth devices in range
-    //                 (address, name, type LE/classic, RSSI).
-    // TODO (stage 2): "info ADDRESS" - details of one device
-    //                 (paired, services, manufacturer data).
-    // TODO (stage 3): "pair ADDRESS" / "unpair ADDRESS".
-    // TODO (stage 3): "connect ADDRESS" / "disconnect". The
-    //                 address is stored in the project settings.
+    {
+        "scan",
+        NULL,
+        false,
+        BT_COMMAND_SCAN,
+        "Scan for Bluetooth devices until Ctrl+C is pressed",
+        "Looks for Bluetooth devices with the selected card and\n"
+        "shows them in a table that is refreshed in place. New\n"
+        "devices are added at the bottom and known devices are\n"
+        "updated; every address appears only once.\n"
+        "\n"
+        "Every device gets an ID. Once the scan ends, the ID is\n"
+        "fixed: the device keeps it in later scans until the shell\n"
+        "is closed. Other commands accept the ID in place of the\n"
+        "address.\n"
+        "\n"
+        "Columns:\n"
+        "  ID       number of the device in this session\n"
+        "  ADDRESS  Bluetooth address of the device\n"
+        "  TYPE     classic or LE (Low Energy)\n"
+        "  ADDR     address type: public or random\n"
+        "  RSSI     signal strength in dBm, closer to 0 is stronger\n"
+        "  PAIRED   whether the device is paired with this computer\n"
+        "  STATE    visible, connected, or lost (no longer received)\n"
+        "  NAME     name announced by the device\n"
+        "\n"
+        "Press Ctrl+C to stop. The devices found by the scan are\n"
+        "then printed as a static table in the shell, so the IDs\n"
+        "and addresses stay on the screen.\n"
+    },
+    {
+        "devices",
+        NULL,
+        false,
+        BT_COMMAND_DEVICES,
+        "List the known devices and their IDs",
+        "Shows every device found by the scans of this session,\n"
+        "without scanning again. Devices that the last scan did\n"
+        "not see have the state 'not seen'. The list is emptied\n"
+        "when the shell is closed.\n"
+    },
+    {
+        "info",
+        "DEVICE",
+        true,
+        BT_COMMAND_INFO,
+        "Show what is known about one device",
+        "DEVICE is an ID from 'scan' or 'devices', or a Bluetooth\n"
+        "address, for example: info 3 or info AA:BB:CC:DD:EE:FF\n"
+        "Shows the data collected by the last scan.\n"
+    },
+    {
+        "forget",
+        NULL,
+        false,
+        BT_COMMAND_FORGET,
+        "Empty the list of known devices",
+        "Removes all known devices from the session. The next\n"
+        "scan numbers the devices from 1 again, so IDs used\n"
+        "before no longer point to the same devices.\n"
+    },
+
+    {
+        "connect",
+        "DEVICE",
+        false,
+        BT_COMMAND_CONNECT,
+        "Connect to a device",
+        "DEVICE is an ID from 'scan' or 'devices', or a Bluetooth\n"
+        "address, for example: connect 3\n"
+        "Without DEVICE, connects to the device that was connected\n"
+        "or paired last in this project.\n"
+        "\n"
+        "The system must know the device, so run 'scan' shortly\n"
+        "before connecting. Press Ctrl+C to cancel the attempt.\n"
+        "A connection made here is closed when the shell exits.\n"
+    },
+    {
+        "disconnect",
+        "DEVICE",
+        false,
+        BT_COMMAND_DISCONNECT,
+        "Close the connection to a device",
+        "DEVICE is an ID or a Bluetooth address. Without DEVICE,\n"
+        "disconnects the device that was connected or paired last.\n"
+    },
+    {
+        "pair",
+        "DEVICE",
+        true,
+        BT_COMMAND_PAIR,
+        "Pair with a device",
+        "DEVICE is an ID or a Bluetooth address, for example:\n"
+        "pair 3\n"
+        "\n"
+        "Works for devices that pair without a code. Devices that\n"
+        "ask for a PIN or a passkey are not supported yet, unless\n"
+        "the desktop environment shows its own pairing dialog.\n"
+        "Press Ctrl+C to cancel the attempt.\n"
+    },
+    {
+        "unpair",
+        "DEVICE",
+        true,
+        BT_COMMAND_UNPAIR,
+        "Remove the pairing with a device",
+        "DEVICE is an ID or a Bluetooth address. The system\n"
+        "forgets the device completely, which also disconnects\n"
+        "it; run 'scan' before using the device again.\n"
+    },
     // TODO (stage 4): BLE manual communication: "services",
     //                 "read UUID", "write UUID HEX", "notify UUID".
     // TODO (stage 4): Classic manual communication: "rfcomm CHANNEL"
@@ -230,7 +333,7 @@ void bt_print_shell_help(const char *command_name)
         format_usage(&shell_commands[i], usage, sizeof(usage));
 
         printf(
-            "  %-16s %s\n",
+            "  %-20s %s\n",
             usage,
             shell_commands[i].description
         );

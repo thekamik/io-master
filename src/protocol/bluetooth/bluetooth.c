@@ -2,9 +2,10 @@
  * Bluetooth protocol.
  *
  * The protocol is built in stages. This file currently holds
- * stage 1: the protocol skeleton, the interactive shell, the
- * project settings and the commands that work with the Bluetooth
- * cards of the computer.
+ * the protocol skeleton, the interactive shell, the project
+ * settings, the commands that work with the Bluetooth cards
+ * of the computer, the scan for devices and the commands that
+ * connect and pair a device.
  *
  * The file is organized in this order:
  *
@@ -18,18 +19,21 @@
  *     entry point   bluetooth_run() and the bluetooth_protocol
  *                   structure
  *
- * Access to the Bluetooth cards is in adapter.c. Diagnostic
- * devices such as Ubertooth One belong to sniffer.c.
+ * Access to the Bluetooth cards is in adapter.c and to the
+ * devices and their discovery in device.c. Connecting and
+ * pairing is in connection.c. The table shown by "scan" is in
+ * scan_table.c. Diagnostic devices such as Ubertooth One belong
+ * to sniffer.c.
  *
  * Planned work:
  */
 
-// TODO (stage 2): Reconnaissance. "scan" lists the devices in
-//                 range of the selected card and "info ADDRESS"
-//                 shows the details of one device.
-// TODO (stage 3): Connection. "pair", "unpair", "connect" and
-//                 "disconnect". The target device is stored in
-//                 the "device" setting of the project.
+// TODO (stage 2): Reconnaissance. "scan" is done. "info" shows
+//                 what the scan knows; it should also read the
+//                 services and manufacturer data of the device.
+// TODO (stage 3): Connection commands are done, except for
+//                 pairing with a PIN or passkey, which needs
+//                 a BlueZ agent (see connection.c).
 // TODO (stage 4): Manual communication, similar to a raw socket.
 //                 BLE: "services", "read UUID", "write UUID HEX",
 //                 "notify UUID". Classic: "rfcomm CHANNEL" and
@@ -47,14 +51,21 @@
 
 #include "protocol/bluetooth/adapter.h"
 #include "protocol/bluetooth/bluetooth_parser.h"
+#include "protocol/bluetooth/connection.h"
+#include "protocol/bluetooth/device.h"
+#include "protocol/bluetooth/scan_table.h"
 #include "protocol/bluetooth/sniffer.h"
 #include "storage/json_file.h"
 
+#include <ctype.h>
 #include <errno.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/select.h>
+#include <time.h>
 #include <unistd.h>
 
 /*
@@ -71,14 +82,18 @@
 #define SHELL_LINE_MAX 256
 
 /*
+ * How often "scan" asks BlueZ for the devices and redraws
+ * the table, in seconds.
+ */
+#define SCAN_REFRESH_SECONDS 1
+
+/*
  * Set by Ctrl+C (SIGINT).
  *
- * Ctrl+C never closes the shell. Stage 1 has no long-running
- * command, so the flag is only set here.
+ * Ctrl+C never closes the shell. It stops the command that
+ * is running, such as "scan", and returns to the prompt.
  */
-// TODO (stage 2): "scan" and later "monitor" run until Ctrl+C
-//                 and will check this flag, like "read" in the
-//                 UART shell.
+// TODO (stage 5): "monitor" will check this flag as well.
 static volatile sig_atomic_t interrupted = 0;
 
 /*
@@ -101,11 +116,11 @@ typedef struct {
     char adapter[BT_ADAPTER_NAME_MAX];
 
     /*
-     * Address of the target device, "AA:BB:CC:DD:EE:FF".
-     * Empty when no device is chosen.
+     * Address of the target device, "AA:BB:CC:DD:EE:FF": the
+     * device that was connected or paired last. "connect" and
+     * "disconnect" use it when no device is named.
+     * Empty when no device was chosen yet.
      */
-    // TODO (stage 3): set by "connect ADDRESS". Until then the
-    //                 value is only loaded and kept.
     char device[BT_ADDRESS_MAX];
 } bt_settings_t;
 
@@ -294,6 +309,36 @@ static int save_setting(
 }
 
 /*
+ * Checks that a text has the form of a Bluetooth address:
+ * six pairs of hexadecimal digits separated by colons,
+ * "AA:BB:CC:DD:EE:FF".
+ */
+static bool is_bluetooth_address(const char *text)
+{
+    if (strlen(text) != BT_ADDRESS_MAX - 1) {
+        return false;
+    }
+
+    for (size_t i = 0; i < BT_ADDRESS_MAX - 1; i++) {
+        /*
+         * Every third character is a colon, the others
+         * are hexadecimal digits.
+         */
+        if (i % 3 == 2) {
+
+            if (text[i] != ':') {
+                return false;
+            }
+
+        } else if (!isxdigit((unsigned char)text[i])) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/*
  * State of the interactive shell.
  */
 typedef struct {
@@ -308,7 +353,21 @@ typedef struct {
      */
     char settings_path[PATH_MAX];
 
-    // TODO (stage 3): connection state of the target device.
+    /*
+     * Devices found during this session. Filled by "scan" and
+     * kept until the shell is closed, so a device keeps its id
+     * from one scan to the next. The list is not stored on disk:
+     * every session starts with an empty list.
+     */
+    bt_scan_table_t devices;
+
+    /*
+     * Address of the device that this session connected to,
+     * or empty. The connection is closed when the shell ends.
+     * Devices that were already connected before, for example
+     * a mouse in use, are never recorded here.
+     */
+    char connected_here[BT_ADDRESS_MAX];
 } bt_shell_t;
 
 /*
@@ -384,7 +443,7 @@ static void bluetooth_print_help(
         "  adapter      Bluetooth card, for example hci0\n"
         "               (set by 'select CARD' in the shell)\n"
         "  device       Address of the target device\n"
-        "               (not used yet)\n"
+        "               (set by 'connect' and 'pair' in the shell)\n"
         "\n"
         "Shell commands:\n"
         "\n",
@@ -512,6 +571,953 @@ static void shell_cards(const bt_shell_t *shell)
 }
 
 /*
+ * Reports why a scan could not be started.
+ *
+ * errno has to hold the error set by bt_discovery_start().
+ */
+static void report_scan_error(const char *adapter)
+{
+    switch (errno) {
+
+    case ENODEV:
+        fprintf(
+            stderr,
+            "Bluetooth card %s is not present "
+            "(list the cards with: cards)\n",
+            adapter
+        );
+        break;
+
+    case ENETDOWN:
+        fprintf(
+            stderr,
+            "Bluetooth card %s is powered off. Turn it on, "
+            "for example with: bluetoothctl power on\n",
+            adapter
+        );
+        break;
+
+    case EACCES:
+    case EPERM:
+        fprintf(
+            stderr,
+            "The system does not allow this user to scan "
+            "with %s\n",
+            adapter
+        );
+        break;
+
+    default:
+        fprintf(
+            stderr,
+            "Cannot start the scan on %s: %s\n",
+            adapter,
+            strerror(errno)
+        );
+        break;
+    }
+}
+
+/*
+ * Returns the number of seconds since an arbitrary fixed point.
+ * Used to measure how long a scan has been running. The
+ * monotonic clock is not affected by changes of the system time.
+ */
+static long monotonic_seconds(void)
+{
+    struct timespec now;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &now) != 0) {
+        return 0;
+    }
+
+    return (long)now.tv_sec;
+}
+
+/*
+ * Shell command "scan".
+ *
+ * Looks for Bluetooth devices with the selected card until
+ * Ctrl+C is pressed.
+ *
+ * Found devices are merged into the device table of the shell.
+ * A device that is new to the table receives the next free id;
+ * a device that is already there keeps the id it has.
+ *
+ * On a terminal the devices are shown in a table that is redrawn
+ * in place on a separate screen. When the scan ends, the terminal
+ * returns to the shell and the devices found by this scan are
+ * printed once more as a static table. From that moment the ids
+ * no longer change, and they remain visible for the next commands.
+ *
+ * When the output is not a terminal (a pipe or a file), there is
+ * no live table and only the final table is printed.
+ */
+static void shell_scan(bt_shell_t *shell)
+{
+    const char *adapter = shell->settings.adapter;
+
+    bt_scan_table_t *table = &shell->devices;
+
+    /*
+     * Fresh list of devices read from BlueZ on every refresh.
+     * static: the array is too large for the stack. The shell
+     * runs one command at a time, so sharing it between calls
+     * is safe.
+     */
+    static bt_device_info_t devices[MAX_BT_DEVICES];
+
+    bt_discovery_t *discovery = NULL;
+    sigset_t block_mask;
+    sigset_t original_mask;
+
+    if (adapter[0] == '\0') {
+        fprintf(
+            stderr,
+            "No Bluetooth card selected. "
+            "Select one with: select CARD\n"
+        );
+        return;
+    }
+
+    /*
+     * SIGINT is blocked outside of pselect(), so Ctrl+C cannot
+     * slip in between checking the flag and starting to wait.
+     * It also keeps the D-Bus calls from being interrupted.
+     */
+    sigemptyset(&block_mask);
+    sigaddset(&block_mask, SIGINT);
+
+    if (sigprocmask(SIG_BLOCK, &block_mask, &original_mask) != 0) {
+        perror("sigprocmask");
+        return;
+    }
+
+    /*
+     * Forget a Ctrl+C that was pressed before this scan started.
+     */
+    interrupted = 0;
+
+    if (bt_discovery_start(adapter, &discovery) != 0) {
+        report_scan_error(adapter);
+        sigprocmask(SIG_SETMASK, &original_mask, NULL);
+        return;
+    }
+
+    /*
+     * Keep the known devices and their ids, but start with
+     * nothing marked as found by this scan.
+     */
+    bt_scan_table_begin_scan(table);
+
+    /*
+     * The live table needs a terminal that understands
+     * control sequences.
+     */
+    bool live = isatty(STDOUT_FILENO) != 0;
+
+    if (live) {
+        bt_scan_screen_enter();
+    } else {
+        printf(
+            "Scanning on %s (press Ctrl+C to stop)...\n",
+            adapter
+        );
+        fflush(stdout);
+    }
+
+    long started = monotonic_seconds();
+
+    /*
+     * Set when reading the devices fails. The message is
+     * printed after the live screen is closed.
+     */
+    int read_error = 0;
+
+    while (!interrupted) {
+        size_t device_count = 0;
+
+        /*
+         * Take the current list of devices from BlueZ and
+         * merge it into the table.
+         */
+        if (bt_discovery_read(
+                discovery,
+                devices,
+                MAX_BT_DEVICES,
+                &device_count) != 0) {
+
+            read_error = errno;
+            break;
+        }
+
+        bt_scan_table_update(table, devices, device_count);
+
+        if (live) {
+            bt_scan_screen_draw(
+                table,
+                adapter,
+                monotonic_seconds() - started
+            );
+        }
+
+        /*
+         * Wait for the next refresh. pselect() is used only as
+         * a sleep that Ctrl+C can end early: SIGINT is unblocked
+         * while it waits. Any return value is fine here, the
+         * loop condition checks the flag.
+         */
+        struct timespec refresh = {
+            .tv_sec = SCAN_REFRESH_SECONDS,
+            .tv_nsec = 0,
+        };
+
+        pselect(0, NULL, NULL, NULL, &refresh, &original_mask);
+    }
+
+    /*
+     * Back to the normal screen before anything else is printed.
+     */
+    if (live) {
+        bt_scan_screen_leave();
+    }
+
+    bt_discovery_stop(discovery);
+
+    /*
+     * Restore the signal mask, so that Ctrl+C works at the
+     * prompt again.
+     */
+    sigprocmask(SIG_SETMASK, &original_mask, NULL);
+
+    if (read_error != 0) {
+        fprintf(
+            stderr,
+            "The scan was interrupted: %s\n",
+            strerror(read_error)
+        );
+    }
+
+    /*
+     * The static table, printed as ordinary text in the shell.
+     */
+    printf(
+        "Scan on %s stopped after %lds, %zu devices found:\n\n",
+        adapter,
+        monotonic_seconds() - started,
+        bt_scan_table_found_count(table)
+    );
+
+    bt_scan_table_print(table, BT_SCAN_SHOW_FOUND);
+
+    /*
+     * Remind the user that the ids can be used right away.
+     */
+    if (bt_scan_table_found_count(table) > 0) {
+        printf(
+            "\nA device can be named by its ID or its address, "
+            "for example: info 1\n"
+        );
+    }
+}
+
+/*
+ * Shell command "devices".
+ *
+ * Prints all devices found during this session, including the
+ * ones that the last scan did not see, without scanning again.
+ */
+static void shell_devices(const bt_shell_t *shell)
+{
+    if (shell->devices.count == 0) {
+        printf("No known devices. Find some with: scan\n");
+        return;
+    }
+
+    bt_scan_table_print(&shell->devices, BT_SCAN_SHOW_ALL);
+}
+
+/*
+ * Shell command "forget".
+ *
+ * Empties the list of known devices. The next scan numbers
+ * the devices from 1 again.
+ */
+static void shell_forget(bt_shell_t *shell)
+{
+    size_t forgotten = shell->devices.count;
+
+    bt_scan_table_init(&shell->devices);
+
+    printf("Forgot %zu devices. IDs start from 1 again.\n", forgotten);
+}
+
+/*
+ * A device named by the user, resolved to an address.
+ */
+typedef struct {
+    /*
+     * Bluetooth address in upper case, "AA:BB:CC:DD:EE:FF".
+     */
+    char address[BT_ADDRESS_MAX];
+
+    /*
+     * Id of the device, or 0 when the address is not in the
+     * table of known devices.
+     */
+    size_t id;
+
+    /*
+     * Row of the device in the table, or NULL when the
+     * address is not in the table.
+     */
+    const bt_scan_entry_t *entry;
+} bt_device_reference_t;
+
+/*
+ * Resolves the way a user names a device. Every command that
+ * takes a device uses this function, so all of them accept
+ * the same two forms:
+ *
+ *     3                    the id shown by "scan" and "devices"
+ *     AA:BB:CC:DD:EE:FF    the Bluetooth address
+ *
+ * The two cannot be confused: an id has only digits and an
+ * address always contains colons. An address does not have to
+ * be in the table, so a device can be used without scanning.
+ *
+ * Problems are reported on stderr.
+ *
+ * Returns 0 on success and -1 on error.
+ */
+static int resolve_device(
+    const bt_shell_t *shell,
+    const char *text,
+    bt_device_reference_t *reference
+)
+{
+    memset(reference, 0, sizeof(*reference));
+
+    /*
+     * Only digits: an id.
+     */
+    if (text[strspn(text, "0123456789")] == '\0') {
+        char *end = NULL;
+
+        errno = 0;
+
+        unsigned long id = strtoul(text, &end, 10);
+
+        const bt_scan_entry_t *entry = NULL;
+
+        /*
+         * ERANGE: a number too large to be an id.
+         */
+        if (errno == 0) {
+            entry = bt_scan_table_find_by_id(
+                &shell->devices,
+                (size_t)id
+            );
+        }
+
+        if (entry == NULL) {
+            fprintf(
+                stderr,
+                "No device with ID %s "
+                "(list the devices with: devices)\n",
+                text
+            );
+            return -1;
+        }
+
+        reference->id = (size_t)id;
+        reference->entry = entry;
+
+        snprintf(
+            reference->address,
+            sizeof(reference->address),
+            "%s",
+            entry->device.address
+        );
+
+        return 0;
+    }
+
+    /*
+     * Otherwise it has to be an address.
+     */
+    if (!is_bluetooth_address(text)) {
+        fprintf(
+            stderr,
+            "'%s' is neither a device ID nor a Bluetooth address "
+            "(expected for example 3 or AA:BB:CC:DD:EE:FF)\n",
+            text
+        );
+        return -1;
+    }
+
+    /*
+     * BlueZ writes addresses in upper case.
+     */
+    for (size_t i = 0; text[i] != '\0'; i++) {
+        reference->address[i] =
+            (char)toupper((unsigned char)text[i]);
+    }
+
+    /*
+     * The device may be known; then it also has an id.
+     */
+    reference->entry = bt_scan_table_find_by_address(
+        &shell->devices,
+        reference->address,
+        &reference->id
+    );
+
+    return 0;
+}
+
+/*
+ * Shell command "info".
+ *
+ * Shows what is known about one device, named by its id or
+ * its address.
+ */
+// TODO (stage 2): read the device from BlueZ and also show its
+//                 services (UUIDs) and manufacturer data. For now
+//                 the command shows what the scan has collected.
+static void shell_info(const bt_shell_t *shell, const char *text)
+{
+    bt_device_reference_t reference;
+
+    if (resolve_device(shell, text, &reference) != 0) {
+        return;
+    }
+
+    /*
+     * A valid address that no scan has seen.
+     */
+    if (reference.entry == NULL) {
+        printf(
+            "Address: %s\n"
+            "This device is not in the list of known devices. "
+            "Run 'scan' to find it.\n",
+            reference.address
+        );
+        return;
+    }
+
+    const bt_device_info_t *device = &reference.entry->device;
+
+    printf(
+        "ID:           %zu\n"
+        "Address:      %s\n"
+        "Name:         %s\n"
+        "Type:         %s\n"
+        "Address type: %s\n",
+        reference.id,
+        device->address,
+        device->name[0] != '\0' ? device->name : "-",
+        device->classic ? "classic" : "LE",
+        device->address_type[0] != '\0' ? device->address_type : "-"
+    );
+
+    /*
+     * The remaining facts come from the last scan. A device
+     * that the last scan did not see has none of them.
+     */
+    if (!reference.entry->found) {
+        printf("State:        not seen by the last scan\n");
+        return;
+    }
+
+    if (device->has_rssi) {
+        printf("RSSI:         %d dBm\n", device->rssi);
+    } else {
+        printf("RSSI:         -\n");
+    }
+
+    const char *state = "lost";
+
+    if (device->connected) {
+        state = "connected";
+    } else if (reference.entry->in_range) {
+        state = "visible";
+    }
+
+    printf(
+        "Paired:       %s\n"
+        "State:        %s\n",
+        device->paired ? "yes" : "no",
+        state
+    );
+}
+
+/*
+ * Finds the device that a connection command works on.
+ *
+ * text is the argument typed by the user: an id or an address,
+ * resolved by resolve_device(). When text is NULL, the target
+ * device of the project is used: the device that was connected
+ * or paired last.
+ *
+ * The command also needs a selected card; its absence is
+ * reported here, so every connection command behaves the same.
+ *
+ * Problems are reported on stderr.
+ *
+ * Returns 0 on success and -1 on error.
+ */
+static int resolve_target(
+    const bt_shell_t *shell,
+    const char *text,
+    bt_device_reference_t *reference
+)
+{
+    if (shell->settings.adapter[0] == '\0') {
+        fprintf(
+            stderr,
+            "No Bluetooth card selected. "
+            "Select one with: select CARD\n"
+        );
+        return -1;
+    }
+
+    if (text != NULL) {
+        return resolve_device(shell, text, reference);
+    }
+
+    if (shell->settings.device[0] == '\0') {
+        fprintf(
+            stderr,
+            "No device named and no earlier device to reuse. "
+            "Name one by its ID or address, for example: "
+            "connect 1\n"
+        );
+        return -1;
+    }
+
+    /*
+     * The stored address goes through the same resolver, so
+     * the device gets its id when the session knows it.
+     */
+    return resolve_device(shell, shell->settings.device, reference);
+}
+
+/*
+ * Describes a device for messages: its id when it has one, its
+ * address, and its name when it is known.
+ *
+ *     "3: AA:BB:CC:DD:EE:FF (Sensor)"
+ *     "AA:BB:CC:DD:EE:FF"
+ */
+static void describe_device(
+    const bt_device_reference_t *reference,
+    char *buffer,
+    size_t size
+)
+{
+    const char *name = "";
+
+    if (reference->entry != NULL) {
+        name = reference->entry->device.name;
+    }
+
+    if (reference->id != 0 && name[0] != '\0') {
+        snprintf(
+            buffer,
+            size,
+            "%zu: %s (%s)",
+            reference->id,
+            reference->address,
+            name
+        );
+    } else if (reference->id != 0) {
+        snprintf(
+            buffer,
+            size,
+            "%zu: %s",
+            reference->id,
+            reference->address
+        );
+    } else {
+        snprintf(buffer, size, "%s", reference->address);
+    }
+}
+
+/*
+ * Reports a failed connection command.
+ *
+ * action says what was attempted ("connect to", "pair with").
+ * errno has to hold the error set by connection.c, and
+ * error_text the explanation that came with it.
+ */
+static void report_device_error(
+    const char *action,
+    const char *device,
+    const char *adapter,
+    const char *error_text
+)
+{
+    switch (errno) {
+
+    case ENOENT:
+        fprintf(
+            stderr,
+            "Cannot %s %s: the system does not know this "
+            "device. Devices found by a scan are forgotten "
+            "after about half a minute; run 'scan' again and "
+            "repeat the command.\n",
+            action,
+            device
+        );
+        break;
+
+    case ENETDOWN:
+        fprintf(
+            stderr,
+            "Cannot %s %s: Bluetooth card %s is powered off\n",
+            action,
+            device,
+            adapter
+        );
+        break;
+
+    case ETIMEDOUT:
+        fprintf(
+            stderr,
+            "Cannot %s %s: the device did not answer in time\n",
+            action,
+            device
+        );
+        break;
+
+    case ECANCELED:
+        fprintf(stderr, "\nCancelled\n");
+        break;
+
+    default:
+        /*
+         * Show the explanation given by BlueZ.
+         */
+        fprintf(
+            stderr,
+            "Cannot %s %s: %s\n",
+            action,
+            device,
+            error_text[0] != '\0' ? error_text : strerror(errno)
+        );
+        break;
+    }
+}
+
+/*
+ * Reads the current state of a device from BlueZ and copies it
+ * into the table of known devices, so "devices" and "info" show
+ * the result of the last connection command.
+ *
+ * Does nothing when the device is not known to BlueZ.
+ */
+static void refresh_device(bt_shell_t *shell, const char *address)
+{
+    bt_device_info_t device;
+
+    if (bt_device_get(
+            shell->settings.adapter,
+            address,
+            &device) == 0) {
+
+        bt_scan_table_refresh(&shell->devices, &device);
+    }
+}
+
+/*
+ * Makes a device the target device of the project and stores
+ * its address in the settings file. A failure to store it is
+ * reported, but the device is still used for this session.
+ */
+static void remember_target(bt_shell_t *shell, const char *address)
+{
+    if (strcmp(shell->settings.device, address) == 0) {
+        return;
+    }
+
+    save_setting(shell->settings_path, KEY_DEVICE, address);
+
+    snprintf(
+        shell->settings.device,
+        sizeof(shell->settings.device),
+        "%s",
+        address
+    );
+}
+
+/*
+ * Shell command "connect".
+ *
+ * Connects to a device named by its id or address, or to the
+ * target device of the project when no device is named.
+ * Ctrl+C aborts the attempt.
+ */
+static void shell_connect(bt_shell_t *shell, const char *text)
+{
+    const char *adapter = shell->settings.adapter;
+
+    bt_device_reference_t reference;
+    bt_device_info_t device;
+    char description[BT_DEVICE_NAME_MAX + 48];
+    char error_text[BT_ERROR_TEXT_MAX];
+
+    if (resolve_target(shell, text, &reference) != 0) {
+        return;
+    }
+
+    describe_device(&reference, description, sizeof(description));
+
+    /*
+     * A device that is connected already, perhaps by another
+     * program, is left alone. It is not recorded as connected
+     * by this session, so leaving the shell will not close it.
+     */
+    if (bt_device_get(adapter, reference.address, &device) == 0 &&
+        device.connected) {
+
+        printf("Already connected to %s\n", description);
+
+        remember_target(shell, reference.address);
+        refresh_device(shell, reference.address);
+
+        return;
+    }
+
+    printf(
+        "Connecting to %s (press Ctrl+C to cancel)...\n",
+        description
+    );
+    fflush(stdout);
+
+    /*
+     * Forget a Ctrl+C that was pressed earlier.
+     */
+    interrupted = 0;
+
+    if (bt_device_connect(
+            adapter,
+            reference.address,
+            &interrupted,
+            error_text) != 0 &&
+        errno != EISCONN) {
+
+        report_device_error(
+            "connect to",
+            description,
+            adapter,
+            error_text
+        );
+        return;
+    }
+
+    printf("Connected to %s\n", description);
+
+    /*
+     * Remember the connection, so that it can be closed when
+     * the shell ends, and make the device the target device.
+     */
+    snprintf(
+        shell->connected_here,
+        sizeof(shell->connected_here),
+        "%s",
+        reference.address
+    );
+
+    remember_target(shell, reference.address);
+    refresh_device(shell, reference.address);
+}
+
+/*
+ * Shell command "disconnect".
+ *
+ * Closes the connection to a device named by its id or address,
+ * or to the target device when no device is named.
+ */
+static void shell_disconnect(bt_shell_t *shell, const char *text)
+{
+    const char *adapter = shell->settings.adapter;
+
+    bt_device_reference_t reference;
+    char description[BT_DEVICE_NAME_MAX + 48];
+    char error_text[BT_ERROR_TEXT_MAX];
+
+    if (resolve_target(shell, text, &reference) != 0) {
+        return;
+    }
+
+    describe_device(&reference, description, sizeof(description));
+
+    interrupted = 0;
+
+    if (bt_device_disconnect(
+            adapter,
+            reference.address,
+            &interrupted,
+            error_text) != 0) {
+
+        if (errno == ENOTCONN) {
+            printf("Not connected to %s\n", description);
+        } else {
+            report_device_error(
+                "disconnect from",
+                description,
+                adapter,
+                error_text
+            );
+            return;
+        }
+    } else {
+        printf("Disconnected from %s\n", description);
+    }
+
+    /*
+     * The connection made by this session is gone.
+     */
+    if (strcmp(shell->connected_here, reference.address) == 0) {
+        shell->connected_here[0] = '\0';
+    }
+
+    refresh_device(shell, reference.address);
+}
+
+/*
+ * Shell command "pair".
+ *
+ * Pairs with a device named by its id or address. Ctrl+C aborts
+ * the attempt.
+ */
+// TODO: Devices that ask for a PIN or a passkey need a BlueZ
+//       agent, which this program does not provide yet. See
+//       connection.c.
+static void shell_pair(bt_shell_t *shell, const char *text)
+{
+    const char *adapter = shell->settings.adapter;
+
+    bt_device_reference_t reference;
+    char description[BT_DEVICE_NAME_MAX + 48];
+    char error_text[BT_ERROR_TEXT_MAX];
+
+    if (resolve_target(shell, text, &reference) != 0) {
+        return;
+    }
+
+    describe_device(&reference, description, sizeof(description));
+
+    printf(
+        "Pairing with %s (press Ctrl+C to cancel)...\n"
+        "Confirm the pairing on the device if it asks for it.\n",
+        description
+    );
+    fflush(stdout);
+
+    interrupted = 0;
+
+    if (bt_device_pair(
+            adapter,
+            reference.address,
+            &interrupted,
+            error_text) != 0) {
+
+        if (errno == EEXIST) {
+            printf("Already paired with %s\n", description);
+        } else if (errno == EACCES) {
+            fprintf(
+                stderr,
+                "Pairing with %s failed: %s\n"
+                "Devices that need a PIN or a passkey are not "
+                "supported yet.\n",
+                description,
+                error_text
+            );
+            return;
+        } else {
+            report_device_error(
+                "pair with",
+                description,
+                adapter,
+                error_text
+            );
+            return;
+        }
+    } else {
+        printf("Paired with %s\n", description);
+    }
+
+    remember_target(shell, reference.address);
+    refresh_device(shell, reference.address);
+}
+
+/*
+ * Shell command "unpair".
+ *
+ * Removes the pairing with a device named by its id or address.
+ * BlueZ forgets the device entirely, which also closes
+ * a connection to it.
+ */
+static void shell_unpair(bt_shell_t *shell, const char *text)
+{
+    const char *adapter = shell->settings.adapter;
+
+    bt_device_reference_t reference;
+    char description[BT_DEVICE_NAME_MAX + 48];
+    char error_text[BT_ERROR_TEXT_MAX];
+
+    if (resolve_target(shell, text, &reference) != 0) {
+        return;
+    }
+
+    describe_device(&reference, description, sizeof(description));
+
+    interrupted = 0;
+
+    if (bt_device_unpair(
+            adapter,
+            reference.address,
+            &interrupted,
+            error_text) != 0) {
+
+        if (errno == ENOENT) {
+            /*
+             * The system has nothing stored for this device.
+             */
+            printf("Not paired with %s\n", description);
+        } else {
+            report_device_error(
+                "unpair from",
+                description,
+                adapter,
+                error_text
+            );
+        }
+
+        return;
+    }
+
+    printf(
+        "Removed the pairing with %s. The system has forgotten "
+        "the device; run 'scan' before using it again.\n",
+        description
+    );
+
+    /*
+     * Removing the device also closed its connection.
+     */
+    if (strcmp(shell->connected_here, reference.address) == 0) {
+        shell->connected_here[0] = '\0';
+    }
+
+    // TODO: The row of the device in the table of known devices
+    //       still shows the state from the last scan. Mark it as
+    //       not seen here.
+}
+
+/*
  * Shell command "select".
  *
  * Remembers the Bluetooth card in the settings file of the
@@ -605,8 +1611,42 @@ static void shell_status(const bt_shell_t *shell)
         report_bluez_error();
     }
 
-    // TODO (stage 3): show the target device and whether
-    //                 it is paired and connected.
+    /*
+     * The target device: the one connected or paired last.
+     */
+    const char *address = shell->settings.device;
+    bt_device_info_t device;
+
+    if (address[0] == '\0') {
+        printf("Device:  none (name one with: connect DEVICE)\n");
+    } else if (name[0] != '\0' &&
+               bt_device_get(name, address, &device) == 0) {
+        /*
+         * Fresh state from BlueZ.
+         */
+        printf(
+            "Device:  %s%s%s%s\n"
+            "         %s, %s\n",
+            device.address,
+            device.name[0] != '\0' ? " (" : "",
+            device.name,
+            device.name[0] != '\0' ? ")" : "",
+            device.connected ? "connected" : "not connected",
+            device.paired ? "paired" : "not paired"
+        );
+    } else {
+        /*
+         * BlueZ knows nothing about the device right now:
+         * it is neither connected nor paired, and no recent
+         * scan has seen it.
+         */
+        printf(
+            "Device:  %s\n"
+            "         not connected, not known to the system "
+            "(run 'scan' to find it)\n",
+            address
+        );
+    }
 }
 
 /*
@@ -700,6 +1740,42 @@ static void run_shell(bt_shell_t *shell)
             shell_status(shell);
             break;
 
+        case BT_COMMAND_SCAN:
+            shell_scan(shell);
+            break;
+
+        case BT_COMMAND_DEVICES:
+            shell_devices(shell);
+            break;
+
+        case BT_COMMAND_INFO:
+            shell_info(shell, command.argument);
+            break;
+
+        case BT_COMMAND_FORGET:
+            shell_forget(shell);
+            break;
+
+        /*
+         * For "connect" and "disconnect" the argument is NULL
+         * when no device was named.
+         */
+        case BT_COMMAND_CONNECT:
+            shell_connect(shell, command.argument);
+            break;
+
+        case BT_COMMAND_DISCONNECT:
+            shell_disconnect(shell, command.argument);
+            break;
+
+        case BT_COMMAND_PAIR:
+            shell_pair(shell, command.argument);
+            break;
+
+        case BT_COMMAND_UNPAIR:
+            shell_unpair(shell, command.argument);
+            break;
+
         // TODO (stage 2-5): cases for the commands listed at
         //                   the top of this file.
 
@@ -717,7 +1793,11 @@ static void run_shell(bt_shell_t *shell)
  */
 static int bluetooth_run(const project_info_t *project)
 {
-    bt_shell_t shell;
+    /*
+     * static: the device table makes the structure too large
+     * for the stack.
+     */
+    static bt_shell_t shell;
 
     memset(&shell, 0, sizeof(shell));
 
@@ -733,6 +1813,11 @@ static int bluetooth_run(const project_info_t *project)
     if (load_settings(shell.settings_path, &shell.settings) != 0) {
         return -1;
     }
+
+    /*
+     * Every session starts without known devices.
+     */
+    bt_scan_table_init(&shell.devices);
 
     /*
      * Handle Ctrl+C (SIGINT).
@@ -770,7 +1855,30 @@ static int bluetooth_run(const project_info_t *project)
      */
     run_shell(&shell);
 
-    // TODO (stage 3): disconnect from the target device here.
+    /*
+     * The shell was closed with "exit" (or Ctrl+D): the session
+     * is over, so the list of found devices and their ids are
+     * discarded. Nothing of it was written to disk.
+     */
+    bt_scan_table_init(&shell.devices);
+
+    /*
+     * Close the connection that this session opened. Devices
+     * that were connected before the session are not touched.
+     */
+    if (shell.connected_here[0] != '\0') {
+        printf("Disconnecting from %s...\n", shell.connected_here);
+
+        if (bt_device_disconnect(
+                shell.settings.adapter,
+                shell.connected_here,
+                NULL,
+                NULL) != 0 &&
+            errno != ENOTCONN) {
+
+            perror("bt_device_disconnect");
+        }
+    }
 
     return 0;
 }

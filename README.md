@@ -43,7 +43,7 @@ The current MVP provides:
 - **Permission helper** — the shell can run the `sudo` command that grants access to the selected serial port.
 - **Damaged project detection** — a project whose settings file is missing is reported and cannot be selected or run.
 - **Protocol registry** — protocols are separate modules behind one interface. UART is implemented; Bluetooth is in development.
-- **Bluetooth shell (early stage)** — running a Bluetooth project opens a shell that lists the Bluetooth cards of the computer and selects the one used by the project.
+- **Bluetooth shell (early stage)** — running a Bluetooth project opens a shell that lists the Bluetooth cards of the computer, selects the one used by the project, scans for devices in a live table, and connects and pairs devices.
 
 These features form the foundation for the broader workflow integration planned for the project.
 
@@ -353,21 +353,61 @@ The default configuration is **9600 8N1**. The selected parameters must match th
 
 ### Bluetooth shell
 
-Bluetooth support is being built in stages. The first stage provides the shell and the handling of Bluetooth cards. For a Bluetooth project, `run` starts this shell:
+Bluetooth support is being built in stages. So far it provides the shell, the handling of Bluetooth cards, the scan for devices, and connecting and pairing. For a Bluetooth project, `run` starts this shell:
 
 ```text
 bluetooth> help
 Commands:
-  help [COMMAND]   List the commands, or describe one command
-  cards            List the Bluetooth cards of this computer
-  select CARD      Select the Bluetooth card, for example hci0
-  status           Show the selected card and its state
-  exit             Leave the shell and close the program
+  help [COMMAND]       List the commands, or describe one command
+  cards                List the Bluetooth cards of this computer
+  select CARD          Select the Bluetooth card, for example hci0
+  status               Show the selected card and its state
+  scan                 Scan for Bluetooth devices until Ctrl+C is pressed
+  devices              List the known devices and their IDs
+  info DEVICE          Show what is known about one device
+  forget               Empty the list of known devices
+  connect [DEVICE]     Connect to a device
+  disconnect [DEVICE]  Close the connection to a device
+  pair DEVICE          Pair with a device
+  unpair DEVICE        Remove the pairing with a device
+  exit                 Leave the shell and close the program
 ```
 
 A computer can have more than one Bluetooth card. `select CARD` stores the chosen card in the project settings, and `help COMMAND` shows the detailed help of one command.
 
-The cards are read from BlueZ over D-Bus, so the `bluetooth` system service has to be running.
+`scan` looks for devices with the selected card and shows them in a table that is redrawn in place:
+
+```text
+Scanning on hci0 | 3 devices | 12s | press Ctrl+C to stop
+
+ ID  ADDRESS            TYPE     ADDR     RSSI  PAIRED  STATE      NAME
+  1  AA:BB:CC:00:00:01  LE       random    -66  no      visible    -
+  2  AA:BB:CC:00:00:02  LE       public    -92  no      visible    Sensor
+  3  AA:BB:CC:00:00:03  classic  public    -81  no      lost       Phone
+```
+
+Every address appears once: new devices are added at the bottom and known devices are updated. A device that is no longer received stays in the table as `lost`. `Ctrl+C` stops the scan, returns to the shell, and prints the devices found by the scan as a static table. When the output is not a terminal, only that final table is printed.
+
+Every device receives an **ID**. Once the scan ends, the ID is fixed: the device keeps it in later scans until the shell is closed. The list is not stored on disk, so every session starts empty. Commands that take a device accept the ID or the Bluetooth address, for example `info 3` or `info AA:BB:CC:00:00:03`.
+
+`devices` lists all known devices without scanning; the ones that the last scan did not see have the state `not seen`. `forget` empties the list, after which IDs start from 1 again. The list holds up to 256 devices. Devices that use random addresses change them over time and then appear as new devices with new IDs.
+
+`connect`, `disconnect`, `pair`, and `unpair` take a device ID or an address:
+
+```text
+bluetooth> connect 2
+Connecting to 2: AA:BB:CC:00:00:02 (Sensor) (press Ctrl+C to cancel)...
+Connected to 2: AA:BB:CC:00:00:02 (Sensor)
+```
+
+- The device that was connected or paired last becomes the target device of the project. It is stored in the project settings, and `connect` and `disconnect` use it when no device is named.
+- The system forgets devices found by a scan after about half a minute, unless they are connected or paired. Run `scan` shortly before `connect` or `pair`.
+- `Ctrl+C` cancels a running connection or pairing attempt.
+- A connection made in the shell is closed when the shell exits. Devices that were already connected are left alone.
+- `pair` works for devices that need no code. Devices that ask for a PIN or a passkey are not supported yet, unless the desktop environment shows its own pairing dialog.
+- `unpair` makes the system forget the device completely, which also disconnects it.
+
+Cards and devices are read from BlueZ over D-Bus, so the `bluetooth` system service has to be running.
 
 A new Bluetooth project receives this settings file:
 
@@ -381,9 +421,9 @@ A new Bluetooth project receives this settings file:
 | Setting | Description |
 |---|---|
 | `adapter` | Bluetooth card, set by `select CARD` in the shell |
-| `device` | Address of the target device; not used yet |
+| `device` | Address of the target device, set by `connect` and `pair` in the shell |
 
-Scanning, pairing, connecting, manual communication, and traffic monitoring are planned; see the [roadmap](#roadmap--to-do).
+Device details, pairing with a code, manual communication, and traffic monitoring are planned; see the [roadmap](#roadmap--to-do).
 
 ## Permissions
 
@@ -426,7 +466,7 @@ Log out and log back in for the group membership change to take effect. If your 
 | `src/discovery/` | Serial device discovery |
 | `src/protocol/` | Protocol interface and the table of supported protocols |
 | `src/protocol/uart/` | UART protocol: serial port access, the shell, and the shell parser |
-| `src/protocol/bluetooth/` | Bluetooth protocol: Bluetooth cards, the shell, and the shell parser |
+| `src/protocol/bluetooth/` | Bluetooth protocol: access to BlueZ, cards, device scan, the shell, and the shell parser |
 
 The headers in `include/` follow the same layout.
 
@@ -439,7 +479,7 @@ The current MVP is focused on project management and raw serial data reading.
 Current limitations include:
 
 - Linux is the only supported platform.
-- UART is the only complete protocol. Bluetooth can only list and select Bluetooth cards so far.
+- UART is the only complete protocol. Bluetooth can list and select Bluetooth cards, scan for devices, and connect and pair them; it cannot exchange data with them yet.
 - Device discovery is limited to `/dev/ttyACM*` and `/dev/ttyUSB*`.
 - Only the baud rates listed above are supported.
 - The UART shell can read from the serial port but cannot write to it.
@@ -482,8 +522,10 @@ The roadmap will evolve as the project develops and receives feedback. The items
 ### Bluetooth
 
 - [x] Add the Bluetooth protocol skeleton, its shell, and Bluetooth card selection.
-- [ ] Scan for devices in range and show the details of a device.
-- [ ] Pair, unpair, connect, and disconnect.
+- [x] Scan for devices in range, shown in a live table, with device IDs that stay fixed for the session.
+- [ ] Show the services and manufacturer data of a device.
+- [x] Pair, unpair, connect, and disconnect.
+- [ ] Pair with devices that require a PIN or a passkey.
 - [ ] Manual communication: GATT read, write, and notifications for BLE; RFCOMM and L2CAP channels for classic Bluetooth.
 - [ ] Monitor the traffic between the operating system and the Bluetooth card, with capture files for Wireshark.
 - [ ] Detect diagnostic devices such as Ubertooth One and use them to observe the traffic between other devices.
