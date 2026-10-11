@@ -8,6 +8,7 @@
 
 #include "protocol/protocol.h"
 
+#include "protocol/bluetooth/bluetooth.h"
 #include "protocol/uart/uart.h"
 
 #include <strings.h>
@@ -19,6 +20,7 @@
  */
 static const protocol_t *const protocols[] = {
     &uart_protocol,
+    &bluetooth_protocol,
 };
 
 /*

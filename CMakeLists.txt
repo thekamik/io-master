@@ -21,6 +21,10 @@ add_executable(main
     ${PROJECT_SOURCE_DIR}/src/protocol/uart/uart.c
     ${PROJECT_SOURCE_DIR}/src/protocol/uart/uart_parser.c
     ${PROJECT_SOURCE_DIR}/src/protocol/uart/serial.c
+    ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/bluetooth.c
+    ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/bluetooth_parser.c
+    ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/adapter.c
+    ${PROJECT_SOURCE_DIR}/src/protocol/bluetooth/sniffer.c
     ${PROJECT_SOURCE_DIR}/src/discovery/devices.c
 )
 

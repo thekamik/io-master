@@ -42,7 +42,8 @@ The current MVP provides:
 - **Interruptible reading** — `Ctrl+C` stops reading and returns to the shell prompt instead of closing the program.
 - **Permission helper** — the shell can run the `sudo` command that grants access to the selected serial port.
 - **Damaged project detection** — a project whose settings file is missing is reported and cannot be selected or run.
-- **Protocol registry** — protocols are separate modules behind one interface. UART is the only protocol implemented so far.
+- **Protocol registry** — protocols are separate modules behind one interface. UART is implemented; Bluetooth is in development.
+- **Bluetooth shell (early stage)** — running a Bluetooth project opens a shell that lists the Bluetooth cards of the computer and selects the one used by the project.
 
 These features form the foundation for the broader workflow integration planned for the project.
 
@@ -241,7 +242,7 @@ Typical device paths include `/dev/ttyACM0` and `/dev/ttyUSB0`. The actual paths
 
 ### Manage projects
 
-Create a project. The protocol must be one of the supported protocols (currently `uart`); its name is not case-sensitive:
+Create a project. The protocol must be one of the supported protocols (`uart` or `bluetooth`); its name is not case-sensitive:
 
 ```bash
 ./build/io-master project add "Arduino logger" --protocol uart
@@ -350,6 +351,40 @@ The currently supported baud rates are `9600`, `19200`, `38400`, `57600`, and `1
 
 The default configuration is **9600 8N1**. The selected parameters must match the target device's configuration.
 
+### Bluetooth shell
+
+Bluetooth support is being built in stages. The first stage provides the shell and the handling of Bluetooth cards. For a Bluetooth project, `run` starts this shell:
+
+```text
+bluetooth> help
+Commands:
+  help [COMMAND]   List the commands, or describe one command
+  cards            List the Bluetooth cards of this computer
+  select CARD      Select the Bluetooth card, for example hci0
+  status           Show the selected card and its state
+  exit             Leave the shell and close the program
+```
+
+A computer can have more than one Bluetooth card. `select CARD` stores the chosen card in the project settings, and `help COMMAND` shows the detailed help of one command.
+
+The cards are read from BlueZ over D-Bus, so the `bluetooth` system service has to be running.
+
+A new Bluetooth project receives this settings file:
+
+```json
+{
+    "adapter": "",
+    "device": ""
+}
+```
+
+| Setting | Description |
+|---|---|
+| `adapter` | Bluetooth card, set by `select CARD` in the shell |
+| `device` | Address of the target device; not used yet |
+
+Scanning, pairing, connecting, manual communication, and traffic monitoring are planned; see the [roadmap](#roadmap--to-do).
+
 ## Permissions
 
 Linux controls access to serial devices through file permissions and system configuration. When the selected port cannot be opened, the UART shell reports `Permission denied`.
@@ -391,6 +426,7 @@ Log out and log back in for the group membership change to take effect. If your 
 | `src/discovery/` | Serial device discovery |
 | `src/protocol/` | Protocol interface and the table of supported protocols |
 | `src/protocol/uart/` | UART protocol: serial port access, the shell, and the shell parser |
+| `src/protocol/bluetooth/` | Bluetooth protocol: Bluetooth cards, the shell, and the shell parser |
 
 The headers in `include/` follow the same layout.
 
@@ -403,7 +439,7 @@ The current MVP is focused on project management and raw serial data reading.
 Current limitations include:
 
 - Linux is the only supported platform.
-- UART is the only supported protocol.
+- UART is the only complete protocol. Bluetooth can only list and select Bluetooth cards so far.
 - Device discovery is limited to `/dev/ttyACM*` and `/dev/ttyUSB*`.
 - Only the baud rates listed above are supported.
 - The UART shell can read from the serial port but cannot write to it.
@@ -442,6 +478,15 @@ The roadmap will evolve as the project develops and receives feedback. The items
 - [ ] Improve capture options, including saving output to files.
 - [ ] Add useful capture metadata without changing the raw data unexpectedly.
 - [ ] Evaluate support for additional serial configurations and device-specific requirements.
+
+### Bluetooth
+
+- [x] Add the Bluetooth protocol skeleton, its shell, and Bluetooth card selection.
+- [ ] Scan for devices in range and show the details of a device.
+- [ ] Pair, unpair, connect, and disconnect.
+- [ ] Manual communication: GATT read, write, and notifications for BLE; RFCOMM and L2CAP channels for classic Bluetooth.
+- [ ] Monitor the traffic between the operating system and the Bluetooth card, with capture files for Wireshark.
+- [ ] Detect diagnostic devices such as Ubertooth One and use them to observe the traffic between other devices.
 
 ### Tool integration
 
