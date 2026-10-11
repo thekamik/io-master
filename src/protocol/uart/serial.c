@@ -1,3 +1,7 @@
+/*
+ * Low-level access to a serial port, built on POSIX termios.
+ */
+
 #include "protocol/uart/serial.h"
 
 #include <errno.h>
@@ -7,6 +11,10 @@
 #include <termios.h>
 #include <unistd.h>
 
+/*
+ * Converts a numeric baud rate to the termios constant.
+ * Only the rates listed here are supported.
+ */
 static int baudrate_to_speed(int baudrate, speed_t *speed)
 {
     switch (baudrate) {
@@ -35,6 +43,11 @@ static int baudrate_to_speed(int baudrate, speed_t *speed)
     }
 }
 
+/*
+ * Applies the serial configuration (baud rate, data bits, parity,
+ * stop bits) to an open port and switches it to raw mode with
+ * non-blocking reads.
+ */
 static int configure_terminal(
     int fd,
     const serial_config_t *config
@@ -232,6 +245,9 @@ int serial_start_connection(
     return 0;
 }
 
+/*
+ * Thin wrapper around read() that validates its arguments.
+ */
 ssize_t serial_read(
     serial_port_t *port,
     void *buffer,
@@ -251,6 +267,9 @@ ssize_t serial_read(
     return read(port->fd, buffer, size);
 }
 
+/*
+ * Thin wrapper around write() that validates its arguments.
+ */
 ssize_t serial_write(
     serial_port_t *port,
     const void *buffer,

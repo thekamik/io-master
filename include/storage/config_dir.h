@@ -1,3 +1,8 @@
+/*
+ * Location of the im_config directory, where all configuration
+ * files of the program are stored.
+ */
+
 #ifndef CONFIG_DIR_H
 #define CONFIG_DIR_H
 

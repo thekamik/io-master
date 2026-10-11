@@ -1,3 +1,28 @@
+/*
+ * Project management: the project list, the selection and the
+ * paths of the project settings files.
+ *
+ * Format of im_config/project_config.json:
+ *
+ *     {
+ *         "projects": [
+ *             {
+ *                 "project_id": 1,
+ *                 "project_name": "Arduino logger",
+ *                 "project_protocol": "uart",
+ *                 "project_active": true
+ *             }
+ *         ],
+ *         "selected_project_id": 1
+ *     }
+ *
+ * "selected_project_id" is absent when no project is selected.
+ *
+ * Every public function loads the file, works on the document
+ * in memory and, when it changes something, writes the whole
+ * document back.
+ */
+
 #include "project/project.h"
 
 #include "storage/config_dir.h"
@@ -9,6 +34,9 @@
 #include <string.h>
 #include <unistd.h>
 
+/*
+ * Keys used in project_config.json.
+ */
 #define KEY_SELECTED_PROJECT_ID "selected_project_id"
 #define KEY_PROJECTS "projects"
 #define KEY_PROJECT_ID "project_id"
@@ -235,6 +263,9 @@ int project_add(
         return -1;
     }
 
+    /*
+     * Make sure im_config exists, then load the current list.
+     */
     if (config_create_directory(NULL) != 0 ||
         load_document(path, sizeof(path), &root, &projects) != 0) {
         return -1;
@@ -282,6 +313,9 @@ int project_add(
         return fail(root, EINVAL);
     }
 
+    /*
+     * Append the project and write the whole document back.
+     */
     if (json_array_append_new(projects, entry) != 0) {
         return fail(root, ENOMEM);
     }
@@ -292,6 +326,9 @@ int project_add(
 
     json_decref(root);
 
+    /*
+     * Report the stored data back to the caller.
+     */
     if (project != NULL) {
         memset(project, 0, sizeof(*project));
 
@@ -340,6 +377,10 @@ int project_get_all(
         return -1;
     }
 
+    /*
+     * The caller provides the buffer, so a list that does not
+     * fit is refused instead of being cut.
+     */
     size_t count = json_array_size(array);
 
     if (count > max_projects) {
@@ -407,6 +448,10 @@ int project_set_active(
         return -1;
     }
 
+    /*
+     * Find the JSON object of the project. Its flag is changed
+     * below and the whole document is written back.
+     */
     if (find_project(path, array, id, &entry, &project) != 0) {
         return fail(root, errno);
     }
@@ -454,6 +499,9 @@ int project_select(int id)
         return -1;
     }
 
+    /*
+     * The project has to exist and be active.
+     */
     if (find_project(path, array, id, &entry, &project) != 0) {
         return fail(root, errno);
     }
@@ -494,6 +542,10 @@ int project_get_selected(project_info_t *project)
         return -1;
     }
 
+    /*
+     * A missing or malformed selection means that no project
+     * is selected.
+     */
     const json_t *selected = json_object_get(
         root,
         KEY_SELECTED_PROJECT_ID
@@ -505,6 +557,10 @@ int project_get_selected(project_info_t *project)
         return fail(root, ENOENT);
     }
 
+    /*
+     * The selection may point to a project that is no longer
+     * in the file. That is reported as ENOENT as well.
+     */
     if (find_project(
             path,
             array,
@@ -525,6 +581,10 @@ int project_get_settings_path(
     size_t size
 )
 {
+    /*
+     * The settings file is named after the project id:
+     * projects/<id>.json
+     */
     char relative_path[64];
 
     snprintf(

@@ -1,3 +1,11 @@
+/*
+ * Implementations of the commands selected on the command line.
+ *
+ * This file connects the modules: it calls the project module,
+ * the protocol registry and device discovery, and prints the
+ * results and the error messages for the user.
+ */
+
 #include "cli/commands.h"
 
 #include "project/project.h"
@@ -50,6 +58,11 @@ static int check_project_data(const project_info_t *project)
     return -1;
 }
 
+/*
+ * --scan [--type TYPE]
+ *
+ * Prints the table of serial devices.
+ */
 int command_scan(device_type_t device_type)
 {
     printf("Scanning for serial devices...\n\n");
@@ -62,6 +75,12 @@ int command_scan(device_type_t device_type)
     return 0;
 }
 
+/*
+ * --display STATUS
+ *
+ * Prints the table of projects that match the filter.
+ * The selected project is marked with '*'.
+ */
 int command_project_list(
     const char *program_name,
     project_filter_t filter
@@ -73,6 +92,9 @@ int command_project_list(
     size_t listed = 0;
     int selected_id = 0;
 
+    /*
+     * Read every project. Filtering happens while printing.
+     */
     if (project_get_all(
             projects,
             MAX_PROJECTS,
@@ -83,6 +105,10 @@ int command_project_list(
         return 1;
     }
 
+    /*
+     * A selected project is optional. Without one selected_id
+     * stays 0, which never matches a real id (ids start at 1).
+     */
     if (project_get_selected(&selected) == 0) {
         selected_id = selected.id;
     }
@@ -96,6 +122,9 @@ int command_project_list(
             continue;
         }
 
+        /*
+         * Print the table header once, before the first row.
+         */
         if (listed == 0) {
             printf(
                 "  %-5s %-30s %-12s %-10s\n",
@@ -136,6 +165,9 @@ int command_project_list(
         check_project_data(&projects[i]);
     }
 
+    /*
+     * Explain an empty table instead of printing nothing.
+     */
     if (listed == 0 && filter == PROJECT_FILTER_INACTIVE) {
         printf("No inactive projects.\n");
     } else if (listed == 0) {
@@ -149,6 +181,12 @@ int command_project_list(
     return 0;
 }
 
+/*
+ * project add NAME --protocol PROTOCOL
+ *
+ * Adds the project to the project list and lets its protocol
+ * create the settings file.
+ */
 int command_project_add(
     const char *program_name,
     const char *name,
@@ -157,6 +195,9 @@ int command_project_add(
 {
     project_info_t project;
 
+    /*
+     * The protocol has to be registered in protocol/protocol.c.
+     */
     const protocol_t *protocol = protocol_find(protocol_name);
 
     if (protocol == NULL) {
@@ -175,6 +216,10 @@ int command_project_add(
         return 1;
     }
 
+    /*
+     * Store the canonical protocol name from the registry,
+     * not the spelling typed by the user.
+     */
     if (project_add(name, protocol->name, &project) != 0) {
 
         if (errno == EINVAL) {
@@ -198,6 +243,9 @@ int command_project_add(
         project.protocol
     );
 
+    /*
+     * Let the protocol create the settings file of the project.
+     */
     if (protocol->init != NULL && protocol->init(&project) != 0) {
         return 1;
     }
@@ -211,6 +259,12 @@ int command_project_add(
     return 0;
 }
 
+/*
+ * project select ID
+ *
+ * Remembers the project used by "run". Only an existing, active
+ * and undamaged project can be selected.
+ */
 int command_project_select(int id)
 {
     project_info_t project;
@@ -248,6 +302,11 @@ int command_project_select(int id)
     return 0;
 }
 
+/*
+ * project remove ID
+ *
+ * Marks the project as inactive. Nothing is deleted from disk.
+ */
 int command_project_remove(int id)
 {
     project_info_t project;
@@ -276,6 +335,12 @@ int command_project_remove(int id)
     return 0;
 }
 
+/*
+ * run
+ * run --help
+ *
+ * Starts the selected project, or prints the help of its protocol.
+ */
 int command_run(const char *program_name, bool show_help)
 {
     project_info_t project;
@@ -296,6 +361,9 @@ int command_run(const char *program_name, bool show_help)
         return 1;
     }
 
+    /*
+     * The protocol stored in the project decides what "run" does.
+     */
     const protocol_t *protocol = protocol_find(project.protocol);
 
     if (protocol == NULL) {
@@ -308,6 +376,10 @@ int command_run(const char *program_name, bool show_help)
         return 1;
     }
 
+    /*
+     * Help does not need the settings file, so it also works
+     * for a damaged project.
+     */
     if (show_help) {
         protocol->print_help(program_name, &project);
         return 0;

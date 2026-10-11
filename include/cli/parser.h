@@ -1,25 +1,43 @@
+/*
+ * Command-line parser for device discovery and project management.
+ *
+ * The interactive UART shell has its own, independent parser
+ * in protocol/uart/uart_parser.h.
+ */
+
 #ifndef PARSER_H
 #define PARSER_H
 
 #include "discovery/devices.h"
 
+/*
+ * Commands of the program and the command line that selects them.
+ */
 typedef enum {
-    COMMAND_HELP,
-    COMMAND_SCAN,
-    COMMAND_PROJECT_LIST,
-    COMMAND_PROJECT_ADD,
-    COMMAND_PROJECT_SELECT,
-    COMMAND_PROJECT_REMOVE,
-    COMMAND_RUN,
-    COMMAND_RUN_HELP
+    COMMAND_HELP,            /* --help */
+    COMMAND_SCAN,            /* --scan [--type TYPE] */
+    COMMAND_PROJECT_LIST,    /* --display STATUS */
+    COMMAND_PROJECT_ADD,     /* project add NAME --protocol PROTOCOL */
+    COMMAND_PROJECT_SELECT,  /* project select ID */
+    COMMAND_PROJECT_REMOVE,  /* project remove ID */
+    COMMAND_RUN,             /* run */
+    COMMAND_RUN_HELP         /* run --help */
 } command_type_t;
 
+/*
+ * Which projects the project table shows.
+ */
 typedef enum {
     PROJECT_FILTER_ACTIVE,
     PROJECT_FILTER_INACTIVE,
     PROJECT_FILTER_ALL
 } project_filter_t;
 
+/*
+ * Result of parsing: the command and the values it needs.
+ *
+ * Only the fields that belong to the given type are meaningful.
+ */
 typedef struct {
     command_type_t type;
 

@@ -1,3 +1,21 @@
+/*
+ * UART protocol.
+ *
+ * The file is organized in this order:
+ *
+ *     settings      default values, loading and validation of
+ *                   im_config/projects/<id>.json
+ *     shell state   uart_shell_t and helpers that change it
+ *     protocol_t    uart_init(), uart_print_help()
+ *     commands      read_until_interrupted(), connect_port() and
+ *                   one shell_*() function per shell command
+ *     shell loop    run_shell(): reads a line, parses it with
+ *                   uart_parser.c and executes the command
+ *     entry point   uart_run() and the uart_protocol structure
+ *
+ * Low-level access to the serial port is in serial.c.
+ */
+
 #include "protocol/uart/uart.h"
 
 #include "discovery/devices.h"
@@ -17,12 +35,19 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+/*
+ * Keys used in the settings file of a UART project
+ * (im_config/projects/<id>.json).
+ */
 #define KEY_DEVICE "device"
 #define KEY_BAUDRATE "baudrate"
 #define KEY_DATA_BITS "data_bits"
 #define KEY_PARITY "parity"
 #define KEY_STOP_BITS "stop_bits"
 
+/*
+ * Interactive shell.
+ */
 #define SHELL_PROMPT "uart> "
 #define SHELL_LINE_MAX 256
 
@@ -34,11 +59,18 @@
  */
 static volatile sig_atomic_t interrupted = 0;
 
+/*
+ * SIGINT handler. It only sets the flag; the loops that can be
+ * interrupted check it.
+ */
 static void handle_signal(int signal) {
     (void)signal; // Unused parameter
     interrupted = 1;
 }
 
+/*
+ * Converts the "parity" setting to parity_t.
+ */
 static int parse_parity(const char *str, parity_t *parity)
 {
     if (strcmp(str, "none") == 0) {
@@ -147,12 +179,20 @@ static int load_settings(const char *path, serial_config_t *config)
         return -1;
     }
 
+    /*
+     * Fetch every setting. A missing key yields NULL, which
+     * fails the type checks below.
+     */
     const json_t *device = json_object_get(root, KEY_DEVICE);
     const json_t *baudrate = json_object_get(root, KEY_BAUDRATE);
     const json_t *data_bits = json_object_get(root, KEY_DATA_BITS);
     const json_t *parity = json_object_get(root, KEY_PARITY);
     const json_t *stop_bits = json_object_get(root, KEY_STOP_BITS);
 
+    /*
+     * Validate the settings one by one and remember the
+     * first problem.
+     */
     const char *problem = NULL;
 
     memset(config, 0, sizeof(*config));
@@ -202,6 +242,9 @@ static int load_settings(const char *path, serial_config_t *config)
         json_string_value(device)
     );
 
+    /*
+     * The ranges were checked above, so the casts are safe.
+     */
     config->baudrate = (int)json_integer_value(baudrate);
     config->data_bits = (int)json_integer_value(data_bits);
     config->stop_bits = (int)json_integer_value(stop_bits);
@@ -295,6 +338,12 @@ static int check_device(const char *device)
     return 0;
 }
 
+/*
+ * protocol_t.init
+ *
+ * Called once when a UART project is added. Creates the settings
+ * file with default values.
+ */
 static int uart_init(const project_info_t *project)
 {
     char path[PATH_MAX];
@@ -308,6 +357,11 @@ static int uart_init(const project_info_t *project)
     return 0;
 }
 
+/*
+ * protocol_t.print_help
+ *
+ * Printed by "run --help" for a UART project.
+ */
 static void uart_print_help(
     const char *program_name,
     const project_info_t *project
@@ -379,6 +433,9 @@ static int read_until_interrupted(serial_port_t *port)
         return -1;
     }
 
+    /*
+     * Forget a Ctrl+C that was pressed before this read started.
+     */
     interrupted = 0;
 
     printf(
@@ -391,6 +448,10 @@ static int read_until_interrupted(serial_port_t *port)
         FD_ZERO(&read_fds);
         FD_SET(port->fd, &read_fds);
 
+        /*
+         * Wait until the port has data or a signal arrives.
+         * SIGINT is unblocked only while pselect() waits.
+         */
         int result = pselect(
             port->fd + 1,
             &read_fds,
@@ -437,6 +498,10 @@ static int read_until_interrupted(serial_port_t *port)
         }
     }
 
+    /*
+     * Restore the signal mask, so that Ctrl+C works at the
+     * prompt again.
+     */
     sigprocmask(SIG_SETMASK, &original_mask, NULL);
 
     if (status == 0) {
@@ -509,11 +574,18 @@ static void shell_select(uart_shell_t *shell, const char *device)
         return;
     }
 
+    /*
+     * Validate and store the new port before touching the current
+     * connection, so a mistyped path keeps the old connection.
+     */
     if (check_device(device) != 0 ||
         save_device(shell->settings_path, device) != 0) {
         return;
     }
 
+    /*
+     * Close the connection to the previously selected port.
+     */
     if (is_connected(shell) &&
         serial_end_connection(&shell->port) != 0) {
         perror("serial_end_connection");
@@ -557,6 +629,9 @@ static void shell_permission(uart_shell_t *shell)
         return;
     }
 
+    /*
+     * Nothing to change when the port is already accessible.
+     */
     if (access(device, R_OK | W_OK) == 0) {
         printf("You already have access to %s\n", device);
 
@@ -574,6 +649,9 @@ static void shell_permission(uart_shell_t *shell)
     );
     fflush(stdout);
 
+    /*
+     * Run sudo as a child process that shares our terminal.
+     */
     pid_t child = fork();
 
     if (child < 0) {
@@ -602,6 +680,10 @@ static void shell_permission(uart_shell_t *shell)
         _exit(127);
     }
 
+    /*
+     * Wait for sudo to finish. A signal such as Ctrl+C can
+     * interrupt the wait; in that case wait again.
+     */
     int status = 0;
 
     while (waitpid(child, &status, 0) < 0) {
@@ -612,6 +694,10 @@ static void shell_permission(uart_shell_t *shell)
         }
     }
 
+    /*
+     * A non-zero exit status means a wrong password, a cancelled
+     * prompt or a failed chmod.
+     */
     if (!WIFEXITED(status) || WEXITSTATUS(status) != 0) {
         fprintf(stderr, "\nThe permission was not changed\n");
         return;
@@ -638,6 +724,10 @@ static void shell_read(uart_shell_t *shell)
         return;
     }
 
+    /*
+     * Connect on demand, for example when access to the port
+     * was granted outside of the shell.
+     */
     if (!is_connected(shell) && connect_port(shell) != 0) {
         return;
     }
@@ -659,6 +749,9 @@ static void run_shell(uart_shell_t *shell)
     for (;;) {
         uart_command_t command;
 
+        /*
+         * Show the prompt and wait for one line.
+         */
         printf(SHELL_PROMPT);
         fflush(stdout);
 
@@ -698,10 +791,17 @@ static void run_shell(uart_shell_t *shell)
             continue;
         }
 
+        /*
+         * Turn the line into a command. Errors were already
+         * reported by the parser, so just show the prompt again.
+         */
         if (uart_parse_line(line, &command) != 0) {
             continue;
         }
 
+        /*
+         * Execute the command.
+         */
         switch (command.type) {
 
         case UART_COMMAND_EMPTY:
@@ -733,12 +833,22 @@ static void run_shell(uart_shell_t *shell)
     }
 }
 
+/*
+ * protocol_t.run
+ *
+ * Called by the "run" command for a UART project. Loads the
+ * settings, runs the shell and closes the connection when the
+ * shell ends.
+ */
 static int uart_run(const project_info_t *project)
 {
     uart_shell_t shell;
 
     memset(&shell, 0, sizeof(shell));
 
+    /*
+     * -1 marks the port as not connected.
+     */
     shell.port.fd = -1;
 
     if (project_get_settings_path(
@@ -783,6 +893,9 @@ static int uart_run(const project_info_t *project)
         connect_port(&shell);
     }
 
+    /*
+     * Hand control to the shell until "exit".
+     */
     run_shell(&shell);
 
     if (is_connected(&shell)) {
@@ -797,6 +910,10 @@ static int uart_run(const project_info_t *project)
     return 0;
 }
 
+/*
+ * Registration of the UART protocol. The table
+ * in protocol/protocol.c refers to this structure.
+ */
 const protocol_t uart_protocol = {
     .name = "uart",
     .description = "Serial port (UART) reader",

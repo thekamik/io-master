@@ -1,3 +1,10 @@
+/*
+ * Entry point of io-master.
+ *
+ * main() only parses the command line and dispatches the command.
+ * The commands themselves are implemented in cli/commands.c.
+ */
+
 #include "cli/commands.h"
 #include "cli/parser.h"
 #include "project/project.h"
@@ -7,6 +14,10 @@
 int main(int argc, char *argv[]) {
     command_t command;
 
+    /*
+     * Translate the command line into a command_t.
+     * On error parse_args() has already printed what is wrong.
+     */
     if (parse_args(argc, argv, &command) != 0) {
         fprintf(stderr, "Try '%s --help' for more information\n", argv[0]);
         return 1;
@@ -23,6 +34,10 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    /*
+     * Run the requested command. Every handler returns the exit
+     * code of the program.
+     */
     switch (command.type) {
 
     case COMMAND_HELP:

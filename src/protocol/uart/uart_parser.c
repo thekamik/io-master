@@ -1,3 +1,11 @@
+/*
+ * Parser of the interactive UART shell.
+ *
+ * Turns one typed line into a uart_command_t. The commands are
+ * described by the shell_commands table; the shell itself, which
+ * executes them, is in uart.c.
+ */
+
 #include "protocol/uart/uart_parser.h"
 
 #include <stdio.h>
@@ -70,6 +78,10 @@ void uart_print_shell_help(void)
     printf("Commands:\n");
 
     for (size_t i = 0; i < shell_command_count; i++) {
+        /*
+         * First column: the command name followed by the name
+         * of its argument, for example "select PORT".
+         */
         char usage[32];
 
         snprintf(
@@ -103,12 +115,19 @@ int uart_parse_line(char *line, uart_command_t *command)
     command->type = UART_COMMAND_EMPTY;
     command->argument = NULL;
 
+    /*
+     * The first word is the command name. A line without words
+     * is an empty command.
+     */
     const char *name = strtok_r(line, TOKEN_DELIMITERS, &state);
 
     if (name == NULL) {
         return 0;
     }
 
+    /*
+     * Look the name up in the command table.
+     */
     for (size_t i = 0; i < shell_command_count; i++) {
 
         if (strcmp(name, shell_commands[i].name) != 0) {
@@ -123,6 +142,10 @@ int uart_parse_line(char *line, uart_command_t *command)
             &state
         );
 
+        /*
+         * Check the argument against what the command expects:
+         * no argument at all, or exactly one.
+         */
         if (argument_name == NULL && argument != NULL) {
             fprintf(
                 stderr,

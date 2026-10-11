@@ -1,3 +1,11 @@
+/*
+ * Location of the im_config directory.
+ *
+ * The directory is placed next to the executable. Its path is
+ * resolved from /proc/self/exe, so the program finds the same
+ * configuration regardless of the current working directory.
+ */
+
 #include "storage/config_dir.h"
 
 #include <errno.h>
@@ -89,6 +97,9 @@ int config_create_directory(const char *subdirectory)
         return -1;
     }
 
+    /*
+     * Only the top-level directory was requested.
+     */
     if (subdirectory == NULL) {
         return 0;
     }

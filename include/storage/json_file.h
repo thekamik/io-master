@@ -1,3 +1,10 @@
+/*
+ * Reading and writing JSON files.
+ *
+ * Wraps the Jansson library. The callers work with json_t
+ * documents directly, using the Jansson API.
+ */
+
 #ifndef JSON_FILE_H
 #define JSON_FILE_H
 

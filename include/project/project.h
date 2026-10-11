@@ -1,3 +1,13 @@
+/*
+ * Project management.
+ *
+ * A project has an id, a name, a protocol and an active flag.
+ * All projects are listed in im_config/project_config.json.
+ * Each project also has its own settings file,
+ * im_config/projects/<id>.json, whose content is defined
+ * by the protocol of the project.
+ */
+
 #ifndef PROJECT_H
 #define PROJECT_H
 

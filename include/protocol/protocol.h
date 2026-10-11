@@ -1,3 +1,8 @@
+/*
+ * Common interface of the protocols and access to the registry
+ * of supported protocols.
+ */
+
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 

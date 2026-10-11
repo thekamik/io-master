@@ -1,3 +1,8 @@
+/*
+ * Low-level access to a serial port: open and configure,
+ * read, write and close.
+ */
+
 #ifndef SERIAL_H
 #define SERIAL_H
 
@@ -12,25 +17,33 @@ typedef enum {
     PARITY_ODD
 } parity_t;
 
+/*
+ * Configuration of a serial port.
+ */
 typedef struct {
-    char device[SERIAL_DEVICE_MAX];
-    int baudrate;
-    int data_bits;
+    char device[SERIAL_DEVICE_MAX];  /* for example /dev/ttyACM0 */
+    int baudrate;                    /* for example 9600 */
+    int data_bits;                   /* 5, 6, 7 or 8 */
     parity_t parity;
-    int stop_bits;
+    int stop_bits;                   /* 1 or 2 */
 } serial_config_t;
 
+/*
+ * An open serial port.
+ *
+ * fd is -1 when the port is not open.
+ */
 typedef struct {
     int fd;
     serial_config_t config;
 } serial_port_t;
 
 /*
- * Otwiera port i konfiguruje go zgodnie z config.
+ * Opens the port and configures it according to config.
  *
- * Zwraca:
- *   0  - sukces
- *  -1  - błąd
+ * Returns:
+ *   0  - success
+ *  -1  - error (errno is set)
  */
 int serial_start_connection(
     serial_port_t *port,
@@ -38,12 +51,12 @@ int serial_start_connection(
 );
 
 /*
- * Odczytuje maksymalnie size bajtów.
+ * Reads at most size bytes. Does not wait for data.
  *
- * Zwraca:
- *   >0 - liczba odczytanych bajtów
- *    0 - brak danych / koniec zgodnie z konfiguracją
- *   -1 - błąd
+ * Returns:
+ *   >0 - number of bytes read
+ *    0 - no data
+ *   -1 - error (errno is set)
  */
 ssize_t serial_read(
     serial_port_t *port,
@@ -52,11 +65,11 @@ ssize_t serial_read(
 );
 
 /*
- * Zapisuje maksymalnie size bajtów.
+ * Writes at most size bytes.
  *
- * Zwraca:
- *   >=0 - liczba zapisanych bajtów
- *   -1  - błąd
+ * Returns:
+ *   >=0 - number of bytes written
+ *   -1  - error (errno is set)
  */
 ssize_t serial_write(
     serial_port_t *port,
@@ -65,11 +78,12 @@ ssize_t serial_write(
 );
 
 /*
- * Zamyka port.
+ * Closes the port. Closing a port that is not open is not
+ * an error.
  *
- * Zwraca:
- *    0 - sukces
- *   -1 - błąd
+ * Returns:
+ *    0 - success
+ *   -1 - error (errno is set)
  */
 int serial_end_connection(serial_port_t *port);
 

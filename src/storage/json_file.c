@@ -1,3 +1,7 @@
+/*
+ * Reading and writing JSON files with the Jansson library.
+ */
+
 #include "storage/json_file.h"
 
 #include <errno.h>

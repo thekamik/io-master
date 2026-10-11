@@ -1,3 +1,17 @@
+/*
+ * Command-line parser.
+ *
+ * parse_args() looks at the first argument and passes the rest
+ * to one of three parsers:
+ *
+ *     parse_global()   --help, --scan, --display
+ *     parse_project()  project add | select | remove | list
+ *     parse_run()      run [--help]
+ *
+ * All of them read options with parse_options() and then check
+ * that only the options valid for the command were used.
+ */
+
 #include "cli/parser.h"
 
 #include "protocol/protocol.h"
@@ -24,6 +38,13 @@ typedef struct {
     const char *protocol;
 } options_t;
 
+/*
+ * Converts a string to an int greater than zero. Used for
+ * project ids.
+ *
+ * Rejects empty strings, trailing characters and values that
+ * do not fit in an int.
+ */
 static int parse_positive_int(const char *str, int *value)
 {
     char *endptr;
@@ -51,6 +72,9 @@ static int parse_positive_int(const char *str, int *value)
     return 0;
 }
 
+/*
+ * Converts the argument of --display to a project filter.
+ */
 static int parse_project_filter(
     const char *str,
     project_filter_t *filter
@@ -74,6 +98,9 @@ static int parse_project_filter(
     return -1;
 }
 
+/*
+ * Converts the argument of --type to a device type.
+ */
 static int parse_device_type(
     const char *str,
     device_type_t *device_type
@@ -97,6 +124,13 @@ static int parse_device_type(
     return -1;
 }
 
+/*
+ * Prints the general help.
+ *
+ * The list of protocols comes from the protocol registry, so
+ * a new protocol appears here automatically. Help that is specific
+ * to one protocol is printed by "run --help".
+ */
 void print_usage(const char *program_name)
 {
     printf(
@@ -329,6 +363,9 @@ static int parse_global(int argc, char *argv[], command_t *command)
         return -1;
     }
 
+    /*
+     * --help wins over every other option.
+     */
     if (options.help) {
         command->type = COMMAND_HELP;
         return 0;
@@ -343,6 +380,9 @@ static int parse_global(int argc, char *argv[], command_t *command)
         return -1;
     }
 
+    /*
+     * --display STATUS: show the table of projects.
+     */
     if (options.display != NULL) {
 
         if (reject_option(
@@ -374,6 +414,10 @@ static int parse_global(int argc, char *argv[], command_t *command)
         return 0;
     }
 
+    /*
+     * Everything else has to be --scan.
+     * --type without --scan is a mistake.
+     */
     if (!options.scan) {
 
         if (options.type != NULL) {
@@ -388,6 +432,9 @@ static int parse_global(int argc, char *argv[], command_t *command)
         return -1;
     }
 
+    /*
+     * --scan, optionally narrowed by --type.
+     */
     command->type = COMMAND_SCAN;
 
     if (options.type != NULL &&
@@ -443,6 +490,12 @@ static int parse_project(int argc, char *argv[], command_t *command)
         return -1;
     }
 
+    /*
+     * project list [--all]
+     *
+     * Older spelling of --display. It is kept working, but it is
+     * not listed in the help.
+     */
     if (strcmp(name, "list") == 0) {
 
         if (reject_option(
@@ -461,6 +514,12 @@ static int parse_project(int argc, char *argv[], command_t *command)
         return 0;
     }
 
+    /*
+     * project add NAME --protocol PROTOCOL
+     *
+     * The protocol name is validated later,
+     * in command_project_add().
+     */
     if (strcmp(name, "add") == 0) {
 
         if (reject_option(
@@ -487,6 +546,12 @@ static int parse_project(int argc, char *argv[], command_t *command)
         return 0;
     }
 
+    /*
+     * project select ID
+     * project remove ID
+     *
+     * Both take exactly one project id.
+     */
     if (strcmp(name, "select") == 0 ||
         strcmp(name, "remove") == 0) {
 
@@ -568,6 +633,10 @@ int parse_args(int argc, char *argv[], command_t *command)
         return -1;
     }
 
+    /*
+     * Start from a known state, so that fields that the command
+     * line does not set have defined values.
+     */
     memset(command, 0, sizeof(*command));
 
     command->type = COMMAND_HELP;
@@ -578,6 +647,13 @@ int parse_args(int argc, char *argv[], command_t *command)
         return -1;
     }
 
+    /*
+     * The first argument decides which parser handles the rest:
+     *
+     *     an option  -> parse_global()
+     *     "project"  -> parse_project()
+     *     "run"      -> parse_run()
+     */
     if (argv[1][0] == '-') {
         return parse_global(argc, argv, command);
     }
@@ -597,10 +673,17 @@ int parse_args(int argc, char *argv[], command_t *command)
             return 0;
         }
 
+        /*
+         * Skip the program name and "project", so that the project
+         * command ("add", "select", ...) becomes argv[0].
+         */
         return parse_project(argc - 2, argv + 2, command);
     }
 
     if (strcmp(argv[1], "run") == 0) {
+        /*
+         * Skip the program name, so that "run" becomes argv[0].
+         */
         return parse_run(argc - 1, argv + 1, command);
     }
 

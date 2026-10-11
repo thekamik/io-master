@@ -1,3 +1,12 @@
+/*
+ * Discovery of serial devices.
+ *
+ * Devices are enumerated with the sd-device API of libsystemd,
+ * which reads the udev database: the "tty" subsystem is searched
+ * for /dev/ttyACM* and /dev/ttyUSB* nodes, and the vendor, model
+ * and serial number come from the udev properties of each device.
+ */
+
 #include "discovery/devices.h"
 
 #include <errno.h>
@@ -6,6 +15,13 @@
 
 #include <systemd/sd-device.h>
 
+/*
+ * Copies one udev property of a device (for example ID_VENDOR)
+ * into a fixed-size buffer.
+ *
+ * Returns 0 on success, or a negative errno-style value
+ * reported by sd-device.
+ */
 static int copy_device_property(
     sd_device *device,
     const char *property,
@@ -50,6 +66,14 @@ static int copy_device_property(
     return 0;
 }
 
+/*
+ * Checks whether a device node belongs to the requested type:
+ *
+ *     /dev/ttyACM*  USB CDC ACM devices, for example Arduino
+ *     /dev/ttyUSB*  USB-to-serial adapters
+ *
+ * Returns 1 when the device is supported and 0 otherwise.
+ */
 static int is_supported_serial_device(
     const char *devname,
     device_type_t device_type
@@ -314,6 +338,9 @@ int print_serial_devices(device_type_t device_type)
         return -1;
     }
 
+    /*
+     * Table header.
+     */
     printf(
         "%-15s %-20s %-30s %-20s\n",
         "PORT",
@@ -322,6 +349,9 @@ int print_serial_devices(device_type_t device_type)
         "SERIAL"
     );
 
+    /*
+     * Separator line. Its columns have the widths of the header.
+     */
     printf(
         "%-15s %-20s %-30s %-20s\n",
         "---------------",
@@ -330,6 +360,9 @@ int print_serial_devices(device_type_t device_type)
         "--------------------"
     );
 
+    /*
+     * One row per device.
+     */
     for (size_t i = 0; i < device_count; i++) {
         printf(
             "%-15s %-20s %-30s %-20s\n",
