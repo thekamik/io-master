@@ -4,7 +4,21 @@
 #include <stddef.h>
 #include <sys/types.h>
 
-#include "parser.h"
+#define SERIAL_DEVICE_MAX 256
+
+typedef enum {
+    PARITY_NONE,
+    PARITY_EVEN,
+    PARITY_ODD
+} parity_t;
+
+typedef struct {
+    char device[SERIAL_DEVICE_MAX];
+    int baudrate;
+    int data_bits;
+    parity_t parity;
+    int stop_bits;
+} serial_config_t;
 
 typedef struct {
     int fd;

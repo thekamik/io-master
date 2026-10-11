@@ -37,10 +37,11 @@ The current MVP provides:
 
 - **Serial device discovery** — enumerate supported serial devices and retrieve available device metadata.
 - **Device filtering** — scan supported devices or filter by device type.
-- **UART data reading** — open a selected serial port and print received bytes to standard output.
-- **Serial communication configuration** — set baud rate, data bits, parity, and stop bits through command-line options.
+- **Interactive UART shell** — open the serial port of a project and read received bytes on demand.
+- **Project management** — create, list, select, and remove projects stored in a JSON file.
+- **Serial communication configuration** — set baud rate, data bits, parity, and stop bits in the project settings file.
 - **Non-blocking serial I/O** — read available data without waiting indefinitely on an individual read operation.
-- **Graceful shutdown** — handle `Ctrl+C` and close the serial connection.
+- **Interruptible reading** — `Ctrl+C` stops reading without closing the shell.
 - **Linux-native device discovery** — use `libsystemd` and its `sd-device` API to enumerate supported devices.
 
 These features form the foundation for the broader workflow integration planned for the project.
@@ -63,7 +64,7 @@ Potential configuration capabilities include:
 
 The intended workflow is to configure an investigation once and subsequently invoke common operations with short, predictable commands.
 
-**Status:** Planned. The current implementation uses command-line options and does not yet provide a dedicated configuration file or profile system.
+**Status:** In progress. Projects and their settings are stored in JSON files. Shared defaults and command-line overrides are not yet implemented.
 
 ### 2. Integration with existing tools
 
@@ -126,12 +127,13 @@ The current implementation requires:
 - CMake 3.10 or newer.
 - `pkg-config`.
 - The `libsystemd` development package.
+- The `jansson` development package.
 
 ### Install dependencies on Debian, Ubuntu, or Parrot OS
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake pkg-config libsystemd-dev
+sudo apt install build-essential cmake pkg-config libsystemd-dev libjansson-dev
 ```
 
 ## Building
@@ -155,39 +157,38 @@ cmake -S . -B build
 cmake --build build --parallel
 ```
 
-The current build produces the `serial-reader` executable in the build directory:
+The build produces the `io-master` executable in the build directory:
 
 ```bash
-./build/serial-reader --help
+./build/io-master --help
 ```
-
-> The project has been renamed to IO Master, but the executable and command syntax may still use the original `serial-reader` name while the implementation is being updated.
 
 ## Current usage
 
-The current implementation supports two main operations:
+IO Master is organized around **projects**. A project has a name and a protocol, and its settings are stored in a JSON file instead of being passed as command-line options.
 
-- Scanning for supported serial devices.
-- Reading data from a selected serial device.
+```text
+io-master --scan [--type TYPE]
+io-master --display STATUS
+io-master project add NAME --protocol PROTOCOL
+io-master project select ID
+io-master project remove ID
+io-master run [--help]
+```
 
 ### Discover serial devices
 
 List supported devices:
 
 ```bash
-./build/serial-reader --scan
+./build/io-master --scan
 ```
 
-Filter for USB CDC ACM devices:
+Filter for USB CDC ACM devices or USB serial devices:
 
 ```bash
-./build/serial-reader --scan --type ttyACM
-```
-
-Filter for USB serial devices:
-
-```bash
-./build/serial-reader --scan --type ttyUSB
+./build/io-master --scan --type ttyACM
+./build/io-master --scan --type ttyUSB
 ```
 
 The output may include:
@@ -201,40 +202,100 @@ The output may include:
 
 Typical device paths include `/dev/ttyACM0` and `/dev/ttyUSB0`. The actual paths and metadata depend on the connected hardware and the information exposed by Linux.
 
-### Read serial data
+### Manage projects
 
-Read from a selected device using the default serial settings:
-
-```bash
-./build/serial-reader /dev/ttyUSB0
-```
-
-Read at 115200 baud:
+Create a project. The protocol must be one of the supported protocols (currently `uart`):
 
 ```bash
-./build/serial-reader /dev/ttyUSB0 --baud 115200
+./build/io-master project add "Arduino logger" --protocol uart
 ```
 
-Specify the complete serial configuration:
+Show the table of projects. `STATUS` is `active`, `inactive`, or `all`. The selected project is marked with `*`:
 
 ```bash
-./build/serial-reader /dev/ttyUSB0 \
-  --baud 9600 \
-  --data 7 \
-  --parity even \
-  --stop 1
+./build/io-master --display active
+./build/io-master --display inactive
 ```
 
-To stop reading, press `Ctrl+C`.
+Select the project used by `run`:
 
-### Supported serial parameters
+```bash
+./build/io-master project select 1
+```
 
-| Option | Description | Default |
+Remove a project:
+
+```bash
+./build/io-master project remove 1
+```
+
+Projects are never deleted. Removing a project marks it as inactive; inactive projects are shown with `--display inactive` and cannot be selected.
+
+### Run a project
+
+Start the selected project:
+
+```bash
+./build/io-master run
+```
+
+Show the help of the protocol used by the selected project:
+
+```bash
+./build/io-master run --help
+```
+
+For a UART project, `run` starts an interactive shell:
+
+```text
+uart> help
+Commands:
+  help           Show this list of commands
+  scan           List available serial devices
+  select PORT    Select the serial port, for example /dev/ttyACM0
+  permission     Get access to the selected port (asks for sudo password)
+  read           Read from the serial port until Ctrl+C is pressed
+  exit           Leave the shell and close the program
+```
+
+When the project has no serial port yet, the shell lists the available devices at startup. `select PORT` stores the port in the project settings and connects to it.
+
+`permission` runs `sudo chmod a+rw` on the selected port, so `sudo` asks for your password in the same terminal. The permission lasts until the device is reconnected; see [Permissions](#permissions) for the permanent solution.
+
+`Ctrl+C` stops reading and returns to the prompt; it does not close the shell. Use `exit` (or `Ctrl+D`) to close the program.
+
+### Configuration files
+
+Configuration is stored in the `im_config` directory next to the executable. The directory, the project list, and the `projects` subdirectory are created automatically when the program starts and they do not exist yet:
+
+| File | Content |
+|---|---|
+| `im_config/project_config.json` | List of projects and the selected project |
+| `im_config/projects/<id>.json` | Settings of one project; the content depends on its protocol |
+
+A project that is listed in `project_config.json` but has no settings file is reported as damaged. It cannot be selected or run until the file is restored.
+
+### UART project settings
+
+A new UART project receives a settings file with default values:
+
+```json
+{
+    "device": "",
+    "baudrate": 9600,
+    "data_bits": 8,
+    "parity": "none",
+    "stop_bits": 1
+}
+```
+
+| Setting | Description | Default |
 |---|---|---|
-| `--baud RATE` | Baud rate | `9600` |
-| `--data BITS` | Data bits: `5`, `6`, `7`, or `8` | `8` |
-| `--parity TYPE` | Parity: `none`, `even`, or `odd` | `none` |
-| `--stop BITS` | Stop bits: `1` or `2` | `1` |
+| `device` | Serial device path, set by `select PORT` in the shell | empty |
+| `baudrate` | Baud rate | `9600` |
+| `data_bits` | Data bits: `5`, `6`, `7`, or `8` | `8` |
+| `parity` | Parity: `"none"`, `"even"`, or `"odd"` | `"none"` |
+| `stop_bits` | Stop bits: `1` or `2` | `1` |
 
 The currently supported baud rates are `9600`, `19200`, `38400`, `57600`, and `115200`.
 
@@ -270,7 +331,8 @@ Current limitations include:
 - Only the baud rates listed above are supported.
 - Received data is written as raw bytes to standard output.
 - There is no built-in protocol decoding or message framing.
-- There is no persistent configuration file or profile management.
+- UART is the only supported protocol.
+- Apart from the serial port, project settings are changed by editing the JSON files.
 - There is no unified session manager or cross-interface event timeline.
 - JTAG/SWD, Modbus, and external-tool orchestration are not yet implemented.
 - There is no graphical user interface.

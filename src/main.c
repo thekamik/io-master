@@ -1,156 +1,59 @@
-#define _POSIX_C_SOURCE 200809L
+#include "cli/commands.h"
+#include "cli/parser.h"
+#include "project/project.h"
 
-#include "parser.h"
-#include "serial.h"
-#include "devices.h"
-
-#include <errno.h>
-#include <signal.h>
 #include <stdio.h>
-#include <sys/select.h>
-#include <unistd.h>
-
-static volatile sig_atomic_t running = 1;
-
-static void handle_signal(int signal) {
-    (void)signal; // Unused parameter
-    running = 0;
-}
 
 int main(int argc, char *argv[]) {
-    serial_config_t config;
+    command_t command;
 
-    if (parse_args(argc, argv, &config) != 0) {
+    if (parse_args(argc, argv, &command) != 0) {
+        fprintf(stderr, "Try '%s --help' for more information\n", argv[0]);
         return 1;
     }
 
     /*
-    printf("Device:    %s\n", config.device);
-    printf("Baud rate: %d\n", config.baudrate);
-    printf("Data bits: %d\n", config.data_bits);
-    printf("Parity:    %d\n", config.parity);
-    printf("Stop bits: %d\n", config.stop_bits);
-    */
+     * Make sure the configuration directory and the project
+     * file exist before any command uses them.
+     */
+    if (command.type != COMMAND_HELP &&
+        project_initialize_storage() != 0) {
 
-    if (config.mode == MODE_SCAN) {
-        serial_device_info_t devices[MAX_SERIAL_DEVICES];
-        size_t device_count = 0;
+        perror("project_initialize_storage");
+        return 1;
+    }
 
-        printf("Scanning for serial devices...\n\n");
+    switch (command.type) {
 
-        if (find_serial_devices(
-                config.device_type,
-                devices,
-                MAX_SERIAL_DEVICES,
-                &device_count
-            ) != 0) {
+    case COMMAND_HELP:
+        print_usage(argv[0]);
+        return 0;
 
-            perror("find_serial_devices");
-            return 1;
-        }
+    case COMMAND_SCAN:
+        return command_scan(command.device_type);
 
-        printf(
-            "%-15s %-20s %-30s %-20s\n",
-            "PORT",
-            "PRODUCENT",
-            "MODEL",
-            "SERIAL"
+    case COMMAND_PROJECT_LIST:
+        return command_project_list(argv[0], command.project_filter);
+
+    case COMMAND_PROJECT_ADD:
+        return command_project_add(
+            argv[0],
+            command.project_name,
+            command.protocol_name
         );
 
-        printf(
-            "%-15s %-20s %-30s %-20s\n",
-            "---------------",
-            "--------------------",
-            "------------------------------",
-            "--------------------"
-        );
+    case COMMAND_PROJECT_SELECT:
+        return command_project_select(command.project_id);
 
-        for (size_t i = 0; i < device_count; i++) {
-            printf(
-                "%-15s %-20s %-30s %-20s\n",
-                devices[i].port,
-                devices[i].vendor,
-                devices[i].model,
-                devices[i].serial
-            );
-        }
-        
+    case COMMAND_PROJECT_REMOVE:
+        return command_project_remove(command.project_id);
+
+    case COMMAND_RUN:
+        return command_run(argv[0], false);
+
+    case COMMAND_RUN_HELP:
+        return command_run(argv[0], true);
     }
-    else {
-        serial_port_t port;
 
-        if (serial_start_connection(&port, &config) != 0) {
-            perror("serial_start_connection");
-            return 1;
-        }
-
-        printf("Connected to %s\n", config.device);
-
-        /*
-        * Handle Ctrl+C (SIGINT).
-        */
-        struct sigaction sa = {0};
-
-        sa.sa_handler = handle_signal;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = 0;
-
-        if (sigaction(SIGINT, &sa, NULL) != 0) {
-            perror("sigaction");
-            serial_end_connection(&port);
-            return 1;
-        }
-
-        char buffer[256];
-
-        while (running) {
-            fd_set read_fds;
-            FD_ZERO(&read_fds);
-            FD_SET(port.fd, &read_fds);
-
-            int result = select(
-                port.fd + 1, 
-                &read_fds, 
-                NULL, 
-                NULL, 
-                NULL
-            );
-
-            if (result < 0) {
-                if (errno == EINTR) {
-                    // Interrupted by signal, continue
-                    continue;
-                }
-                perror("select");
-                break;
-            }
-
-            if (FD_ISSET(port.fd, &read_fds)) {
-                ssize_t bytes_read = serial_read(
-                    &port, 
-                    buffer, 
-                    sizeof(buffer)
-                );
-
-                if (bytes_read > 0) {
-                    fwrite(buffer, 1, bytes_read, stdout);
-                    fflush(stdout);
-                } else if (bytes_read < 0 &&
-                        errno != EAGAIN && 
-                        errno != EWOULDBLOCK) {
-                    perror("serial_read");
-                    break;
-                }
-            }
-        }
-
-        printf("\nClosing connection...\n");
-
-        if (serial_end_connection(&port) != 0) {
-            perror("serial_end_connection");
-            return 1;
-        }
-
-    }
-    return 0;
+    return 1;
 }

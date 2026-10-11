@@ -1,4 +1,4 @@
-#include "devices.h"
+#include "discovery/devices.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -296,6 +296,49 @@ int find_serial_devices(
      * Release enumerator.
      */
     sd_device_enumerator_unref(enumerator);
+
+    return 0;
+}
+
+int print_serial_devices(device_type_t device_type)
+{
+    serial_device_info_t devices[MAX_SERIAL_DEVICES];
+    size_t device_count = 0;
+
+    if (find_serial_devices(
+            device_type,
+            devices,
+            MAX_SERIAL_DEVICES,
+            &device_count
+        ) != 0) {
+        return -1;
+    }
+
+    printf(
+        "%-15s %-20s %-30s %-20s\n",
+        "PORT",
+        "PRODUCENT",
+        "MODEL",
+        "SERIAL"
+    );
+
+    printf(
+        "%-15s %-20s %-30s %-20s\n",
+        "---------------",
+        "--------------------",
+        "------------------------------",
+        "--------------------"
+    );
+
+    for (size_t i = 0; i < device_count; i++) {
+        printf(
+            "%-15s %-20s %-30s %-20s\n",
+            devices[i].port,
+            devices[i].vendor,
+            devices[i].model,
+            devices[i].serial
+        );
+    }
 
     return 0;
 }

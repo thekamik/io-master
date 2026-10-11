@@ -1,4 +1,4 @@
-#include "serial.h"
+#include "protocol/uart/serial.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -49,6 +49,7 @@ static int configure_terminal(
             "Unsupported baud rate: %d\n",
             config->baudrate
         );
+        errno = EINVAL;
         return -1;
     }
 
