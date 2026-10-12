@@ -404,7 +404,7 @@ Connected to 2: AA:BB:CC:00:00:02 (Sensor)
 - The system forgets devices found by a scan after about half a minute, unless they are connected or paired. Run `scan` shortly before `connect` or `pair`.
 - `Ctrl+C` cancels a running connection or pairing attempt.
 - A connection made in the shell is closed when the shell exits. Devices that were already connected are left alone.
-- `pair` works for devices that need no code. Devices that ask for a PIN or a passkey are not supported yet, unless the desktop environment shows its own pairing dialog.
+- `pair` pairs a device that needs no code right away. When the device requires a PIN or a passkey, the shell asks for it; when both sides show a number, the shell asks to confirm that they match.
 - `unpair` makes the system forget the device completely, which also disconnects it.
 
 Cards and devices are read from BlueZ over D-Bus, so the `bluetooth` system service has to be running.
@@ -423,7 +423,7 @@ A new Bluetooth project receives this settings file:
 | `adapter` | Bluetooth card, set by `select CARD` in the shell |
 | `device` | Address of the target device, set by `connect` and `pair` in the shell |
 
-Device details, pairing with a code, manual communication, and traffic monitoring are planned; see the [roadmap](#roadmap--to-do).
+Device details, manual communication, and traffic monitoring are planned; see the [roadmap](#roadmap--to-do).
 
 ## Permissions
 
@@ -525,7 +525,7 @@ The roadmap will evolve as the project develops and receives feedback. The items
 - [x] Scan for devices in range, shown in a live table, with device IDs that stay fixed for the session.
 - [ ] Show the services and manufacturer data of a device.
 - [x] Pair, unpair, connect, and disconnect.
-- [ ] Pair with devices that require a PIN or a passkey.
+- [x] Pair with devices that require a PIN or a passkey.
 - [ ] Manual communication: GATT read, write, and notifications for BLE; RFCOMM and L2CAP channels for classic Bluetooth.
 - [ ] Monitor the traffic between the operating system and the Bluetooth card, with capture files for Wireshark.
 - [ ] Detect diagnostic devices such as Ubertooth One and use them to observe the traffic between other devices.

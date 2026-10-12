@@ -137,6 +137,64 @@ int bluez_device_path(
     return 0;
 }
 
+int bluez_address_from_path(
+    const char *path,
+    char *buffer,
+    size_t size
+)
+{
+    /*
+     * "AA_BB_CC_DD_EE_FF" has 17 characters.
+     */
+    enum { ADDRESS_LENGTH = 17 };
+
+    static const char marker[] = "/dev_";
+
+    if (path == NULL || buffer == NULL || size < ADDRESS_LENGTH + 1) {
+        return -EINVAL;
+    }
+
+    /*
+     * The address is the last element of the path, after "dev_".
+     */
+    const char *element = strrchr(path, '/');
+
+    if (element == NULL ||
+        strncmp(element, marker, strlen(marker)) != 0) {
+        return -EINVAL;
+    }
+
+    element += strlen(marker);
+
+    if (strlen(element) != ADDRESS_LENGTH) {
+        return -EINVAL;
+    }
+
+    /*
+     * Copy the address, turning the '_' separators into ':'.
+     */
+    for (size_t i = 0; i < ADDRESS_LENGTH; i++) {
+
+        if (i % 3 == 2) {
+
+            if (element[i] != '_') {
+                return -EINVAL;
+            }
+
+            buffer[i] = ':';
+
+        } else if (isxdigit((unsigned char)element[i])) {
+            buffer[i] = element[i];
+        } else {
+            return -EINVAL;
+        }
+    }
+
+    buffer[ADDRESS_LENGTH] = '\0';
+
+    return 0;
+}
+
 int bluez_read_string(
     sd_bus_message *value,
     char *destination,

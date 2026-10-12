@@ -21,7 +21,8 @@
  *
  * Access to the Bluetooth cards is in adapter.c and to the
  * devices and their discovery in device.c. Connecting and
- * pairing is in connection.c. The table shown by "scan" is in
+ * pairing is in connection.c, and agent.c receives the questions
+ * that a pairing with a code asks. The table shown by "scan" is in
  * scan_table.c. Diagnostic devices such as Ubertooth One belong
  * to sniffer.c.
  *
@@ -31,9 +32,6 @@
 // TODO (stage 2): Reconnaissance. "scan" is done. "info" shows
 //                 what the scan knows; it should also read the
 //                 services and manufacturer data of the device.
-// TODO (stage 3): Connection commands are done, except for
-//                 pairing with a PIN or passkey, which needs
-//                 a BlueZ agent (see connection.c).
 // TODO (stage 4): Manual communication, similar to a raw socket.
 //                 BLE: "services", "read UUID", "write UUID HEX",
 //                 "notify UUID". Classic: "rfcomm CHANNEL" and
@@ -1387,14 +1385,233 @@ static void shell_disconnect(bt_shell_t *shell, const char *text)
 }
 
 /*
+ * Reads one line typed by the user as the answer to a pairing
+ * question. question is printed first, without a line break,
+ * so the answer is typed next to it.
+ *
+ * The line break and surrounding spaces are removed.
+ *
+ * Returns 0 when an answer was typed and -1 when there is none:
+ * an empty line, Ctrl+C or the end of input.
+ */
+static int read_answer(
+    const char *question,
+    char *answer,
+    size_t size
+)
+{
+    char line[SHELL_LINE_MAX];
+
+    printf("%s", question);
+    fflush(stdout);
+
+    if (fgets(line, sizeof(line), stdin) == NULL) {
+        /*
+         * Ctrl+C interrupts the read, because the SIGINT
+         * handler is installed without SA_RESTART. Clear the
+         * error, so the shell can read commands again.
+         */
+        clearerr(stdin);
+        printf("\n");
+        return -1;
+    }
+
+    /*
+     * Cut the answer out of the line: skip leading spaces and
+     * stop at the first space or line break after it.
+     */
+    const char *start = line + strspn(line, " \t");
+    size_t length = strcspn(start, " \t\r\n");
+
+    if (length == 0 || length >= size) {
+        return -1;
+    }
+
+    memcpy(answer, start, length);
+    answer[length] = '\0';
+
+    return 0;
+}
+
+/*
+ * Asks a yes/no question. Only an answer that starts with
+ * 'y' or 'Y' counts as yes; anything else, including no answer,
+ * is a no.
+ *
+ * Returns 0 for yes and -1 for no.
+ */
+static int read_yes(const char *question)
+{
+    char answer[8];
+
+    if (read_answer(question, answer, sizeof(answer)) != 0) {
+        return -1;
+    }
+
+    return (answer[0] == 'y' || answer[0] == 'Y') ? 0 : -1;
+}
+
+/*
+ * bt_pairing_prompts_t.request_pin
+ *
+ * The device needs a PIN. Called only for devices that
+ * require one.
+ */
+static int prompt_request_pin(
+    const char *address,
+    char *pin,
+    size_t size
+)
+{
+    printf(
+        "Device %s requires a PIN "
+        "(press Enter without a PIN to cancel).\n",
+        address
+    );
+
+    if (read_answer("PIN: ", pin, size) != 0) {
+        printf("No PIN given, the pairing is cancelled.\n");
+        return -1;
+    }
+
+    return 0;
+}
+
+/*
+ * bt_pairing_prompts_t.request_passkey
+ *
+ * The device shows a number that has to be typed here.
+ */
+static int prompt_request_passkey(
+    const char *address,
+    uint32_t *passkey
+)
+{
+    char answer[16];
+    char *end = NULL;
+
+    printf(
+        "Device %s shows a passkey of up to 6 digits. Type it "
+        "here (press Enter without a passkey to cancel).\n",
+        address
+    );
+
+    if (read_answer("Passkey: ", answer, sizeof(answer)) != 0) {
+        printf("No passkey given, the pairing is cancelled.\n");
+        return -1;
+    }
+
+    /*
+     * A passkey is a number from 0 to 999999.
+     */
+    errno = 0;
+
+    unsigned long value = strtoul(answer, &end, 10);
+
+    if (errno != 0 ||
+        answer[strspn(answer, "0123456789")] != '\0' ||
+        *end != '\0' ||
+        value > 999999UL) {
+
+        printf(
+            "'%s' is not a passkey, the pairing is cancelled.\n",
+            answer
+        );
+        return -1;
+    }
+
+    *passkey = (uint32_t)value;
+
+    return 0;
+}
+
+/*
+ * bt_pairing_prompts_t.confirm_passkey
+ *
+ * Both sides show a number and the user compares them.
+ */
+static int prompt_confirm_passkey(
+    const char *address,
+    uint32_t passkey
+)
+{
+    printf(
+        "Device %s should show this number: %06u\n",
+        address,
+        (unsigned int)passkey
+    );
+
+    return read_yes("Does the device show the same number? [y/N]: ");
+}
+
+/*
+ * bt_pairing_prompts_t.authorize
+ *
+ * A pairing without a code that still needs consent.
+ */
+static int prompt_authorize(const char *address)
+{
+    printf("Device %s asks to be paired.\n", address);
+
+    return read_yes("Accept the pairing? [y/N]: ");
+}
+
+/*
+ * bt_pairing_prompts_t.display_pin
+ *
+ * The code has to be typed on the device.
+ */
+static void prompt_display_pin(const char *address, const char *pin)
+{
+    printf(
+        "Type this PIN on device %s and confirm it there: %s\n",
+        address,
+        pin
+    );
+    fflush(stdout);
+}
+
+/*
+ * bt_pairing_prompts_t.display_passkey
+ */
+static void prompt_display_passkey(
+    const char *address,
+    uint32_t passkey
+)
+{
+    printf(
+        "Type this passkey on device %s and confirm it there: "
+        "%06u\n",
+        address,
+        (unsigned int)passkey
+    );
+    fflush(stdout);
+}
+
+/*
+ * The questions of a pairing, answered on the terminal.
+ * Passed to bt_device_pair() by the "pair" command.
+ */
+static const bt_pairing_prompts_t pairing_prompts = {
+    .request_pin = prompt_request_pin,
+    .request_passkey = prompt_request_passkey,
+    .confirm_passkey = prompt_confirm_passkey,
+    .authorize = prompt_authorize,
+    .display_pin = prompt_display_pin,
+    .display_passkey = prompt_display_passkey,
+};
+
+/*
  * Shell command "pair".
  *
  * Pairs with a device named by its id or address. Ctrl+C aborts
  * the attempt.
+ *
+ * A device that pairs without a code is paired without any
+ * question. When the device requires a PIN, a passkey or
+ * a confirmation, the matching prompt_*() function above asks
+ * the user for it in the middle of the pairing.
  */
-// TODO: Devices that ask for a PIN or a passkey need a BlueZ
-//       agent, which this program does not provide yet. See
-//       connection.c.
 static void shell_pair(bt_shell_t *shell, const char *text)
 {
     const char *adapter = shell->settings.adapter;
@@ -1410,8 +1627,7 @@ static void shell_pair(bt_shell_t *shell, const char *text)
     describe_device(&reference, description, sizeof(description));
 
     printf(
-        "Pairing with %s (press Ctrl+C to cancel)...\n"
-        "Confirm the pairing on the device if it asks for it.\n",
+        "Pairing with %s (press Ctrl+C to cancel)...\n",
         description
     );
     fflush(stdout);
@@ -1421,17 +1637,20 @@ static void shell_pair(bt_shell_t *shell, const char *text)
     if (bt_device_pair(
             adapter,
             reference.address,
+            &pairing_prompts,
             &interrupted,
             error_text) != 0) {
 
         if (errno == EEXIST) {
             printf("Already paired with %s\n", description);
         } else if (errno == EACCES) {
+            /*
+             * A wrong PIN, a refused confirmation, or the
+             * device said no.
+             */
             fprintf(
                 stderr,
-                "Pairing with %s failed: %s\n"
-                "Devices that need a PIN or a passkey are not "
-                "supported yet.\n",
+                "Pairing with %s failed: %s\n",
                 description,
                 error_text
             );

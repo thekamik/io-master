@@ -13,12 +13,66 @@
 
 #include <signal.h>
 #include <stddef.h>
+#include <stdint.h>
 
 /*
  * Size of the buffer that receives the explanation of a failed
  * operation.
  */
 #define BT_ERROR_TEXT_MAX 160
+
+/*
+ * Questions that a pairing may have to ask the user.
+ *
+ * Which of them is used, if any, is decided by the two devices:
+ * a device that pairs without a code asks nothing. The functions
+ * are supplied by the caller of bt_device_pair(); the shell
+ * implements them with prompts on the terminal.
+ *
+ * address is the Bluetooth address of the device that is being
+ * paired. A function that is NULL counts as a refusal (for the
+ * questions) or is skipped (for the display functions).
+ */
+typedef struct {
+    /*
+     * The device needs a PIN, as many classic devices do
+     * ("0000", "1234"). Stores the PIN typed by the user in pin,
+     * a buffer of size characters; a PIN has 1 to 16 characters.
+     *
+     * Returns 0 on success and -1 when the user gave none.
+     */
+    int (*request_pin)(const char *address, char *pin, size_t size);
+
+    /*
+     * The device shows a number of up to 6 digits that the user
+     * has to type here. Stores it in *passkey (0 - 999999).
+     *
+     * Returns 0 on success and -1 when the user gave none.
+     */
+    int (*request_passkey)(const char *address, uint32_t *passkey);
+
+    /*
+     * Both sides show a number. Asks the user whether the device
+     * shows passkey as well.
+     *
+     * Returns 0 when the user confirms and -1 otherwise.
+     */
+    int (*confirm_passkey)(const char *address, uint32_t passkey);
+
+    /*
+     * A pairing without a code that still needs consent.
+     *
+     * Returns 0 when the user agrees and -1 otherwise.
+     */
+    int (*authorize)(const char *address);
+
+    /*
+     * The user has to type a code on the device, for example
+     * on a Bluetooth keyboard. Show it.
+     */
+    void (*display_pin)(const char *address, const char *pin);
+    void (*display_passkey)(const char *address, uint32_t passkey);
+} bt_pairing_prompts_t;
 
 /*
  * Common rules of the four operations below
@@ -78,12 +132,17 @@ int bt_device_disconnect(
 );
 
 /*
- * Pairs with the device. Can take up to a minute, because the
- * device or the user may have to confirm the pairing.
+ * Pairs with the device. Can take up to two minutes, because
+ * the user may have to read or type a code.
+ *
+ * prompts supplies the questions for a pairing with a code; see
+ * bt_pairing_prompts_t. It is used only when the device asks for
+ * it. With NULL only devices that need no code can be paired.
  */
 int bt_device_pair(
     const char *adapter,
     const char *address,
+    const bt_pairing_prompts_t *prompts,
     const volatile sig_atomic_t *cancel,
     char *error_text
 );

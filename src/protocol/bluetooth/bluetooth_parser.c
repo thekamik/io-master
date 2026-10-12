@@ -195,10 +195,11 @@ static const shell_command_t shell_commands[] = {
         "DEVICE is an ID or a Bluetooth address, for example:\n"
         "pair 3\n"
         "\n"
-        "Works for devices that pair without a code. Devices that\n"
-        "ask for a PIN or a passkey are not supported yet, unless\n"
-        "the desktop environment shows its own pairing dialog.\n"
-        "Press Ctrl+C to cancel the attempt.\n"
+        "A device that needs no code is paired right away. When\n"
+        "the device requires a PIN or a passkey, you are asked to\n"
+        "type it; when both sides show a number, you are asked to\n"
+        "confirm that they match. Pressing Enter without a code,\n"
+        "or Ctrl+C, cancels the pairing.\n"
     },
     {
         "unpair",

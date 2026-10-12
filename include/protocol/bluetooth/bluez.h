@@ -69,6 +69,24 @@ int bluez_device_path(
 );
 
 /*
+ * The opposite of bluez_device_path(): extracts the Bluetooth
+ * address from the D-Bus path of a device.
+ *
+ *     "/org/bluez/hci0/dev_AA_BB_CC_DD_EE_FF"
+ *         -> "AA:BB:CC:DD:EE:FF"
+ *
+ * buffer needs room for 18 characters.
+ *
+ * Returns 0 on success or -EINVAL when the path is not the path
+ * of a device.
+ */
+int bluez_address_from_path(
+    const char *path,
+    char *buffer,
+    size_t size
+);
+
+/*
  * Describes what the caller wants to read from the BlueZ objects.
  *
  * bluez_visit_objects() goes through all objects and calls these

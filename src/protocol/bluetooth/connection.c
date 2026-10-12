@@ -19,16 +19,19 @@
  * asynchronously: the call is sent, and run_call() then waits for
  * the reply in its own loop, looking at the cancel flag several
  * times a second.
+ *
+ * Pairing with a code
+ * -------------------
+ * For a pairing, an agent (agent.c) is registered on the same
+ * connection before Pair is called. While run_call() waits for
+ * the reply to Pair, BlueZ may call the agent to ask for a PIN
+ * or a confirmation. Those calls are handled inside
+ * sd_bus_process(), in the same loop.
  */
-
-// TODO: Pairing that needs a PIN or a passkey requires a BlueZ
-//       "agent": an object of this program that BlueZ asks for the
-//       code. Without one, pairing works for devices that need no
-//       code ("Just Works"), or when the desktop environment
-//       provides an agent and shows its own dialog.
 
 #include "protocol/bluetooth/connection.h"
 
+#include "protocol/bluetooth/agent.h"
 #include "protocol/bluetooth/bluez.h"
 
 #include <errno.h>
@@ -43,7 +46,7 @@
  */
 #define USEC_PER_SECOND 1000000ULL
 #define CONNECT_TIMEOUT_USEC (30 * USEC_PER_SECOND)
-#define PAIR_TIMEOUT_USEC (60 * USEC_PER_SECOND)
+#define PAIR_TIMEOUT_USEC (120 * USEC_PER_SECOND)
 #define SHORT_TIMEOUT_USEC (10 * USEC_PER_SECOND)
 
 /*
@@ -339,6 +342,9 @@ static int run_call(
 /*
  * Calls a method of org.bluez.Device1 that takes no arguments:
  * Connect, Disconnect or Pair.
+ *
+ * When prompts is not NULL, a pairing agent that uses them is
+ * registered for the duration of the call.
  */
 static int call_device_method(
     const char *adapter,
@@ -346,6 +352,7 @@ static int call_device_method(
     const char *method,
     uint64_t timeout_usec,
     const char *undo_method,
+    const bt_pairing_prompts_t *prompts,
     const volatile sig_atomic_t *cancel,
     char *error_text
 )
@@ -353,6 +360,7 @@ static int call_device_method(
     char path[BLUEZ_PATH_MAX];
     sd_bus *bus = NULL;
     sd_bus_message *call = NULL;
+    bt_agent_t *agent = NULL;
 
     if (error_text != NULL) {
         error_text[0] = '\0';
@@ -374,6 +382,14 @@ static int call_device_method(
 
     int result = sd_bus_open_system(&bus);
 
+    /*
+     * The agent has to be on the connection that sends Pair:
+     * BlueZ asks the agent of the program that wants the pairing.
+     */
+    if (result >= 0 && prompts != NULL) {
+        result = bt_agent_start(bus, prompts, &agent);
+    }
+
     if (result >= 0) {
         result = sd_bus_message_new_method_call(
             bus,
@@ -386,7 +402,8 @@ static int call_device_method(
     }
 
     /*
-     * The bus could not be opened or the call not be built.
+     * The bus could not be opened, the agent not be registered
+     * or the call not be built.
      */
     if (result < 0) {
 
@@ -399,6 +416,7 @@ static int call_device_method(
             );
         }
 
+        bt_agent_stop(agent);
         sd_bus_message_unref(call);
         sd_bus_unref(bus);
 
@@ -420,6 +438,7 @@ static int call_device_method(
      */
     int saved_errno = errno;
 
+    bt_agent_stop(agent);
     sd_bus_message_unref(call);
     sd_bus_unref(bus);
 
@@ -445,6 +464,7 @@ int bt_device_connect(
         "Connect",
         CONNECT_TIMEOUT_USEC,
         "Disconnect",
+        NULL,
         cancel,
         error_text
     );
@@ -463,6 +483,7 @@ int bt_device_disconnect(
         "Disconnect",
         SHORT_TIMEOUT_USEC,
         NULL,
+        NULL,
         cancel,
         error_text
     );
@@ -471,6 +492,7 @@ int bt_device_disconnect(
 int bt_device_pair(
     const char *adapter,
     const char *address,
+    const bt_pairing_prompts_t *prompts,
     const volatile sig_atomic_t *cancel,
     char *error_text
 )
@@ -481,6 +503,7 @@ int bt_device_pair(
         "Pair",
         PAIR_TIMEOUT_USEC,
         "CancelPairing",
+        prompts,
         cancel,
         error_text
     );
