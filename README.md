@@ -45,6 +45,8 @@ The current MVP provides:
 - **Protocol registry** — protocols are separate modules behind one interface. UART is implemented; Bluetooth is in development.
 - **Bluetooth shell (early stage)** — running a Bluetooth project opens a shell that lists the Bluetooth cards of the computer, selects the one used by the project, scans for devices in a live table, and connects and pairs devices.
 
+- **AI shell (working tool)** — a project of the `ai` protocol opens a conversation with an AI model. It is the first step of the planned AI-assisted analysis of protocol data. The API key is kept in the keyring of the system and is sent only over HTTPS with TLS 1.3.
+
 These features form the foundation for the broader workflow integration planned for the project.
 
 ## Design goals
@@ -131,12 +133,15 @@ The current implementation requires:
 - `pkg-config`.
 - The `libsystemd` development package.
 - The `jansson` development package.
+- The `libcurl` development package (HTTPS requests to AI services).
+- The `libsecret` development package (API keys in the system keyring).
 
 ### Install dependencies on Debian, Ubuntu, or Parrot OS
 
 ```bash
 sudo apt update
-sudo apt install build-essential cmake pkg-config libsystemd-dev libjansson-dev
+sudo apt install build-essential cmake pkg-config libsystemd-dev libjansson-dev \
+    libcurl4-openssl-dev libsecret-1-dev
 ```
 
 ## Building
@@ -242,7 +247,7 @@ Typical device paths include `/dev/ttyACM0` and `/dev/ttyUSB0`. The actual paths
 
 ### Manage projects
 
-Create a project. The protocol must be one of the supported protocols (`uart` or `bluetooth`); its name is not case-sensitive:
+Create a project. The protocol must be one of the supported protocols (`uart`, `bluetooth`, or `ai`); its name is not case-sensitive:
 
 ```bash
 ./build/io-master project add "Arduino logger" --protocol uart
@@ -425,6 +430,92 @@ A new Bluetooth project receives this settings file:
 
 Device details, manual communication, and traffic monitoring are planned; see the [roadmap](#roadmap--to-do).
 
+### AI shell
+
+The `ai` protocol is a working tool for talking to an AI model. It is not a device protocol; it exists to try out and debug the AI integration that the device protocols are meant to use later.
+
+```bash
+./build/io-master project add "Assistant" --protocol ai
+./build/io-master project select 3
+./build/io-master run
+```
+
+```text
+Provider:     anthropic
+Model:        claude-opus-5-5
+API key:      loaded from the keyring ("anthropic")
+Conversation: 0 messages
+
+Type a message, or '/help' to list commands
+ai> What does the byte 0x7E mark in HDLC?
+Waiting for the reply (press Ctrl+C to cancel)...
+
+It is the flag sequence that opens and closes every frame.
+
+[claude-opus-5-5, 21 tokens in, 18 tokens out]
+```
+
+A line is a message for the model unless it starts with `/`:
+
+| Command | Behavior |
+|---|---|
+| `/help` | Lists the commands. |
+| `/new` | Starts a new conversation; the model forgets the old one. |
+| `/status` | Shows the provider, the model, and whether an API key is loaded. |
+| `/key` | Asks for the API key without showing it and stores it in the system keyring. |
+| `/exit` | Closes the shell. `Ctrl+D` does the same. |
+
+The conversation is kept in memory until `/new` or until the shell is closed. `Ctrl+C` cancels a request that is waiting for a reply.
+
+#### API key
+
+The API key is never written to a file by IO Master and is never passed on the command line.
+
+- The key is stored in the **keyring of the system** (the Secret Service: GNOME Keyring, KWallet), which keeps it encrypted and unlocks it at login. Store it with `/key`.
+- The project settings contain only the **name** of the keyring entry (`key_name`), so the settings file holds no secret.
+- The key is read from the keyring when the shell starts and is wiped from memory when the shell ends.
+
+The keyring protects the key on disk and from other users of the computer. It does not protect it from other programs running under the same user while the keyring is unlocked.
+
+A key can also be stored without IO Master:
+
+```bash
+secret-tool store --label="IO Master API key: anthropic" \
+    application io-master key_name anthropic
+```
+
+#### Transport security
+
+A request that carries an API key is sent only to an `https://` address, over TLS 1.3 or newer, with the server certificate verified. Redirects are not followed. A server that offers only older TLS versions, or a certificate that cannot be verified, is refused before the key is sent.
+
+#### AI project settings
+
+```json
+{
+    "provider": "anthropic",
+    "model": "claude-opus-5-5",
+    "key_name": "anthropic",
+    "max_tokens": 16000,
+    "system": "",
+    "refusal_fallback": true,
+    "base_url": "",
+    "ca_file": ""
+}
+```
+
+| Setting | Description |
+|---|---|
+| `provider` | AI service. Currently only `anthropic` (Claude). |
+| `model` | Model of that service. |
+| `key_name` | Name of the keyring entry that holds the API key. |
+| `max_tokens` | Upper limit of the length of one reply. |
+| `system` | Instructions for the whole conversation, or `""`. |
+| `refusal_fallback` | `true` lets the service answer with another model when the chosen model declines a request. |
+| `base_url` | Address of the service, or `""` for the address of the provider. |
+| `ca_file` | Certificate authorities to trust for `base_url` (PEM file), or `""` for the certificates of the system. |
+
+Everything typed into the shell is sent to the configured AI service. What may be sent there is the responsibility of the user.
+
 ## Permissions
 
 Linux controls access to serial devices through file permissions and system configuration. When the selected port cannot be opened, the UART shell reports `Permission denied`.
@@ -466,11 +557,47 @@ Log out and log back in for the group membership change to take effect. If your 
 | `src/discovery/` | Serial device discovery |
 | `src/protocol/` | Protocol interface and the table of supported protocols |
 | `src/protocol/uart/` | UART protocol: serial port access, the shell, and the shell parser |
-| `src/protocol/bluetooth/` | Bluetooth protocol: access to BlueZ, cards, device scan, the shell, and the shell parser |
+| `src/protocol/bluetooth/` | Bluetooth protocol: access to BlueZ, cards, device scan, connecting and pairing, the shell, and the shell parser |
+| `src/protocol/ai/` | AI shell and its parser |
+| `src/ai/` | AI module used by the shell: provider interface, the Anthropic provider, HTTPS transport, and keyring access |
+| `tests/` | Test scripts, kept apart from the program sources |
 
 The headers in `include/` follow the same layout.
 
+AI services are handled the same way as protocols: each one is an `ai_provider_t` structure (`include/ai/provider.h`) registered in the table in `src/ai/ai.c`. The rest of the program calls `ai_send()` from `include/ai/ai.h` and does not depend on a particular service.
+
 A protocol is described by a `protocol_t` structure (`include/protocol/protocol.h`) with its name and three functions: `init` creates the settings file of a new project, `print_help` prints the protocol help, and `run` starts the project. A new protocol is added by implementing it in `src/protocol/<name>/` and adding its structure to the table in `src/protocol/protocol.c`.
+
+## Tests
+
+Tests live in the `tests` directory, separate from the program sources. They are scripts that run the built executable and check what it does.
+
+Run all tests after building:
+
+```bash
+ctest --test-dir build --output-on-failure
+```
+
+| Test | What it covers |
+|---|---|
+| `tests/bluetooth/test_bluetooth_shell.py` | The Bluetooth shell end to end: scan and device IDs, pairing with and without a code, connecting, cancelling with `Ctrl+C`, and leaving the shell |
+| `tests/ai/test_ai_shell.py` | The AI shell end to end: storing and loading the API key, a conversation, refusals and service errors, retries, cancelling, and the transport security rules |
+
+The Bluetooth test needs no Bluetooth card and touches no real device. BlueZ is replaced by `tests/bluetooth/fake_bluez.py`, a stand-in that runs on a private D-Bus bus started only for the test. The test also runs a copy of the executable in a temporary directory, so the `im_config` of the build is left alone.
+
+The AI test needs no API key and no network. The AI service is replaced by `tests/ai/fake_api.py`, a local HTTPS server with a certificate created for the test, and the system keyring by `tests/ai/fake_keyring.py` on the private bus, so the real keyring of the user is never read or changed.
+
+The tests share helpers in `tests/testlib.py`. They require `python3`, `dbus-run-session`, `openssl`, and the Python D-Bus bindings:
+
+```bash
+sudo apt install python3-dbus python3-gi dbus-daemon openssl
+```
+
+A test can also be run directly:
+
+```bash
+python3 tests/bluetooth/test_bluetooth_shell.py build/io-master
+```
 
 ## Current implementation and limitations
 
@@ -490,7 +617,9 @@ Current limitations include:
 - The UART shell has no command history or line editing.
 - There is no unified session manager or cross-interface event timeline.
 - JTAG/SWD, Modbus, and external-tool orchestration are not yet implemented.
-- There are no automated tests yet.
+- Automated tests cover only the Bluetooth and AI shells.
+- The AI shell supports one provider (Anthropic) and prints a reply only when it is complete; it is not yet connected to the UART and Bluetooth protocols.
+- API keys require a Secret Service keyring; there is no alternative way to supply a key.
 - There is no graphical user interface.
 
 These limitations describe the current implementation, not the full intended scope of IO Master.
@@ -530,6 +659,15 @@ The roadmap will evolve as the project develops and receives feedback. The items
 - [ ] Monitor the traffic between the operating system and the Bluetooth card, with capture files for Wireshark.
 - [ ] Detect diagnostic devices such as Ubertooth One and use them to observe the traffic between other devices.
 
+### AI integration
+
+- [x] Add an AI module with a provider interface, and Anthropic (Claude) as the first provider.
+- [x] Keep API keys in the system keyring and send them only over HTTPS with TLS 1.3.
+- [x] Add the `ai` working shell for trying out the integration.
+- [ ] Add a provider for OpenAI-compatible services and local servers.
+- [ ] Show the reply while it is being written (streaming).
+- [ ] Use the AI module from the UART and Bluetooth shells to analyse captured data.
+
 ### Tool integration
 
 - [x] Introduce a common interface for protocol modules.
@@ -558,6 +696,7 @@ The roadmap will evolve as the project develops and receives feedback. The items
 
 ### Quality and project maturity
 
+- [x] Add an end-to-end test of the Bluetooth shell.
 - [ ] Add automated tests for configuration parsing and core functionality.
 - [ ] Add tests for serial configuration validation and error handling.
 - [ ] Improve build and CI checks.
