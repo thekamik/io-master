@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 """
-Stand-in for the Anthropic Messages API, used by the AI shell tests.
+Stand-in for the AI services, used by the AI shell tests.
 
-The real service needs an API key, costs money and cannot be made
-to fail on demand. This script is a small HTTPS server that answers
-"POST /v1/messages" the way the real API does, with behaviour that
-a test selects through the text of the message it sends:
+The real services need an API key, may cost money and cannot be
+made to fail on demand. This script is a small HTTPS server that
+answers the way the real APIs do. It plays two services at once,
+told apart by the address of the request:
+
+    POST /v1/messages                              Anthropic
+    POST /v1beta/models/<model>:generateContent    Gemini
+
+Anthropic
+---------
+The behaviour is selected through the text of the message:
 
     message of the user      answer of the server
     -------------------      --------------------
@@ -20,13 +27,31 @@ a test selects through the text of the message it sends:
     anything else            "reply N to: <message>", where N is
                              the number of user messages so far
 
-Requests with an API key other than VALID_KEY get 401.
+Requests with an API key other than VALID_KEY get 401, and
+requests for the model "claude-typo" get 404.
 
 Every reply contains a "thinking" block with a signature. The real
 API requires such blocks to be sent back unchanged with the next
 request; the server checks that and answers 400 when a block is
 missing, so a test notices when io-master forgets the history.
 
+Gemini
+------
+    message of the user      answer of the server
+    -------------------      --------------------
+    refuse                   200 without candidates, blocked
+    unsafe                   200, a candidate stopped for SAFETY
+    quota                    429 RESOURCE_EXHAUSTED
+    long                     a reply cut off by MAX_TOKENS
+    anything else            "gemini reply N to: <message>"
+
+The key is expected in the "x-goog-api-key" header; a wrong key
+gets the 400 "API_KEY_INVALID" answer of the real service. Every
+reply carries a thought part, which must not be shown, and
+a "thoughtSignature", which must come back with the next request.
+
+Log
+---
 Every request that reaches the server is written to a log file,
 one JSON object per line, so the tests can check what was sent.
 The API key itself is not logged, only whether it was valid.
@@ -41,6 +66,7 @@ must refuse to talk to. The server listens on a free port of
 """
 
 import json
+import re
 import ssl
 import sys
 import threading
@@ -53,8 +79,15 @@ VALID_KEY = "sk-test-valid-key"
 # Delay of the "slow" answer. Long enough to cancel the request.
 SLOW_SECONDS = 15
 
+# Model name that the Anthropic side answers with 404, the way
+# the real service answers a model it does not know.
+UNKNOWN_MODEL = "claude-typo"
+
 # Model named in the reply of the "fallback" behaviour.
 FALLBACK_MODEL = "claude-opus-4-8"
+
+# Address of the Gemini method; the group is the model name.
+GEMINI_PATH = re.compile(r"^/v1beta/models/([^/:]+):generateContent$")
 
 # Number of tries of an "overloaded once" message seen so far.
 overloaded_tries = 0
@@ -101,6 +134,12 @@ def history_is_intact(messages):
 
         assistant_turns += 1
         content = message.get("content")
+
+        # A reply given as plain text: the chat was written by
+        # another model and is being continued from its
+        # transcript, which carries no thinking blocks.
+        if isinstance(content, str):
+            continue
 
         if (
             not isinstance(content, list)
@@ -160,13 +199,18 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             body = None
 
-        key_is_valid = self.headers.get("x-api-key") == VALID_KEY
+        # Which service the request is meant for.
+        gemini = GEMINI_PATH.match(self.path)
+
+        key_header = "x-goog-api-key" if gemini else "x-api-key"
+        key_is_valid = self.headers.get(key_header) == VALID_KEY
 
         # What the tests want to know about the request.
         self.log_file.write(
             json.dumps(
                 {
                     "path": self.path,
+                    "service": "gemini" if gemini else "anthropic",
                     "key_is_valid": key_is_valid,
                     "anthropic-version": self.headers.get("anthropic-version"),
                     "anthropic-beta": self.headers.get("anthropic-beta"),
@@ -176,6 +220,10 @@ class Handler(BaseHTTPRequestHandler):
             )
             + "\n"
         )
+
+        if gemini:
+            self.answer_gemini(gemini.group(1), key_is_valid, body)
+            return
 
         if self.path != "/v1/messages":
             self.send_json(404, error_body("not_found_error", "Not found"))
@@ -205,6 +253,13 @@ class Handler(BaseHTTPRequestHandler):
                     "invalid_request_error",
                     "earlier replies were not sent back unchanged",
                 ),
+            )
+            return
+
+        # A model that does not exist, as after a typing mistake.
+        if model == UNKNOWN_MODEL:
+            self.send_json(
+                404, error_body("not_found_error", "model: " + model)
             )
             return
 
@@ -272,6 +327,150 @@ class Handler(BaseHTTPRequestHandler):
                     model, "reply %d to: %s" % (user_turns, text), user_turns
                 ),
             )
+
+
+def gemini_error(code, status, message, reason=None):
+    """Body of a Gemini error answer, in the format of the real API."""
+    error = {"code": code, "message": message, "status": status}
+
+    if reason is not None:
+        error["details"] = [
+            {
+                "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+                "reason": reason,
+            }
+        ]
+
+    return {"error": error}
+
+
+def gemini_reply(model, text, user_turns, finish_reason="STOP"):
+    """Body of a successful Gemini answer."""
+    return {
+        "candidates": [
+            {
+                "content": {
+                    "role": "model",
+                    "parts": [
+                        # A note of the model: must not be shown.
+                        {"text": "SECRET THOUGHT", "thought": True},
+                        # Must come back unchanged with the
+                        # next request.
+                        {
+                            "text": text,
+                            "thoughtSignature": "signature-%d" % user_turns,
+                        },
+                    ],
+                },
+                "finishReason": finish_reason,
+            }
+        ],
+        "usageMetadata": {
+            "promptTokenCount": 10 * user_turns,
+            "candidatesTokenCount": 5,
+            "thoughtsTokenCount": 2,
+        },
+        "modelVersion": model,
+    }
+
+
+def gemini_history_is_intact(contents):
+    """
+    Checks that every earlier reply was sent back as it was given:
+    the last part of the n-th model message must still carry the
+    n-th signature.
+    """
+    model_turns = 0
+
+    for message in contents:
+        if message.get("role") != "model":
+            continue
+
+        model_turns += 1
+        parts = message.get("parts")
+
+        if (
+            not isinstance(parts, list)
+            or not parts
+            or parts[-1].get("thoughtSignature")
+            != "signature-%d" % model_turns
+        ):
+            return False
+
+    return True
+
+
+def answer_gemini(self, model, key_is_valid, body):
+    """Answers a request to the Gemini generateContent method."""
+    if not key_is_valid:
+        self.send_json(
+            400,
+            gemini_error(
+                400,
+                "INVALID_ARGUMENT",
+                "API key not valid. Please pass a valid API key.",
+                "API_KEY_INVALID",
+            ),
+        )
+        return
+
+    if not isinstance(body, dict) or not body.get("contents"):
+        self.send_json(
+            400, gemini_error(400, "INVALID_ARGUMENT", "contents: required")
+        )
+        return
+
+    contents = body["contents"]
+    text = contents[-1]["parts"][0].get("text", "")
+    user_turns = sum(1 for m in contents if m.get("role") == "user")
+
+    if not gemini_history_is_intact(contents):
+        self.send_json(
+            400,
+            gemini_error(
+                400,
+                "INVALID_ARGUMENT",
+                "earlier replies were not sent back unchanged",
+            ),
+        )
+        return
+
+    if text == "refuse":
+        # The request itself is blocked: no candidates at all.
+        self.send_json(200, {"promptFeedback": {"blockReason": "SAFETY"}})
+    elif text == "unsafe":
+        # The model was stopped before it wrote anything.
+        self.send_json(
+            200,
+            {
+                "candidates": [
+                    {"content": {"role": "model"}, "finishReason": "SAFETY"}
+                ]
+            },
+        )
+    elif text == "quota":
+        self.send_json(
+            429,
+            gemini_error(429, "RESOURCE_EXHAUSTED", "Quota exceeded."),
+        )
+    elif text == "long":
+        self.send_json(
+            200, gemini_reply(model, "cut off here", user_turns, "MAX_TOKENS")
+        )
+    else:
+        self.send_json(
+            200,
+            gemini_reply(
+                model,
+                "gemini reply %d to: %s" % (user_turns, text),
+                user_turns,
+            ),
+        )
+
+
+# The function above is written at module level for readability
+# and attached to the handler here.
+Handler.answer_gemini = answer_gemini
 
 
 def main():

@@ -114,3 +114,53 @@ int config_create_directory(const char *subdirectory)
 
     return 0;
 }
+
+int config_create_directories(const char *relative_path, mode_t mode)
+{
+    char partial[PATH_MAX];
+    char path[PATH_MAX];
+
+    if (relative_path == NULL || *relative_path == '\0') {
+        errno = EINVAL;
+        return -1;
+    }
+
+    size_t length = strlen(relative_path);
+
+    if (length >= sizeof(partial)) {
+        errno = ENAMETOOLONG;
+        return -1;
+    }
+
+    /*
+     * im_config itself.
+     */
+    if (config_create_directory(NULL) != 0) {
+        return -1;
+    }
+
+    /*
+     * Walk through relative_path and create the directory that
+     * ends at every '/' and at the end of the text:
+     * "ai", then "ai/chats", then "ai/chats/3".
+     */
+    for (size_t i = 1; i <= length; i++) {
+
+        if (relative_path[i] != '/' && relative_path[i] != '\0') {
+            continue;
+        }
+
+        memcpy(partial, relative_path, i);
+        partial[i] = '\0';
+
+        if (config_build_path(path, sizeof(path), partial) != 0) {
+            return -1;
+        }
+
+        if (mkdir(path, mode) != 0 && errno != EEXIST) {
+            return -1;
+        }
+    }
+
+    return 0;
+}

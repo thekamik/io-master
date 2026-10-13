@@ -14,6 +14,7 @@
 
 #include "cli/parser.h"
 
+#include "cli/ai_config.h"
 #include "protocol/protocol.h"
 
 #include <errno.h>
@@ -141,6 +142,7 @@ void print_usage(const char *program_name)
         "  %s project select ID\n"
         "  %s project remove ID\n"
         "  %s run [--help]\n"
+        "  %s ai-config\n"
         "\n"
         "Device discovery:\n"
         "  --scan            Scan available serial devices\n"
@@ -158,10 +160,16 @@ void print_usage(const char *program_name)
         "  run --help        Show the help of the protocol used\n"
         "                    by the selected project\n"
         "\n"
+        "AI:\n"
+        "  ai-config         Set up the AI integration: asks for the\n"
+        "                    provider, the model and the API key, and\n"
+        "                    can test them. Short form: aic\n"
+        "\n"
         "Other options:\n"
         "  -h, --help        Show this help\n"
         "\n"
         "Supported protocols:\n",
+        program_name,
         program_name,
         program_name,
         program_name,
@@ -187,7 +195,9 @@ void print_usage(const char *program_name)
         "  %s --display active\n"
         "  %s project add \"Arduino logger\" --protocol uart\n"
         "  %s project select 1\n"
-        "  %s run\n",
+        "  %s run\n"
+        "  %s aic\n",
+        program_name,
         program_name,
         program_name,
         program_name,
@@ -653,6 +663,7 @@ int parse_args(int argc, char *argv[], command_t *command)
      *     an option  -> parse_global()
      *     "project"  -> parse_project()
      *     "run"      -> parse_run()
+     *     "ai-config" or "aic" -> handled below
      */
     if (argv[1][0] == '-') {
         return parse_global(argc, argv, command);
@@ -685,6 +696,30 @@ int parse_args(int argc, char *argv[], command_t *command)
          * Skip the program name, so that "run" becomes argv[0].
          */
         return parse_run(argc - 1, argv + 1, command);
+    }
+
+    /*
+     * The AI configuration. It asks its questions itself and
+     * takes nothing on the command line; in particular an API key is
+     * never accepted there, where other users of the computer
+     * could see it in the list of processes.
+     */
+    if (strcmp(argv[1], AI_CONFIG_COMMAND) == 0 ||
+        strcmp(argv[1], AI_CONFIG_COMMAND_SHORT) == 0) {
+
+        if (argc > 2) {
+            fprintf(
+                stderr,
+                "Command '%s' takes no arguments; it asks for "
+                "everything interactively\n",
+                argv[1]
+            );
+            return -1;
+        }
+
+        command->type = COMMAND_AI_CONFIG;
+
+        return 0;
     }
 
     fprintf(stderr, "Unknown command: '%s'\n", argv[1]);

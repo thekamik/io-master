@@ -5,6 +5,7 @@
  * The commands themselves are implemented in cli/commands.c.
  */
 
+#include "cli/ai_config.h"
 #include "cli/commands.h"
 #include "cli/parser.h"
 #include "project/project.h"
@@ -68,6 +69,9 @@ int main(int argc, char *argv[]) {
 
     case COMMAND_RUN_HELP:
         return command_run(argv[0], true);
+
+    case COMMAND_AI_CONFIG:
+        return command_ai_config();
     }
 
     return 1;

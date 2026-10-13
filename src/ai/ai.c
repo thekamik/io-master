@@ -40,6 +40,7 @@
  */
 static const ai_provider_t *const providers[] = {
     &anthropic_provider,
+    &gemini_provider,
 };
 
 static const size_t provider_count =
@@ -70,7 +71,10 @@ static const ai_provider_t *find_provider(const char *name)
 
     for (size_t i = 0; i < provider_count; i++) {
 
-        if (strcasecmp(providers[i]->info.name, name) == 0) {
+        const ai_provider_info_t *info = &providers[i]->info;
+
+        if (strcasecmp(info->name, name) == 0 ||
+            (info->alias != NULL && strcasecmp(info->alias, name) == 0)) {
             return providers[i];
         }
     }
@@ -117,6 +121,25 @@ size_t ai_conversation_length(const ai_conversation_t *conversation)
     }
 
     return json_array_size(conversation->messages);
+}
+
+int ai_conversation_add_text(
+    const char *provider_name,
+    ai_conversation_t *conversation,
+    bool from_user,
+    const char *text
+)
+{
+    const ai_provider_t *provider = find_provider(provider_name);
+
+    if (provider == NULL || conversation == NULL || text == NULL) {
+        return -1;
+    }
+
+    /*
+     * The JSON form of a message belongs to the provider.
+     */
+    return provider->add_text(conversation, from_user, text);
 }
 
 void ai_conversation_free(ai_conversation_t *conversation)

@@ -73,6 +73,24 @@ typedef struct {
         ai_reply_t *reply,
         char *error_text
     );
+
+    /*
+     * Appends one message, given as plain text, to
+     * a conversation, in the JSON form of this provider.
+     * from_user tells whether the user or the model wrote it.
+     *
+     * Used to continue a saved chat with another provider or
+     * model than the one that wrote it: the conversation is
+     * built again from the plain text of the chat.
+     *
+     * Returns 0 on success and -1 on error (for example text
+     * that is not valid UTF-8).
+     */
+    int (*add_text)(
+        ai_conversation_t *conversation,
+        bool from_user,
+        const char *text
+    );
 } ai_provider_t;
 
 /*
@@ -106,5 +124,6 @@ ai_status_t ai_post(
  * The providers. Each is defined in its own file.
  */
 extern const ai_provider_t anthropic_provider;
+extern const ai_provider_t gemini_provider;
 
 #endif

@@ -1,30 +1,35 @@
 /*
- * Parser of the interactive AI shell.
+ * Parser of the menu of the AI shell.
  *
- * It is independent of the command-line parser used for project
- * management (cli/parser.h) and of the other shell parsers.
+ * The AI shell has two levels:
  *
- * In this shell a line is a message for the AI model, unless it
- * starts with '/', which marks a command:
+ *     the menu   commands that manage the saved chats
+ *                ("list", "new", "open", "delete", ...); they
+ *                are parsed here
  *
- *     what does 0x7E mean in HDLC?     a message
- *     /new                             a command
+ *     a chat     entered from the menu; every typed line is
+ *                a message for the model, so nothing is parsed
+ *
+ * The parser is independent of the command-line parser used for
+ * project management (cli/parser.h) and of the other shell
+ * parsers.
  */
 
 #ifndef AI_PARSER_H
 #define AI_PARSER_H
 
 /*
- * What a typed line asks for.
+ * Commands of the menu.
  */
 typedef enum {
     AI_COMMAND_EMPTY,    /* empty line */
-    AI_COMMAND_MESSAGE,  /* text to send to the model */
-    AI_COMMAND_HELP,     /* /help */
-    AI_COMMAND_NEW,      /* /new */
-    AI_COMMAND_STATUS,   /* /status */
-    AI_COMMAND_KEY,      /* /key */
-    AI_COMMAND_EXIT      /* /exit */
+    AI_COMMAND_HELP,     /* help */
+    AI_COMMAND_STATUS,   /* status */
+    AI_COMMAND_LIST,     /* list */
+    AI_COMMAND_NEW,      /* new [TITLE] */
+    AI_COMMAND_OPEN,     /* open ID */
+    AI_COMMAND_DELETE,   /* delete ID */
+    AI_COMMAND_EXIT      /* exit */
 } ai_command_type_t;
 
 /*
@@ -34,14 +39,20 @@ typedef struct {
     ai_command_type_t type;
 
     /*
-     * For AI_COMMAND_MESSAGE: the message, without surrounding
-     * spaces. Points into the parsed line. NULL otherwise.
+     * For AI_COMMAND_NEW: the title, which may contain spaces,
+     * or NULL when none was given. Points into the parsed line.
      */
     const char *text;
+
+    /*
+     * For AI_COMMAND_OPEN and AI_COMMAND_DELETE: the id of
+     * the chat.
+     */
+    int id;
 } ai_command_t;
 
 /*
- * Parses one line typed in the AI shell.
+ * Parses one line typed in the menu.
  *
  * The line is modified during parsing. An empty line is not
  * an error: it yields AI_COMMAND_EMPTY.
@@ -55,7 +66,7 @@ typedef struct {
 int ai_parse_line(char *line, ai_command_t *command);
 
 /*
- * Prints the list of the AI shell commands.
+ * Prints the list of the menu commands.
  */
 void ai_print_shell_help(void);
 

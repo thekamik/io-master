@@ -112,9 +112,12 @@ def run_io_master(directory, arguments):
     )
 
 
-def run_shell(directory, steps, environment=None):
+def run_shell(directory, steps, environment=None, arguments=("run",)):
     """
-    Runs "io-master run" in a pseudo-terminal and feeds it steps.
+    Runs an interactive shell of io-master in a pseudo-terminal
+    and feeds it steps. arguments is the command line that starts
+    the shell: "run" for the shell of the selected project (the
+    default), or for example "aic" for the AI configuration.
 
     A step is either bytes, which are typed into the shell, or
     a number, which is a pause in seconds. The last step should
@@ -136,7 +139,9 @@ def run_shell(directory, steps, environment=None):
     if process_id == 0:
         # Child: become io-master.
         os.chdir(directory)
-        os.execve("./io-master", ["./io-master", "run"], environment)
+        os.execve(
+            "./io-master", ["./io-master"] + list(arguments), environment
+        )
 
     output = b""
 

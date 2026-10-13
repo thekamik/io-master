@@ -174,6 +174,24 @@ void ai_conversation_clear(ai_conversation_t *conversation);
 size_t ai_conversation_length(const ai_conversation_t *conversation);
 
 /*
+ * Appends one message, given as plain text, to a conversation,
+ * without sending anything. provider names the AI service whose
+ * format the conversation uses; from_user tells whether the
+ * user or the model wrote the message.
+ *
+ * Used to build a conversation from a saved chat.
+ *
+ * Returns 0 on success and -1 on error (unknown provider, or
+ * text that is not valid UTF-8).
+ */
+int ai_conversation_add_text(
+    const char *provider,
+    ai_conversation_t *conversation,
+    bool from_user,
+    const char *text
+);
+
+/*
  * Releases a conversation. NULL is accepted.
  */
 void ai_conversation_free(ai_conversation_t *conversation);
@@ -206,12 +224,45 @@ ai_status_t ai_send(
 void ai_reply_free(ai_reply_t *reply);
 
 /*
+ * A model that a provider suggests to the user.
+ */
+typedef struct {
+    const char *name;  /* as sent to the service */
+    const char *note;  /* a few words that tell the models apart */
+} ai_model_info_t;
+
+/*
  * Public description of an AI provider.
  */
 typedef struct {
-    const char *name;           /* used in ai_config_t.provider */
+    /*
+     * Name used in ai_config_t.provider and in the
+     * configuration file.
+     */
+    const char *name;
+
+    /*
+     * Name that users know the service by, when it differs from
+     * name: "claude" for the provider "anthropic". NULL when
+     * there is none. ai_provider_find() accepts it as well.
+     */
+    const char *alias;
+
     const char *description;
+
+    /*
+     * Model used when the user does not choose one. It is the
+     * first entry of models.
+     */
     const char *default_model;
+
+    /*
+     * Models suggested to the user, ended by an entry whose
+     * name is NULL. The list is a convenience, not a limit:
+     * any model name of the provider can be configured.
+     */
+    const ai_model_info_t *models;
+
     bool requires_key;          /* false for local servers */
 } ai_provider_info_t;
 
@@ -227,7 +278,8 @@ size_t ai_provider_count(void);
 const ai_provider_info_t *ai_provider_get(size_t index);
 
 /*
- * Finds a provider by name. Letter case is ignored.
+ * Finds a provider by its name or its alias. Letter case
+ * is ignored.
  *
  * Returns NULL when the provider is not supported.
  */

@@ -98,6 +98,40 @@
 #define HEADER_API_KEY_PREFIX "x-api-key: "
 
 /*
+ * Models suggested to the user. The first one is the default.
+ */
+static const ai_model_info_t anthropic_models[] = {
+    { ANTHROPIC_DEFAULT_MODEL, "most capable" },
+    { "claude-sonnet-5-5", "balanced speed and capability" },
+    { "claude-haiku-5-5", "fastest and cheapest" },
+    { NULL, NULL },
+};
+
+/*
+ * Beginning of the names of the Haiku models, which have no
+ * server-side fallback.
+ */
+#define HAIKU_MODEL_PREFIX "claude-haiku"
+
+/*
+ * Tells whether a request should ask the service to fall back
+ * to another model when the requested one declines.
+ *
+ * That takes the setting of the user and a model that supports
+ * it. The Haiku models have no server-side fallback, so the
+ * option is left out for them whatever the setting says.
+ */
+static bool use_fallback(const ai_config_t *config)
+{
+    return config->refusal_fallback &&
+           strncmp(
+               config->model,
+               HAIKU_MODEL_PREFIX,
+               strlen(HAIKU_MODEL_PREFIX)
+           ) != 0;
+}
+
+/*
  * Stores an explanation in error_text, when the caller wants one.
  */
 static void set_error(char *error_text, const char *text)
@@ -148,7 +182,7 @@ static char *build_request_body(
      * Let the service answer with another model when the
      * requested one declines.
      */
-    if (config->refusal_fallback) {
+    if (use_fallback(config)) {
         failed |= json_object_set_new(
             root,
             "fallbacks",
@@ -504,7 +538,7 @@ static ai_status_t anthropic_send(
         HEADER_CONTENT_TYPE,
         HEADER_API_VERSION,
         key_header,
-        config->refusal_fallback ? HEADER_FALLBACK_BETA : NULL,
+        use_fallback(config) ? HEADER_FALLBACK_BETA : NULL,
         NULL,
     };
 
@@ -555,16 +589,43 @@ static ai_status_t anthropic_send(
 }
 
 /*
+ * ai_provider_t.add_text
+ *
+ * {"role": "user" or "assistant", "content": "..."}
+ */
+static int anthropic_add_text(
+    ai_conversation_t *conversation,
+    bool from_user,
+    const char *text
+)
+{
+    /*
+     * json_pack() returns NULL for text that is not valid UTF-8,
+     * and json_array_append_new() fails for NULL.
+     */
+    json_t *message = json_pack(
+        "{s:s, s:s}",
+        "role", from_user ? "user" : "assistant",
+        "content", text
+    );
+
+    return json_array_append_new(conversation->messages, message);
+}
+
+/*
  * Registration of the provider. The table in ai.c refers to
  * this structure.
  */
 const ai_provider_t anthropic_provider = {
     .info = {
         .name = "anthropic",
+        .alias = "claude",
         .description = "Claude models by Anthropic",
         .default_model = ANTHROPIC_DEFAULT_MODEL,
+        .models = anthropic_models,
         .requires_key = true,
     },
     .default_base_url = ANTHROPIC_BASE_URL,
     .send = anthropic_send,
+    .add_text = anthropic_add_text,
 };

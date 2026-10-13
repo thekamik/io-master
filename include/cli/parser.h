@@ -21,7 +21,8 @@ typedef enum {
     COMMAND_PROJECT_SELECT,  /* project select ID */
     COMMAND_PROJECT_REMOVE,  /* project remove ID */
     COMMAND_RUN,             /* run */
-    COMMAND_RUN_HELP         /* run --help */
+    COMMAND_RUN_HELP,        /* run --help */
+    COMMAND_AI_CONFIG        /* ai-config, or aic for short */
 } command_type_t;
 
 /*

@@ -7,6 +7,7 @@
 #define CONFIG_DIR_H
 
 #include <stddef.h>
+#include <sys/types.h>
 
 #define CONFIG_DIRECTORY_NAME "im_config"
 
@@ -40,5 +41,20 @@ int config_build_path(
  *  -1  - error (errno is set)
  */
 int config_create_directory(const char *subdirectory);
+
+/*
+ * Creates a directory several levels deep inside im_config, for
+ * example "ai/chats/3": im_config itself and then every level of
+ * relative_path that does not exist yet.
+ *
+ * mode is the permission of the directories that are created
+ * below im_config, for example 0700 for directories that hold
+ * private data. Existing directories are left as they are.
+ *
+ * Returns:
+ *   0  - success
+ *  -1  - error (errno is set)
+ */
+int config_create_directories(const char *relative_path, mode_t mode);
 
 #endif

@@ -16,6 +16,7 @@ add_executable(main
     ${PROJECT_SOURCE_DIR}/src/main.c
     ${PROJECT_SOURCE_DIR}/src/cli/parser.c
     ${PROJECT_SOURCE_DIR}/src/cli/commands.c
+    ${PROJECT_SOURCE_DIR}/src/cli/ai_config.c
     ${PROJECT_SOURCE_DIR}/src/project/project.c
     ${PROJECT_SOURCE_DIR}/src/storage/config_dir.c
     ${PROJECT_SOURCE_DIR}/src/storage/json_file.c
@@ -35,7 +36,10 @@ add_executable(main
     ${PROJECT_SOURCE_DIR}/src/protocol/ai/ai_protocol.c
     ${PROJECT_SOURCE_DIR}/src/protocol/ai/ai_parser.c
     ${PROJECT_SOURCE_DIR}/src/ai/ai.c
+    ${PROJECT_SOURCE_DIR}/src/ai/ai_settings.c
+    ${PROJECT_SOURCE_DIR}/src/ai/chat_store.c
     ${PROJECT_SOURCE_DIR}/src/ai/anthropic.c
+    ${PROJECT_SOURCE_DIR}/src/ai/gemini.c
     ${PROJECT_SOURCE_DIR}/src/ai/http.c
     ${PROJECT_SOURCE_DIR}/src/ai/keyring.c
     ${PROJECT_SOURCE_DIR}/src/discovery/devices.c
