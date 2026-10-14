@@ -28,25 +28,27 @@ Legend: `[ ]` to do, `[x]` done.
 ## Step 1: Web server skeleton
 
 **Decisions**
-- [ ] Web framework: `axum` on `tokio` (proposed), TLS with `rustls` (TLS 1.3 only).
-- [ ] TLS certificate of the workstation: a local certificate authority created at first start, whose certificate the user adds to the browser once (proposed).
-- [ ] Where the configuration lives (role, address, port), for example `~/.config/io-master/config.toml`, and its format.
-- [ ] How the page is built: plain HTML, CSS and a little JavaScript embedded in the program (proposed), no separate frontend build.
+- [x] Web framework: `axum` on `tokio`.
+- [x] No TLS for the web UI: plain HTTP on 127.0.0.1 only. TLS 1.3 only where data leaves the computer (master, AI, git).
+- [x] How the server is started: flags. `--port N` (default 8080); `--address IP` always means the TLS server (step 5a). The installation file `~/.config/io-master/config.toml` keeps only the role and single-host mode, until the system database exists (step 5a); `--config PATH` for development and tests.
+- [x] Pages: plain HTML and CSS built into the program, no separate frontend build.
 
 **Tasks**
-- [ ] Configuration file with the role (`workstation` or `master`), fixed at installation; the program refuses to start without it.
-- [ ] HTTPS server listening on `127.0.0.1` by default; TLS 1.2 and older refused.
-- [ ] Creation of the local certificate authority and of the server certificate. The private keys are files readable only by the user for now. **TODO: move them into the TPM in step 4.**
-- [ ] Layout: navigation on the left, the page on the right.
-- [ ] Pages of the workstation: Chat (placeholder), Scan and permissions (placeholder), Settings (placeholder).
-- [ ] Page of the master: administration panel (placeholder). Each role refuses the pages of the other.
-- [ ] Red bar on every page while no password reset is configured (always, for now).
-- [ ] Warning bar in single-host mode.
-- [ ] Mock-up login: a login page and a session cookie (`Secure`, `HttpOnly`, `SameSite=Strict`); any name is accepted. **TODO: real login in step 5.**
-- [ ] Security headers: Content-Security-Policy, HSTS, no framing, no MIME sniffing.
-- [ ] `main.rs` starts the server; `--cli` is gone.
+- [x] Installation file with the role (`workstation` or `master`), fixed at installation; the program refuses to start without it.
+- [x] Flags `--port` and `--address`; `--address` is recognized and refused with an explanation until step 5a.
+- [x] HTTP server listening only on `127.0.0.1`.
+- [x] Protection of a local server: only the `Host` names of the program are answered (DNS rebinding); requests that change something need the `Origin` of the program (cross-site requests).
+- [x] Layout: navigation on the left, the page on the right.
+- [x] Pages of the workstation: Chat (placeholder), Scan and permissions (placeholder), Settings (placeholder).
+- [x] Page of the master: password reset panel (placeholder). Each role refuses the pages of the other.
+- [x] Red bar on every page while no password reset is configured (always, for now).
+- [x] Warning bar in single-host mode.
+- [x] Mock-up login: a login page and a session cookie (`HttpOnly`, `SameSite=Strict`); any name is accepted. **TODO: real login in step 5.**
+- [x] Security headers: Content-Security-Policy, no framing, no MIME sniffing, no referrer.
+- [x] `main.rs` reads the configuration and starts the server; Ctrl+C stops it cleanly.
+- [x] The random bytes of the kernel moved to `random/random.rs`, shared by the database key and the session tokens.
 
-**Done when:** the browser opens the pages over HTTPS without a certificate warning (after the authority was added once); a TLS 1.2 client is refused; tests cover routes, role blocking and headers.
+**Done when:** the browser opens the pages on `http://127.0.0.1:PORT/`; tests cover the configuration, routes, role blocking, the Host and Origin checks and the headers.
 
 ---
 
@@ -95,7 +97,6 @@ Legend: `[ ]` to do, `[x]` done.
 **Tasks**
 - [ ] `SecretStore` implemented on the TPM: store, load, delete, contains.
 - [ ] The secret of the device (`architecture.md`, section 5.2) created and sealed at first start.
-- [ ] Private keys of the TLS certificates (step 1) moved into the TPM.
 - [ ] Tests against `swtpm`, so they run without touching the real TPM.
 - [ ] Remove the Secret Service keyring (`keyring/` on `secret-service`).
 
@@ -120,6 +121,26 @@ Legend: `[ ]` to do, `[x]` done.
 - [ ] Several evaluators on one workstation.
 
 **Done when:** without the password the data cannot be read, also with the TPM present; tests cover creating, opening, changing the password and a wrong password.
+
+---
+
+## Step 5a: System database and the TLS server
+
+**Decisions**
+- [ ] Who may change the settings of the installation (TLS, later the password reset): every logged-in evaluator, or a separate administrator of the workstation.
+- [ ] Whether the TLS settings can be changed after they are saved (for example to replace an expiring certificate) or only by installing again.
+- [ ] TLS library: `rustls` with TLS 1.3 only (proposed).
+- [ ] Which names the TLS server answers to (`Host` check): the address, and the names in the certificate.
+
+**Tasks**
+- [ ] System database: encrypted with a key sealed in the TPM only, opened at program start without a password (`architecture.md`, section 5.3).
+- [ ] The role and single-host mode move from the installation file into the system database; the installation file goes away.
+- [ ] Settings page: the certificate and private key of the TLS server, checked (they belong together, the certificate is valid) and stored in the system database.
+- [ ] `--address IP` starts HTTPS with TLS 1.3 only, with the stored settings; refuses with an explanation when none are stored.
+- [ ] In TLS mode: the session cookie is `Secure`, the answers carry HSTS.
+- [ ] Tests: a TLS 1.2 client is refused; a changed system database is detected.
+
+**Done when:** the TLS server is configured in the local interface, starts with `--address`, and a browser reaches it over TLS 1.3 only.
 
 ---
 
@@ -165,7 +186,7 @@ Legend: `[ ]` to do, `[x]` done.
 - [ ] **Replace the TPM 2.0 emulator `swtpm` with a real TPM 2.0; the release refuses to run on an emulated TPM.**
 - [ ] Final login: limits on failed attempts, session expiry, logout everywhere.
 - [ ] Security review of the whole program.
-- [ ] Installation: role chosen at installation, configuration created, certificate authority shown to the user.
+- [ ] Installation: role chosen at installation, configuration file created.
 - [ ] Rewrite `README.md` for v0.3.
 
 ---

@@ -1,0 +1,121 @@
+/* IO Master: the style of every page. Minimal on purpose. */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    color: #1f2328;
+    background: #f6f8fa;
+}
+
+/* Warning bars at the top of every page. */
+.bar {
+    padding: 0.6rem 1rem;
+    font-weight: 600;
+    color: #fff;
+}
+
+.bar.danger {
+    background: #c62828;
+}
+
+.bar.warning {
+    background: #b26a00;
+}
+
+/* Navigation on the left, the page on the right. */
+.layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+nav {
+    width: 15rem;
+    padding: 1rem;
+    background: #24292f;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+nav .brand {
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+}
+
+nav .role {
+    color: #8c959f;
+    font-size: 0.8rem;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+}
+
+nav a {
+    color: #d0d7de;
+    text-decoration: none;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+}
+
+nav a:hover {
+    background: #32383f;
+}
+
+nav a.active {
+    background: #0969da;
+    color: #fff;
+}
+
+nav .user {
+    margin-top: auto;
+    color: #d0d7de;
+    font-size: 0.9rem;
+}
+
+main {
+    flex: 1;
+    padding: 1.5rem 2rem;
+}
+
+/* The login page. */
+.login {
+    max-width: 22rem;
+    margin: 4rem auto;
+    padding: 2rem;
+    background: #fff;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+}
+
+.login label {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.login input {
+    display: block;
+    width: 100%;
+    padding: 0.4rem;
+    margin-top: 0.25rem;
+}
+
+.note {
+    color: #57606a;
+    font-size: 0.9rem;
+}
+
+.problem {
+    color: #c62828;
+}
+
+button {
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+}

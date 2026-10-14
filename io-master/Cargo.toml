@@ -20,3 +20,30 @@ secret-service = { version = "5.2.0", features = ["rt-async-io-crypto-rust"] }
 # Overwriting secrets in memory with zeros when they are no
 # longer needed, in a way the compiler cannot optimize away.
 zeroize = "1.9.1"
+
+# Reading the configuration file, written in TOML. The file is
+# read into a plain table and checked by hand (config/config.rs),
+# so the types of the program carry no serialization code.
+toml = "1.1.8"
+
+# The asynchronous runtime the web server runs on: many browser
+# requests are served at once without a thread for each.
+# "rt-multi-thread" and "macros" start it from main(), "net" opens
+# the listening socket, "signal" notices Ctrl+C for a clean stop.
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "net", "signal"] }
+
+# The web framework: routes requests to handler functions. Made by
+# the tokio team; the most widely used Rust web framework.
+axum = "0.8.9"
+
+# Reading the fields of HTML forms (the login form) into a Rust
+# struct. Used only in web_ui/, at the boundary to the browser.
+serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+# Sending requests to the web server in tests without opening
+# a network port ("util" gives the oneshot() call).
+tower = { version = "0.5.3", features = ["util"] }
+
+# Reading the body of a response in tests.
+http-body-util = "0.1.5"

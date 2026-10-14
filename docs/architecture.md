@@ -59,7 +59,13 @@ It exists mainly for development, where two computers with TPM 2.0 are not avail
 
 ## 4. Web user interface (agreed)
 
-- Served by the program itself over **HTTPS with TLS 1.3 or newer**.
+- **How the server is started is chosen with flags** (agreed):
+  - `io-master`: plain HTTP on 127.0.0.1, port 8080. The connection between the browser and the program never leaves the computer, so TLS would protect nothing there.
+  - `--port N`: another port, in either mode.
+  - `--address IP`: **always the secure server**, HTTPS with TLS 1.3 only, even for `--address 127.0.0.1`. The flag itself is the request for TLS.
+- **The TLS server must be configured first**, in the Settings page of the program started locally (without `--address`). The certificate, its private key and the other TLS settings are kept in the system database (section 5.3). Without them `--address` refuses to start.
+- TLS 1.3 is used wherever data leaves the computer: the TLS server above, between a workstation and the master, to the AI providers and to git.
+- Two attacks reach a local server through the browser and are stopped: **DNS rebinding** (only the `Host` names `127.0.0.1:PORT` and `localhost:PORT` are answered) and **cross-site requests** (session cookie `SameSite=Strict`, and a request that changes something must carry the `Origin` of the program).
 - Minimal layout: **navigation on the left**, the selected page on the right.
 - Pages of the workstation, in this order of work:
   1. **Chat**: the AI assistant (empty page at first).
@@ -92,7 +98,16 @@ secret of the device (TPM) ───────────────┘
 - Changing the password re-encrypts only the 32-byte key of the database, not the database.
 - Limit: while an evaluator is logged in, the key is in the memory of the program. The scheme protects the data when the program is closed or logged out.
 
-### 5.3 Password reset (agreed; optional)
+### 5.3 Two levels of the database (agreed)
+
+| Level | Key | Opened | Holds |
+|---|---|---|---|
+| **System database** (of the installation) | sealed in the TPM only (secret of the device) | at program start, without a password | settings of the installation: TLS certificate and private key, later the role and the password reset configuration |
+| **Database of an evaluator** | password of the evaluator + secret of the device (section 5.2) | at login | API keys, chats, working results |
+
+The system database exists because the TLS server needs its private key **before** anyone logs in (the TLS handshake comes before the login page). Keeping the key in a database protected by the TPM is much safer than a plain file: another program cannot read it, and a changed file is detected when it is opened.
+
+### 5.4 Password reset (agreed; optional)
 
 The reset service is **optional and off by default**. It is configured after installation, on a running workstation.
 
