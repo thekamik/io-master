@@ -37,7 +37,7 @@ fn an_empty_data_directory_is_the_first_start() {
 fn the_choice_of_the_first_start_is_kept() {
     let directory = TempDir::new();
 
-    let created = create(&directory.0, Role::Master, "admin").unwrap();
+    let created = create(&directory.0, [1; ID_LENGTH], Role::Master, "admin").unwrap();
 
     assert_eq!(load(&directory.0).unwrap(), State::Installed(created.clone()));
     assert_eq!(created.users, ["admin"]);
@@ -48,10 +48,10 @@ fn the_choice_of_the_first_start_is_kept() {
 fn the_installation_is_written_only_once() {
     let directory = TempDir::new();
 
-    create(&directory.0, Role::Workstation, "anna").unwrap();
+    create(&directory.0, [2; ID_LENGTH], Role::Workstation, "anna").unwrap();
 
     assert!(matches!(
-        create(&directory.0, Role::Master, "mallory"),
+        create(&directory.0, [3; ID_LENGTH], Role::Master, "mallory"),
         Err(InstallationError::AlreadyInstalled)
     ));
     assert!(matches!(load(&directory.0).unwrap(), State::Installed(i) if i.role == Role::Workstation));
@@ -61,7 +61,7 @@ fn the_installation_is_written_only_once() {
 fn the_files_are_private() {
     let directory = TempDir::new();
 
-    create(&directory.0, Role::Workstation, "anna").unwrap();
+    create(&directory.0, [2; ID_LENGTH], Role::Workstation, "anna").unwrap();
 
     let mode = |path: &Path| fs::metadata(path).unwrap().permissions().mode() & 0o777;
 
@@ -86,9 +86,10 @@ fn user_names_are_checked() {
 fn a_damaged_file_stops_the_program() {
     for text in [
         "not json",
-        "{\"users\": [\"a\"]}",
-        "{\"role\": \"workstation\", \"users\": []}",
-        "{\"role\": \"master\", \"users\": [\"a\", \"b\"]}",
+        "{\"id\": \"00000000000000000000000000000001\", \"users\": [\"a\"]}",
+        "{\"id\": \"00000000000000000000000000000001\", \"role\": \"workstation\", \"users\": []}",
+        "{\"id\": \"00000000000000000000000000000001\", \"role\": \"master\", \"users\": [\"a\", \"b\"]}"
+        ,"{\"id\": \"xyz\", \"role\": \"master\", \"users\": [\"a\"]}",
     ] {
         let directory = TempDir::new();
 
@@ -109,4 +110,25 @@ fn roles_have_names() {
     }
 
     assert_eq!(Role::from_name("admin"), None);
+}
+
+#[test]
+fn the_identifier_is_kept_as_hexadecimal_digits() {
+    let id: InstallationId = std::array::from_fn(|index| index as u8);
+
+    assert_eq!(to_hex(&id), "000102030405060708090a0b0c0d0e0f");
+    assert_eq!(from_hex(&to_hex(&id)), Some(id));
+    assert_eq!(from_hex("00"), None);
+    assert_eq!(from_hex(&"zz".repeat(ID_LENGTH)), None);
+}
+
+#[test]
+fn removing_the_record_leaves_the_first_start() {
+    let directory = TempDir::new();
+
+    create(&directory.0, [4; ID_LENGTH], Role::Workstation, "anna").unwrap();
+    remove(&directory.0).unwrap();
+
+    assert_eq!(load(&directory.0).unwrap(), State::FirstRun);
+    remove(&directory.0).unwrap();
 }

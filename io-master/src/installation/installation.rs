@@ -1,26 +1,16 @@
-//! The state of the installation: is this the first start, and if
-//! not, what was chosen at the first start.
+//! The record of the installation: what was chosen at the first
+//! start. Whether this is the first start at all is decided in
+//! `lifecycle.rs`, together with the TPM.
 //!
 //! The first start is the only moment at which the role of the
 //! installation (workstation or master) is chosen, together with
 //! the first user. Afterwards the choice cannot be reached again:
 //! the program only offers it in the state [`State::FirstRun`].
 //!
-//! How the state is told (`docs/architecture.md`, section 3.2):
-//!
-//! ```text
-//! database   secret in the TPM   state
-//! missing    missing             first start: choose the role
-//! present    present             installed
-//! missing    present             damaged: the database was removed
-//! present    missing             damaged: wrong computer or TPM cleared
-//! ```
-//!
-//! TODO (steps 4, 5 and 5a of docs/todo.md): the database and the
-//! TPM do not exist yet. Until then the state is kept in a
-//! temporary file, `installation.json` in the data directory, and
-//! the two damaged states cannot be told. The file goes away when
-//! the system database takes its place.
+//! TODO (step 3 of docs/todo.md): the database does not exist yet.
+//! Until then the record is kept in a temporary file,
+//! `installation.json` in the data directory. The file goes away
+//! when the system database takes its place.
 
 use std::fmt;
 use std::fs::{self, DirBuilder, OpenOptions};
@@ -35,6 +25,14 @@ const FILE_NAME: &str = "installation.json";
 
 /// The longest name of a user, in characters.
 pub const USER_NAME_MAX: usize = 64;
+
+/// Length of the identifier of an installation in bytes.
+pub const ID_LENGTH: usize = 16;
+
+/// The identifier of an installation: random, created at the first
+/// start, and kept both in the record and in the marker of the TPM,
+/// so that the two can be matched.
+pub type InstallationId = [u8; ID_LENGTH];
 
 /// The role of the installation (`docs/architecture.md`,
 /// section 3).
@@ -70,6 +68,7 @@ impl Role {
 /// What was chosen at the first start.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Installation {
+    pub id: InstallationId,
     pub role: Role,
     /// The users of the installation, the first one first.
     pub users: Vec<String>,
@@ -83,7 +82,7 @@ impl Installation {
 
     /// Tells whether users may add further users: on a workstation
     /// they may; a master has only the user who installed it.
-    // TODO: used by the management of users (step 5 of
+    // TODO: used by the management of users (step 3 of
     //       docs/todo.md); until then only by the tests.
     #[allow(dead_code)]
     pub fn can_add_users(&self) -> bool {
@@ -183,8 +182,8 @@ pub fn load(data_dir: &Path) -> Result<State, InstallationError> {
         .map_err(|reason| InstallationError::Damaged { path, reason })
 }
 
-/// Writes the installation at the first start: the role and the
-/// first user.
+/// Writes the record at the first start: the identifier, the role
+/// and the first user.
 ///
 /// Fails with [`InstallationError::AlreadyInstalled`] when an
 /// installation exists, also when another request wrote it a
@@ -192,6 +191,7 @@ pub fn load(data_dir: &Path) -> Result<State, InstallationError> {
 /// in one step of the system.
 pub fn create(
     data_dir: &Path,
+    id: InstallationId,
     role: Role,
     first_user: &str,
 ) -> Result<Installation, InstallationError> {
@@ -210,6 +210,7 @@ pub fn create(
     let path = data_dir.join(FILE_NAME);
 
     let installation = Installation {
+        id,
         role,
         users: vec![first_user.to_owned()],
     };
@@ -234,6 +235,7 @@ pub fn create(
 /// The installation as the text of the file.
 fn to_text(installation: &Installation) -> String {
     let document = json!({
+        "id": to_hex(&installation.id),
         "role": installation.role.name(),
         "users": installation.users,
     });
@@ -244,6 +246,12 @@ fn to_text(installation: &Installation) -> String {
 /// Reads the text of the file. The error is the reason, in words.
 fn parse(text: &str) -> Result<Installation, String> {
     let document: Value = serde_json::from_str(text).map_err(|error| error.to_string())?;
+
+    let id = document
+        .get("id")
+        .and_then(Value::as_str)
+        .and_then(from_hex)
+        .ok_or("no valid identifier")?;
 
     let role = document
         .get("role")
@@ -267,7 +275,40 @@ fn parse(text: &str) -> Result<Installation, String> {
         return Err("a master has only one user".to_owned());
     }
 
-    Ok(Installation { role, users })
+    Ok(Installation { id, role, users })
+}
+
+/// Removes the record; used when the program is uninstalled.
+/// A missing record is not an error.
+pub fn remove(data_dir: &Path) -> Result<(), InstallationError> {
+    let path = data_dir.join(FILE_NAME);
+
+    match fs::remove_file(&path) {
+        Err(source) if source.kind() != io::ErrorKind::NotFound => {
+            Err(InstallationError::Io { path, source })
+        }
+        _ => Ok(()),
+    }
+}
+
+/// The identifier as 32 hexadecimal digits.
+pub fn to_hex(id: &InstallationId) -> String {
+    id.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+/// The identifier from 32 hexadecimal digits.
+fn from_hex(text: &str) -> Option<InstallationId> {
+    if text.len() != ID_LENGTH * 2 || !text.is_ascii() {
+        return None;
+    }
+
+    let mut id = [0u8; ID_LENGTH];
+
+    for (byte, pair) in id.iter_mut().zip(text.as_bytes().chunks(2)) {
+        *byte = u8::from_str_radix(std::str::from_utf8(pair).ok()?, 16).ok()?;
+    }
+
+    Some(id)
 }
 
 // Unit tests, in their own file to keep this one readable. They

@@ -2,7 +2,7 @@
 //!
 //! **Mock-up:** any name is accepted and the password is not
 //! checked. The real login, which unlocks the encrypted database
-//! with the password, replaces it in step 5 of `docs/todo.md`.
+//! with the password, replaces it in step 3 of `docs/todo.md`.
 //!
 //! A session is a random token in a cookie. The server keeps the
 //! tokens in memory, so all sessions end when the program stops.

@@ -9,20 +9,24 @@ use axum::http::header::CONTENT_TYPE;
 use tower::ServiceExt;
 
 use crate::installation::installation::{Installation, Role, State as InstallationState};
+use crate::tpm::tpm::TpmAccess;
 use crate::web_ui::web_ui::router;
 
 /// An installed workstation with the user "x" on port 8080.
 fn state() -> AppState {
     let installation = Installation {
+        id: [1; 16],
         role: Role::Workstation,
         users: vec!["x".to_owned()],
     };
 
+    // The routes tested here never reach the TPM.
     AppState::new(
         std::env::temp_dir(),
         InstallationState::Installed(installation),
         None,
         8080,
+        TpmAccess { port: 0 },
     )
 }
 

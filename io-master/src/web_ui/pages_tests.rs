@@ -4,6 +4,7 @@ use super::*;
 
 fn workstation() -> Installation {
     Installation {
+        id: [1; 16],
         role: Role::Workstation,
         users: vec!["anna".to_owned()],
     }

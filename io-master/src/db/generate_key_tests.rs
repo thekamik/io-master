@@ -5,7 +5,7 @@
 
 use super::*;
 
-use crate::keyring::database_key::DATABASE_KEY_LENGTH;
+use crate::db::database_key::DATABASE_KEY_LENGTH;
 
 #[test]
 fn a_key_is_generated() {

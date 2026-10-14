@@ -11,7 +11,7 @@
 
 use std::io;
 
-use crate::keyring::database_key::DatabaseKey;
+use crate::db::database_key::DatabaseKey;
 use crate::random::random::fill_random;
 
 /// Generates a new key for the database.

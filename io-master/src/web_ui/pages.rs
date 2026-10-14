@@ -2,7 +2,7 @@
 //!
 //! Every page is built by a function that returns the whole
 //! document as text. Nothing is fetched by the page itself yet;
-//! when a page needs live data (the scan, step 2 of
+//! when a page needs live data (the scan, step 5 of
 //! `docs/todo.md`), it will ask the JSON API of the server.
 //!
 //! Text that comes from outside the program (the name of the
@@ -63,14 +63,14 @@ impl Page {
     /// `docs/todo.md` it names.
     fn content(self) -> &'static str {
         match self {
-            Page::Chat => "<p>The AI assistant comes here (step 6).</p>",
+            Page::Chat => "<p>The AI assistant comes here (step 7).</p>",
             Page::Scan => {
-                "<p>The serial ports and the access rights to them come here (steps 2 and 3).</p>"
+                "<p>The serial ports and the access rights to them come here (steps 5 and 6).</p>"
             }
             Page::Settings => {
-                "<p>The choice of the columns of the port table comes here (step 2).</p>"
+                "<p>The choice of the columns of the port table comes here (step 5).</p>"
             }
-            Page::Admin => "<p>Password reset requests are approved here (step 8).</p>",
+            Page::Admin => "<p>Password reset requests are approved here (step 9).</p>",
         }
     }
 }
@@ -98,12 +98,12 @@ pub fn escape(text: &str) -> String {
 /// see whatever page is open.
 ///
 /// The installation decides which bars are shown; it is not read
-/// yet, because the only bar so far is always shown (step 8 makes
+/// yet, because the only bar so far is always shown (step 9 makes
 /// it depend on the reset service).
 fn warning_bars(_installation: &Installation) -> String {
     let mut bars = String::new();
 
-    // TODO (step 8): show it only while no reset service is
+    // TODO (step 9): show it only while no reset service is
     // configured; until then none can be.
     bars.push_str(
         "<div class=\"bar danger\">No password reset is configured: \
@@ -122,6 +122,7 @@ fn document(title: &str, body: &str) -> String {
          <meta charset=\"utf-8\">\n\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
          <title>{} - IO Master</title>\n\
+         <link rel=\"icon\" type=\"image/png\" href=\"/static/logo.png\">\n\
          <link rel=\"stylesheet\" href=\"/static/style.css\">\n\
          </head>\n\
          <body>\n{}\n</body>\n\
@@ -147,7 +148,7 @@ pub fn page(installation: &Installation, user: &str, active: Page) -> String {
         "{bars}\n\
          <div class=\"layout\">\n\
          <nav>\n\
-         <div class=\"brand\">IO Master</div>\n\
+         <div class=\"brand\"><img src=\"/static/logo.png\" alt=\"\">IO Master</div>\n\
          <div class=\"role\">{role}</div>\n\
          {links}\n\
          <div class=\"user\">{user}\n\
@@ -178,6 +179,7 @@ pub fn login_page(installation: &Installation, problem: Option<&str>) -> String 
     let body = format!(
         "{bars}\n\
          <div class=\"login\">\n\
+         <img class=\"logo\" src=\"/static/logo.png\" alt=\"IO Master\">\n\
          <h1>IO Master</h1>\n\
          <p class=\"note\">Mock-up login: the password is not checked yet.</p>\n\
          {problem}\n\
@@ -207,6 +209,7 @@ fn problem_text(problem: Option<&str>) -> String {
 pub fn setup_page(problem: Option<&str>) -> String {
     let body = format!(
         "<div class=\"login wide\">\n\
+         <img class=\"logo\" src=\"/static/logo.png\" alt=\"IO Master\">\n\
          <h1>IO Master: first start</h1>\n\
          <p class=\"note\">Nothing is installed yet. Create the first user and choose \
          the role of this installation.</p>\n\

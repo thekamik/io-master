@@ -2,7 +2,7 @@
 //!
 //! The server listens on 127.0.0.1 over plain HTTP: the connection
 //! between the browser and the server never leaves the computer.
-//! The TLS server for `--address` comes in step 5a of
+//! The TLS server for `--address` comes in step 4 of
 //! `docs/todo.md`.
 //!
 //! The work is split over the files of this folder:
@@ -13,7 +13,7 @@
 //! session.rs    login (mock-up), sessions, the login check
 //! security.rs   Host and Origin checks, protective headers
 //! pages.rs      the HTML of the pages
-//! static/       the style sheet
+//! static/       the style sheet and the logo
 //! ```
 //!
 //! Until the installation is done, every address leads to the
@@ -37,6 +37,7 @@ use serde::Deserialize;
 use tokio::net::TcpListener;
 
 use crate::installation::installation::{Installation, State as InstallationState};
+use crate::tpm::tpm::TpmAccess;
 
 use super::pages::{self, Page};
 use super::security::{check_host, check_origin, security_headers};
@@ -45,6 +46,14 @@ use super::setup::{self, SetupCode};
 
 /// The style sheet, built into the program.
 const STYLE: &str = include_str!("static/style.css");
+
+/// The logo, built into the program: a 192-pixel copy of
+/// `static/logo.png` (the original, 1254 pixels), small enough to
+/// load with every page.
+const LOGO: &[u8] = include_bytes!("static/logo-small.png");
+
+/// The address of the logo.
+pub const LOGO_PATH: &str = "/static/logo.png";
 
 /// What every request handler can reach.
 #[derive(Debug, Clone)]
@@ -60,13 +69,21 @@ pub struct AppState {
     /// The port the server listens on; the names a browser may
     /// use for the server depend on it (security.rs).
     pub port: u16,
+    /// Where the TPM is reached; the first start needs it.
+    pub tpm: TpmAccess,
     pub sessions: Sessions,
 }
 
 impl AppState {
     /// The state of a server. `setup_code` is needed only for the
     /// first start.
-    pub fn new(data_dir: PathBuf, state: InstallationState, setup_code: Option<SetupCode>, port: u16) -> AppState {
+    pub fn new(
+        data_dir: PathBuf,
+        state: InstallationState,
+        setup_code: Option<SetupCode>,
+        port: u16,
+        tpm: TpmAccess,
+    ) -> AppState {
         let installation = match state {
             InstallationState::FirstRun => None,
             InstallationState::Installed(installation) => Some(installation),
@@ -77,6 +94,7 @@ impl AppState {
             installation: Arc::new(RwLock::new(installation)),
             setup_code: setup_code.map(Arc::new),
             port,
+            tpm,
             sessions: Sessions::default(),
         }
     }
@@ -142,6 +160,7 @@ pub fn router(state: AppState) -> Router {
         .route("/setup", get(setup::setup_form).post(setup::setup))
         .route("/login", get(login_form).post(login))
         .route("/static/style.css", get(style))
+        .route(LOGO_PATH, get(logo))
         .fallback(not_found)
         .layer(from_fn_with_state(state.clone(), require_installed))
         .layer(from_fn_with_state(state.clone(), check_origin))
@@ -159,6 +178,7 @@ async fn require_installed(State(state): State<AppState>, request: Request, next
     match (installed, path) {
         (true, "/setup") => Redirect::to("/").into_response(),
         (false, "/setup" | "/static/style.css") | (true, _) => next.run(request).await,
+        (false, path) if path == LOGO_PATH => next.run(request).await,
         (false, _) => Redirect::to("/setup").into_response(),
     }
 }
@@ -210,7 +230,7 @@ struct LoginForm {
 
 /// Logs a user in.
 ///
-/// TODO (step 5 of docs/todo.md): mock-up. The user must exist,
+/// TODO (step 3 of docs/todo.md): mock-up. The user must exist,
 /// but the password is not checked yet.
 async fn login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Response {
     let Some(installation) = state.installation() else {
@@ -249,6 +269,11 @@ async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
 /// The style sheet.
 async fn style() -> Response {
     ([(CONTENT_TYPE, "text/css; charset=utf-8")], STYLE).into_response()
+}
+
+/// The logo.
+async fn logo() -> Response {
+    ([(CONTENT_TYPE, "image/png")], LOGO).into_response()
 }
 
 /// Any other address, also the pages of the other role.

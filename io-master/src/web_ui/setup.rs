@@ -7,9 +7,9 @@
 //! who started the program sees it, so nobody else (another user
 //! of the computer, another program) can make the choice first.
 //!
-//! The choice is made once: the installation is written only if
-//! none exists (`installation.rs`), and afterwards this page is
-//! no longer reachable.
+//! The choice is made once: the installation is made only if none
+//! exists, in the TPM as well (`installation/lifecycle.rs`), and
+//! afterwards this page is no longer reachable.
 
 use std::io;
 
@@ -20,7 +20,8 @@ use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::Form;
 use serde::Deserialize;
 
-use crate::installation::installation::{self, InstallationError, Role};
+use crate::installation::installation::{InstallationError, Role};
+use crate::installation::lifecycle::{self, LifecycleError};
 use crate::random::random::fill_random;
 
 use super::pages;
@@ -126,8 +127,8 @@ pub async fn setup(State(state): State<AppState>, Form(form): Form<SetupForm>) -
 
     let user = form.username.trim();
 
-    // TODO (step 5 of docs/todo.md): the password is checked here
-    // but not kept; from step 5 it protects the database.
+    // TODO (step 3 of docs/todo.md): the password is checked here
+    // but not kept; from step 3 it protects the database.
     if form.password.is_empty() || form.password != form.password_repeat {
         return refuse(StatusCode::BAD_REQUEST, "The two passwords are empty or differ.");
     }
@@ -140,20 +141,42 @@ pub async fn setup(State(state): State<AppState>, Form(form): Form<SetupForm>) -
         return refuse(StatusCode::BAD_REQUEST, "Confirm that the role cannot be changed later.");
     }
 
-    let created = installation::create(&state.data_dir, role, user);
+    // The TPM is slow and its connection must stay on one thread,
+    // so the installation is made on a thread for blocking work.
+    let data_dir = state.data_dir.as_ref().clone();
+    let tpm = state.tpm;
+    let first_user = user.to_owned();
+
+    let created = tokio::task::spawn_blocking(move || {
+        let mut tpm = tpm.connect().map_err(LifecycleError::Tpm)?;
+
+        lifecycle::install(&data_dir, &mut tpm, role, &first_user)
+    })
+    .await;
 
     let installation = match created {
-        Ok(installation) => installation,
-        Err(InstallationError::InvalidUserName(reason)) => {
+        Ok(Ok(installation)) => installation,
+        Ok(Err(LifecycleError::Installation(InstallationError::InvalidUserName(reason)))) => {
             return refuse(StatusCode::BAD_REQUEST, &format!("The name is not valid: {reason}."));
         }
         // Another request finished the setup a moment earlier.
-        Err(InstallationError::AlreadyInstalled) => return Redirect::to("/login").into_response(),
-        Err(error) => {
+        Ok(Err(LifecycleError::Installation(InstallationError::AlreadyInstalled))) => {
+            return Redirect::to("/login").into_response();
+        }
+        Ok(Err(LifecycleError::AnotherInstallation)) => {
+            return refuse(
+                StatusCode::CONFLICT,
+                "This computer already has an installation of IO Master: there is one per computer.",
+            );
+        }
+        Ok(Err(error)) => {
             return refuse(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                &format!("The installation could not be written: {error}."),
+                &format!("The installation could not be made: {error}."),
             );
+        }
+        Err(_) => {
+            return refuse(StatusCode::INTERNAL_SERVER_ERROR, "The installation was interrupted.");
         }
     };
 

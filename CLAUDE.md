@@ -24,7 +24,7 @@ The whole workflow is controlled from a **web UI**. By default it is served over
 ## Rules carried over from v0.2
 
 - No command reaches a device without an action of a person for that command. The program proposes; a person executes.
-- Secrets (API keys, the key of the database, git credentials) only in protected storage: today the Secret Service keyring, in the target design the TPM 2.0 (`docs/architecture.md`, section 5). Never in plain files.
+- Secrets (API keys, the key of the database, git credentials) only in protected storage: the encrypted databases, whose keys depend on the TPM 2.0 (`docs/architecture.md`, section 5). Never in plain files. Until the beta version the TPM is the emulator `swtpm`.
 - Every network connection that leaves the computer uses TLS 1.3 or newer with a verified certificate (workstation and master, AI providers, git). The web UI on 127.0.0.1 is plain HTTP, protected against DNS rebinding and cross-site requests (`docs/architecture.md`, section 4).
 - Code comments and documentation in English, thorough. Conversation with the user in Polish.
 

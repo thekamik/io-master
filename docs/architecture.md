@@ -71,6 +71,8 @@ The first start is the real moment of installation. The program tells it from th
 - **Only the role is final.** The connection to a master is set, changed or removed later in Settings; a workstation works fully without a master (section 5.4). An evaluator can install a workstation alone and connect it to a master set up later.
 - The data of an installation lives in its data directory: `--data-dir`, default `~/.local/share/io-master` (another directory for development and tests). Nothing is kept outside the database.
 - A build without the master code is possible later as a separate build variant.
+- The program can be removed with `io-master --uninstall`, which also removes its marker from the TPM, so nothing of it stays in the TPM. It works on a damaged installation too.
+- Until the beta version the TPM is the emulator `swtpm`, which the program starts itself with its state in the data directory (section 5.1).
 
 ## 4. Web user interface (agreed)
 
@@ -97,6 +99,8 @@ The first start is the real moment of installation. The program tells it from th
 - Each evaluator has **their own API keys**, stored in the encrypted database of their workstation.
 - The program has its **own accounts and passwords**, independent of the Linux accounts.
 - Several evaluators may use one workstation, each with an own account.
+
+> **The TPM must stay as it is for the life of the installation.** The program never clears the TPM or changes its passwords. But the secret of the device, and with it all data, is lost if the TPM is cleared from outside the program: "Clear TPM" in the BIOS or in another operating system, some BIOS updates that reset a TPM built into the processor (fTPM), or a new motherboard. Only a backup with its own encryption (section 5.5) protects against that.
 
 > **TODO (before release): development uses the TPM 2.0 emulator `swtpm`. It must be replaced by a real TPM 2.0 before the end of development, and the release must refuse to run on an emulated TPM.**
 

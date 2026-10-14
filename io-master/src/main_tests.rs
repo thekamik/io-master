@@ -16,7 +16,8 @@ fn no_parameters_start_the_local_server_on_8080() {
         Ok(Arguments {
             data_dir: None,
             port: 8080,
-            address: None
+            address: None,
+            uninstall: false
         })
     );
 }
@@ -53,4 +54,13 @@ fn mistakes_on_the_command_line_are_refused() {
     assert_eq!(parse(&["--port", "1", "--port", "2"]), Err(ArgumentError::Repeated("--port")));
     assert_eq!(parse(&["--cli"]), Err(ArgumentError::Unknown("--cli".to_owned())));
     assert_eq!(parse(&["9000"]), Err(ArgumentError::Unknown("9000".to_owned())));
+}
+
+#[test]
+fn uninstall_is_a_flag_without_a_value() {
+    let arguments = parse(&["--uninstall", "--data-dir", "/tmp/io"]).unwrap();
+
+    assert!(arguments.uninstall);
+    assert_eq!(arguments.data_dir, Some(PathBuf::from("/tmp/io")));
+    assert_eq!(parse(&["--uninstall", "--uninstall"]), Err(ArgumentError::Repeated("--uninstall")));
 }

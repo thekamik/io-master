@@ -5,21 +5,19 @@ edition = "2024"
 
 [dependencies]
 # System calls without unsafe code: asking whether the current
-# user may read and write a device file (access(2), "fs"), and
-# reading random bytes from the kernel (getrandom(2), "rand").
-rustix = { version = "1.1.5", default-features = false, features = ["std", "fs", "rand"] }
-
-# The keyring of the system (the Secret Service of the desktop:
-# GNOME Keyring, KWallet), which keeps secrets such as API keys
-# encrypted on disk. "rt-async-io" lets the crate run its D-Bus
-# connection on a small runtime of its own, so it can be used
-# from plain, blocking code; "crypto-rust" encrypts the secrets
-# on their way between this program and the keyring service.
-secret-service = { version = "5.2.0", features = ["rt-async-io-crypto-rust"] }
+# user may read and write a device file (access(2), "fs"),
+# reading random bytes from the kernel (getrandom(2), "rand"),
+# and stopping a leftover TPM emulator (kill(2), "process").
+rustix = { version = "1.1.5", default-features = false, features = ["std", "fs", "rand", "process"] }
 
 # Overwriting secrets in memory with zeros when they are no
 # longer needed, in a way the compiler cannot optimize away.
 zeroize = "1.9.1"
+
+# The TPM 2.0: sealing the secret of the device and keeping the
+# marker of the installation (tpm/). A Rust wrapper of tpm2-tss,
+# the TPM library of the system (package libtss2-dev).
+tss-esapi = "7.7.0"
 
 # Reading and writing the temporary installation file as JSON
 # (installation/installation.rs), until the system database
