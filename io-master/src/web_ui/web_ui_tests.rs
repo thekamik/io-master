@@ -206,6 +206,73 @@ async fn logout_ends_the_session() {
 }
 
 /* ---------------------------------------------------------------
+ * Scan
+ * ------------------------------------------------------------- */
+
+#[tokio::test]
+async fn the_scan_page_shows_the_settings_and_the_ports() {
+    let server = installed(Role::Workstation, &["anna"]);
+    let token = log_in(&server.state, "anna").await;
+
+    let response = send(&server.state, request(Method::GET, "/scan", Some(&token), "")).await;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let html = text(response).await;
+
+    // The defaults of a new account; the result depends on the
+    // hardware of the computer that runs the test.
+    assert!(html.contains("value=\"all\" checked"));
+    assert!(html.contains("value=\"path\" checked"));
+    assert!(html.contains("Serial ports"));
+}
+
+#[tokio::test]
+async fn the_settings_of_the_scanner_are_kept_per_user() {
+    let server = installed(Role::Workstation, &["anna", "jan"]);
+    let anna = log_in(&server.state, "anna").await;
+
+    let body = "type=ttyUSB&type=ttyAMA&column=path&column=driver";
+    let response = send(&server.state, request(Method::POST, "/scan/settings", Some(&anna), body)).await;
+
+    // Back to the page, which then scans with the new settings.
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(response.headers()[LOCATION], "/scan");
+
+    // Kept after logging in again: they are in the database of anna.
+    let again = log_in(&server.state, "anna").await;
+    let html = text(send(&server.state, request(Method::GET, "/scan", Some(&again), "")).await).await;
+
+    assert!(html.contains("value=\"ttyUSB\" checked"));
+    assert!(html.contains("value=\"ttyAMA\" checked"));
+    assert!(!html.contains("value=\"all\" checked"));
+    assert!(html.contains("value=\"driver\" checked"));
+    assert!(!html.contains("value=\"type\" checked"));
+
+    // Jan has his own settings: still the defaults.
+    let jan = log_in(&server.state, "jan").await;
+    let html = text(send(&server.state, request(Method::GET, "/scan", Some(&jan), "")).await).await;
+
+    assert!(html.contains("value=\"all\" checked"));
+    assert!(!html.contains("value=\"driver\" checked"));
+}
+
+#[tokio::test]
+async fn the_scan_page_needs_a_login_and_a_workstation() {
+    let server = installed(Role::Workstation, &["anna"]);
+
+    let response = send(&server.state, request(Method::POST, "/scan/settings", None, "column=path")).await;
+    assert_eq!(response.headers()[LOCATION], "/login");
+
+    let master = installed(Role::Master, &["admin"]);
+    let token = log_in(&master.state, "admin").await;
+
+    for (method, path) in [(Method::GET, "/scan"), (Method::POST, "/scan/settings")] {
+        let response = send(&master.state, request(method, path, Some(&token), "column=path")).await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND, "{path}");
+    }
+}
+
+/* ---------------------------------------------------------------
  * Settings
  * ------------------------------------------------------------- */
 

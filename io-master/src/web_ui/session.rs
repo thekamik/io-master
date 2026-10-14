@@ -39,16 +39,21 @@ const TOKEN_BYTES: usize = 32;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CurrentUser(pub Account);
 
+/// The key of the database of the evaluator of the current request,
+/// put into the request by [`require_login`] for the pages that
+/// read or change the data of the evaluator.
+///
+/// Shared with the session: the key is wiped when the session ends
+/// and no request uses it any more.
+#[derive(Debug, Clone)]
+pub struct UserKey(pub Arc<DatabaseKey>);
+
 /// What a session holds.
 #[derive(Debug)]
 struct Session {
     account: Account,
-    /// The key of the database of the account; wiped when the
-    /// session ends.
-    // TODO: read by the data of the evaluator (step 5 of
-    //       docs/todo.md); until then only kept.
-    #[allow(dead_code)]
-    key: DatabaseKey,
+    /// The key of the database of the account.
+    key: Arc<DatabaseKey>,
 }
 
 /// The open sessions: token -> account and key.
@@ -76,7 +81,13 @@ impl Sessions {
 
         let token: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
 
-        self.table().insert(token.clone(), Session { account, key });
+        self.table().insert(
+            token.clone(),
+            Session {
+                account,
+                key: Arc::new(key),
+            },
+        );
 
         Ok(token)
     }
@@ -84,6 +95,14 @@ impl Sessions {
     /// The account of a session, if the token is valid.
     pub fn user(&self, token: &str) -> Option<Account> {
         self.table().get(token).map(|session| session.account.clone())
+    }
+
+    /// The account of a session and the key of its database, if the
+    /// token is valid.
+    fn get(&self, token: &str) -> Option<(Account, Arc<DatabaseKey>)> {
+        self.table()
+            .get(token)
+            .map(|session| (session.account.clone(), Arc::clone(&session.key)))
     }
 
     /// Ends a session; its key is wiped.
@@ -118,13 +137,15 @@ pub fn expired_cookie() -> String {
 
 /// Lets a request through only with a valid session; others are
 /// sent to the login page. The pages find the evaluator as
-/// [`CurrentUser`] in the request.
+/// [`CurrentUser`] and the key of their database as [`UserKey`] in
+/// the request.
 pub async fn require_login(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
-    let user = token_from(request.headers()).and_then(|token| state.sessions.user(token));
+    let session = token_from(request.headers()).and_then(|token| state.sessions.get(token));
 
-    match user {
-        Some(user) => {
-            request.extensions_mut().insert(CurrentUser(user));
+    match session {
+        Some((account, key)) => {
+            request.extensions_mut().insert(CurrentUser(account));
+            request.extensions_mut().insert(UserKey(key));
             next.run(request).await
         }
         None => Redirect::to("/login").into_response(),

@@ -33,3 +33,21 @@ fn all_databases_are_removed() {
     assert!(!directory.path().join(DIRECTORY).exists());
     remove_all(directory.path()).unwrap();
 }
+
+#[test]
+fn settings_are_kept_and_replaced() {
+    let directory = TempDir::new();
+    let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
+
+    let db = create(directory.path(), 1, &key).unwrap();
+
+    assert_eq!(db.setting("scan.columns").unwrap(), None);
+
+    db.set_setting("scan.columns", "path,type").unwrap();
+    db.set_setting("scan.columns", "path").unwrap();
+    drop(db);
+
+    // Kept in the file, and readable only with the key.
+    let db = open(directory.path(), 1, &key).unwrap();
+    assert_eq!(db.setting("scan.columns").unwrap().as_deref(), Some("path"));
+}

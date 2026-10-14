@@ -48,6 +48,8 @@ mod devices {
     // Same layout as installation/installation.rs.
     #[allow(clippy::module_inception)]
     pub mod devices;
+    pub mod port_property;
+    pub mod scan_settings;
 }
 
 mod tpm {
@@ -79,6 +81,7 @@ mod random {
 
 mod web_ui {
     pub mod pages;
+    pub mod scan_page;
     pub mod security;
     pub mod session;
     pub mod settings;

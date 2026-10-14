@@ -189,3 +189,76 @@ button {
     background: #fff;
     cursor: pointer;
 }
+
+/* The settings of the scanner: folded, boxes in columns. */
+details.settings {
+    margin-bottom: 1.5rem;
+}
+
+details.settings summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+h2 a.button {
+    font-size: 0.85rem;
+    font-weight: normal;
+    vertical-align: middle;
+}
+
+.settings fieldset {
+    margin-bottom: 1rem;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.settings legend {
+    font-weight: 600;
+    padding: 0 0.3rem;
+}
+
+.choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+    gap: 0.25rem 1rem;
+    margin-top: 0.5rem;
+}
+
+label.choice {
+    white-space: nowrap;
+}
+
+a.button {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    background: #fff;
+    color: inherit;
+    text-decoration: none;
+}
+
+/* The table of ports. */
+table.ports {
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 0.9rem;
+}
+
+table.ports th,
+table.ports td {
+    border: 1px solid #d0d7de;
+    padding: 0.35rem 0.6rem;
+    text-align: left;
+    vertical-align: top;
+    /* Paths and ids are read as a whole; a value is never broken
+       in the middle. Values of several lines keep their lines. */
+    white-space: nowrap;
+}
+
+table.ports th {
+    background: #eaeef2;
+}

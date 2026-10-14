@@ -2,7 +2,8 @@
 //!
 //! [`scan`] lists the serial ports of the computer together with
 //! everything the system knows about them. It can be limited to
-//! one kind of port ([`PortType`]), for example only `ttyACM`.
+//! some kinds of port ([`PortFilter`]), for example only `ttyACM`
+//! and `ttyUSB`.
 //!
 //! Where the information comes from
 //! --------------------------------
@@ -48,11 +49,6 @@
 //! (`ttyACM*`, `ttyUSB*`), built-in UARTs (`ttyS*`, `ttyAMA*`,
 //! ...) and kinds this module has no name for
 //! ([`PortType::Other`]).
-
-// TODO: Remove when the web UI calls scan() (step 5 of
-//       docs/todo.md); until then the compiler sees no user of
-//       this module.
-#![allow(dead_code)]
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -361,23 +357,36 @@ impl Sources {
  * Scan
  * ------------------------------------------------------------- */
 
+/// Which ports a scan reports.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum PortFilter {
+    /// Every serial port.
+    All,
+    /// Only ports of these kinds. An empty list reports nothing.
+    Types(Vec<PortType>),
+}
+
+impl PortFilter {
+    /// Tells whether a port of this kind is reported.
+    pub fn accepts(&self, port_type: &PortType) -> bool {
+        match self {
+            PortFilter::All => true,
+            PortFilter::Types(types) => types.contains(port_type),
+        }
+    }
+}
+
 /// Lists the serial ports of the computer, ordered by name
-/// (`ttyACM2` before `ttyACM10`).
-///
-/// `filter` limits the list to one kind of port; `None` lists
-/// all of them.
+/// (`ttyACM2` before `ttyACM10`), limited by `filter`.
 ///
 /// A port that disappears while it is being examined (a cable
 /// pulled out at that moment) is left out. No port is opened.
-pub fn scan(filter: Option<&PortType>) -> Result<Vec<SerialPortInfo>, ScanError> {
+pub fn scan(filter: &PortFilter) -> Result<Vec<SerialPortInfo>, ScanError> {
     scan_with(&Sources::system(), filter)
 }
 
 /// [`scan`] on the given places.
-fn scan_with(
-    sources: &Sources,
-    filter: Option<&PortType>,
-) -> Result<Vec<SerialPortInfo>, ScanError> {
+fn scan_with(sources: &Sources, filter: &PortFilter) -> Result<Vec<SerialPortInfo>, ScanError> {
     let unavailable = |source| ScanError::DeviceListUnavailable {
         path: sources.tty_class.clone(),
         source,
@@ -403,7 +412,7 @@ fn scan_with(
 
         let port_type = PortType::of_port(name);
 
-        if filter.is_some_and(|wanted| *wanted != port_type) {
+        if !filter.accepts(&port_type) {
             continue;
         }
 

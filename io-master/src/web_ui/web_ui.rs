@@ -10,6 +10,7 @@
 //! ```text
 //! web_ui.rs     the server, the routes, login and logout
 //! setup.rs      the first start: setup code, first user, role
+//! scan_page.rs  the scan page: serial ports and their settings
 //! settings.rs   the settings page: users and password
 //! session.rs    sessions and the login check
 //! security.rs   Host and Origin checks, protective headers
@@ -45,6 +46,7 @@ use crate::accounts::accounts::{self, AccountError};
 use crate::installation::lifecycle::{Opened, Running};
 
 use super::pages::{self, Page};
+use super::scan_page;
 use super::security::{check_host, check_origin, security_headers};
 use super::session::{self, CurrentUser, Sessions};
 use super::settings;
@@ -141,9 +143,11 @@ pub fn router(state: AppState) -> Router {
         .route("/", get(home))
         .route(Page::Settings.path(), get(settings::show))
         .route("/settings/users", post(settings::add_user))
-        .route("/settings/password", post(settings::change_password));
+        .route("/settings/password", post(settings::change_password))
+        .route(Page::Scan.path(), get(scan_page::show))
+        .route("/scan/settings", post(scan_page::save));
 
-    for page in [Page::Chat, Page::Scan, Page::Admin] {
+    for page in [Page::Chat, Page::Admin] {
         pages = pages.route(page.path(), get(move |state, user| show_placeholder(state, user, page)));
     }
 

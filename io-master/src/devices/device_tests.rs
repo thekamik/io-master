@@ -158,11 +158,16 @@ impl FakeSystem {
 }
 
 fn scan_fake(system: &FakeSystem) -> Vec<SerialPortInfo> {
-    scan_filtered(system, None)
+    scan_filtered(system, &PortFilter::All)
 }
 
-fn scan_filtered(system: &FakeSystem, filter: Option<&PortType>) -> Vec<SerialPortInfo> {
+fn scan_filtered(system: &FakeSystem, filter: &PortFilter) -> Vec<SerialPortInfo> {
     scan_with(&system.sources(), filter).expect("the fake system can be scanned")
+}
+
+/// A filter for the given kinds.
+fn only(types: &[PortType]) -> PortFilter {
+    PortFilter::Types(types.to_vec())
 }
 
 /// The names of the ports, in the order they were returned.
@@ -295,7 +300,7 @@ fn a_missing_device_list_is_an_error() {
     sources.tty_class = system.path("sys/class/none");
 
     assert!(matches!(
-        scan_with(&sources, None),
+        scan_with(&sources, &PortFilter::All),
         Err(ScanError::DeviceListUnavailable { .. })
     ));
 }
@@ -313,13 +318,20 @@ fn the_filter_keeps_one_kind_of_port() {
     system.tty("ttyRP0", Some(&card), "240:0", &[]);
 
     assert_eq!(names(&scan_fake(&system)), ["ttyACM0", "ttyAMA0", "ttyRP0"]);
-    assert_eq!(names(&scan_filtered(&system, Some(&PortType::UsbAcm))), ["ttyACM0"]);
-    assert_eq!(names(&scan_filtered(&system, Some(&PortType::ArmPl011))), ["ttyAMA0"]);
+    assert_eq!(names(&scan_filtered(&system, &only(&[PortType::UsbAcm]))), ["ttyACM0"]);
+    assert_eq!(names(&scan_filtered(&system, &only(&[PortType::ArmPl011]))), ["ttyAMA0"]);
     assert_eq!(
-        names(&scan_filtered(&system, Some(&PortType::Other("ttyRP".to_owned())))),
+        names(&scan_filtered(&system, &only(&[PortType::Other("ttyRP".to_owned())]))),
         ["ttyRP0"]
     );
-    assert!(scan_filtered(&system, Some(&PortType::UsbSerial)).is_empty());
+    assert!(scan_filtered(&system, &only(&[PortType::UsbSerial])).is_empty());
+
+    // Several kinds at once, and none at all.
+    assert_eq!(
+        names(&scan_filtered(&system, &only(&[PortType::UsbAcm, PortType::ArmPl011]))),
+        ["ttyACM0", "ttyAMA0"]
+    );
+    assert!(scan_filtered(&system, &only(&[])).is_empty());
 }
 
 #[test]
@@ -365,5 +377,5 @@ fn every_known_type_has_its_own_base_name() {
 #[test]
 #[ignore]
 fn scan_of_this_computer() {
-    println!("{:#?}", scan(None).expect("the system can be scanned"));
+    println!("{:#?}", scan(&PortFilter::All).expect("the system can be scanned"));
 }
