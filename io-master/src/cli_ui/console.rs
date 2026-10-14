@@ -21,7 +21,7 @@
 use std::io::{self, BufRead, Write};
 
 use crate::devices::devices::{self, PortType, ScanError, SerialPortInfo};
-use crate::ui::port_table::format_port_table;
+use crate::cli_ui::port_table::format_port_table;
 
 /// The prompt shown before every line.
 const PROMPT: &str = "io-master> ";

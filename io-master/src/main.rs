@@ -18,7 +18,19 @@ mod devices {
     pub mod devices;
 }
 
-mod ui {
+mod keyring {
+    // Same layout as devices/devices.rs.
+    #[allow(clippy::module_inception)]
+    pub mod keyring;
+
+    pub mod database_key;
+}
+
+mod db {
+    pub mod generate_key;
+}
+
+mod cli_ui {
     pub mod console;
     pub mod port_table;
 }
@@ -76,7 +88,7 @@ fn main() -> ExitCode {
 
     match parse_arguments(&arguments) {
         Ok(Mode::Console) => {
-            ui::console::console_ui();
+            cli_ui::console::console_ui();
             ExitCode::SUCCESS
         }
         Err(error) => {
