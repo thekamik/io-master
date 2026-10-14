@@ -7,7 +7,7 @@
 - The long-term direction is AI-assisted Common Criteria evaluation (`v0.2_functionality.md`, section 3.7).
 - **The agreed concept of v0.3 is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the web UI (workstation: many users with equal rights; master: one user), web UI only, passwords as the default factor with the TPM 2.0 as an optional further factor, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
 - The program must run without a TPM (virtual machines). TODO before release: the optional TPM factor uses a real TPM 2.0, not the emulator `swtpm`.
-- **The work follows `docs/todo.md`, one step at a time.** Every step: concept approved by the user, implementation with tests, check, approval, commit. When the list is done, further functionality is planned anew.
+- **The work follows `docs/todo.md`, one step at a time, in the order of its table "order of work"; step numbers are names and never change.** Every step: concept approved by the user, implementation with tests, check, approval, commit. When the list is done, further functionality is planned anew.
 
 ## Main design rule: the web UI is the only interface
 

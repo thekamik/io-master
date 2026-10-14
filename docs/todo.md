@@ -1,6 +1,23 @@
 # IO Master v0.3: TODO
 
-The steps that take the program from where it is now to the design in `architecture.md`. They are done **in order, one at a time**. The workstation is the core and is completed first; the master (step 11) is the last stage. When the last step is done, the next functionality is planned anew.
+The steps that take the program from where it is now to the design in `architecture.md`. They are done **one at a time, in the order of work below**. The workstation is the core and is completed first; the TLS server and the master are the last stage. When the last step is done, the next functionality is planned anew.
+
+The number of a step is its name and never changes, so that references in the code (`TODO (step 7 of docs/todo.md)`) stay valid. The order of work is kept here:
+
+| Order | Step | State |
+|---|---|---|
+| 1 | 0: Put the current state in order | done |
+| 2 | 1: Web server skeleton | done |
+| 3 | 2: Secrets in the TPM (now an optional factor, see step 8) | done |
+| 4 | 3: Databases, accounts and the management of users | done |
+| 5 | 5: Scan page | done |
+| 6 | **7: AI chat with Anthropic** | **next** |
+| 7 | 6: Port permissions | |
+| 8 | 8: The TPM as an optional factor | |
+| 9 | 9: Passkeys as an optional factor | |
+| 10 | 10: Before release of the workstation | |
+| 11 | 4: The TLS server | before the master |
+| 12 | 11: Master and password reset | last |
 
 ## How every step is done
 
@@ -110,6 +127,8 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 4: The TLS server
 
+Moved to the last stage: done right before the master (step 11), which is reached over the network. Until then the program serves only the local interface on 127.0.0.1.
+
 **Decisions**
 - [x] Who may change the settings of the installation: on a workstation every user (equal rights); on a master its only user.
 - [ ] Whether the TLS settings can be changed after they are saved (for example to replace an expiring certificate) or only by installing again.
@@ -128,18 +147,20 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 5: Scan page
 
+Done before step 4, at the request of the user.
+
 **Decisions**
-- [ ] Shape of the JSON API, for example `GET /api/ports?type=ttyACM`.
+- [x] The page is built by the server (HTML forms, no JavaScript); a JSON API and `web_ui/serializer/` come when a page needs live data.
+- [x] The settings of the scanner are on the scan page itself, kept per evaluator in their encrypted database.
+- [x] No CSRF token: the check of `Origin` and the `SameSite=Strict` cookie already refuse forms of other websites (step 1).
 
 **Tasks**
-- [ ] `web_ui/serializer/`: ports (`SerialPortInfo`) to JSON.
-- [ ] API endpoint for the scan, with the optional filter by port type.
-- [ ] Table of ports on the page, a filter by type, a button to scan again.
-- [ ] Settings page: choice of the columns of the table among all properties of a port; default columns: port, type, device, serial number, access.
-- [ ] Settings kept in the database of the evaluator (step 3).
-- [ ] Protection of requests that change something (CSRF token, in addition to `SameSite=Strict`).
+- [x] The scan filters by several kinds of port at once, or all (`devices::PortFilter`).
+- [x] The properties of a port that can be shown (`devices/port_property.rs`), each with a stable key for storing the choice; default columns: port, type, device, serial number, access.
+- [x] The settings of the scanner (`devices/scan_settings.rs`) in the settings table of the evaluator's database (`db/user_db.rs`); forgiving when reading.
+- [x] Scan page: kinds of port (with "All kinds") and columns as boxes, "Save and scan", "Scan again", the table of ports with the chosen columns.
 
-**Done when:** the Arduino appears in the table; the chosen columns survive a restart of the program; tests cover the serializer, the endpoint and the settings file.
+**Done when:** the Arduino appears in the table; the chosen settings survive a new login and a restart of the program, and each evaluator has their own; tests cover the filter, the properties, the settings and the page.
 
 ---
 
@@ -158,21 +179,30 @@ Legend: `[ ]` to do, `[x]` done.
 
 ---
 
-## Step 7: AI and chat
+## Step 7: AI chat with Anthropic
+
+The first AI function: a chat with a Claude model of Anthropic, with the API key of the evaluator. Other providers (Gemini) and the use of AI on the data of devices come later.
 
 **Decisions**
-- [ ] HTTP client with `rustls` and TLS 1.3 only (proposed: `reqwest`).
-- [ ] Providers to start with: Anthropic and Gemini, as in v0.2.
-- [ ] Replies shown when complete, or streamed while they are written.
+- [x] HTTP client: `reqwest` with `rustls`, TLS 1.3 only, certificates verified, redirects never followed, as in v0.2, so the key never reaches another address.
+- [x] Settings of the chat on the chat page itself, folded like those of the scanner (step 5), kept per evaluator in their database: the model, chosen from a list of the current Claude models (Opus, Sonnet, Haiku), with a default.
+- [x] Replies are shown while they are written (streamed): friendlier for the user. This needs a small script on the chat page, served from the program itself (the Content-Security-Policy allows no other), and server-sent events from the server.
+- [x] The key and the chosen model are checked when they are stored, as in v0.2: one short request; a failure is explained in plain words (key rejected, unknown model, no connection) and the key is not stored.
+- [x] What the page shows after the check: only that the model is configured correctly and can be used in the chat or to support the evaluation; nothing of the key itself, not even its last characters.
 
-**Tasks**
-- [ ] API keys of the evaluator stored in the database; a settings page to enter, replace and delete them (the key is never shown back).
-- [ ] Provider interface and the two providers; errors told apart (key rejected, limit reached, no connection, refusal).
-- [ ] Chat page: list of chats, new chat, continue, delete; history in the database.
-- [ ] Cancelling a request that is waiting for a reply.
-- [ ] Tests against a fake AI service, without a real key.
+**Tasks: the API key (Settings)**
+- [ ] A section "AI" in Settings: entering, replacing and deleting the Anthropic API key of the logged-in evaluator. The field is a password field; the key is **never shown back** in a page, a log or an error message.
+- [ ] The key is stored only in the evaluator's database, which is encrypted with a key opened by their password (and by every further factor, steps 8 and 9): **at least the password protects it**. It is never written to a file or to the system database.
+- [ ] Transport of the key from the browser: only to the local interface on 127.0.0.1 (later over TLS 1.3, step 4); the form is protected like every form (Origin check, `SameSite=Strict`).
+- [ ] In memory: the key is held in a type that wipes it and never prints it (as `DatabaseKey`), read from the database only for a request and dropped right after it.
 
-**Done when:** a conversation with a real model works from the browser; the key is never written to a file or shown in a page; the tests pass without network.
+**Tasks: the chat**
+- [ ] AI module (`ai/`): sending a conversation to the Anthropic Messages API, reading the reply and the token counts; errors told apart (key rejected, limit reached, no connection, refusal, overloaded service).
+- [ ] Chat page: list of the evaluator's chats, new chat, continue, delete; every message and reply kept in the evaluator's database with its time and model.
+- [ ] A reply is shown while it is written; it can be stopped while it is being written.
+- [ ] Tests against a fake Anthropic service, without a real key and without network.
+
+**Done when:** an evaluator stores an API key in Settings, the key cannot be read from the files without the password, a conversation with a real Claude model works from the browser, and the tests pass without network.
 
 ---
 
@@ -253,6 +283,7 @@ The workstation is the core of the program and is completed first (steps 0–10)
 
 Not planned in detail yet; to be designed once the steps above are done:
 
+- Further AI providers (Gemini, local models) and AI on the data of the devices.
 - Backup of the databases with its own encryption, independent of the TPM; also the way to move to a new computer (`architecture.md`, section 5.5).
 - Git of the laboratory over a secure connection, with checks of its configuration (`architecture.md`, section 6).
 - Filling the LaTeX report templates of the laboratory and committing the result.
