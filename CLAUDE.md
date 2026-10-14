@@ -11,7 +11,7 @@
 
 ## Main design rule: the web UI is the only interface
 
-The whole workflow is controlled from a **web UI** served over HTTPS (TLS 1.3 or newer). There is no console interface; `cli_ui/` is to be removed. Every function is designed so that the web UI can use it without changes to the function:
+The whole workflow is controlled from a **web UI** served over HTTPS (TLS 1.3 or newer). There is no console interface. Every function is designed so that the web UI can use it without changes to the function:
 
 - **Core logic is separate from presentation.** Functions in the core never print, never read from the terminal, and never exit the process. They take parameters and return results; the web UI presents them.
 - **Results and errors are data.** Internal functions return plain Rust types (structs, enums, `Vec`, `Result`) and are used only inside Rust. Errors are enums that the UI can tell apart, not only text.

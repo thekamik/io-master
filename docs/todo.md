@@ -17,9 +17,9 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 0: Put the current state in order
 
-- [ ] Commit what exists today to `v0.3`: the new folder layout (`cli_ui/`, `web_ui/`, `db/`, `keyring/`, `permission/`), `keyring.rs`, `database_key.rs`, `db/generate_key.rs`, `docs/`.
-- [ ] Remove the console interface: `cli_ui/`, the `--cli` parameter, its tests.
-- [ ] Remove empty files that no step needs yet, or keep them with a comment saying which step fills them.
+- [x] Commit what exists today to `v0.3`: the new folder layout (`cli_ui/`, `web_ui/`, `db/`, `keyring/`, `permission/`), `keyring.rs`, `database_key.rs`, `db/generate_key.rs`, `docs/`.
+- [x] Remove the console interface: `cli_ui/`, the `--cli` parameter, its tests.
+- [x] Remove empty files that no step needs yet, or keep them with a comment saying which step fills them.
 
 **Done when:** the working tree is clean, `v0.3` on GitHub matches it, and the program builds without the console.
 

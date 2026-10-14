@@ -49,6 +49,11 @@
 //! ...) and kinds this module has no name for
 //! ([`PortType::Other`]).
 
+// TODO: Remove when the web UI calls scan() (step 2 of
+//       docs/todo.md); until then the compiler sees no user of
+//       this module.
+#![allow(dead_code)]
+
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;

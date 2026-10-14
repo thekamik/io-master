@@ -7,10 +7,9 @@
 //! which stores them encrypted and unlocks them when the user
 //! logs in.
 //!
-//! This module knows nothing about user interfaces. The console
-//! and the web UI both get the secret from the user in their own
-//! way (a hidden prompt, a form sent over HTTPS), turn it into
-//! a [`Secret`] and call [`SecretStore::store`].
+//! This module knows nothing about the user interface. The web UI
+//! gets the secret from the user (a form sent over HTTPS), turns
+//! it into a [`Secret`] and calls [`SecretStore::store`].
 //!
 //! ```text
 //! let key = Secret::api_key(typed_text)?;       // checks and trims
