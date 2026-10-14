@@ -20,6 +20,7 @@ mod devices {
 
 mod ui {
     pub mod console;
+    pub mod port_table;
 }
 
 use std::process::ExitCode;

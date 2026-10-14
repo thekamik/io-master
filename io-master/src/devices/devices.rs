@@ -49,10 +49,6 @@
 //! ...) and kinds this module has no name for
 //! ([`PortType::Other`]).
 
-// TODO: Remove when the user interfaces call scan(); until then
-//       the compiler sees no user of this module.
-#![allow(dead_code)]
-
 use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
