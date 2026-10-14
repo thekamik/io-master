@@ -8,15 +8,20 @@ use axum::http::Request as HttpRequest;
 use axum::http::header::CONTENT_TYPE;
 use tower::ServiceExt;
 
-use crate::config::config::{Config, Role};
+use crate::installation::installation::{Installation, Role, State as InstallationState};
 use crate::web_ui::web_ui::router;
 
+/// An installed workstation with the user "x" on port 8080.
 fn state() -> AppState {
+    let installation = Installation {
+        role: Role::Workstation,
+        users: vec!["x".to_owned()],
+    };
+
     AppState::new(
-        Config {
-            role: Role::Workstation,
-            single_host: false,
-        },
+        std::env::temp_dir(),
+        InstallationState::Installed(installation),
+        None,
         8080,
     )
 }

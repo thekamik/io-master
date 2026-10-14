@@ -5,7 +5,7 @@
 - The new version is the Rust project in `io-master/`. It is built from scratch, not ported line by line.
 - Version 0.2 (C) is the reference for *what* the tool can do: `v0.2_functionality.md` lists its functions with IDs (CLI-1, UART-4, ...). Its code is in git history (commit `6cc4091`). Functions are re-created one at a time, redesigned for the new version.
 - The long-term direction is AI-assisted Common Criteria evaluation (`v0.2_functionality.md`, section 3.7).
-- **The agreed concept of v0.3 is in `docs/architecture.md`**: one program with two roles fixed at installation (workstation, master), web UI only, all secrets protected by TPM 2.0, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
+- **The agreed concept of v0.3 is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the web UI (workstation: many users with equal rights; master: one user), web UI only, all secrets protected by TPM 2.0, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
 - TODO before release: development uses the TPM 2.0 emulator `swtpm`; it must be replaced by a real TPM 2.0.
 - **The work follows `docs/todo.md`, one step at a time.** Every step: concept approved by the user, implementation with tests, check, approval, commit. When the list is done, further functionality is planned anew.
 

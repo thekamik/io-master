@@ -9,7 +9,7 @@
 //! evaluator, later the names of devices) is always passed
 //! through [`escape`], so it can never become HTML or a script.
 
-use crate::config::config::{Config, Role};
+use crate::installation::installation::{Installation, Role};
 
 /// The pages behind the navigation on the left.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -21,6 +21,9 @@ pub enum Page {
 }
 
 impl Page {
+    /// Every page, of both roles.
+    pub const ALL: [Page; 4] = [Page::Chat, Page::Scan, Page::Settings, Page::Admin];
+
     /// The address of the page.
     pub fn path(self) -> &'static str {
         match self {
@@ -67,7 +70,7 @@ impl Page {
             Page::Settings => {
                 "<p>The choice of the columns of the port table comes here (step 2).</p>"
             }
-            Page::Admin => "<p>Password reset requests are approved here (step 7).</p>",
+            Page::Admin => "<p>Password reset requests are approved here (step 8).</p>",
         }
     }
 }
@@ -93,23 +96,19 @@ pub fn escape(text: &str) -> String {
 
 /// The bars at the top of every page: warnings the user has to
 /// see whatever page is open.
-fn warning_bars(config: &Config) -> String {
+///
+/// The installation decides which bars are shown; it is not read
+/// yet, because the only bar so far is always shown (step 8 makes
+/// it depend on the reset service).
+fn warning_bars(_installation: &Installation) -> String {
     let mut bars = String::new();
 
-    // TODO (step 7): show it only while no reset service is
+    // TODO (step 8): show it only while no reset service is
     // configured; until then none can be.
     bars.push_str(
         "<div class=\"bar danger\">No password reset is configured: \
          a forgotten password means lost data.</div>",
     );
-
-    if config.single_host {
-        bars.push_str(
-            "<div class=\"bar warning\">Single-host mode: master and workstation \
-             run on one computer. Not recommended: whoever takes over this computer \
-             gets every secret.</div>",
-        );
-    }
 
     bars
 }
@@ -134,8 +133,8 @@ fn document(title: &str, body: &str) -> String {
 
 /// A page of a logged-in evaluator: the warning bars, the
 /// navigation on the left and the page on the right.
-pub fn page(config: &Config, user: &str, active: Page) -> String {
-    let links: String = Page::of_role(config.role)
+pub fn page(installation: &Installation, user: &str, active: Page) -> String {
+    let links: String = Page::of_role(installation.role)
         .iter()
         .map(|&page| {
             let class = if page == active { " class=\"active\"" } else { "" };
@@ -160,8 +159,8 @@ pub fn page(config: &Config, user: &str, active: Page) -> String {
          {content}\n\
          </main>\n\
          </div>",
-        bars = warning_bars(config),
-        role = config.role.name(),
+        bars = warning_bars(installation),
+        role = installation.role.name(),
         links = links,
         user = escape(user),
         title = active.title(),
@@ -173,17 +172,14 @@ pub fn page(config: &Config, user: &str, active: Page) -> String {
 
 /// The login page, with an explanation when the last attempt was
 /// refused.
-pub fn login_page(config: &Config, problem: Option<&str>) -> String {
-    let problem = problem
-        .map(|text| format!("<p class=\"problem\">{}</p>", escape(text)))
-        .unwrap_or_default();
+pub fn login_page(installation: &Installation, problem: Option<&str>) -> String {
+    let problem = problem_text(problem);
 
     let body = format!(
         "{bars}\n\
          <div class=\"login\">\n\
          <h1>IO Master</h1>\n\
-         <p class=\"note\">Mock-up login: any name is accepted and the password \
-         is not checked yet.</p>\n\
+         <p class=\"note\">Mock-up login: the password is not checked yet.</p>\n\
          {problem}\n\
          <form method=\"post\" action=\"/login\">\n\
          <label>Name <input name=\"username\" autocomplete=\"username\" required></label>\n\
@@ -192,11 +188,56 @@ pub fn login_page(config: &Config, problem: Option<&str>) -> String {
          <button type=\"submit\">Log in</button>\n\
          </form>\n\
          </div>",
-        bars = warning_bars(config),
+        bars = warning_bars(installation),
         problem = problem,
     );
 
     document("Log in", &body)
+}
+
+/// An explanation of a refused form, or nothing.
+fn problem_text(problem: Option<&str>) -> String {
+    problem
+        .map(|text| format!("<p class=\"problem\">{}</p>", escape(text)))
+        .unwrap_or_default()
+}
+
+/// The page of the first start: the setup code, the first user and
+/// the role of the installation.
+pub fn setup_page(problem: Option<&str>) -> String {
+    let body = format!(
+        "<div class=\"login wide\">\n\
+         <h1>IO Master: first start</h1>\n\
+         <p class=\"note\">Nothing is installed yet. Create the first user and choose \
+         the role of this installation.</p>\n\
+         {problem}\n\
+         <form method=\"post\" action=\"/setup\">\n\
+         <label>Setup code <input name=\"code\" autocomplete=\"off\" required>\
+         <span class=\"note\">Printed in the terminal where IO Master was started.</span></label>\n\
+         <label>Name of the first user <input name=\"username\" autocomplete=\"username\" required></label>\n\
+         <label>Password <input name=\"password\" type=\"password\" autocomplete=\"new-password\" required></label>\n\
+         <label>Password again <input name=\"password_repeat\" type=\"password\" \
+         autocomplete=\"new-password\" required></label>\n\
+         <fieldset>\n\
+         <legend>Role of this installation</legend>\n\
+         <label class=\"choice\"><input type=\"radio\" name=\"role\" value=\"workstation\" checked> \
+         <b>Workstation</b>: the computer of an evaluator. Users with equal rights; \
+         any user can add further users.</label>\n\
+         <label class=\"choice\"><input type=\"radio\" name=\"role\" value=\"master\"> \
+         <b>Master</b>: the password reset service only. You stay its only user.</label>\n\
+         </fieldset>\n\
+         <p class=\"note\">A master must run on its own computer, never on the computer \
+         of an evaluator. A workstation works without a master; the connection to \
+         a master (password reset) can be set or changed later in Settings.</p>\n\
+         <label class=\"choice\"><input type=\"checkbox\" name=\"confirm\" required> \
+         I understand that the role cannot be changed later.</label>\n\
+         <button type=\"submit\">Install</button>\n\
+         </form>\n\
+         </div>",
+        problem = problem_text(problem),
+    );
+
+    document("First start", &body)
 }
 
 /// The page for an address that does not exist, or that belongs

@@ -21,10 +21,11 @@ secret-service = { version = "5.2.0", features = ["rt-async-io-crypto-rust"] }
 # longer needed, in a way the compiler cannot optimize away.
 zeroize = "1.9.1"
 
-# Reading the configuration file, written in TOML. The file is
-# read into a plain table and checked by hand (config/config.rs),
-# so the types of the program carry no serialization code.
-toml = "1.1.8"
+# Reading and writing the temporary installation file as JSON
+# (installation/installation.rs), until the system database
+# exists. The file is read into a plain JSON value and checked by
+# hand, so the types of the program carry no serialization code.
+serde_json = "1.0.154"
 
 # The asynchronous runtime the web server runs on: many browser
 # requests are served at once without a thread for each.

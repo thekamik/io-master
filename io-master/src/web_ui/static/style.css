@@ -22,10 +22,6 @@ body {
     background: #c62828;
 }
 
-.bar.warning {
-    background: #b26a00;
-}
-
 /* Navigation on the left, the page on the right. */
 .layout {
     display: flex;
@@ -91,9 +87,20 @@ main {
     border-radius: 8px;
 }
 
-.login label {
+.login.wide {
+    max-width: 36rem;
+}
+
+.login label,
+.login fieldset {
     display: block;
     margin-bottom: 0.75rem;
+}
+
+.login label.choice input {
+    display: inline;
+    width: auto;
+    margin-right: 0.4rem;
 }
 
 .login input {

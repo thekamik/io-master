@@ -1,6 +1,6 @@
 # IO Master v0.3: TODO
 
-The steps that take the program from where it is now to the design in `architecture.md`. They are done **in order, one at a time**. When the last step is done, the next functionality is planned anew.
+The steps that take the program from where it is now to the design in `architecture.md`. They are done **in order, one at a time**. The workstation is the core and is completed first; the master (step 8) is the last stage. When the last step is done, the next functionality is planned anew.
 
 ## How every step is done
 
@@ -30,20 +30,21 @@ Legend: `[ ]` to do, `[x]` done.
 **Decisions**
 - [x] Web framework: `axum` on `tokio`.
 - [x] No TLS for the web UI: plain HTTP on 127.0.0.1 only. TLS 1.3 only where data leaves the computer (master, AI, git).
-- [x] How the server is started: flags. `--port N` (default 8080); `--address IP` always means the TLS server (step 5a). The installation file `~/.config/io-master/config.toml` keeps only the role and single-host mode, until the system database exists (step 5a); `--config PATH` for development and tests.
+- [x] How the server is started: flags. `--port N` (default 8080); `--address IP` always means the TLS server (step 5a); `--data-dir DIR` (default `~/.local/share/io-master`).
+- [x] The role is chosen at the first start, in the web interface, together with the first user, unlocked by a one-time setup code printed in the terminal (`architecture.md`, section 3.2).
 - [x] Pages: plain HTML and CSS built into the program, no separate frontend build.
 
 **Tasks**
-- [x] Installation file with the role (`workstation` or `master`), fixed at installation; the program refuses to start without it.
-- [x] Flags `--port` and `--address`; `--address` is recognized and refused with an explanation until step 5a.
+- [x] First start: the setup page (setup code, first user, password twice, role, confirmation); afterwards the page is gone and the first user is logged in. **TODO: until steps 4–5a the state is kept in `installation.json` in the data directory; the password is checked on the form but not kept.**
+- [x] A damaged installation file stops the program.
+- [x] Flags `--port`, `--address` and `--data-dir`; `--address` is recognized and refused with an explanation until step 5a.
 - [x] HTTP server listening only on `127.0.0.1`.
 - [x] Protection of a local server: only the `Host` names of the program are answered (DNS rebinding); requests that change something need the `Origin` of the program (cross-site requests).
 - [x] Layout: navigation on the left, the page on the right.
 - [x] Pages of the workstation: Chat (placeholder), Scan and permissions (placeholder), Settings (placeholder).
 - [x] Page of the master: password reset panel (placeholder). Each role refuses the pages of the other.
 - [x] Red bar on every page while no password reset is configured (always, for now).
-- [x] Warning bar in single-host mode.
-- [x] Mock-up login: a login page and a session cookie (`HttpOnly`, `SameSite=Strict`); any name is accepted. **TODO: real login in step 5.**
+- [x] Mock-up login: a login page and a session cookie (`HttpOnly`, `SameSite=Strict`); only users of the installation are accepted, the password is not checked yet. **TODO: real login in step 5.**
 - [x] Security headers: Content-Security-Policy, no framing, no MIME sniffing, no referrer.
 - [x] `main.rs` reads the configuration and starts the server; Ctrl+C stops it cleanly.
 - [x] The random bytes of the kernel moved to `random/random.rs`, shared by the database key and the session tokens.
@@ -97,6 +98,8 @@ Legend: `[ ]` to do, `[x]` done.
 **Tasks**
 - [ ] `SecretStore` implemented on the TPM: store, load, delete, contains.
 - [ ] The secret of the device (`architecture.md`, section 5.2) created and sealed at first start.
+- [ ] The states of `architecture.md`, section 3.2: a secret in the TPM without a database, or a database without the secret, stops the program.
+- [ ] One installation per computer: the TPM refuses a second installation, so a master and a workstation can never share a computer (`architecture.md`, section 3.1).
 - [ ] Tests against `swtpm`, so they run without touching the real TPM.
 - [ ] Remove the Secret Service keyring (`keyring/` on `secret-service`).
 
@@ -109,7 +112,7 @@ Legend: `[ ]` to do, `[x]` done.
 **Needs:** SQLCipher (packaged or compiled into the program; decided below).
 
 **Decisions**
-- [ ] Database: SQLCipher through `rusqlite` (proposed); bundled or system library.
+- [x] Database: SQLite encrypted with SQLCipher (`architecture.md`, section 5.3); through `rusqlite`, bundled or system library still to decide.
 - [ ] One database per evaluator, or one per workstation with separate data per account.
 - [ ] Parameters of Argon2id (memory, time) and the cipher that wraps the key of the database.
 
@@ -118,7 +121,8 @@ Legend: `[ ]` to do, `[x]` done.
 - [ ] Login unlocks the database; logout wipes the key from memory. This replaces the mock-up login of step 1.
 - [ ] Change of password: re-wraps only the key of the database.
 - [ ] Settings move from the session file into the database.
-- [ ] Several evaluators on one workstation.
+- [ ] Several evaluators on one workstation: a logged-in user adds a further user (workstation only; a master keeps its one user).
+- [ ] The users and the first user's password move from `installation.json` into the database.
 
 **Done when:** without the password the data cannot be read, also with the TPM present; tests cover creating, opening, changing the password and a wrong password.
 
@@ -127,14 +131,14 @@ Legend: `[ ]` to do, `[x]` done.
 ## Step 5a: System database and the TLS server
 
 **Decisions**
-- [ ] Who may change the settings of the installation (TLS, later the password reset): every logged-in evaluator, or a separate administrator of the workstation.
+- [x] Who may change the settings of the installation: on a workstation every user (equal rights); on a master its only user.
 - [ ] Whether the TLS settings can be changed after they are saved (for example to replace an expiring certificate) or only by installing again.
 - [ ] TLS library: `rustls` with TLS 1.3 only (proposed).
 - [ ] Which names the TLS server answers to (`Host` check): the address, and the names in the certificate.
 
 **Tasks**
 - [ ] System database: encrypted with a key sealed in the TPM only, opened at program start without a password (`architecture.md`, section 5.3).
-- [ ] The role and single-host mode move from the installation file into the system database; the installation file goes away.
+- [ ] The role moves from `installation.json` into the system database; the file goes away.
 - [ ] Settings page: the certificate and private key of the TLS server, checked (they belong together, the certificate is valid) and stored in the system database.
 - [ ] `--address IP` starts HTTPS with TLS 1.3 only, with the stored settings; refuses with an explanation when none are stored.
 - [ ] In TLS mode: the session cookie is `Secure`, the answers carry HSTS.
@@ -162,32 +166,37 @@ Legend: `[ ]` to do, `[x]` done.
 
 ---
 
-## Step 7: Master and password reset
+## Step 7: Before release of the workstation
 
-**Needs:** for development, `swtpm` for the master on the same laptop (single-host mode).
+- [ ] **Replace the TPM 2.0 emulator `swtpm` with a real TPM 2.0; the release refuses to run on an emulated TPM.**
+- [ ] Final login: limits on failed attempts, session expiry, logout everywhere.
+- [ ] Security review of the whole program.
+- [ ] Installation package: the program and its start as a service; the role is chosen at the first start (step 1).
+- [ ] Rewrite `README.md` for v0.3.
+
+---
+
+## Step 8: Master and password reset (last stage)
+
+The workstation is the core of the program and is completed first (steps 0–7). The master comes last.
+
+**Needs:** a second machine for the master; a virtual machine with its own virtual TPM (`swtpm`) is enough. Master and workstation never run on the same computer (`architecture.md`, section 3.1).
 
 **Decisions**
 - [ ] How a workstation and the master recognize each other (mutual TLS with certificates exchanged at enrollment, proposed).
-- [ ] How the administrator account of the master is created at installation.
+- [x] The administrator of the master is the user created at its first start (step 1).
 
 **Tasks**
 - [ ] Master: API that receives reset requests, a panel where the administrator approves or rejects them, shares sealed in its TPM.
 - [ ] Workstation: settings page to configure the reset service; creates the recovery copy of the key of the database and hands the master its share.
 - [ ] Reset flow: request, approval, share handed out, new password set on the workstation.
 - [ ] The red bar disappears once a reset service is configured.
+- [ ] Settings of a workstation: connect it to a master after installation, change the master, or disconnect it.
 - [ ] Every request and decision recorded on the master.
 
-**Done when:** a forgotten password is reset in single-host mode with `swtpm`; neither side alone can decrypt the data (shown by tests).
+**Done when:** a forgotten password is reset with the master on a second machine; neither side alone can decrypt the data (shown by tests).
 
 ---
-
-## Step 8: Before release
-
-- [ ] **Replace the TPM 2.0 emulator `swtpm` with a real TPM 2.0; the release refuses to run on an emulated TPM.**
-- [ ] Final login: limits on failed attempts, session expiry, logout everywhere.
-- [ ] Security review of the whole program.
-- [ ] Installation: role chosen at installation, configuration file created.
-- [ ] Rewrite `README.md` for v0.3.
 
 ---
 
@@ -195,8 +204,10 @@ Legend: `[ ]` to do, `[x]` done.
 
 Not planned in detail yet; to be designed once the steps above are done:
 
+- Backup of the databases with its own encryption, independent of the TPM; also the way to move to a new computer (`architecture.md`, section 5.5).
 - Git of the laboratory over a secure connection, with checks of its configuration (`architecture.md`, section 6).
 - Filling the LaTeX report templates of the laboratory and committing the result.
 - Git panel in the web UI.
 - The other functions of v0.2 (`v0.2_functionality.md`): UART read and write with the confirmation of every command (P2), Bluetooth.
+- A build variant without the code of the master (`architecture.md`, section 3.2).
 - Common Criteria support: norm index, document library, the two pipelines, guided execution.

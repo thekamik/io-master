@@ -2,10 +2,10 @@
 
 use super::*;
 
-fn workstation() -> Config {
-    Config {
+fn workstation() -> Installation {
+    Installation {
         role: Role::Workstation,
-        single_host: false,
+        users: vec!["anna".to_owned()],
     }
 }
 
@@ -31,7 +31,7 @@ fn the_navigation_holds_the_pages_of_the_role() {
 
 #[test]
 fn the_master_sees_only_its_panel() {
-    let master = Config {
+    let master = Installation {
         role: Role::Master,
         ..workstation()
     };
@@ -51,18 +51,19 @@ fn the_name_of_the_evaluator_cannot_inject_html() {
 }
 
 #[test]
-fn the_missing_reset_is_always_shown() {
-    assert!(page(&workstation(), "anna", Page::Chat).contains("No password reset is configured"));
-    assert!(login_page(&workstation(), None).contains("No password reset is configured"));
+fn the_setup_page_offers_both_roles_and_warns() {
+    let html = setup_page(Some("The setup code is wrong."));
+
+    assert!(html.contains("value=\"workstation\" checked"));
+    assert!(html.contains("value=\"master\""));
+    assert!(html.contains("cannot be changed later"));
+    assert!(html.contains("can be set or changed later in Settings"));
+    assert!(!html.contains("single_host"));
+    assert!(html.contains("The setup code is wrong."));
 }
 
 #[test]
-fn single_host_mode_is_shown_only_when_on() {
-    let single = Config {
-        single_host: true,
-        ..workstation()
-    };
-
-    assert!(page(&single, "anna", Page::Chat).contains("Single-host mode"));
-    assert!(!page(&workstation(), "anna", Page::Chat).contains("Single-host mode"));
+fn the_missing_reset_is_always_shown() {
+    assert!(page(&workstation(), "anna", Page::Chat).contains("No password reset is configured"));
+    assert!(login_page(&workstation(), None).contains("No password reset is configured"));
 }

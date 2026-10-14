@@ -1,55 +1,62 @@
 //! The web user interface: the server and its routes.
 //!
-//! The server listens only on 127.0.0.1, over plain HTTP: the
-//! connection between the browser and the server never leaves the
-//! computer, so there is nothing for TLS to protect. TLS is used
-//! where data does leave the computer: between a workstation and
-//! the master (step 7 of `docs/todo.md`).
+//! The server listens on 127.0.0.1 over plain HTTP: the connection
+//! between the browser and the server never leaves the computer.
+//! The TLS server for `--address` comes in step 5a of
+//! `docs/todo.md`.
 //!
 //! The work is split over the files of this folder:
 //!
 //! ```text
 //! web_ui.rs     the server, the routes, the handlers
+//! setup.rs      the first start: setup code, first user, role
 //! session.rs    login (mock-up), sessions, the login check
 //! security.rs   Host and Origin checks, protective headers
 //! pages.rs      the HTML of the pages
 //! static/       the style sheet
 //! ```
 //!
-//! Which pages exist depends on the role of the installation: the
-//! routes of the other role are not registered at all, so they
-//! answer "not found".
+//! Until the installation is done, every address leads to the
+//! setup page; afterwards the setup page is gone. Which pages
+//! exist depends on the role chosen there: the pages of the other
+//! role answer "not found".
 
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
-use std::sync::Arc;
+use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 
-use axum::extract::State;
+use axum::extract::{Request, State};
 use axum::http::header::{CONTENT_TYPE, SET_COOKIE};
 use axum::http::{HeaderMap, StatusCode};
-use axum::middleware::{from_fn, from_fn_with_state};
+use axum::middleware::{Next, from_fn, from_fn_with_state};
 use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::routing::{get, post};
 use axum::{Extension, Form, Router};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 
-use crate::config::config::Config;
+use crate::installation::installation::{Installation, State as InstallationState};
 
 use super::pages::{self, Page};
 use super::security::{check_host, check_origin, security_headers};
 use super::session::{self, CurrentUser, Sessions};
+use super::setup::{self, SetupCode};
 
 /// The style sheet, built into the program.
 const STYLE: &str = include_str!("static/style.css");
 
-/// The longest name of an evaluator, in characters.
-const USER_NAME_MAX: usize = 64;
-
 /// What every request handler can reach.
 #[derive(Debug, Clone)]
 pub struct AppState {
-    pub config: Arc<Config>,
+    /// Where the data of the installation is kept.
+    pub data_dir: Arc<PathBuf>,
+    /// The installation; `None` until the first start is done.
+    /// Written once, by the setup page.
+    installation: Arc<RwLock<Option<Installation>>>,
+    /// The one-time code of the first start; `None` when the
+    /// program is installed.
+    pub setup_code: Option<Arc<SetupCode>>,
     /// The port the server listens on; the names a browser may
     /// use for the server depend on it (security.rs).
     pub port: u16,
@@ -57,12 +64,40 @@ pub struct AppState {
 }
 
 impl AppState {
-    pub fn new(config: Config, port: u16) -> AppState {
+    /// The state of a server. `setup_code` is needed only for the
+    /// first start.
+    pub fn new(data_dir: PathBuf, state: InstallationState, setup_code: Option<SetupCode>, port: u16) -> AppState {
+        let installation = match state {
+            InstallationState::FirstRun => None,
+            InstallationState::Installed(installation) => Some(installation),
+        };
+
         AppState {
-            config: Arc::new(config),
+            data_dir: Arc::new(data_dir),
+            installation: Arc::new(RwLock::new(installation)),
+            setup_code: setup_code.map(Arc::new),
             port,
             sessions: Sessions::default(),
         }
+    }
+
+    /// The installation, or `None` before the first start is done.
+    pub fn installation(&self) -> Option<Installation> {
+        // A panic while the lock was held cannot leave the value
+        // half-written (it is replaced in one step), so a poisoned
+        // lock is used as it is.
+        self.installation
+            .read()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .clone()
+    }
+
+    /// Records the installation made by the setup page.
+    pub fn install(&self, installation: Installation) {
+        *self
+            .installation
+            .write()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(installation);
     }
 }
 
@@ -77,25 +112,20 @@ pub async fn bind(port: u16) -> io::Result<TcpListener> {
 /// example when Ctrl+C is pressed.
 pub async fn run(
     listener: TcpListener,
-    config: Config,
+    state: AppState,
     shutdown: impl Future<Output = ()> + Send + 'static,
 ) -> io::Result<()> {
-    let port = listener.local_addr()?.port();
-
-    axum::serve(listener, router(AppState::new(config, port)))
+    axum::serve(listener, router(state))
         .with_graceful_shutdown(shutdown)
         .await
 }
 
 /// All routes of the interface, with their protection.
 pub fn router(state: AppState) -> Router {
-    let home = Page::home(state.config.role).path();
+    // The pages, each one only for a logged-in user.
+    let mut pages = Router::new().route("/", get(home));
 
-    // The pages of the role, each one only for a logged-in
-    // evaluator.
-    let mut pages = Router::new().route("/", get(move || async move { Redirect::to(home) }));
-
-    for &page in Page::of_role(state.config.role) {
+    for page in Page::ALL {
         pages = pages.route(page.path(), get(move |state, user| show_page(state, user, page)));
     }
 
@@ -105,78 +135,109 @@ pub fn router(state: AppState) -> Router {
 
     // The layers run from the last added to the first: the
     // headers are added to every answer, also to refusals; the
-    // Host is checked before anything else.
+    // Host is checked before anything else; nothing but the setup
+    // page is reachable before the installation is done.
     Router::new()
         .merge(pages)
+        .route("/setup", get(setup::setup_form).post(setup::setup))
         .route("/login", get(login_form).post(login))
         .route("/static/style.css", get(style))
         .fallback(not_found)
+        .layer(from_fn_with_state(state.clone(), require_installed))
         .layer(from_fn_with_state(state.clone(), check_origin))
         .layer(from_fn_with_state(state.clone(), check_host))
         .layer(from_fn(security_headers))
         .with_state(state)
 }
 
-/// A page of the navigation.
+/// Before the first start is done every address leads to the setup
+/// page; afterwards the setup page leads home.
+async fn require_installed(State(state): State<AppState>, request: Request, next: Next) -> Response {
+    let path = request.uri().path();
+    let installed = state.installation().is_some();
+
+    match (installed, path) {
+        (true, "/setup") => Redirect::to("/").into_response(),
+        (false, "/setup" | "/static/style.css") | (true, _) => next.run(request).await,
+        (false, _) => Redirect::to("/setup").into_response(),
+    }
+}
+
+/// `/`: the first page of the role.
+async fn home(State(state): State<AppState>) -> Response {
+    match state.installation() {
+        Some(installation) => Redirect::to(Page::home(installation.role).path()).into_response(),
+        None => Redirect::to("/setup").into_response(),
+    }
+}
+
+/// A page of the navigation; "not found" for the pages of the
+/// other role.
 async fn show_page(
     State(state): State<AppState>,
     Extension(CurrentUser(user)): Extension<CurrentUser>,
     page: Page,
-) -> Html<String> {
-    Html(pages::page(&state.config, &user, page))
+) -> Response {
+    match state.installation() {
+        Some(installation) if Page::of_role(installation.role).contains(&page) => {
+            Html(pages::page(&installation, &user, page)).into_response()
+        }
+        _ => not_found().await,
+    }
 }
 
-/// The login page; a logged-in evaluator goes straight on.
+/// The login page; a logged-in user goes straight on.
 async fn login_form(State(state): State<AppState>, headers: HeaderMap) -> Response {
     let logged_in = session::token_from(&headers)
         .and_then(|token| state.sessions.user(token))
         .is_some();
 
-    if logged_in {
-        return Redirect::to("/").into_response();
+    match state.installation() {
+        Some(_) if logged_in => Redirect::to("/").into_response(),
+        Some(installation) => Html(pages::login_page(&installation, None)).into_response(),
+        None => Redirect::to("/setup").into_response(),
     }
-
-    Html(pages::login_page(&state.config, None)).into_response()
 }
 
 /// The fields of the login form.
 #[derive(Deserialize)]
 struct LoginForm {
     username: String,
-    // Read but not checked: the login is a mock-up (session.rs).
+    // Read but not checked yet (see login()).
     #[allow(dead_code)]
     password: String,
 }
 
-/// Logs an evaluator in. Mock-up: any name is accepted.
+/// Logs a user in.
+///
+/// TODO (step 5 of docs/todo.md): mock-up. The user must exist,
+/// but the password is not checked yet.
 async fn login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Response {
+    let Some(installation) = state.installation() else {
+        return Redirect::to("/setup").into_response();
+    };
+
     let user = form.username.trim();
 
-    if user.is_empty() || user.chars().count() > USER_NAME_MAX {
-        let problem = format!("The name must have 1 to {USER_NAME_MAX} characters.");
-
+    if !installation.has_user(user) {
         return (
-            StatusCode::BAD_REQUEST,
-            Html(pages::login_page(&state.config, Some(&problem))),
+            StatusCode::UNAUTHORIZED,
+            Html(pages::login_page(&installation, Some("Unknown user."))),
         )
             .into_response();
     }
 
     match state.sessions.create(user) {
-        Ok(token) => (
-            [(SET_COOKIE, session::session_cookie(&token))],
-            Redirect::to("/"),
-        )
-            .into_response(),
+        Ok(token) => ([(SET_COOKIE, session::session_cookie(&token))], Redirect::to("/")).into_response(),
         Err(_) => (
             StatusCode::INTERNAL_SERVER_ERROR,
-            Html(pages::login_page(&state.config, Some("No session could be created."))),
+            Html(pages::login_page(&installation, Some("No session could be created."))),
         )
             .into_response(),
     }
 }
 
-/// Logs the evaluator out and ends the session.
+/// Logs the user out and ends the session.
 async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if let Some(token) = session::token_from(&headers) {
         state.sessions.remove(token);

@@ -14,7 +14,7 @@ fn no_parameters_start_the_local_server_on_8080() {
     assert_eq!(
         parse(&[]),
         Ok(Arguments {
-            config: None,
+            data_dir: None,
             port: 8080,
             address: None
         })
@@ -23,10 +23,10 @@ fn no_parameters_start_the_local_server_on_8080() {
 
 #[test]
 fn every_flag_is_read_in_any_order() {
-    let arguments = parse(&["--port", "9000", "--config", "/tmp/io.toml", "--address", "10.0.0.5"]).unwrap();
+    let arguments = parse(&["--port", "9000", "--data-dir", "/tmp/io", "--address", "10.0.0.5"]).unwrap();
 
     assert_eq!(arguments.port, 9000);
-    assert_eq!(arguments.config, Some(PathBuf::from("/tmp/io.toml")));
+    assert_eq!(arguments.data_dir, Some(PathBuf::from("/tmp/io")));
     assert_eq!(arguments.address, Some("10.0.0.5".parse().unwrap()));
 }
 

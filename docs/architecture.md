@@ -26,12 +26,12 @@ Carried over from the design of v0.2; they are requirements, not preferences.
 
 ## 3. One program, two roles (agreed)
 
-There is one program. Its **role is fixed when it is installed**; changing the role means installing again. A role that could be switched at run time would let a compromised installation turn itself into the other role.
+There is one program. Its **role is chosen once, at the first start, in the web interface**, together with the first user (section 3.2). Afterwards the choice cannot be reached again: a role that could be switched later would let a compromised installation turn itself into the other role.
 
 | Role | Where | What it can do | What is blocked |
 |---|---|---|---|
-| **Workstation** | computer of an evaluator | everything: web UI, AI, chats, device scan and tests, evaluations | the master panel |
-| **Master** | a separate, dedicated machine | only the password reset service: an API for workstations and a panel where an administrator approves requests | everything else |
+| **Workstation** | computer of an evaluator | everything: web UI, AI, chats, device scan and tests, evaluations. Any number of users with **equal rights**; a user can add further users | the master panel |
+| **Master** | a separate, dedicated machine | only the password reset service: an API for workstations and a panel where its administrator approves requests. **One user only**: the one who installed it; adding users is not possible | everything else |
 
 ```text
  workstation of evaluator A          workstation of evaluator B
@@ -47,15 +47,30 @@ There is one program. Its **role is fixed when it is installed**; changing the r
 
 All the work and all the data stay on the workstation. The master never commands a device and never sees the data of an evaluator.
 
-### 3.1 Single-host mode (agreed)
+### 3.1 Never on one computer (agreed)
 
-A master and a workstation on the same computer are allowed, but **marked as not recommended (unsafe)**: whoever takes over that computer gets every secret. When the mode is used:
+A master and a workstation **never run on the same computer**, not even for development or tests: whoever took over that computer would get every secret, which is exactly what the split into two roles prevents. There is no mode that allows it.
 
-- the setting warns when it is chosen, and the program warns at every start;
-- the web UI shows a permanent warning;
-- evaluation records state that they were made in single-host mode.
+- A computer holds one installation of IO Master. The TPM, which holds the secret of the device, makes this enforceable: a second installation on the same computer is refused (step 4 of `todo.md`).
+- Developing the master needs a second machine; a virtual machine with its own virtual TPM counts as one.
 
-It exists mainly for development, where two computers with TPM 2.0 are not available.
+### 3.2 The first start (agreed)
+
+The first start is the real moment of installation. The program tells it from the database and the secret of the device in the TPM:
+
+| Database | Secret in the TPM | State | What the program does |
+|---|---|---|---|
+| missing | missing | first start | the setup page: first user and role |
+| present | present | installed | normal work; the role cannot be chosen |
+| missing | present | damaged: the database was removed | refuses to start |
+| present | missing | damaged: another computer, or the TPM was cleared | refuses to start |
+
+- At the first start the program prints a **one-time setup code** in the terminal. The setup page asks for it, so only the person who started the program can install it, not another user or program of the computer.
+- The setup is possible only in the local interface (without `--address`).
+- The person who installs the program is its **first user**. On a master it stays the only one.
+- **Only the role is final.** The connection to a master is set, changed or removed later in Settings; a workstation works fully without a master (section 5.4). An evaluator can install a workstation alone and connect it to a master set up later.
+- The data of an installation lives in its data directory: `--data-dir`, default `~/.local/share/io-master` (another directory for development and tests). Nothing is kept outside the database.
+- A build without the master code is possible later as a separate build variant.
 
 ## 4. Web user interface (agreed)
 
@@ -107,6 +122,8 @@ secret of the device (TPM) ───────────────┘
 
 The system database exists because the TLS server needs its private key **before** anyone logs in (the TLS handshake comes before the login page). Keeping the key in a database protected by the TPM is much safer than a plain file: another program cannot read it, and a changed file is detected when it is opened.
 
+Both databases are **SQLite files encrypted with SQLCipher** (agreed): no separate database service, one file per database in the data directory (`--data-dir`, default `~/.local/share/io-master`), transactions that survive an interrupted write, and a built-in way to copy a running database.
+
 ### 5.4 Password reset (agreed; optional)
 
 The reset service is **optional and off by default**. It is configured after installation, on a running workstation.
@@ -123,6 +140,10 @@ share from the master ────────┘
 - When the reset service is configured, the workstation (with the evaluator logged in) creates the recovery copy and gives the master only its *share*. The master keeps it sealed in its TPM.
 - Reset: the workstation sends a request; **an administrator of the master approves it**; the master hands out the share; the workstation combines it with its device secret, recovers the key of the database and sets the new password.
 - Neither side can decrypt the data alone: a compromised master lacks the device secret, a stolen workstation lacks the share.
+
+### 5.5 Backup (agreed; later stage)
+
+The databases can only be opened on the computer whose TPM holds the secret of the device. A backup therefore has **its own encryption, independent of the TPM**, designed when the function is built. The backup file is also the only way to move the work of an evaluator to a new computer.
 
 ## 6. Collaboration through git (agreed)
 
