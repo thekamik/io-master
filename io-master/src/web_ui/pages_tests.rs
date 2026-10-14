@@ -6,7 +6,6 @@ fn workstation() -> Installation {
     Installation {
         id: [1; 16],
         role: Role::Workstation,
-        users: vec!["anna".to_owned()],
     }
 }
 
@@ -20,7 +19,7 @@ fn text_is_escaped() {
 
 #[test]
 fn the_navigation_holds_the_pages_of_the_role() {
-    let html = page(&workstation(), "anna", Page::Scan);
+    let html = page(&workstation(), "anna", Page::Scan, "");
 
     for page in [Page::Chat, Page::Scan, Page::Settings] {
         assert!(html.contains(page.path()), "{page:?} is missing");
@@ -37,7 +36,7 @@ fn the_master_sees_only_its_panel() {
         ..workstation()
     };
 
-    let html = page(&master, "admin", Page::Admin);
+    let html = page(&master, "admin", Page::Admin, "");
 
     assert!(html.contains("/admin"));
     assert!(!html.contains("/chat"));
@@ -45,7 +44,7 @@ fn the_master_sees_only_its_panel() {
 
 #[test]
 fn the_name_of_the_evaluator_cannot_inject_html() {
-    let html = page(&workstation(), "<img src=x>", Page::Chat);
+    let html = page(&workstation(), "<img src=x>", Page::Chat, "");
 
     assert!(html.contains("&lt;img src=x&gt;"));
     assert!(!html.contains("<img src=x>"));
@@ -64,7 +63,13 @@ fn the_setup_page_offers_both_roles_and_warns() {
 }
 
 #[test]
+fn the_missing_tpm_is_always_shown() {
+    assert!(page(&workstation(), "anna", Page::Chat, "").contains("No TPM is configured"));
+    assert!(login_page(&workstation(), None).contains("No TPM is configured"));
+}
+
+#[test]
 fn the_missing_reset_is_always_shown() {
-    assert!(page(&workstation(), "anna", Page::Chat).contains("No password reset is configured"));
+    assert!(page(&workstation(), "anna", Page::Chat, "").contains("No password reset is configured"));
     assert!(login_page(&workstation(), None).contains("No password reset is configured"));
 }

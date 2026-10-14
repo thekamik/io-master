@@ -51,14 +51,16 @@ All the work and all the data stay on the workstation. The master never commands
 
 A master and a workstation **never run on the same computer**, not even for development or tests: whoever took over that computer would get every secret, which is exactly what the split into two roles prevents. There is no mode that allows it.
 
-- A computer holds one installation of IO Master. The TPM, which holds the secret of the device, makes this enforceable: a second installation on the same computer is refused (step 4 of `todo.md`).
+- A computer holds one installation of IO Master. With the TPM factor this is enforced: the TPM refuses a second installation on the same computer. Without it, it is a rule of operation.
 - Developing the master needs a second machine; a virtual machine with its own virtual TPM counts as one.
 
 ### 3.2 The first start (agreed)
 
-The first start is the real moment of installation. The program tells it from the database and the secret of the device in the TPM:
+The first start is the real moment of installation. **It is told by the system database alone**: without it the program shows the setup page, with it the login. A system database that cannot be read stops the program.
 
-| Database | Secret in the TPM | State | What the program does |
+With the optional TPM factor (section 5.1) the marker in the TPM is compared as well:
+
+| Database | Marker in the TPM | State | What the program does |
 |---|---|---|---|
 | missing | missing | first start | the setup page: first user and role |
 | present | present | installed | normal work; the role cannot be chosen |
@@ -71,8 +73,7 @@ The first start is the real moment of installation. The program tells it from th
 - **Only the role is final.** The connection to a master is set, changed or removed later in Settings; a workstation works fully without a master (section 5.4). An evaluator can install a workstation alone and connect it to a master set up later.
 - The data of an installation lives in its data directory: `--data-dir`, default `~/.local/share/io-master` (another directory for development and tests). Nothing is kept outside the database.
 - A build without the master code is possible later as a separate build variant.
-- The program can be removed with `io-master --uninstall`, which also removes its marker from the TPM, so nothing of it stays in the TPM. It works on a damaged installation too.
-- Until the beta version the TPM is the emulator `swtpm`, which the program starts itself with its state in the data directory (section 5.1).
+- The program can be removed with `io-master --uninstall`, which removes its databases (and, with the TPM factor, its marker in the TPM). It works on a damaged installation too.
 
 ## 4. Web user interface (agreed)
 
@@ -93,46 +94,59 @@ The first start is the real moment of installation. The program tells it from th
 
 ## 5. Secrets and encryption (agreed)
 
-### 5.1 Where secrets live
+### 5.1 Factors (agreed)
 
-- **Every secret is protected by the TPM 2.0** of the machine, on workstations and on the master. A secret sealed in the TPM cannot be copied to another computer.
+**By default the program authenticates with passwords only**, and only the password opens the database of an evaluator. The program must also run on machines without a TPM, such as many virtual machines.
+
+**Every further factor adds protection** on top of the password; none replaces it. Planned factors, after the functions of the workstation:
+
+| Factor | Binds the data to | Chosen | Step of `todo.md` |
+|---|---|---|---|
+| **TPM 2.0** | the computer: a secret of the device, sealed by the TPM | for the whole installation | 8 |
+| **Passkey** (FIDO2, WebAuthn with the PRF extension) | the person: a secret computed inside their security key | by each user for their account | 9 |
+
+Either, both or neither can be used. Each adds a secret to the unlocking key, so the files alone are useless without it, even with the password. Until a factor is configured, every page shows that the databases are protected by the passwords alone.
+
 - Each evaluator has **their own API keys**, stored in the encrypted database of their workstation.
 - The program has its **own accounts and passwords**, independent of the Linux accounts.
 - Several evaluators may use one workstation, each with an own account.
+- Without the TPM factor, someone who copies the files can try passwords offline. Argon2id (64 MiB per try) and the minimum of 12 characters make that slow; a strong password is the protection.
 
-> **The TPM must stay as it is for the life of the installation.** The program never clears the TPM or changes its passwords. But the secret of the device, and with it all data, is lost if the TPM is cleared from outside the program: "Clear TPM" in the BIOS or in another operating system, some BIOS updates that reset a TPM built into the processor (fTPM), or a new motherboard. Only a backup with its own encryption (section 5.5) protects against that.
+> **With the TPM factor, the TPM must stay as it is for the life of the installation.** The program never clears the TPM or changes its passwords. But the secret of the device, and with it all data, is lost if the TPM is cleared from outside the program: "Clear TPM" in the BIOS or in another operating system, some BIOS updates that reset a TPM built into the processor (fTPM), or a new motherboard. Only a backup with its own encryption (section 5.5) protects against that.
 
-> **TODO (before release): development uses the TPM 2.0 emulator `swtpm`. It must be replaced by a real TPM 2.0 before the end of development, and the release must refuse to run on an emulated TPM.**
+> **TODO (before release): development of the TPM factor uses the emulator `swtpm`. The release must use a real TPM 2.0 and refuse an emulated one.**
 
 ### 5.2 Key of the database
 
 ```text
 password of the evaluator ──► Argon2id ──┐
                                           ├─► unlocking key ──► key of the database ──► database (SQLCipher)
-secret of the device (TPM) ───────────────┘
+[secret of the device (TPM), optional] ───┘
 ```
 
-- The key of the database is random (`db/generate_key.rs`) and is never stored in plain form; it is stored encrypted with the unlocking key.
-- Opening the database needs **both** the password and the device: the files alone are useless, and so is the device without the password.
+- The key of the database is random (`db/generate_key.rs`) and is never stored in plain form; it is stored encrypted with the unlocking key. Each stored key records which factors it needs.
+- Opening the database needs the password, and with the TPM factor also the device.
 - Changing the password re-encrypts only the 32-byte key of the database, not the database.
 - Limit: while an evaluator is logged in, the key is in the memory of the program. The scheme protects the data when the program is closed or logged out.
 
 ### 5.3 Two levels of the database (agreed)
 
-| Level | Key | Opened | Holds |
+| Level | Protection | Opened | Holds |
 |---|---|---|---|
-| **System database** (of the installation) | sealed in the TPM only (secret of the device) | at program start, without a password | settings of the installation: TLS certificate and private key, later the role and the password reset configuration |
-| **Database of an evaluator** | password of the evaluator + secret of the device (section 5.2) | at login | API keys, chats, working results |
+| **System database** (of the installation) | not encrypted, readable only by the user; with the TPM factor: encrypted with a key from the secret of the device | at program start, without a password | the installation (identifier, role), the accounts with their keys in encrypted form; later the settings of the installation |
+| **Database of an evaluator** | encrypted; key opened by the password (+ TPM factor) | at login | API keys, chats, working results |
 
-The system database exists because the TLS server needs its private key **before** anyone logs in (the TLS handshake comes before the login page). Keeping the key in a database protected by the TPM is much safer than a plain file: another program cannot read it, and a changed file is detected when it is opened.
+The system database is opened before anyone gives a password, so without the TPM there is no key that could protect it: it therefore holds **nothing secret**. The keys of the evaluators' databases it holds are encrypted and useless without the passwords.
 
-Both databases are **SQLite files encrypted with SQLCipher** (agreed): no separate database service, one file per database in the data directory (`--data-dir`, default `~/.local/share/io-master`), transactions that survive an interrupted write, and a built-in way to copy a running database.
+**Open (step 4):** the private key of the TLS server is needed at program start, before any login. With the TPM factor it is protected by the TPM; without it, how it is protected is still to be decided.
+
+Both databases are **SQLite files** (agreed, implemented in step 3), the databases of the evaluators encrypted with SQLCipher: no separate database service, one file per database in the data directory (`--data-dir`, default `~/.local/share/io-master`), transactions that survive an interrupted write, and a built-in way to copy a running database.
 
 ### 5.4 Password reset (agreed; optional)
 
 The reset service is **optional and off by default**. It is configured after installation, on a running workstation.
 
-- **Without a reset service** the program works fully. Every page shows a **red bar at the top**: "No password reset is configured: a forgotten password means lost data." The risk belongs to the user of the system.
+- **Without a reset service** the program works fully. Every page shows an **orange bar at the top**: "No password reset is configured: a forgotten password means lost data." The risk belongs to the user of the system.
 - **With a reset service**, the key of the database is additionally encrypted for recovery:
 
 ```text
@@ -145,9 +159,11 @@ share from the master ────────┘
 - Reset: the workstation sends a request; **an administrator of the master approves it**; the master hands out the share; the workstation combines it with its device secret, recovers the key of the database and sets the new password.
 - Neither side can decrypt the data alone: a compromised master lacks the device secret, a stolen workstation lacks the share.
 
+**Open (step 10):** this scheme combines the share of the master with the secret of the device. Without the TPM factor the workstation has no secret of the device, so the scheme has to be reworked for installations without a TPM.
+
 ### 5.5 Backup (agreed; later stage)
 
-The databases can only be opened on the computer whose TPM holds the secret of the device. A backup therefore has **its own encryption, independent of the TPM**, designed when the function is built. The backup file is also the only way to move the work of an evaluator to a new computer.
+A backup has **its own encryption**, designed when the function is built; with the TPM factor it must not depend on the TPM, since the databases then open only on the computer whose TPM holds the secret of the device. The backup file is also the only way to move the work of an evaluator to a new computer.
 
 ## 6. Collaboration through git (agreed)
 
@@ -168,5 +184,5 @@ Devices are reached from the workstation only. The first function is the scan of
 
 The work is planned step by step in `todo.md`. Two items must not be forgotten whatever the order:
 
-- **Replace the `swtpm` emulator with a real TPM 2.0 before release** (section 5.1).
+- **The TPM factor uses a real TPM 2.0 in the release, not the emulator `swtpm`** (section 5.1).
 - **Replace the mock-up login with the real login** (section 4).

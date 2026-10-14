@@ -5,8 +5,8 @@
 - The new version is the Rust project in `io-master/`. It is built from scratch, not ported line by line.
 - Version 0.2 (C) is the reference for *what* the tool can do: `v0.2_functionality.md` lists its functions with IDs (CLI-1, UART-4, ...). Its code is in git history (commit `6cc4091`). Functions are re-created one at a time, redesigned for the new version.
 - The long-term direction is AI-assisted Common Criteria evaluation (`v0.2_functionality.md`, section 3.7).
-- **The agreed concept of v0.3 is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the web UI (workstation: many users with equal rights; master: one user), web UI only, all secrets protected by TPM 2.0, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
-- TODO before release: development uses the TPM 2.0 emulator `swtpm`; it must be replaced by a real TPM 2.0.
+- **The agreed concept of v0.3 is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the web UI (workstation: many users with equal rights; master: one user), web UI only, passwords as the default factor with the TPM 2.0 as an optional further factor, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
+- The program must run without a TPM (virtual machines). TODO before release: the optional TPM factor uses a real TPM 2.0, not the emulator `swtpm`.
 - **The work follows `docs/todo.md`, one step at a time.** Every step: concept approved by the user, implementation with tests, check, approval, commit. When the list is done, further functionality is planned anew.
 
 ## Main design rule: the web UI is the only interface
@@ -24,7 +24,7 @@ The whole workflow is controlled from a **web UI**. By default it is served over
 ## Rules carried over from v0.2
 
 - No command reaches a device without an action of a person for that command. The program proposes; a person executes.
-- Secrets (API keys, the key of the database, git credentials) only in protected storage: the encrypted databases, whose keys depend on the TPM 2.0 (`docs/architecture.md`, section 5). Never in plain files. Until the beta version the TPM is the emulator `swtpm`.
+- Secrets (API keys, the key of the database, git credentials) only in the encrypted databases of the evaluators, opened by the password (+ optional TPM factor) (`docs/architecture.md`, section 5). Never in plain files, and never in the system database, which is not encrypted.
 - Every network connection that leaves the computer uses TLS 1.3 or newer with a verified certificate (workstation and master, AI providers, git). The web UI on 127.0.0.1 is plain HTTP, protected against DNS rebinding and cross-site requests (`docs/architecture.md`, section 4).
 - Code comments and documentation in English, thorough. Conversation with the user in Polish.
 

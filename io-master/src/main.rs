@@ -26,8 +26,15 @@
 //! TODO (step 4 of docs/todo.md): the TLS server. Until then
 //! `--address` is recognized and refused with an explanation.
 //!
-//! TODO (step 8 of docs/todo.md): until the beta version the TPM is
-//! always the emulator swtpm (tpm/emulator.rs), never the real TPM.
+//! The program authenticates with passwords only. The TPM is an
+//! optional further factor (tpm/), not used yet: TODO (step 8 of
+//! docs/todo.md).
+
+mod accounts {
+    // Same layout as installation/installation.rs.
+    #[allow(clippy::module_inception)]
+    pub mod accounts;
+}
 
 mod installation {
     // The file is installation/installation.rs by choice of the
@@ -55,7 +62,13 @@ mod tpm {
 
 mod db {
     pub mod database_key;
+    // Same layout as installation/installation.rs.
+    #[allow(clippy::module_inception)]
+    pub mod db;
     pub mod generate_key;
+    pub mod keys;
+    pub mod system_db;
+    pub mod user_db;
 }
 
 mod random {
@@ -68,7 +81,10 @@ mod web_ui {
     pub mod pages;
     pub mod security;
     pub mod session;
+    pub mod settings;
     pub mod setup;
+    #[cfg(test)]
+    pub mod test_support;
     // Same layout as installation/installation.rs.
     #[allow(clippy::module_inception)]
     pub mod web_ui;
@@ -79,10 +95,7 @@ use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use installation::installation::State;
-use installation::lifecycle;
-use tpm::emulator::{EMULATOR_DIRECTORY, Emulator};
-use tpm::tpm::TpmAccess;
+use installation::lifecycle::{self, Opened};
 use web_ui::setup::SetupCode;
 use web_ui::web_ui::AppState;
 
@@ -196,11 +209,10 @@ async fn ctrl_c() {
 }
 
 /// `--uninstall`: removes the installation after the user typed
-/// the confirmation. Removes the marker from the TPM, the sealed
-/// secret, the record, and the state of the TPM emulator.
+/// the confirmation.
 fn uninstall(data_dir: &Path) -> ExitCode {
-    println!("This removes the installation of IO Master in {}", data_dir.display());
-    println!("and its marker in the TPM. Its data cannot be opened afterwards.");
+    println!("This removes the installation of IO Master in {}.", data_dir.display());
+    println!("Its data cannot be opened afterwards.");
     println!("Type '{UNINSTALL_CONFIRMATION}' to continue:");
 
     let mut answer = String::new();
@@ -210,35 +222,8 @@ fn uninstall(data_dir: &Path) -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    let emulator = match Emulator::start(data_dir) {
-        Ok(emulator) => emulator,
-        Err(error) => {
-            eprintln!("Error: {error}");
-            return ExitCode::FAILURE;
-        }
-    };
-
-    let removed = TpmAccess { port: emulator.port() }
-        .connect()
-        .map_err(lifecycle::LifecycleError::Tpm)
-        .and_then(|mut tpm| lifecycle::uninstall(data_dir, &mut tpm));
-
-    // The emulator is stopped before its state is removed.
-    drop(emulator);
-
-    if let Err(error) = removed {
+    if let Err(error) = lifecycle::uninstall(data_dir) {
         eprintln!("Error: {error}");
-        return ExitCode::FAILURE;
-    }
-
-    // TODO (step 8 of docs/todo.md): with the real TPM there is no
-    // emulator state to remove.
-    let emulator_state = data_dir.join(EMULATOR_DIRECTORY);
-
-    if let Err(error) = std::fs::remove_dir_all(&emulator_state)
-        && error.kind() != std::io::ErrorKind::NotFound
-    {
-        eprintln!("Error: {}: {error}", emulator_state.display());
         return ExitCode::FAILURE;
     }
 
@@ -270,9 +255,9 @@ async fn main() -> ExitCode {
     let data_dir = match arguments.data_dir {
         Some(directory) => directory,
         None => match installation::installation::default_data_dir() {
-            Ok(directory) => directory,
-            Err(error) => {
-                eprintln!("Error: {error}");
+            Some(directory) => directory,
+            None => {
+                eprintln!("Error: cannot find the data directory: HOME is not set");
                 return ExitCode::FAILURE;
             }
         },
@@ -294,24 +279,8 @@ async fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
 
-    // The TPM, until the beta version always the emulator. It runs
-    // as long as this variable lives: until the server ends.
-    let emulator = match Emulator::start(&data_dir) {
-        Ok(emulator) => emulator,
-        Err(error) => {
-            eprintln!("Error: {error}");
-            return ExitCode::FAILURE;
-        }
-    };
-
-    let tpm = TpmAccess { port: emulator.port() };
-
-    let state = match tpm
-        .connect()
-        .map_err(lifecycle::LifecycleError::Tpm)
-        .and_then(|mut connection| lifecycle::open(&data_dir, &mut connection))
-    {
-        Ok(state) => state,
+    let opened = match lifecycle::open(&data_dir) {
+        Ok(opened) => opened,
         Err(error) => {
             eprintln!("Error: {error}");
             eprintln!("IO Master does not start on a damaged installation.");
@@ -330,42 +299,35 @@ async fn main() -> ExitCode {
 
     // The first start: a one-time code that only the person who
     // started the program sees.
-    let setup_code = match state {
-        State::FirstRun => match SetupCode::generate() {
+    let setup_code = match opened {
+        Opened::FirstRun => match SetupCode::generate() {
             Ok(code) => Some(code),
             Err(error) => {
                 eprintln!("Error: no setup code could be created: {error}");
                 return ExitCode::FAILURE;
             }
         },
-        State::Installed(_) => None,
+        Opened::Installed(_) => None,
     };
 
-    match (&state, &setup_code) {
-        (State::Installed(installation), _) => {
+    match (&opened, &setup_code) {
+        (Opened::Installed(running), _) => {
             println!(
                 "IO Master ({}) is running at http://127.0.0.1:{}/ (press Ctrl+C to stop)",
-                installation.role.name(),
+                running.installation.role.name(),
                 arguments.port
             );
         }
-        (State::FirstRun, Some(code)) => {
+        (Opened::FirstRun, Some(code)) => {
             println!("IO Master is not installed yet. Open http://127.0.0.1:{}/", arguments.port);
             println!("and enter this one-time setup code: {}", code.display());
         }
-        (State::FirstRun, None) => unreachable!("a first start always has a setup code"),
+        (Opened::FirstRun, None) => unreachable!("a first start always has a setup code"),
     }
 
-    eprintln!("Development version: the TPM is the emulator swtpm, not the TPM of this computer.");
+    let state = AppState::new(data_dir, opened, setup_code, arguments.port);
 
-    let state = AppState::new(data_dir, state, setup_code, arguments.port, tpm);
-
-    let result = web_ui::web_ui::run(listener, state, ctrl_c()).await;
-
-    // Stop the TPM after the server.
-    drop(emulator);
-
-    match result {
+    match web_ui::web_ui::run(listener, state, ctrl_c()).await {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
             eprintln!("Error: {error}");

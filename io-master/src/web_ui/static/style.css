@@ -22,6 +22,10 @@ body {
     background: #c62828;
 }
 
+.bar.warning {
+    background: #b26a00;
+}
+
 /* Navigation on the left, the page on the right. */
 .layout {
     display: flex;
@@ -136,6 +140,46 @@ main {
 
 .problem {
     color: #c62828;
+}
+
+.done {
+    color: #1a7f37;
+}
+
+/* Sections and forms of the pages. */
+main section {
+    margin-bottom: 2rem;
+}
+
+main h2 {
+    font-size: 1.2rem;
+    border-bottom: 1px solid #d0d7de;
+    padding-bottom: 0.3rem;
+}
+
+.panel {
+    max-width: 26rem;
+    padding: 1rem 1.25rem;
+    background: #fff;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+}
+
+.panel h3 {
+    margin-top: 0;
+    font-size: 1rem;
+}
+
+.panel label {
+    display: block;
+    margin-bottom: 0.75rem;
+}
+
+.panel input {
+    display: block;
+    width: 100%;
+    padding: 0.4rem;
+    margin-top: 0.25rem;
 }
 
 button {

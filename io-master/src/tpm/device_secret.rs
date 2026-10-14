@@ -12,6 +12,11 @@
 //! Together with the password of an evaluator the secret unlocks
 //! the database (step 3 of `docs/todo.md`).
 
+// TODO (step 8 of docs/todo.md): the TPM is an optional factor that
+//       is not switched on yet; until then only the tests use this
+//       file.
+#![allow(dead_code)]
+
 use std::fmt;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
@@ -40,11 +45,15 @@ pub struct DeviceSecret(Box<Zeroizing<[u8; LENGTH]>>);
 impl DeviceSecret {
     /// The bytes of the secret, for deriving the keys of the
     /// databases.
-    // TODO: used by the databases (step 3 of docs/todo.md); until
-    //       then only by the tests.
-    #[allow(dead_code)]
     pub fn expose(&self) -> &[u8; LENGTH] {
         &self.0
+    }
+
+    /// A secret with known bytes, for the tests of the modules that
+    /// use it, so they need no TPM.
+    #[cfg(test)]
+    pub fn from_bytes(bytes: [u8; LENGTH]) -> DeviceSecret {
+        DeviceSecret(Box::new(Zeroizing::new(bytes)))
     }
 }
 

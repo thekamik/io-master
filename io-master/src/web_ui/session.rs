@@ -1,11 +1,10 @@
-//! Sessions of logged-in evaluators, and the mock-up login.
+//! Sessions of logged-in evaluators.
 //!
-//! **Mock-up:** any name is accepted and the password is not
-//! checked. The real login, which unlocks the encrypted database
-//! with the password, replaces it in step 3 of `docs/todo.md`.
-//!
-//! A session is a random token in a cookie. The server keeps the
-//! tokens in memory, so all sessions end when the program stops.
+//! A session is a random token in a cookie. The server keeps, for
+//! every token, the account and the key of its database, opened at
+//! login (`accounts/accounts.rs`). Everything is in memory only:
+//! all sessions end when the program stops, and the key of a
+//! database is wiped when its session ends.
 //!
 //! The cookie is `HttpOnly` (scripts of the page cannot read it)
 //! and `SameSite=Strict` (the browser does not send it with
@@ -23,6 +22,8 @@ use axum::http::header::COOKIE;
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Redirect, Response};
 
+use crate::accounts::accounts::Account;
+use crate::db::database_key::DatabaseKey;
 use crate::random::random::fill_random;
 
 use super::web_ui::AppState;
@@ -36,43 +37,56 @@ const TOKEN_BYTES: usize = 32;
 /// The evaluator of the current request, put into the request by
 /// [`require_login`] for the pages to read.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CurrentUser(pub String);
+pub struct CurrentUser(pub Account);
 
-/// The open sessions: token -> name of the evaluator.
+/// What a session holds.
+#[derive(Debug)]
+struct Session {
+    account: Account,
+    /// The key of the database of the account; wiped when the
+    /// session ends.
+    // TODO: read by the data of the evaluator (step 5 of
+    //       docs/todo.md); until then only kept.
+    #[allow(dead_code)]
+    key: DatabaseKey,
+}
+
+/// The open sessions: token -> account and key.
 ///
 /// Cloning a `Sessions` gives another handle to the same sessions;
 /// every request handler gets one.
 #[derive(Debug, Clone, Default)]
-pub struct Sessions(Arc<Mutex<HashMap<String, String>>>);
+pub struct Sessions(Arc<Mutex<HashMap<String, Session>>>);
 
 impl Sessions {
     /// The table of sessions. A panic in another request while it
     /// held the lock does not leave the table damaged (every
     /// change is a single insert or remove), so the lock is used
     /// as it is.
-    fn table(&self) -> std::sync::MutexGuard<'_, HashMap<String, String>> {
+    fn table(&self) -> std::sync::MutexGuard<'_, HashMap<String, Session>> {
         self.0.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// Opens a session for an evaluator and returns its token.
-    pub fn create(&self, user: &str) -> io::Result<String> {
+    /// Opens a session for a logged-in account and returns its
+    /// token.
+    pub fn create(&self, account: Account, key: DatabaseKey) -> io::Result<String> {
         let mut bytes = [0u8; TOKEN_BYTES];
 
         fill_random(&mut bytes)?;
 
         let token: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
 
-        self.table().insert(token.clone(), user.to_owned());
+        self.table().insert(token.clone(), Session { account, key });
 
         Ok(token)
     }
 
-    /// The evaluator of a session, if the token is valid.
-    pub fn user(&self, token: &str) -> Option<String> {
-        self.table().get(token).cloned()
+    /// The account of a session, if the token is valid.
+    pub fn user(&self, token: &str) -> Option<Account> {
+        self.table().get(token).map(|session| session.account.clone())
     }
 
-    /// Ends a session.
+    /// Ends a session; its key is wiped.
     pub fn remove(&self, token: &str) {
         self.table().remove(token);
     }

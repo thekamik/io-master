@@ -28,6 +28,11 @@
 //! What the program never does: clear the TPM, change its
 //! passwords, or bind secrets to the state of the machine (PCR).
 
+// TODO (step 8 of docs/todo.md): the TPM is an optional factor that
+//       is not switched on yet; until then only the tests use this
+//       file.
+#![allow(dead_code)]
+
 use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};

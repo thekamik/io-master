@@ -7,8 +7,8 @@
 //! who started the program sees it, so nobody else (another user
 //! of the computer, another program) can make the choice first.
 //!
-//! The choice is made once: the installation is made only if none
-//! exists, in the TPM as well (`installation/lifecycle.rs`), and
+//! The choice is made once: the installation is made only if no
+//! system database exists (`installation/lifecycle.rs`), and
 //! afterwards this page is no longer reachable.
 
 use std::io;
@@ -20,7 +20,8 @@ use axum::response::{Html, IntoResponse, Redirect, Response};
 use axum::Form;
 use serde::Deserialize;
 
-use crate::installation::installation::{InstallationError, Role};
+use crate::accounts::accounts::{self, AccountError};
+use crate::installation::installation::Role;
 use crate::installation::lifecycle::{self, LifecycleError};
 use crate::random::random::fill_random;
 
@@ -127,10 +128,9 @@ pub async fn setup(State(state): State<AppState>, Form(form): Form<SetupForm>) -
 
     let user = form.username.trim();
 
-    // TODO (step 3 of docs/todo.md): the password is checked here
-    // but not kept; from step 3 it protects the database.
-    if form.password.is_empty() || form.password != form.password_repeat {
-        return refuse(StatusCode::BAD_REQUEST, "The two passwords are empty or differ.");
+    // The rules of the password are checked by the installation.
+    if form.password != form.password_repeat {
+        return refuse(StatusCode::BAD_REQUEST, "The two passwords differ.");
     }
 
     let Some(role) = Role::from_name(&form.role) else {
@@ -141,34 +141,33 @@ pub async fn setup(State(state): State<AppState>, Form(form): Form<SetupForm>) -
         return refuse(StatusCode::BAD_REQUEST, "Confirm that the role cannot be changed later.");
     }
 
-    // The TPM is slow and its connection must stay on one thread,
-    // so the installation is made on a thread for blocking work.
+    // Argon2id is slow on purpose, so the installation is made on
+    // a thread for blocking work. The first user is then logged in
+    // with the same password, which opens the key of their database
+    // for the session.
     let data_dir = state.data_dir.as_ref().clone();
-    let tpm = state.tpm;
     let first_user = user.to_owned();
+    let password = form.password;
 
     let created = tokio::task::spawn_blocking(move || {
-        let mut tpm = tpm.connect().map_err(LifecycleError::Tpm)?;
+        let (running, _) = lifecycle::install(&data_dir, role, &first_user, &password)?;
 
-        lifecycle::install(&data_dir, &mut tpm, role, &first_user)
+        let login = accounts::log_in(&running.system_db, None, &data_dir, &first_user, &password)
+            .map_err(LifecycleError::Account)?;
+
+        Ok::<_, LifecycleError>((running, login))
     })
     .await;
 
-    let installation = match created {
-        Ok(Ok(installation)) => installation,
-        Ok(Err(LifecycleError::Installation(InstallationError::InvalidUserName(reason)))) => {
-            return refuse(StatusCode::BAD_REQUEST, &format!("The name is not valid: {reason}."));
+    let (running, (account, key)) = match created {
+        Ok(Ok(done)) => done,
+        Ok(Err(LifecycleError::Account(
+            error @ (AccountError::InvalidName(_) | AccountError::WeakPassword(_)),
+        ))) => {
+            return refuse(StatusCode::BAD_REQUEST, &format!("{error}."));
         }
         // Another request finished the setup a moment earlier.
-        Ok(Err(LifecycleError::Installation(InstallationError::AlreadyInstalled))) => {
-            return Redirect::to("/login").into_response();
-        }
-        Ok(Err(LifecycleError::AnotherInstallation)) => {
-            return refuse(
-                StatusCode::CONFLICT,
-                "This computer already has an installation of IO Master: there is one per computer.",
-            );
-        }
+        Ok(Err(LifecycleError::AlreadyInstalled)) => return Redirect::to("/login").into_response(),
         Ok(Err(error)) => {
             return refuse(
                 StatusCode::INTERNAL_SERVER_ERROR,
@@ -180,10 +179,9 @@ pub async fn setup(State(state): State<AppState>, Form(form): Form<SetupForm>) -
         }
     };
 
-    state.install(installation);
+    state.install(running);
 
-    // The first user is logged in straight away.
-    match state.sessions.create(user) {
+    match state.sessions.create(account, key) {
         Ok(token) => ([(SET_COOKIE, session::session_cookie(&token))], Redirect::to("/")).into_response(),
         Err(_) => Redirect::to("/login").into_response(),
     }

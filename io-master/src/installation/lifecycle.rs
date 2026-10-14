@@ -1,163 +1,211 @@
 //! The life of an installation: the first start, every later
 //! start, and the removal of the program.
 //!
-//! An installation consists of three parts, all created at the
-//! first start:
+//! An installation consists of these parts, created at the first
+//! start:
 //!
 //! ```text
-//! the record          installation.json (later the system database)
-//! the device secret   device-secret.sealed, sealed by the TPM
-//! the marker          an entry in the TPM with the identifier
+//! the record          system.db, the system database
+//! the first account   a row of system.db and users/<id>.db
 //! ```
 //!
-//! At every start [`open`] compares the record and the marker
-//! (`docs/architecture.md`, section 3.2):
+//! **The only thing that decides whether this is the first start is
+//! the system database**: without it the program offers the setup
+//! page, with it the login (`docs/architecture.md`, section 3.2).
 //!
-//! ```text
-//! record    marker in the TPM   state
-//! missing   missing             first start: choose the role
-//! present   same identifier     installed
-//! missing   present             damaged: the record was removed
-//! present   missing             damaged: other computer or TPM cleared
-//! present   other identifier    damaged: the record belongs elsewhere
-//! ```
+//! The TPM is an optional, further factor (`tpm/`) and is not used
+//! by default, so the program also runs on machines without a TPM,
+//! such as many virtual machines. TODO (step 8 of docs/todo.md):
+//! when the TPM factor is switched on, its secret is unsealed here
+//! and its marker is compared with the record, as described in the
+//! architecture.
 //!
-//! A damaged installation does not start. [`uninstall`] removes all
-//! three parts, also of a damaged installation, so that a new first
-//! start is possible.
+//! [`uninstall`] removes all parts, also of a damaged installation,
+//! so that a new first start is possible.
 
 use std::fmt;
+use std::fs;
+use std::os::unix::fs::DirBuilderExt;
+use std::io;
 use std::path::Path;
 
+use crate::accounts::accounts::{self, Account, AccountError};
+use crate::db::db::DbError;
+use crate::db::keys;
+use crate::db::system_db::{self, SystemDb};
+use crate::db::user_db;
 use crate::random::random::fill_random;
-use crate::tpm::device_secret;
-use crate::tpm::tpm::{Tpm, TpmError};
+use crate::tpm::device_secret::{self, DeviceSecret};
+use crate::tpm::emulator::EMULATOR_DIRECTORY;
 
-use super::installation::{self, Installation, InstallationError, InstallationId, Role, State};
+use super::installation::{self, Installation, InstallationId, Role};
+
+/// An installed program, ready to work: its record and its open
+/// system database.
+#[derive(Debug)]
+pub struct Running {
+    pub installation: Installation,
+    pub system_db: SystemDb,
+    /// The secret of the device, when the optional TPM factor is
+    /// used; `None` by default.
+    pub device_secret: Option<DeviceSecret>,
+}
+
+/// What a start finds.
+#[derive(Debug)]
+pub enum Opened {
+    /// Nothing is installed: the role and the first user are chosen
+    /// now.
+    FirstRun,
+    /// The installation is done and opened.
+    Installed(Running),
+}
 
 /// Why an installation could not be opened, made or removed.
 #[derive(Debug)]
 pub enum LifecycleError {
-    /// The parts of the installation do not belong together; holds
-    /// the explanation. The program must not start.
+    /// The record cannot be read; holds the explanation. The
+    /// program must not start.
     Damaged(String),
-    /// The TPM already holds the marker of an installation: there
-    /// is one installation per computer.
-    AnotherInstallation,
-    /// The record could not be read or written.
-    Installation(InstallationError),
-    /// The TPM failed.
-    Tpm(TpmError),
+    /// The installation exists already (made a moment earlier by
+    /// another request).
+    AlreadyInstalled,
+    /// The first account could not be made.
+    Account(AccountError),
+    /// A database or a file failed.
+    Db(DbError),
 }
 
 impl fmt::Display for LifecycleError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LifecycleError::Damaged(reason) => write!(formatter, "the installation is damaged: {reason}"),
-            LifecycleError::AnotherInstallation => {
-                formatter.write_str("this computer already has an installation of IO Master")
-            }
-            LifecycleError::Installation(error) => write!(formatter, "{error}"),
-            LifecycleError::Tpm(error) => write!(formatter, "{error}"),
+            LifecycleError::AlreadyInstalled => formatter.write_str("the program is already installed"),
+            LifecycleError::Account(error) => write!(formatter, "{error}"),
+            LifecycleError::Db(error) => write!(formatter, "{error}"),
         }
     }
 }
 
 impl std::error::Error for LifecycleError {}
 
-impl From<InstallationError> for LifecycleError {
-    fn from(error: InstallationError) -> LifecycleError {
+impl From<DbError> for LifecycleError {
+    fn from(error: DbError) -> LifecycleError {
         match error {
-            // A record that cannot be read is a damaged installation.
-            InstallationError::Damaged { path, reason } => {
-                LifecycleError::Damaged(format!("{}: {}", path.display(), reason))
+            DbError::Exists(_) => LifecycleError::AlreadyInstalled,
+            // Not a system database of this program, for example one
+            // left encrypted by an earlier development version.
+            DbError::WrongKey(path) => {
+                LifecycleError::Damaged(format!("{} is not a system database of IO Master", path.display()))
             }
-            other => LifecycleError::Installation(other),
+            other => LifecycleError::Db(other),
         }
-    }
-}
-
-impl From<TpmError> for LifecycleError {
-    fn from(error: TpmError) -> LifecycleError {
-        LifecycleError::Tpm(error)
     }
 }
 
 /// Tells the state of the installation in a data directory, and
-/// checks that the device secret can be opened.
-pub fn open(data_dir: &Path, tpm: &mut Tpm) -> Result<State, LifecycleError> {
-    let marker = tpm.read_marker()?;
-    let record = installation::load(data_dir)?;
-
-    match (record, marker) {
-        (State::FirstRun, None) => {
-            // A sealed secret without record and marker is left from
-            // a first start that was interrupted.
-            if device_secret::path(data_dir).exists() {
-                return Err(LifecycleError::Damaged(
-                    "an earlier first start did not finish".to_owned(),
-                ));
-            }
-
-            Ok(State::FirstRun)
-        }
-        (State::Installed(installation), Some(id)) if installation.id == id => {
-            // The secret is opened once to prove that this TPM sealed
-            // it. TODO (step 3 of docs/todo.md): keep it for the
-            // databases instead of dropping it.
-            device_secret::load(tpm, data_dir)?;
-
-            Ok(State::Installed(installation))
-        }
-        (State::Installed(_), Some(_)) => Err(LifecycleError::Damaged(
-            "the record belongs to another installation than the TPM".to_owned(),
-        )),
-        (State::FirstRun, Some(_)) => Err(LifecycleError::Damaged(
-            "the TPM holds an installation whose record was removed".to_owned(),
-        )),
-        (State::Installed(_), None) => Err(LifecycleError::Damaged(
-            "the TPM holds no installation: another computer, or the TPM was cleared".to_owned(),
-        )),
+/// opens it when it is installed.
+pub fn open(data_dir: &Path) -> Result<Opened, LifecycleError> {
+    if !system_db::path(data_dir).exists() {
+        return Ok(Opened::FirstRun);
     }
+
+    let system_db = SystemDb::open(data_dir)?;
+    let installation = system_db
+        .installation()
+        .map_err(|error| LifecycleError::Damaged(error.to_string()))?;
+
+    Ok(Opened::Installed(Running {
+        installation,
+        system_db,
+        device_secret: None,
+    }))
 }
 
-/// Makes the installation at the first start: the device secret,
-/// the record with the role and the first user, and last the
-/// marker in the TPM.
-pub fn install(data_dir: &Path, tpm: &mut Tpm, role: Role, first_user: &str) -> Result<Installation, LifecycleError> {
-    installation::check_user_name(first_user)?;
+/// Makes the installation at the first start: the system database
+/// with the role, and the first account. Returns the running
+/// installation and the first account.
+pub fn install(
+    data_dir: &Path,
+    role: Role,
+    first_user: &str,
+    password: &str,
+) -> Result<(Running, Account), LifecycleError> {
+    // Checked before anything is made, so that a mistake in the
+    // form leaves nothing behind.
+    installation::check_user_name(first_user).map_err(|error| LifecycleError::Account(error.into()))?;
+    keys::check_password(password).map_err(|error| LifecycleError::Account(error.into()))?;
 
-    if tpm.read_marker()?.is_some() {
-        return Err(LifecycleError::AnotherInstallation);
-    }
+    // The data directory is private to the user.
+    fs::DirBuilder::new()
+        .recursive(true)
+        .mode(0o700)
+        .create(data_dir)
+        .map_err(|source| DbError::Io {
+            path: data_dir.to_owned(),
+            source,
+        })?;
 
     let mut id: InstallationId = [0; installation::ID_LENGTH];
 
-    fill_random(&mut id).map_err(|source| TpmError::io(data_dir, source))?;
+    fill_random(&mut id).map_err(|source| DbError::Io {
+        path: data_dir.to_owned(),
+        source,
+    })?;
 
-    // The order matters only when the program is stopped in the
-    // middle: whatever was made is then found by open() as damaged
-    // and removed by uninstall().
-    device_secret::create(tpm, data_dir)?;
+    let installation = Installation { id, role };
+    let system_db = SystemDb::create(data_dir, &installation)?;
 
-    let installation = installation::create(data_dir, id, role, first_user)?;
+    // If the first account cannot be made, the system database is
+    // removed again: an installation without a user could never be
+    // entered.
+    let account = match accounts::create_first(&system_db, None, data_dir, first_user, password) {
+        Ok(account) => account,
+        Err(error) => {
+            drop(system_db);
+            let _ = SystemDb::remove(data_dir);
 
-    match tpm.write_marker(&id) {
-        Ok(()) => Ok(installation),
-        Err(TpmError::MarkerExists) => Err(LifecycleError::AnotherInstallation),
-        Err(error) => Err(error.into()),
-    }
+            return Err(LifecycleError::Account(error));
+        }
+    };
+
+    Ok((
+        Running {
+            installation,
+            system_db,
+            device_secret: None,
+        },
+        account,
+    ))
 }
 
-/// Removes the installation: the marker from the TPM, the sealed
-/// secret and the record. Works on a damaged installation too.
-/// Other files of the data directory are left to the caller.
-pub fn uninstall(data_dir: &Path, tpm: &mut Tpm) -> Result<(), LifecycleError> {
-    tpm.remove_marker()?;
-    device_secret::remove(data_dir)?;
-    installation::remove(data_dir)?;
+/// Removes the installation: the system database and the databases
+/// of the accounts, and what the optional TPM factor may have left
+/// (its sealed secret and the state of the TPM emulator). Works on
+/// a damaged installation too.
+///
+/// TODO (step 8 of docs/todo.md): with the TPM factor switched on,
+/// also remove its marker from the TPM.
+pub fn uninstall(data_dir: &Path) -> Result<(), LifecycleError> {
+    SystemDb::remove(data_dir)?;
+    user_db::remove_all(data_dir)?;
 
-    Ok(())
+    device_secret::remove(data_dir).map_err(|error| {
+        LifecycleError::Db(DbError::Io {
+            path: device_secret::path(data_dir),
+            source: io::Error::other(error.to_string()),
+        })
+    })?;
+
+    let emulator_state = data_dir.join(EMULATOR_DIRECTORY);
+
+    match fs::remove_dir_all(&emulator_state) {
+        Err(source) if source.kind() != io::ErrorKind::NotFound => Err(LifecycleError::Db(DbError::Io {
+            path: emulator_state,
+            source,
+        })),
+        _ => Ok(()),
+    }
 }
 
 // Unit tests, in their own file to keep this one readable. They

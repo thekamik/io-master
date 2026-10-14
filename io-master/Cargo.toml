@@ -39,6 +39,26 @@ axum = "0.8.9"
 # struct. Used only in web_ui/, at the boundary to the browser.
 serde = { version = "1.0", features = ["derive"] }
 
+# The databases: SQLite with SQLCipher, which encrypts the whole
+# file with AES-256 (db/). "bundled-sqlcipher" compiles a fixed,
+# known version of SQLCipher into the program; it uses the
+# cryptography of the system's OpenSSL (package libssl-dev).
+rusqlite = { version = "0.40.2", features = ["bundled-sqlcipher"] }
+
+# Turning a password into a key (db/keys.rs): Argon2id, the
+# recommended password hashing function, slow on purpose so that
+# guessing passwords is expensive.
+argon2 = "0.6.0"
+
+# Encrypting the key of a database with a key derived from the
+# password: AES-256 in GCM mode, which also detects any change of
+# the encrypted key.
+aes-gcm = "0.11.1"
+
+# Deriving several keys from one secret (HKDF with SHA-256).
+hkdf = "0.13.0"
+sha2 = "0.11.1"
+
 [dev-dependencies]
 # Sending requests to the web server in tests without opening
 # a network port ("util" gives the oneshot() call).
@@ -46,3 +66,12 @@ tower = { version = "0.5.3", features = ["util"] }
 
 # Reading the body of a response in tests.
 http-body-util = "0.1.5"
+
+# Argon2id is slow on purpose; without optimization (the default
+# of debug builds) a login would take seconds. Only these crates
+# are optimized; the program itself stays easy to debug.
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3

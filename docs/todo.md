@@ -1,6 +1,6 @@
 # IO Master v0.3: TODO
 
-The steps that take the program from where it is now to the design in `architecture.md`. They are done **in order, one at a time**. The workstation is the core and is completed first; the master (step 9) is the last stage. When the last step is done, the next functionality is planned anew.
+The steps that take the program from where it is now to the design in `architecture.md`. They are done **in order, one at a time**. The workstation is the core and is completed first; the master (step 11) is the last stage. When the last step is done, the next functionality is planned anew.
 
 ## How every step is done
 
@@ -55,6 +55,8 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 2: Secrets in the TPM
 
+> **Changed after step 3:** the TPM is an **optional, further factor**, not a requirement, because the program must also run on machines without a TPM (many virtual machines). By default the program uses passwords only. The TPM modules built here stay and are switched on as a factor in step 8.
+
 **Needs:** packages `libtss2-dev` and `swtpm` (installed). Until the beta version the program uses only the emulator; access to the real TPM (group `tss`) is needed from step 8.
 
 **Decisions**
@@ -86,18 +88,21 @@ Legend: `[ ]` to do, `[x]` done.
 **Decisions**
 - [x] Database: SQLite encrypted with SQLCipher (`architecture.md`, section 5.3).
 - [x] Two levels: the system database (key sealed in the TPM only) and the databases of the evaluators (password + secret of the device).
-- [ ] SQLCipher bundled into the program or the system library.
-- [ ] One database per evaluator, or one per workstation with separate data per account.
-- [ ] Parameters of Argon2id (memory, time) and the cipher that wraps the key of the database.
+- [x] SQLCipher bundled into the program (`rusqlite`, feature `bundled-sqlcipher`), on the OpenSSL of the system.
+- [x] One database per evaluator (`users/<id>.db`) next to the system database (`system.db`).
+- [x] Argon2id with 64 MiB and 3 passes (OWASP); the key of a database is wrapped with AES-256-GCM under a key derived (HKDF-SHA256) from Argon2id(password) and the secret of the device, and bound to the account name.
+- [x] Password rules: 12 to 1024 characters, nothing else (NIST).
 
 **Tasks**
-- [ ] System database: encrypted with a key sealed in the TPM only, opened at program start without a password (`architecture.md`, section 5.3).
-- [ ] The role and the users move from `installation.json` into the system database; the file goes away.
-- [ ] Creating an account: password rules, Argon2id, wrapping of the key of the database with the password and the secret of the device.
-- [ ] Login unlocks the database of the evaluator; logout wipes the key from memory. This replaces the mock-up login of step 1.
-- [ ] Change of password: re-wraps only the key of the database.
-- [ ] Management of users: on a workstation a logged-in user adds a further user (equal rights); a master keeps its one user.
-- [ ] Settings are kept in the database of the evaluator.
+- [x] Encrypted databases (`db/db.rs`): files readable only by the user; every new database holds its schema version at once, so even an empty one opens only with its key.
+- [x] System database (`db/system_db.rs`): key derived from the secret of the device, opened at program start without a password (`architecture.md`, section 5.3). It is the record of the installation; `installation.json` is gone.
+- [x] Creating an account (`accounts/accounts.rs`): password rules, a random key for its own database, wrapped with the password and the secret of the device (`db/keys.rs`).
+- [x] Login unlocks the key of the database of the evaluator; the session keeps it and logout wipes it. A wrong name and a wrong password get the same answer. This replaces the mock-up login of step 1.
+- [x] Change of password (Settings): needs the current password, re-wraps only the key of the database.
+- [x] Management of users (Settings): on a workstation a logged-in user adds a further user (equal rights); a master keeps its one user.
+- [x] Uninstall also removes the databases.
+- [ ] Settings kept in the database of the evaluator: moved to step 5, the first setting is the choice of columns.
+- [ ] Changing the password on a master: comes with the master (step 11).
 
 **Done when:** without the password the data cannot be read, also with the TPM present; tests cover creating, opening, changing the password, a wrong password, and adding a user.
 
@@ -171,18 +176,58 @@ Legend: `[ ]` to do, `[x]` done.
 
 ---
 
-## Step 8: Before release of the workstation
+## Step 8: The TPM as an optional factor
 
-- [ ] **Replace the TPM 2.0 emulator `swtpm` with a real TPM 2.0 (`/dev/tpmrm0`, the user in the group `tss`); the release refuses to run on an emulated TPM.** Until then the program uses only the emulator (step 2).
+Comes after the functions of the workstation (steps 4–7). The program authenticates with passwords only by default (`architecture.md`, section 5). The TPM, built in step 2, becomes a further factor that can be switched on where a TPM exists, for the whole installation.
+
+**Decisions**
+- [ ] Where the factor is switched on: at the first start, in Settings afterwards, or both.
+- [ ] Switching it on later: every account must log in once to have its key wrapped again with the new factor; what happens to accounts that have not.
+- [ ] Whether switching it off is allowed, and what it asks for.
+
+**Tasks**
+- [ ] The setting in the system database; the program starts the TPM only when the factor is on.
+- [ ] The secret of the device added to the unlocking keys (`db/keys.rs` already takes it as a factor; `with_device_secret` is stored per account).
+- [ ] With the factor on: the system database encrypted with a key from the secret of the device, the marker of the installation compared at every start, one installation per computer.
+- [ ] `--uninstall` also removes the marker from the TPM.
+- [ ] Tests on the emulator `swtpm`.
+- [ ] The red bar "No TPM is configured" (shown on every page since step 3) disappears once the factor is on.
+
+**Done when:** the factor can be switched on, an account then needs both the password and the TPM, and the program still works fully without it.
+
+---
+
+## Step 9: Passkeys as an optional factor
+
+A further factor next to the TPM, chosen by each user for their own account (`architecture.md`, section 5.1). The TPM binds the data to the computer, a passkey to the person; either, both or neither can be used.
+
+**Decisions**
+- [ ] Library: `webauthn-rs` (proposed); check its support of the PRF extension.
+- [ ] What a browser or key without PRF gets: a passkey only for logging in (does not protect the files), or no passkey at all.
+- [ ] How many passkeys an account may have (proposed: several, so that a spare key in a drawer prevents the loss of the data).
+
+**Tasks**
+- [ ] Registering and removing passkeys in the Settings of an account.
+- [ ] Login with password and passkey; the secret from the PRF extension becomes part of the unlocking key (`db/keys.rs`), the key of the database is wrapped once per registered passkey.
+- [ ] Tests with a software authenticator.
+
+**Done when:** an account with a passkey opens only with the password and the passkey, and losing one of two registered passkeys loses no data.
+
+---
+
+## Step 10: Before release of the workstation
+
+- [ ] **The TPM factor (step 8) uses a real TPM 2.0 (`/dev/tpmrm0`, the user in the group `tss`) instead of the emulator `swtpm`; the release refuses an emulated TPM.**
+- [ ] Without the TPM factor the system database is not encrypted and the private key of the TLS server (step 4) has no key to protect it at program start: decide how it is protected without a TPM.
 - [ ] Final login: limits on failed attempts, session expiry, logout everywhere.
 - [ ] Security review of the whole program.
 - [ ] Installation package: the program and its start as a service; the role is chosen at the first start (step 1).
 
 ---
 
-## Step 9: Master and password reset (last stage)
+## Step 11: Master and password reset (last stage)
 
-The workstation is the core of the program and is completed first (steps 0–8). The master comes last.
+The workstation is the core of the program and is completed first (steps 0–10). The master comes last.
 
 **Needs:** a second machine for the master; a virtual machine with its own virtual TPM (`swtpm`) is enough. Master and workstation never run on the same computer (`architecture.md`, section 3.1).
 
@@ -194,7 +239,7 @@ The workstation is the core of the program and is completed first (steps 0–8).
 - [ ] Master: API that receives reset requests, a panel where the administrator approves or rejects them, shares sealed in its TPM.
 - [ ] Workstation: settings page to configure the reset service; creates the recovery copy of the key of the database and hands the master its share.
 - [ ] Reset flow: request, approval, share handed out, new password set on the workstation.
-- [ ] The red bar disappears once a reset service is configured.
+- [ ] The orange bar disappears once a reset service is configured.
 - [ ] Settings of a workstation: connect it to a master after installation, change the master, or disconnect it.
 - [ ] Every request and decision recorded on the master.
 

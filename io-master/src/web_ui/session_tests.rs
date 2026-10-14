@@ -4,13 +4,27 @@ use super::*;
 
 use axum::http::HeaderValue;
 
+/// An account and a key for a session.
+fn login(name: &str) -> (Account, DatabaseKey) {
+    let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
+
+    (
+        Account {
+            id: 1,
+            name: name.to_owned(),
+        },
+        key,
+    )
+}
+
 #[test]
-fn a_session_belongs_to_its_evaluator() {
+fn a_session_belongs_to_its_account() {
     let sessions = Sessions::default();
+    let (account, key) = login("anna");
 
-    let token = sessions.create("anna").unwrap();
+    let token = sessions.create(account.clone(), key).unwrap();
 
-    assert_eq!(sessions.user(&token).as_deref(), Some("anna"));
+    assert_eq!(sessions.user(&token), Some(account));
     assert_eq!(sessions.user("not-a-token"), None);
 
     sessions.remove(&token);
@@ -21,8 +35,10 @@ fn a_session_belongs_to_its_evaluator() {
 fn tokens_are_long_and_never_repeat() {
     let sessions = Sessions::default();
 
-    let first = sessions.create("anna").unwrap();
-    let second = sessions.create("anna").unwrap();
+    let (account, key) = login("anna");
+    let first = sessions.create(account, key).unwrap();
+    let (account, key) = login("anna");
+    let second = sessions.create(account, key).unwrap();
 
     assert_eq!(first.len(), TOKEN_BYTES * 2);
     assert_ne!(first, second);

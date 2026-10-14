@@ -21,9 +21,6 @@ pub enum Page {
 }
 
 impl Page {
-    /// Every page, of both roles.
-    pub const ALL: [Page; 4] = [Page::Chat, Page::Scan, Page::Settings, Page::Admin];
-
     /// The address of the page.
     pub fn path(self) -> &'static str {
         match self {
@@ -57,20 +54,19 @@ impl Page {
         Page::of_role(role)[0]
     }
 
-    /// The content of the page.
+    /// The content of a page that does not exist yet.
     ///
-    /// TODO: every page is a placeholder until the step of
-    /// `docs/todo.md` it names.
-    fn content(self) -> &'static str {
+    /// TODO: every such page is a placeholder until the step of
+    /// `docs/todo.md` it names. Settings has a page of its own
+    /// (`settings.rs`).
+    pub fn placeholder(self) -> &'static str {
         match self {
             Page::Chat => "<p>The AI assistant comes here (step 7).</p>",
             Page::Scan => {
                 "<p>The serial ports and the access rights to them come here (steps 5 and 6).</p>"
             }
-            Page::Settings => {
-                "<p>The choice of the columns of the port table comes here (step 5).</p>"
-            }
-            Page::Admin => "<p>Password reset requests are approved here (step 9).</p>",
+            Page::Settings => "",
+            Page::Admin => "<p>Password reset requests are approved here (step 11).</p>",
         }
     }
 }
@@ -98,15 +94,24 @@ pub fn escape(text: &str) -> String {
 /// see whatever page is open.
 ///
 /// The installation decides which bars are shown; it is not read
-/// yet, because the only bar so far is always shown (step 9 makes
-/// it depend on the reset service).
+/// yet, because both bars are always shown so far: neither the
+/// reset service nor the TPM factor can be configured yet.
 fn warning_bars(_installation: &Installation) -> String {
     let mut bars = String::new();
 
-    // TODO (step 9): show it only while no reset service is
-    // configured; until then none can be.
+    // The more serious warning first, in red: the protection of
+    // the data. TODO (step 8 of docs/todo.md): show it only while
+    // the TPM factor is off.
     bars.push_str(
-        "<div class=\"bar danger\">No password reset is configured: \
+        "<div class=\"bar danger\">No TPM is configured: the databases are protected \
+         by the passwords alone. Whoever copies the files can try to guess them.</div>",
+    );
+
+    // In orange: a forgotten password is a risk the user can avoid.
+    // TODO (step 11 of docs/todo.md): show it only while no reset
+    // service is configured.
+    bars.push_str(
+        "<div class=\"bar warning\">No password reset is configured: \
          a forgotten password means lost data.</div>",
     );
 
@@ -133,8 +138,9 @@ fn document(title: &str, body: &str) -> String {
 }
 
 /// A page of a logged-in evaluator: the warning bars, the
-/// navigation on the left and the page on the right.
-pub fn page(installation: &Installation, user: &str, active: Page) -> String {
+/// navigation on the left and the page on the right, with the given
+/// HTML as its content.
+pub fn page(installation: &Installation, user: &str, active: Page, content: &str) -> String {
     let links: String = Page::of_role(installation.role)
         .iter()
         .map(|&page| {
@@ -165,7 +171,7 @@ pub fn page(installation: &Installation, user: &str, active: Page) -> String {
         links = links,
         user = escape(user),
         title = active.title(),
-        content = active.content(),
+        content = content,
     );
 
     document(active.title(), &body)
@@ -181,7 +187,6 @@ pub fn login_page(installation: &Installation, problem: Option<&str>) -> String 
          <div class=\"login\">\n\
          <img class=\"logo\" src=\"/static/logo.png\" alt=\"IO Master\">\n\
          <h1>IO Master</h1>\n\
-         <p class=\"note\">Mock-up login: the password is not checked yet.</p>\n\
          {problem}\n\
          <form method=\"post\" action=\"/login\">\n\
          <label>Name <input name=\"username\" autocomplete=\"username\" required></label>\n\
@@ -198,7 +203,7 @@ pub fn login_page(installation: &Installation, problem: Option<&str>) -> String 
 }
 
 /// An explanation of a refused form, or nothing.
-fn problem_text(problem: Option<&str>) -> String {
+pub fn problem_text(problem: Option<&str>) -> String {
     problem
         .map(|text| format!("<p class=\"problem\">{}</p>", escape(text)))
         .unwrap_or_default()
@@ -218,7 +223,8 @@ pub fn setup_page(problem: Option<&str>) -> String {
          <label>Setup code <input name=\"code\" autocomplete=\"off\" required>\
          <span class=\"note\">Printed in the terminal where IO Master was started.</span></label>\n\
          <label>Name of the first user <input name=\"username\" autocomplete=\"username\" required></label>\n\
-         <label>Password <input name=\"password\" type=\"password\" autocomplete=\"new-password\" required></label>\n\
+         <label>Password <input name=\"password\" type=\"password\" autocomplete=\"new-password\" \
+         minlength=\"12\" required><span class=\"note\">At least 12 characters.</span></label>\n\
          <label>Password again <input name=\"password_repeat\" type=\"password\" \
          autocomplete=\"new-password\" required></label>\n\
          <fieldset>\n\

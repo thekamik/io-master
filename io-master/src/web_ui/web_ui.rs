@@ -8,9 +8,10 @@
 //! The work is split over the files of this folder:
 //!
 //! ```text
-//! web_ui.rs     the server, the routes, the handlers
+//! web_ui.rs     the server, the routes, login and logout
 //! setup.rs      the first start: setup code, first user, role
-//! session.rs    login (mock-up), sessions, the login check
+//! settings.rs   the settings page: users and password
+//! session.rs    sessions and the login check
 //! security.rs   Host and Origin checks, protective headers
 //! pages.rs      the HTML of the pages
 //! static/       the style sheet and the logo
@@ -20,6 +21,10 @@
 //! setup page; afterwards the setup page is gone. Which pages
 //! exist depends on the role chosen there: the pages of the other
 //! role answer "not found".
+//!
+//! Work that is slow on purpose (Argon2id at login) runs on the
+//! threads that tokio keeps for blocking work, so that the server
+//! keeps answering meanwhile.
 
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -36,12 +41,13 @@ use axum::{Extension, Form, Router};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 
-use crate::installation::installation::{Installation, State as InstallationState};
-use crate::tpm::tpm::TpmAccess;
+use crate::accounts::accounts::{self, AccountError};
+use crate::installation::lifecycle::{Opened, Running};
 
 use super::pages::{self, Page};
 use super::security::{check_host, check_origin, security_headers};
 use super::session::{self, CurrentUser, Sessions};
+use super::settings;
 use super::setup::{self, SetupCode};
 
 /// The style sheet, built into the program.
@@ -60,62 +66,51 @@ pub const LOGO_PATH: &str = "/static/logo.png";
 pub struct AppState {
     /// Where the data of the installation is kept.
     pub data_dir: Arc<PathBuf>,
-    /// The installation; `None` until the first start is done.
-    /// Written once, by the setup page.
-    installation: Arc<RwLock<Option<Installation>>>,
+    /// The running installation; `None` until the first start is
+    /// done. Written once, by the setup page.
+    running: Arc<RwLock<Option<Arc<Running>>>>,
     /// The one-time code of the first start; `None` when the
     /// program is installed.
     pub setup_code: Option<Arc<SetupCode>>,
     /// The port the server listens on; the names a browser may
     /// use for the server depend on it (security.rs).
     pub port: u16,
-    /// Where the TPM is reached; the first start needs it.
-    pub tpm: TpmAccess,
     pub sessions: Sessions,
 }
 
 impl AppState {
     /// The state of a server. `setup_code` is needed only for the
     /// first start.
-    pub fn new(
-        data_dir: PathBuf,
-        state: InstallationState,
-        setup_code: Option<SetupCode>,
-        port: u16,
-        tpm: TpmAccess,
-    ) -> AppState {
-        let installation = match state {
-            InstallationState::FirstRun => None,
-            InstallationState::Installed(installation) => Some(installation),
+    pub fn new(data_dir: PathBuf, opened: Opened, setup_code: Option<SetupCode>, port: u16) -> AppState {
+        let running = match opened {
+            Opened::FirstRun => None,
+            Opened::Installed(running) => Some(Arc::new(running)),
         };
 
         AppState {
             data_dir: Arc::new(data_dir),
-            installation: Arc::new(RwLock::new(installation)),
+            running: Arc::new(RwLock::new(running)),
             setup_code: setup_code.map(Arc::new),
             port,
-            tpm,
             sessions: Sessions::default(),
         }
     }
 
-    /// The installation, or `None` before the first start is done.
-    pub fn installation(&self) -> Option<Installation> {
+    /// The running installation, or `None` before the first start
+    /// is done.
+    pub fn running(&self) -> Option<Arc<Running>> {
         // A panic while the lock was held cannot leave the value
         // half-written (it is replaced in one step), so a poisoned
         // lock is used as it is.
-        self.installation
+        self.running
             .read()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
             .clone()
     }
 
     /// Records the installation made by the setup page.
-    pub fn install(&self, installation: Installation) {
-        *self
-            .installation
-            .write()
-            .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(installation);
+    pub fn install(&self, running: Running) {
+        *self.running.write().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(Arc::new(running));
     }
 }
 
@@ -140,11 +135,16 @@ pub async fn run(
 
 /// All routes of the interface, with their protection.
 pub fn router(state: AppState) -> Router {
-    // The pages, each one only for a logged-in user.
-    let mut pages = Router::new().route("/", get(home));
+    // The pages, each one only for a logged-in user. Settings has
+    // a page of its own; the others are placeholders for now.
+    let mut pages = Router::new()
+        .route("/", get(home))
+        .route(Page::Settings.path(), get(settings::show))
+        .route("/settings/users", post(settings::add_user))
+        .route("/settings/password", post(settings::change_password));
 
-    for page in Page::ALL {
-        pages = pages.route(page.path(), get(move |state, user| show_page(state, user, page)));
+    for page in [Page::Chat, Page::Scan, Page::Admin] {
+        pages = pages.route(page.path(), get(move |state, user| show_placeholder(state, user, page)));
     }
 
     let pages = pages
@@ -173,7 +173,7 @@ pub fn router(state: AppState) -> Router {
 /// page; afterwards the setup page leads home.
 async fn require_installed(State(state): State<AppState>, request: Request, next: Next) -> Response {
     let path = request.uri().path();
-    let installed = state.installation().is_some();
+    let installed = state.running().is_some();
 
     match (installed, path) {
         (true, "/setup") => Redirect::to("/").into_response(),
@@ -185,22 +185,22 @@ async fn require_installed(State(state): State<AppState>, request: Request, next
 
 /// `/`: the first page of the role.
 async fn home(State(state): State<AppState>) -> Response {
-    match state.installation() {
-        Some(installation) => Redirect::to(Page::home(installation.role).path()).into_response(),
+    match state.running() {
+        Some(running) => Redirect::to(Page::home(running.installation.role).path()).into_response(),
         None => Redirect::to("/setup").into_response(),
     }
 }
 
-/// A page of the navigation; "not found" for the pages of the
+/// A page that is not built yet; "not found" for the pages of the
 /// other role.
-async fn show_page(
+async fn show_placeholder(
     State(state): State<AppState>,
-    Extension(CurrentUser(user)): Extension<CurrentUser>,
+    Extension(CurrentUser(account)): Extension<CurrentUser>,
     page: Page,
 ) -> Response {
-    match state.installation() {
-        Some(installation) if Page::of_role(installation.role).contains(&page) => {
-            Html(pages::page(&installation, &user, page)).into_response()
+    match state.running() {
+        Some(running) if Page::of_role(running.installation.role).contains(&page) => {
+            Html(pages::page(&running.installation, &account.name, page, page.placeholder())).into_response()
         }
         _ => not_found().await,
     }
@@ -212,9 +212,9 @@ async fn login_form(State(state): State<AppState>, headers: HeaderMap) -> Respon
         .and_then(|token| state.sessions.user(token))
         .is_some();
 
-    match state.installation() {
+    match state.running() {
         Some(_) if logged_in => Redirect::to("/").into_response(),
-        Some(installation) => Html(pages::login_page(&installation, None)).into_response(),
+        Some(running) => Html(pages::login_page(&running.installation, None)).into_response(),
         None => Redirect::to("/setup").into_response(),
     }
 }
@@ -223,41 +223,45 @@ async fn login_form(State(state): State<AppState>, headers: HeaderMap) -> Respon
 #[derive(Deserialize)]
 struct LoginForm {
     username: String,
-    // Read but not checked yet (see login()).
-    #[allow(dead_code)]
     password: String,
 }
 
-/// Logs a user in.
-///
-/// TODO (step 3 of docs/todo.md): mock-up. The user must exist,
-/// but the password is not checked yet.
+/// Logs a user in: the password opens the key of the database of
+/// the account (`accounts/accounts.rs`).
 async fn login(State(state): State<AppState>, Form(form): Form<LoginForm>) -> Response {
-    let Some(installation) = state.installation() else {
+    let Some(running) = state.running() else {
         return Redirect::to("/setup").into_response();
     };
 
-    let user = form.username.trim();
+    let data_dir = state.data_dir.as_ref().clone();
+    let worker = Arc::clone(&running);
+    let name = form.username.trim().to_owned();
 
-    if !installation.has_user(user) {
-        return (
-            StatusCode::UNAUTHORIZED,
-            Html(pages::login_page(&installation, Some("Unknown user."))),
-        )
-            .into_response();
-    }
+    // Argon2id takes a noticeable moment on purpose.
+    let result = tokio::task::spawn_blocking(move || {
+        accounts::log_in(&worker.system_db, worker.device_secret.as_ref(), &data_dir, &name, &form.password)
+    })
+    .await;
 
-    match state.sessions.create(user) {
-        Ok(token) => ([(SET_COOKIE, session::session_cookie(&token))], Redirect::to("/")).into_response(),
-        Err(_) => (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Html(pages::login_page(&installation, Some("No session could be created."))),
-        )
-            .into_response(),
+    let refuse = |status: StatusCode, problem: &str| {
+        (status, Html(pages::login_page(&running.installation, Some(problem)))).into_response()
+    };
+
+    match result {
+        Ok(Ok((account, key))) => match state.sessions.create(account, key) {
+            Ok(token) => ([(SET_COOKIE, session::session_cookie(&token))], Redirect::to("/")).into_response(),
+            Err(_) => refuse(StatusCode::INTERNAL_SERVER_ERROR, "No session could be created."),
+        },
+        // One answer for a wrong name and a wrong password, so that
+        // the page does not tell which names exist.
+        Ok(Err(AccountError::WrongCredentials)) => refuse(StatusCode::UNAUTHORIZED, "Wrong name or password."),
+        Ok(Err(error)) => refuse(StatusCode::INTERNAL_SERVER_ERROR, &format!("The login failed: {error}.")),
+        Err(_) => refuse(StatusCode::INTERNAL_SERVER_ERROR, "The login was interrupted."),
     }
 }
 
-/// Logs the user out and ends the session.
+/// Logs the user out and ends the session; the key of the database
+/// is wiped from memory.
 async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if let Some(token) = session::token_from(&headers) {
         state.sessions.remove(token);
@@ -277,7 +281,7 @@ async fn logo() -> Response {
 }
 
 /// Any other address, also the pages of the other role.
-async fn not_found() -> Response {
+pub async fn not_found() -> Response {
     (StatusCode::NOT_FOUND, Html(pages::not_found_page())).into_response()
 }
 

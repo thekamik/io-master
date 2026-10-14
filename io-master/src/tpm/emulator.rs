@@ -2,7 +2,7 @@
 //!
 //! Until the program reaches its beta version it works only with
 //! `swtpm`, a TPM 2.0 emulator, and never touches the real TPM of
-//! the computer (`docs/todo.md`, step 8 brings the real TPM). The
+//! the computer (`docs/todo.md`, step 10 brings the real TPM). The
 //! program starts its own emulator and stops it when it ends:
 //!
 //! ```text
@@ -21,6 +21,11 @@
 //! this computer could reach them; that is acceptable only for
 //! development, and one more reason why the release uses the real
 //! TPM.
+
+// TODO (step 8 of docs/todo.md): the TPM is an optional factor that
+//       is not switched on yet; until then only the tests use this
+//       file.
+#![allow(dead_code)]
 
 use std::fs::{self, DirBuilder};
 use std::io;

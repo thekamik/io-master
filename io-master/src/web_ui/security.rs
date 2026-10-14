@@ -88,7 +88,12 @@ pub async fn security_headers(request: Request, next: Next) -> Response {
     );
     headers.insert(X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
     headers.insert(X_CONTENT_TYPE_OPTIONS, HeaderValue::from_static("nosniff"));
-    headers.insert(REFERRER_POLICY, HeaderValue::from_static("no-referrer"));
+    // "same-origin", not "no-referrer": with "no-referrer" the
+    // browser sends "Origin: null" with every form, and
+    // check_origin() could no longer tell the forms of this server
+    // from those of other websites. Other websites still get no
+    // address of this server.
+    headers.insert(REFERRER_POLICY, HeaderValue::from_static("same-origin"));
 
     response
 }
