@@ -57,12 +57,11 @@ impl Page {
     /// The content of a page that does not exist yet.
     ///
     /// TODO: every such page is a placeholder until the step of
-    /// `docs/todo.md` it names. Scan and Settings have pages of
-    /// their own (`scan_page.rs`, `settings.rs`).
+    /// `docs/todo.md` it names. Chat, Scan and Settings have pages
+    /// of their own (`chat_page.rs`, `scan_page.rs`, `settings.rs`).
     pub fn placeholder(self) -> &'static str {
         match self {
-            Page::Chat => "<p>The AI assistant comes here (step 7).</p>",
-            Page::Scan | Page::Settings => "",
+            Page::Chat | Page::Scan | Page::Settings => "",
             Page::Admin => "<p>Password reset requests are approved here (step 11).</p>",
         }
     }

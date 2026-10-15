@@ -51,3 +51,23 @@ fn settings_are_kept_and_replaced() {
     let db = open(directory.path(), 1, &key).unwrap();
     assert_eq!(db.setting("scan.columns").unwrap().as_deref(), Some("path"));
 }
+
+#[test]
+fn secrets_are_kept_replaced_and_removed() {
+    let directory = TempDir::new();
+    let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
+    let db = create(directory.path(), 1, &key).unwrap();
+
+    assert_eq!(db.secret("api").unwrap(), None);
+
+    db.set_secret("api", "first").unwrap();
+    db.set_secret("api", "second").unwrap();
+    assert_eq!(db.secret("api").unwrap().as_deref().map(String::as_str), Some("second"));
+
+    // Secrets and settings do not mix.
+    assert_eq!(db.setting("api").unwrap(), None);
+
+    db.remove_secret("api").unwrap();
+    db.remove_secret("api").unwrap();
+    assert_eq!(db.secret("api").unwrap(), None);
+}

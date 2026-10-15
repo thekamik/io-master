@@ -1,8 +1,8 @@
 //! The database of one evaluator: `users/<id>.db` in the data
 //! directory.
 //!
-//! Everything an evaluator works with is kept here: later the API
-//! keys, the chats, the settings, the results. Its key is random
+//! Everything an evaluator works with is kept here: the API key,
+//! the chats, the settings, later the results. Its key is random
 //! and stored only encrypted with the password of the evaluator
 //! and the secret of the device (`keys.rs`), so nobody else, not
 //! even another evaluator of the same workstation, can open it.
@@ -10,6 +10,13 @@
 //! ```text
 //! settings   name -> value: the settings of the evaluator, for
 //!            example of the scanner (devices/scan_settings.rs)
+//! secrets    name -> value: secrets of the evaluator, such as the
+//!            API key of Anthropic (ai/ai_settings.rs); kept apart
+//!            from the settings so that they are never listed or
+//!            shown with them
+//! chats      the conversations with an AI model (ai/chats.rs)
+//! messages   the messages of the conversations, with their time
+//!            and model
 //! ```
 //!
 //! Each step of `docs/todo.md` that keeps data of an evaluator adds
@@ -23,6 +30,7 @@ use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
 
 use rusqlite::{Connection, OptionalExtension, params};
+use zeroize::Zeroizing;
 
 use super::database_key::DatabaseKey;
 use super::db::{self, DbError};
@@ -36,6 +44,36 @@ const SCHEMA: &str = "
         name    TEXT PRIMARY KEY,
         value   TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS secrets (
+        name    TEXT PRIMARY KEY,
+        value   TEXT NOT NULL
+    );
+
+    -- Times are seconds since 1970 (UTC).
+    CREATE TABLE IF NOT EXISTS chats (
+        id        INTEGER PRIMARY KEY,
+        title     TEXT NOT NULL,
+        created   INTEGER NOT NULL
+    );
+
+    -- speaker: 'evaluator' or 'model'. For a reply of the model:
+    -- the model that wrote it, how the reply ended (ai/chats.rs),
+    -- an explanation when it failed, and its token counts.
+    CREATE TABLE IF NOT EXISTS messages (
+        id              INTEGER PRIMARY KEY,
+        chat_id         INTEGER NOT NULL REFERENCES chats (id),
+        speaker         TEXT NOT NULL,
+        text            TEXT NOT NULL,
+        created         INTEGER NOT NULL,
+        model           TEXT,
+        ending          TEXT,
+        note            TEXT,
+        input_tokens    INTEGER,
+        output_tokens   INTEGER
+    );
+
+    CREATE INDEX IF NOT EXISTS messages_of_chat ON messages (chat_id, id);
 ";
 
 /// The open database of one evaluator.
@@ -69,6 +107,47 @@ impl UserDb {
         )?;
 
         Ok(())
+    }
+
+    /// The value of a secret, or `None` when none is stored. The
+    /// copy given out is wiped when it is dropped.
+    pub fn secret(&self, name: &str) -> Result<Option<Zeroizing<String>>, DbError> {
+        Ok(self
+            .connection
+            .query_row("SELECT value FROM secrets WHERE name = ?1", [name], |row| row.get::<_, String>(0))
+            .optional()?
+            .map(Zeroizing::new))
+    }
+
+    /// Stores a secret, replacing an earlier value.
+    pub fn set_secret(&self, name: &str, value: &str) -> Result<(), DbError> {
+        self.connection.execute(
+            "INSERT INTO secrets (name, value) VALUES (?1, ?2)
+             ON CONFLICT (name) DO UPDATE SET value = excluded.value",
+            params![name, value],
+        )?;
+
+        Ok(())
+    }
+
+    /// Removes a secret; a secret that is not stored is not an
+    /// error.
+    ///
+    /// SQLite marks the space of a removed row as free but does not
+    /// overwrite it at once; `secure_delete` makes it overwrite the
+    /// value with zeros, so that the old secret is not left in the
+    /// (encrypted) file.
+    pub fn remove_secret(&self, name: &str) -> Result<(), DbError> {
+        self.connection.execute_batch("PRAGMA secure_delete = ON")?;
+        self.connection.execute("DELETE FROM secrets WHERE name = ?1", [name])?;
+
+        Ok(())
+    }
+
+    /// The connection, for the modules that keep their own tables
+    /// here (for example `ai/chats.rs`).
+    pub fn connection(&self) -> &Connection {
+        &self.connection
     }
 }
 

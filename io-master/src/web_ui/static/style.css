@@ -262,3 +262,121 @@ table.ports td {
 table.ports th {
     background: #eaeef2;
 }
+
+/* The chat page: the list of chats on the left, the conversation
+   on the right. */
+.chat {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.chat-list {
+    width: 16rem;
+    flex-shrink: 0;
+}
+
+.chat-list a.button {
+    margin-left: 0;
+}
+
+.chat-list ul {
+    list-style: none;
+    padding: 0;
+}
+
+.chat-list li {
+    margin-bottom: 0.4rem;
+}
+
+.chat-list li a {
+    display: block;
+    padding: 0.3rem 0.5rem;
+    border-radius: 6px;
+    color: inherit;
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-list li a:hover {
+    background: #eaeef2;
+}
+
+.chat-list li a.active {
+    background: #ddf4ff;
+}
+
+.chat-list li .note {
+    display: block;
+    padding-left: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.conversation {
+    flex: 1;
+    min-width: 0;
+    max-width: 60rem;
+}
+
+form.inline {
+    display: inline;
+}
+
+h2 form.inline button {
+    font-size: 0.85rem;
+    margin-left: 0.5rem;
+}
+
+.message {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d0d7de;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.message.evaluator {
+    background: #f0f6ff;
+}
+
+.message header {
+    font-size: 0.8rem;
+    color: #57606a;
+    margin-bottom: 0.4rem;
+}
+
+/* The text as it was written: lines kept, long words broken. */
+.message .text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.message .ending {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: #b26a00;
+}
+
+#ask textarea {
+    display: block;
+    width: 100%;
+    padding: 0.5rem;
+    font: inherit;
+    resize: vertical;
+}
+
+#ask .buttons {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* The list of models in the settings of the chat. */
+.models label.choice {
+    display: block;
+    white-space: normal;
+    margin: 0.3rem 0;
+}

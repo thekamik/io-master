@@ -10,12 +10,13 @@
 //! ```text
 //! web_ui.rs     the server, the routes, login and logout
 //! setup.rs      the first start: setup code, first user, role
+//! chat_page.rs  the chat page: chats with an AI model
 //! scan_page.rs  the scan page: serial ports and their settings
-//! settings.rs   the settings page: users and password
+//! settings.rs   the settings page: users, password, API key
 //! session.rs    sessions and the login check
 //! security.rs   Host and Origin checks, protective headers
 //! pages.rs      the HTML of the pages
-//! static/       the style sheet and the logo
+//! static/       the style sheet, the script of the chat, the logo
 //! ```
 //!
 //! Until the installation is done, every address leads to the
@@ -43,9 +44,11 @@ use serde::Deserialize;
 use tokio::net::TcpListener;
 
 use crate::accounts::accounts::{self, AccountError};
+use crate::ai::anthropic::Anthropic;
 use crate::installation::lifecycle::{Opened, Running};
 
 use super::pages::{self, Page};
+use super::chat_page;
 use super::scan_page;
 use super::security::{check_host, check_origin, security_headers};
 use super::session::{self, CurrentUser, Sessions};
@@ -54,6 +57,10 @@ use super::setup::{self, SetupCode};
 
 /// The style sheet, built into the program.
 const STYLE: &str = include_str!("static/style.css");
+
+/// The script of the chat page, built into the program
+/// (chat_page.rs).
+const CHAT_SCRIPT: &str = include_str!("static/chat.js");
 
 /// The logo, built into the program: a 192-pixel copy of
 /// `static/logo.png` (the original, 1254 pixels), small enough to
@@ -78,12 +85,14 @@ pub struct AppState {
     /// use for the server depend on it (security.rs).
     pub port: u16,
     pub sessions: Sessions,
+    /// The connection to the AI service (`ai/anthropic.rs`).
+    pub ai: Anthropic,
 }
 
 impl AppState {
     /// The state of a server. `setup_code` is needed only for the
     /// first start.
-    pub fn new(data_dir: PathBuf, opened: Opened, setup_code: Option<SetupCode>, port: u16) -> AppState {
+    pub fn new(data_dir: PathBuf, opened: Opened, setup_code: Option<SetupCode>, port: u16, ai: Anthropic) -> AppState {
         let running = match opened {
             Opened::FirstRun => None,
             Opened::Installed(running) => Some(Arc::new(running)),
@@ -95,6 +104,7 @@ impl AppState {
             setup_code: setup_code.map(Arc::new),
             port,
             sessions: Sessions::default(),
+            ai,
         }
     }
 
@@ -137,21 +147,28 @@ pub async fn run(
 
 /// All routes of the interface, with their protection.
 pub fn router(state: AppState) -> Router {
-    // The pages, each one only for a logged-in user. Settings has
-    // a page of its own; the others are placeholders for now.
-    let mut pages = Router::new()
+    // The pages, each one only for a logged-in user. Only the page
+    // of the master is a placeholder for now.
+    let pages = Router::new()
         .route("/", get(home))
         .route(Page::Settings.path(), get(settings::show))
         .route("/settings/users", post(settings::add_user))
         .route("/settings/password", post(settings::change_password))
+        .route("/settings/ai/key", post(settings::store_api_key))
+        .route("/settings/ai/key/delete", post(settings::delete_api_key))
         .route(Page::Scan.path(), get(scan_page::show))
-        .route("/scan/settings", post(scan_page::save));
+        .route("/scan/settings", post(scan_page::save))
+        .route(Page::Chat.path(), get(chat_page::show_new))
+        .route("/chat/{id}", get(chat_page::show_chat))
+        .route("/chat/{id}/delete", post(chat_page::delete))
+        .route("/chat/send", post(chat_page::send))
+        .route("/chat/settings", post(chat_page::save_settings));
 
-    for page in [Page::Chat, Page::Admin] {
-        pages = pages.route(page.path(), get(move |state, user| show_placeholder(state, user, page)));
-    }
+    // The page of the master, a placeholder until step 11.
+    let admin = Page::Admin;
 
     let pages = pages
+        .route(admin.path(), get(move |state, user| show_placeholder(state, user, admin)))
         .route("/logout", post(logout))
         .route_layer(from_fn_with_state(state.clone(), session::require_login));
 
@@ -164,6 +181,7 @@ pub fn router(state: AppState) -> Router {
         .route("/setup", get(setup::setup_form).post(setup::setup))
         .route("/login", get(login_form).post(login))
         .route("/static/style.css", get(style))
+        .route("/static/chat.js", get(chat_script))
         .route(LOGO_PATH, get(logo))
         .fallback(not_found)
         .layer(from_fn_with_state(state.clone(), require_installed))
@@ -277,6 +295,11 @@ async fn logout(State(state): State<AppState>, headers: HeaderMap) -> Response {
 /// The style sheet.
 async fn style() -> Response {
     ([(CONTENT_TYPE, "text/css; charset=utf-8")], STYLE).into_response()
+}
+
+/// The script of the chat page.
+async fn chat_script() -> Response {
+    ([(CONTENT_TYPE, "text/javascript; charset=utf-8")], CHAT_SCRIPT).into_response()
 }
 
 /// The logo.

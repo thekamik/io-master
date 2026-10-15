@@ -10,6 +10,7 @@ use http_body_util::BodyExt;
 use tower::ServiceExt;
 
 use crate::accounts::accounts;
+use crate::ai::anthropic::Anthropic;
 use crate::installation::installation::Role;
 use crate::installation::lifecycle::{self, Opened};
 use crate::tpm::test_support::TempDir;
@@ -43,7 +44,7 @@ pub fn installed(role: Role, users: &[&str]) -> TestServer {
         accounts::add(&running.system_db, None, directory.path(), user, PASSWORD).expect("the user is added");
     }
 
-    let state = AppState::new(directory.path().to_owned(), Opened::Installed(running), None, 8080);
+    let state = AppState::new(directory.path().to_owned(), Opened::Installed(running), None, 8080, Anthropic::offline());
 
     TestServer { directory, state }
 }
@@ -57,6 +58,7 @@ pub fn first_start() -> TestServer {
         Opened::FirstRun,
         Some(SetupCode::from_text(CODE)),
         8080,
+        Anthropic::offline(),
     );
 
     TestServer { directory, state }
