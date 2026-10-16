@@ -11,8 +11,9 @@
 //! complete   the model finished
 //! cut        the reply reached the largest length and was cut
 //! stopped    the evaluator stopped it; the text up to then is kept
-//! refused    the model declined; any partial text is dropped, as
-//!            Anthropic advises, and only the fact is kept
+//! refused    the model declined; any partial text is dropped (it
+//!            may be the beginning of what was declined), and only
+//!            the fact is kept
 //! failed     the request failed; the explanation is kept, and the
 //!            text written before the failure
 //! ```
@@ -25,8 +26,9 @@ use rusqlite::{OptionalExtension, params};
 use crate::db::db::DbError;
 use crate::db::user_db::UserDb;
 
-use super::anthropic::{Reply, ReplyEnd, Speaker, Turn};
-use super::reply::StopReason;
+use super::client::{Reply, ReplyEnd};
+use super::request::{Speaker, Turn};
+use super::response::StopReason;
 
 /// The longest title of a chat, in characters; the title is the
 /// beginning of the first message.
@@ -206,9 +208,9 @@ pub fn add_message(db: &UserDb, chat_id: i64, text: &str) -> Result<(), DbError>
 /// reply the explanation.
 pub fn ending_of(reply: &Reply) -> (Ending, Option<String>) {
     match &reply.end {
-        ReplyEnd::Finished(StopReason::MaxTokens) => (Ending::Cut, None),
-        ReplyEnd::Finished(StopReason::Refusal) => (Ending::Refused, None),
-        ReplyEnd::Finished(_) => (Ending::Complete, None),
+        ReplyEnd::Finished(StopReason::Cut) => (Ending::Cut, None),
+        ReplyEnd::Finished(StopReason::Refused) => (Ending::Refused, None),
+        ReplyEnd::Finished(StopReason::Complete) => (Ending::Complete, None),
         ReplyEnd::Cancelled => (Ending::Stopped, None),
         ReplyEnd::Failed(error) => (Ending::Failed, Some(error.to_string())),
     }

@@ -25,8 +25,8 @@
 //! `users/<id>.db`; this database holds only what is needed to open
 //! it.
 //!
-//! The connection is kept behind a lock, so that the requests of
-//! the web interface, which run at the same time, use it one after
+//! The connection is kept behind a lock, so that the commands of
+//! the interface, which may run at the same time, use it one after
 //! another.
 
 use std::fs;

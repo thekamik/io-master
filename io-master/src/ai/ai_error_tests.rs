@@ -2,50 +2,45 @@
 
 use super::*;
 
-/// The body Anthropic sends with an error.
-fn body(kind: &str, message: &str) -> Vec<u8> {
-    serde_json::json!({"type": "error", "error": {"type": kind, "message": message}})
-        .to_string()
-        .into_bytes()
+use serde_json::json;
+
+fn error_path() -> JsonPath {
+    JsonPath::parse("error.message").unwrap()
 }
 
 #[test]
-fn the_kind_in_the_body_decides() {
-    assert_eq!(AiError::from_answer(401, &body("authentication_error", "invalid x-api-key")), AiError::KeyRejected);
-    assert_eq!(AiError::from_answer(404, &body("not_found_error", "model: x")), AiError::UnknownModel);
-    assert_eq!(AiError::from_answer(429, &body("rate_limit_error", "slow down")), AiError::LimitReached);
-    assert_eq!(AiError::from_answer(529, &body("overloaded_error", "busy")), AiError::Overloaded);
+fn the_status_decides_the_kind() {
+    let body = json!({"error": {"message": "explained"}}).to_string();
+    let path = error_path();
+    let error = |status| AiError::from_answer(status, body.as_bytes(), Some(&path));
+
+    assert_eq!(error(401), AiError::KeyRejected("explained".to_owned()));
+    assert_eq!(error(403), AiError::KeyRejected("explained".to_owned()));
+    assert_eq!(error(404), AiError::NotFound("explained".to_owned()));
+    assert_eq!(error(429), AiError::LimitReached("explained".to_owned()));
+    assert_eq!(error(400), AiError::Rejected(400, "explained".to_owned()));
+    assert_eq!(error(529), AiError::ServiceFailed(529, "explained".to_owned()));
+    assert!(matches!(error(307), AiError::UnexpectedAnswer(text) if text.contains("redirect")));
+}
+
+#[test]
+fn without_the_path_the_beginning_of_the_body_explains() {
+    let error = AiError::from_answer(500, b"<html>\n  Bad   gateway\n</html>", Some(&error_path()));
+
+    assert_eq!(error, AiError::ServiceFailed(500, "<html> Bad gateway </html>".to_owned()));
     assert_eq!(
-        AiError::from_answer(400, &body("invalid_request_error", "Your credit balance is too low")),
-        AiError::Rejected("Your credit balance is too low".to_owned())
-    );
-    assert_eq!(
-        AiError::from_answer(402, &body("billing_error", "no card")),
-        AiError::Billing("no card".to_owned())
-    );
-    assert_eq!(
-        AiError::from_answer(403, &body("permission_error", "no access")),
-        AiError::NotAllowed("no access".to_owned())
-    );
-    assert_eq!(
-        AiError::from_answer(500, &body("api_error", "oops")),
-        AiError::ServiceFailed("oops".to_owned())
+        AiError::from_answer(500, b"", None),
+        AiError::ServiceFailed(500, "no explanation was given".to_owned())
     );
 }
 
 #[test]
-fn without_a_body_the_status_decides() {
-    assert_eq!(AiError::from_answer(401, b"<html>"), AiError::KeyRejected);
-    assert_eq!(AiError::from_answer(429, b""), AiError::LimitReached);
-    assert_eq!(AiError::from_answer(529, b""), AiError::Overloaded);
-    assert_eq!(AiError::from_answer(502, b""), AiError::ServiceFailed("HTTP status 502".to_owned()));
-    assert_eq!(AiError::from_answer(418, b""), AiError::UnexpectedAnswer("HTTP status 418".to_owned()));
-}
+fn a_long_explanation_is_shortened() {
+    let long = "x".repeat(1000);
+    let AiError::Rejected(_, message) = AiError::from_answer(400, long.as_bytes(), None) else {
+        panic!("a 400 is a rejected request");
+    };
 
-#[test]
-fn an_unknown_kind_is_kept_for_the_explanation() {
-    assert_eq!(
-        AiError::from_answer(400, &body("new_kind", "text")),
-        AiError::UnexpectedAnswer("new_kind: text".to_owned())
-    );
+    assert_eq!(message.chars().count(), EXPLANATION_LENGTH);
+    assert!(message.ends_with('…'));
 }

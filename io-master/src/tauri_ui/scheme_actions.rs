@@ -1,0 +1,459 @@
+//! The drawing of one scheme of a test project in the tool Create
+//! evaluation scheme: tiles, links (also to tiles of other schemes of
+//! the project), moving tiles between schemes, "Undo", the checks, and
+//! the analysis of chapters with AI.
+//!
+//! Every change of tiles or links goes through [`change`]: the content
+//! of the project before the change is kept for "Undo"
+//! (`UiState::remember`; one stack per project, since a change may
+//! touch two schemes), the change is made, and the page gets the whole
+//! scheme back with its new findings, so that it never has to guess
+//! what the program stored.
+//!
+//! The projects and the list of their schemes are in
+//! `project_actions.rs`.
+
+use crate::db::user_db::UserDb;
+use crate::evaluation::analysis::{self, DEFAULT_INSTRUCTIONS, INSTRUCTIONS_SETTING};
+use crate::evaluation::checks;
+use crate::evaluation::contents;
+use crate::evaluation::documents;
+use crate::evaluation::projects::ProjectData;
+use crate::evaluation::scheme::Tile;
+use crate::evaluation::schemes;
+
+use super::error::UiError;
+use super::model_run::{Asked, active_model, ask};
+use super::project_actions::{documents_of, project_data};
+use super::serializer::project_view::ProjectDataView;
+use super::serializer::scheme_view::{AnalysisEvent, PageRange, SchemeDataView, TileForm};
+use super::state::UiState;
+use super::user_data::with_user_db;
+
+/// The project a scheme belongs to.
+fn project_of(db: &UserDb, scheme: i64) -> Result<i64, UiError> {
+    Ok(schemes::existing(db, scheme)?.project)
+}
+
+/// The view of a scheme as it is stored now.
+fn view(db: &UserDb, scheme: i64, can_undo: bool) -> Result<SchemeDataView, UiError> {
+    let project = project_of(db, scheme)?;
+    let data = project_data(db, project)?;
+    let findings = checks::check(&data.tiles, &data.links);
+    let documents = documents_of(db, &data)?;
+
+    SchemeDataView::new(data, scheme, findings, documents, can_undo)
+        .ok_or_else(|| UiError::Invalid("the scheme does not exist".to_owned()))
+}
+
+/// Makes a change of tiles or links, shown in `scheme`: keeps the
+/// content of its project before it for "Undo", makes it, and gives
+/// the scheme as it is afterwards.
+async fn change(
+    state: &UiState,
+    scheme: i64,
+    work: impl FnOnce(&UserDb) -> Result<(), UiError> + Send + 'static,
+) -> Result<SchemeDataView, UiError> {
+    let before = with_user_db(state, move |db| {
+        let before = project_data(db, project_of(db, scheme)?)?;
+        work(db)?;
+        Ok(before)
+    })
+    .await?;
+
+    let project = before.project.id;
+    state.remember(before);
+    let can_undo = state.can_undo(project);
+
+    with_user_db(state, move |db| view(db, scheme, can_undo)).await
+}
+
+/// The scheme a tile is in.
+async fn scheme_of_tile(state: &UiState, tile: i64) -> Result<i64, UiError> {
+    with_user_db(state, move |db| {
+        Ok(schemes::tile(db, tile)?.ok_or_else(|| UiError::Invalid("the tile does not exist".to_owned()))?.scheme)
+    })
+    .await
+}
+
+/// Whether the tile `id` is in the project of `scheme`.
+fn in_project_of(db: &UserDb, scheme: i64, id: i64) -> Result<bool, UiError> {
+    Ok(schemes::project_of_tile(db, id)? == Some(project_of(db, scheme)?))
+}
+
+pub async fn open(state: &UiState, scheme: i64) -> Result<SchemeDataView, UiError> {
+    let project = with_user_db(state, move |db| project_of(db, scheme)).await?;
+    let can_undo = state.can_undo(project);
+
+    with_user_db(state, move |db| view(db, scheme, can_undo)).await
+}
+
+/* ---------------------------------------------------------------
+ * The drawing
+ * ------------------------------------------------------------- */
+
+pub async fn add_tile(state: &UiState, scheme: i64, form: TileForm) -> Result<SchemeDataView, UiError> {
+    let fields = form.into_fields()?;
+
+    change(state, scheme, move |db| {
+        schemes::add_tile(db, scheme, &fields)?;
+        Ok(())
+    })
+    .await
+}
+
+pub async fn update_tile(state: &UiState, id: i64, form: TileForm) -> Result<SchemeDataView, UiError> {
+    let fields = form.into_fields()?;
+    let scheme = scheme_of_tile(state, id).await?;
+
+    change(state, scheme, move |db| Ok(schemes::update_tile(db, id, &fields)?)).await
+}
+
+/// Moves a tile on the canvas; gives nothing back, the page knows
+/// where it put it.
+pub async fn move_tile(state: &UiState, id: i64, x: f64, y: f64) -> Result<(), UiError> {
+    let scheme = scheme_of_tile(state, id).await?;
+
+    change(state, scheme, move |db| Ok(schemes::move_tile(db, id, x, y)?)).await?;
+
+    Ok(())
+}
+
+/// Moves tiles of the project to the scheme `to` (step 26); the page
+/// gets the scheme `shown` back.
+pub async fn move_tiles(state: &UiState, shown: i64, ids: Vec<i64>, to: i64) -> Result<SchemeDataView, UiError> {
+    change(state, shown, move |db| Ok(schemes::move_to_scheme(db, &ids, to)?)).await
+}
+
+pub async fn delete_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
+    change(state, scheme, move |db| {
+        for id in ids {
+            if schemes::tile(db, id)?.is_some_and(|tile| tile.scheme == scheme) {
+                schemes::delete_tile(db, id)?;
+            }
+        }
+
+        Ok(())
+    })
+    .await
+}
+
+pub async fn accept_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
+    change(state, scheme, move |db| {
+        for id in ids {
+            if schemes::tile(db, id)?.is_some_and(|tile| tile.scheme == scheme) {
+                schemes::accept_tile(db, id)?;
+            }
+        }
+
+        Ok(())
+    })
+    .await
+}
+
+/// Links two tiles of the project of `scheme` (one of them may be in
+/// another scheme of it).
+pub async fn add_link(state: &UiState, scheme: i64, from: i64, to: i64) -> Result<SchemeDataView, UiError> {
+    change(state, scheme, move |db| {
+        if !in_project_of(db, scheme, from)? || !in_project_of(db, scheme, to)? {
+            return Err(UiError::Invalid("only tiles of this test project can be linked".to_owned()));
+        }
+
+        schemes::add_link(db, from, to)?;
+        Ok(())
+    })
+    .await
+}
+
+pub async fn delete_link(state: &UiState, scheme: i64, id: i64) -> Result<SchemeDataView, UiError> {
+    change(state, scheme, move |db| {
+        if schemes::links(db, project_of(db, scheme)?)?.iter().any(|link| link.id == id) {
+            schemes::delete_link(db, id)?;
+        }
+
+        Ok(())
+    })
+    .await
+}
+
+/// Undoes the last change of tiles or links in the project of
+/// `scheme` (in any of its schemes); gives `scheme` back.
+pub async fn undo(state: &UiState, scheme: i64) -> Result<SchemeDataView, UiError> {
+    let project = with_user_db(state, move |db| project_of(db, scheme)).await?;
+
+    let Some(before) = state.take_undo(project) else {
+        return Err(UiError::Invalid("there is nothing to undo".to_owned()));
+    };
+
+    let can_undo = state.can_undo(project);
+
+    with_user_db(state, move |db| {
+        schemes::replace_content(db, project, &before.tiles, &before.links)?;
+        view(db, scheme, can_undo)
+    })
+    .await
+}
+
+/* ---------------------------------------------------------------
+ * The analysis with AI
+ * ------------------------------------------------------------- */
+
+/// Which instructions: those of the analysis of a chapter, or those
+/// of reading a table of contents.
+fn instruction_setting(which: &str) -> Result<(&'static str, &'static str), UiError> {
+    match which {
+        "chapter" => Ok((INSTRUCTIONS_SETTING, DEFAULT_INSTRUCTIONS)),
+        "contents" => Ok((contents::INSTRUCTIONS_SETTING, contents::DEFAULT_INSTRUCTIONS)),
+        _ => Err(UiError::Invalid("there are no such instructions".to_owned())),
+    }
+}
+
+/// The instructions `which` ("chapter" or "contents"): those the user
+/// changed, or the default ones.
+pub async fn instructions(state: &UiState, which: String) -> Result<String, UiError> {
+    let (setting, default) = instruction_setting(&which)?;
+
+    with_user_db(state, move |db| Ok(db.setting(setting)?.unwrap_or_else(|| default.to_owned()))).await
+}
+
+/// Stores the instructions `which`; empty text brings the default
+/// ones back. Gives the instructions now in force.
+pub async fn save_instructions(state: &UiState, which: String, text: String) -> Result<String, UiError> {
+    let (setting, default) = instruction_setting(&which)?;
+
+    with_user_db(state, move |db| {
+        if text.trim().is_empty() {
+            db.connection()
+                .execute("DELETE FROM settings WHERE name = ?1", [setting])
+                .map_err(|error| UiError::Failed(error.to_string()))?;
+            Ok(default.to_owned())
+        } else {
+            db.set_setting(setting, &text)?;
+            Ok(text)
+        }
+    })
+    .await
+}
+
+/// One scheme to analyse: its number, the pages to read.
+struct Job {
+    scheme: i64,
+    number: String,
+    name: String,
+    ranges: Vec<(i64, u32, u32)>,
+}
+
+/// Analyses one scheme with `ranges` of pages (or, when empty, the
+/// pages of the scheme) over the active AI connection, part by part
+/// (at most `part_size` characters each), and stores what the model
+/// proposes as proposed tiles. Reports to `events`; "Stop" ends it.
+pub async fn analyse(
+    state: &UiState,
+    scheme: i64,
+    ranges: Vec<PageRange>,
+    part_size: usize,
+    events: impl Fn(AnalysisEvent) -> bool + Send + Sync + Clone + 'static,
+) -> Result<SchemeDataView, UiError> {
+    let ranges: Vec<(i64, u32, u32)> =
+        ranges.into_iter().map(|range| (range.document_id, range.first_page, range.last_page)).collect();
+
+    let job = with_user_db(state, move |db| {
+        let stored = schemes::existing(db, scheme)?;
+        let ranges = if ranges.is_empty() {
+            stored.fields.pages.map(|pages| vec![(pages.document_id, pages.first_page, pages.last_page)]).unwrap_or_default()
+        } else {
+            ranges
+        };
+
+        if ranges.is_empty() {
+            return Err(UiError::Invalid("choose the pages to analyse: the scheme has none".to_owned()));
+        }
+
+        Ok(Job {
+            scheme,
+            number: stored.fields.number,
+            name: stored.fields.name,
+            ranges,
+        })
+    })
+    .await?;
+
+    run(state, vec![job], part_size, events).await?;
+
+    open(state, scheme).await
+}
+
+/// Analyses every scheme of `ids` of `project` on its own pages, one
+/// after another (a scheme without pages is left out and told).
+/// "Undo" takes the whole work back.
+pub async fn analyse_schemes(
+    state: &UiState,
+    project: i64,
+    ids: Vec<i64>,
+    part_size: usize,
+    events: impl Fn(AnalysisEvent) -> bool + Send + Sync + Clone + 'static,
+) -> Result<ProjectDataView, UiError> {
+    let (jobs, without) = with_user_db(state, move |db| {
+        let data = project_data(db, project)?;
+        let mut jobs = Vec::new();
+        let mut without = Vec::new();
+
+        for scheme in data.schemes.into_iter().filter(|scheme| ids.contains(&scheme.id)) {
+            let name = format!("{} {}", scheme.fields.number, scheme.fields.name).trim().to_owned();
+
+            match scheme.fields.pages {
+                Some(pages) => jobs.push(Job {
+                    scheme: scheme.id,
+                    number: scheme.fields.number,
+                    name: scheme.fields.name,
+                    ranges: vec![(pages.document_id, pages.first_page, pages.last_page)],
+                }),
+                None => without.push(name),
+            }
+        }
+
+        Ok((jobs, without))
+    })
+    .await?;
+
+    for name in without {
+        events(AnalysisEvent::Failed {
+            message: format!("{name}: the scheme has no pages; give them in its settings"),
+        });
+    }
+
+    run(state, jobs, part_size, events).await?;
+
+    super::project_actions::open(state, project).await
+}
+
+/// The common work of [`analyse`] and [`analyse_schemes`]: every job
+/// part by part; one "Undo" for all of it.
+async fn run(
+    state: &UiState,
+    jobs: Vec<Job>,
+    part_size: usize,
+    events: impl Fn(AnalysisEvent) -> bool + Send + Sync + Clone + 'static,
+) -> Result<(), UiError> {
+    let Some(first) = jobs.first().map(|job| job.scheme) else {
+        events(AnalysisEvent::End { stopped: false });
+        return Ok(());
+    };
+
+    // Everything the work needs, read once: the instructions, the
+    // connection and its key; and the project before it, for "Undo".
+    let (model, instructions, before) = with_user_db(state, move |db| {
+        let model = active_model(db)?;
+        let instructions = db.setting(INSTRUCTIONS_SETTING)?.unwrap_or_else(|| DEFAULT_INSTRUCTIONS.to_owned());
+        let before: ProjectData = project_data(db, project_of(db, first)?)?;
+
+        Ok((model, instructions, before))
+    })
+    .await?;
+
+    let stop = state.start_work();
+    state.remember(before);
+
+    let count = jobs.len();
+    let mut stopped = false;
+
+    'jobs: for (job_index, job) in jobs.into_iter().enumerate() {
+        if count > 1
+            && !events(AnalysisEvent::Scheme {
+                index: job_index + 1,
+                count,
+                number: job.number.clone(),
+                name: job.name.clone(),
+            })
+        {
+            stopped = true;
+            break;
+        }
+
+        let ranges = job.ranges.clone();
+        let parts = with_user_db(state, move |db| Ok(analysis::parts(db, &ranges, part_size)?)).await?;
+        let parts_count = parts.len();
+
+        for (index, part) in parts.into_iter().enumerate() {
+            if *stop.borrow() {
+                stopped = true;
+                break 'jobs;
+            }
+
+            let (document_id, scheme) = (part.document_id, job.scheme);
+            let (document, stored, own, others) = with_user_db(state, move |db| {
+                let document =
+                    documents::get(db, document_id)?.ok_or_else(|| UiError::Invalid("a document is gone".to_owned()))?;
+                let stored = schemes::existing(db, scheme)?;
+                let (own, others): (Vec<Tile>, Vec<Tile>) = schemes::project_tiles(db, stored.project)?
+                    .into_iter()
+                    .partition(|tile| tile.scheme == scheme);
+
+                Ok((document, stored, own, others))
+            })
+            .await?;
+
+            if !events(AnalysisEvent::Part {
+                index: index + 1,
+                count: parts_count,
+                document: document.fields.title.clone(),
+                first_page: part.first_page,
+                last_page: part.last_page,
+            }) {
+                stopped = true;
+                break 'jobs;
+            }
+
+            let message = analysis::prompt(&instructions, &document, &part, &stored, &own, &others);
+            let writing = {
+                let events = events.clone();
+                move |characters| {
+                    events(AnalysisEvent::Writing { characters });
+                }
+            };
+
+            let answer = match ask(&model, message, &stop, writing).await {
+                Asked::Answer(answer) => answer,
+                Asked::Stopped => {
+                    stopped = true;
+                    break 'jobs;
+                }
+                Asked::Failed(error) => {
+                    events(AnalysisEvent::Failed {
+                        message: format!("pages {} to {}: {error}", part.first_page, part.last_page),
+                    });
+                    continue;
+                }
+            };
+
+            let proposal = match analysis::read(&answer, &part) {
+                Ok(proposal) => proposal,
+                Err(reason) => {
+                    events(AnalysisEvent::Failed {
+                        message: format!("pages {} to {}: {reason}", part.first_page, part.last_page),
+                    });
+                    continue;
+                }
+            };
+
+            let applied = with_user_db(state, move |db| Ok(analysis::apply(db, scheme, &proposal)?)).await?;
+
+            events(AnalysisEvent::Applied {
+                added: applied.added,
+                joined: applied.joined,
+                links: applied.links,
+                dropped: applied.dropped,
+            });
+        }
+    }
+
+    events(AnalysisEvent::End { stopped });
+
+    Ok(())
+}
+
+// Unit tests, in their own file to keep this one readable. They
+// are part of this module, so they can use its private items.
+#[cfg(test)]
+#[path = "scheme_actions_tests.rs"]
+mod tests;

@@ -17,7 +17,7 @@ fn database(directory: &TempDir) -> UserDb {
 fn reply(text: &str, end: ReplyEnd) -> Reply {
     Reply {
         text: text.to_owned(),
-        model: Some("claude-opus-5-5".to_owned()),
+        model: Some("local-model".to_owned()),
         input_tokens: 10,
         output_tokens: 5,
         end,
@@ -30,7 +30,7 @@ fn a_chat_keeps_its_messages_in_order() {
     let db = database(&directory);
 
     let id = start(&db, "What is ADV_FSP?").unwrap();
-    add_reply(&db, id, &reply("The functional specification.", ReplyEnd::Finished(StopReason::EndTurn))).unwrap();
+    add_reply(&db, id, &reply("The functional specification.", ReplyEnd::Finished(StopReason::Complete))).unwrap();
     add_message(&db, id, "And ADV_TDS?").unwrap();
 
     let messages = messages(&db, id).unwrap();
@@ -39,7 +39,7 @@ fn a_chat_keeps_its_messages_in_order() {
     assert_eq!(messages[0].speaker, Speaker::Evaluator);
     assert_eq!(messages[0].text, "What is ADV_FSP?");
     assert_eq!(messages[1].speaker, Speaker::Model);
-    assert_eq!(messages[1].model.as_deref(), Some("claude-opus-5-5"));
+    assert_eq!(messages[1].model.as_deref(), Some("local-model"));
     assert_eq!(messages[1].ending, Ending::Complete);
     assert_eq!(messages[2].text, "And ADV_TDS?");
 
@@ -77,16 +77,16 @@ fn unfinished_replies_are_kept_with_their_ending() {
     let id = start(&db, "question").unwrap();
 
     add_reply(&db, id, &reply("half", ReplyEnd::Cancelled)).unwrap();
-    add_reply(&db, id, &reply("long", ReplyEnd::Finished(StopReason::MaxTokens))).unwrap();
-    add_reply(&db, id, &reply("partial", ReplyEnd::Failed(AiError::Overloaded))).unwrap();
-    add_reply(&db, id, &reply("dropped", ReplyEnd::Finished(StopReason::Refusal))).unwrap();
+    add_reply(&db, id, &reply("long", ReplyEnd::Finished(StopReason::Cut))).unwrap();
+    add_reply(&db, id, &reply("partial", ReplyEnd::Failed(AiError::ServiceFailed(503, "overloaded".to_owned())))).unwrap();
+    add_reply(&db, id, &reply("dropped", ReplyEnd::Finished(StopReason::Refused))).unwrap();
 
     let messages = messages(&db, id).unwrap();
     let endings: Vec<&Ending> = messages[1..].iter().map(|message| &message.ending).collect();
 
     assert_eq!(endings, [&Ending::Stopped, &Ending::Cut, &Ending::Failed, &Ending::Refused]);
     assert_eq!(messages[3].text, "partial");
-    assert_eq!(messages[3].note.as_deref(), Some(AiError::Overloaded.to_string().as_str()));
+    assert_eq!(messages[3].note.as_deref(), Some(AiError::ServiceFailed(503, "overloaded".to_owned()).to_string().as_str()));
 
     // The text of a refused reply is not kept, and not sent again.
     assert_eq!(messages[4].text, "");

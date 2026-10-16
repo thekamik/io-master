@@ -23,7 +23,11 @@ tss-esapi = "7.7.0"
 # (installation/installation.rs), until the system database
 # exists. The file is read into a plain JSON value and checked by
 # hand, so the types of the program carry no serialization code.
-serde_json = "1.0.154"
+# Also the templates of the AI connections (ai/connection.rs):
+# "preserve_order" keeps the fields of a template in the order the
+# evaluator wrote them, in the request and in the report of a check
+# (without it they come out sorted by name).
+serde_json = { version = "1.0.154", features = ["preserve_order"] }
 
 # The asynchronous runtime the web server runs on: many browser
 # requests are served at once without a thread for each.
@@ -60,11 +64,11 @@ aes-gcm = "0.11.1"
 hkdf = "0.13.0"
 sha2 = "0.11.1"
 
-# The HTTPS client for the API of Anthropic (ai/anthropic.rs).
+# The HTTPS client for the AI connections (ai/client.rs).
 # The most widely used HTTP client of Rust, from the tokio world.
 # "rustls" is TLS written in Rust (no OpenSSL), with the trusted
-# certificates of the system; "http2" for the connection that the
-# API prefers. The defaults are switched off so that no proxy of the
+# certificates of the system; "http2" for the services that prefer
+# it. The defaults are switched off so that no proxy of the
 # environment is used.
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "http2"] }
 
@@ -72,6 +76,24 @@ reqwest = { version = "0.13.5", default-features = false, features = ["rustls", 
 # server-sent events for the browser (web_ui/chat_page.rs). Already
 # used by axum and reqwest themselves, so it adds no new code.
 futures-util = { version = "0.3.34", default-features = false }
+
+# The desktop interface (src/tauri_ui/, ui/): a window of the
+# system with a web view (WebKitGTK on Linux) that shows the page of
+# ui/, and calls into Rust through commands, without a network port.
+# "custom-protocol" serves the page built into the program also in
+# development builds, so that no development server is needed.
+tauri = { version = "2.12.4", features = ["custom-protocol"] }
+
+# The PDFs carried in an exported scheme, as text in its JSON
+# (evaluation/exchange.rs). The standard crate for it; already used
+# by Tauri, so it adds no new code.
+base64 = "0.22.1"
+
+# The dialogs of the system to choose files (the PDFs of a standard,
+# the files of schemes; src/tauri_ui/standard_actions.rs). The
+# official plugin of Tauri; it is called only from Rust, so the page
+# never gets a way to the files of the computer itself.
+tauri-plugin-dialog = "2.8.3"
 
 [dev-dependencies]
 # Sending requests to the web server in tests without opening
@@ -81,11 +103,12 @@ tower = { version = "0.5.3", features = ["util"] }
 # Reading the body of a response in tests.
 http-body-util = "0.1.5"
 
-# A fake Anthropic service for the tests (ai/test_support.rs): an
-# HTTPS server on 127.0.0.1 with a certificate made for the test
-# (rcgen) and TLS from rustls (tokio-rustls), so that the client is
-# tested with real TLS 1.3 but without network.
-rcgen = { version = "0.14.10", default-features = false, features = ["aws_lc_rs"] }
+# A fake AI service for the tests (ai/test_support.rs): an HTTPS
+# server on 127.0.0.1 with a certificate made for the test (rcgen;
+# "pem" writes it as the CA certificate of a connection) and TLS
+# from rustls (tokio-rustls), so that the client is tested with real
+# TLS 1.3 but without network.
+rcgen = { version = "0.14.10", default-features = false, features = ["aws_lc_rs", "pem"] }
 tokio-rustls = { version = "0.26.6", default-features = false, features = ["aws_lc_rs", "tls12"] }
 
 # Reading and writing on the connections of the fake service, and
@@ -100,3 +123,9 @@ opt-level = 3
 
 [profile.dev.package.blake2]
 opt-level = 3
+
+[build-dependencies]
+# Prepares the desktop interface at build time (build.rs): reads
+# tauri.conf.json and capabilities/, makes the permissions of the
+# commands.
+tauri-build = "2.7.3"

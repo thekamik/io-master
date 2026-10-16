@@ -1,8 +1,8 @@
-//! The API key of an AI service (for now Anthropic) of one
-//! evaluator.
+//! The API key of an AI connection of one evaluator
+//! (`ai/connection.rs`).
 //!
-//! The key is a password to a paid account: whoever has it can use
-//! the account at the cost of its owner. So it is handled like the
+//! The key is a password to an account, often a paid one: whoever
+//! has it can use the account at the cost of its owner. So it is handled like the
 //! key of a database (`db/database_key.rs`):
 //!
 //! - it is wiped from memory when it is dropped;
@@ -12,16 +12,16 @@
 //!   [`ApiKey::expose`], where a request needs it.
 //!
 //! It is stored only in the encrypted database of the evaluator
-//! (`ai/ai_settings.rs`), never in a file of its own or in the
+//! (`ai/connections.rs`), never in a file of its own or in the
 //! system database.
 
 use std::fmt;
 
 use zeroize::Zeroizing;
 
-/// The longest key that is accepted, in characters. Keys of
-/// Anthropic are about 110 characters; the limit only stops
-/// nonsense such as a pasted document.
+/// The longest key that is accepted, in characters. API keys are
+/// usually 30 to 120 characters; the limit only stops nonsense
+/// such as a pasted document.
 pub const MAX_LENGTH: usize = 512;
 
 /// Why a text is not an API key.

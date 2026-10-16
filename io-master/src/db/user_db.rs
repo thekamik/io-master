@@ -11,9 +11,16 @@
 //! settings   name -> value: the settings of the evaluator, for
 //!            example of the scanner (devices/scan_settings.rs)
 //! secrets    name -> value: secrets of the evaluator, such as the
-//!            API key of Anthropic (ai/ai_settings.rs); kept apart
-//!            from the settings so that they are never listed or
-//!            shown with them
+//!            API keys of the AI connections (ai/connections.rs);
+//!            kept apart from the settings so that they are never
+//!            listed or shown with them
+//! standard_documents, standard_pages   the documents of standards
+//!            and the text of their pages (evaluation/documents.rs)
+//! projects, project_documents, schemes, tiles, tile_sources, links
+//!            the test projects and their schemes (evaluation/
+//!            projects.rs, evaluation/schemes.rs)
+//! ai_connections   the connections to AI services, as the evaluator
+//!            set them up on the tab AI of Settings (ai/connections.rs)
 //! chats      the conversations with an AI model (ai/chats.rs)
 //! messages   the messages of the conversations, with their time
 //!            and model
@@ -74,6 +81,162 @@ const SCHEMA: &str = "
     );
 
     CREATE INDEX IF NOT EXISTS messages_of_chat ON messages (chat_id, id);
+
+    -- The fields of ai/connection.rs, as they were entered; the API
+    -- key is a secret ('ai.connection.<id>.api_key'), key_origin the
+    -- address it is bound to.
+    CREATE TABLE IF NOT EXISTS ai_connections (
+        id                  INTEGER PRIMARY KEY,
+        name                TEXT NOT NULL UNIQUE,
+        url                 TEXT NOT NULL,
+        model               TEXT NOT NULL,
+        ca_certificate      TEXT NOT NULL,
+        headers             TEXT NOT NULL,
+        body                TEXT NOT NULL,
+        user_role           TEXT NOT NULL,
+        model_role          TEXT NOT NULL,
+        system_role         TEXT NOT NULL,
+        system_prompt       TEXT NOT NULL,
+        answer              TEXT NOT NULL,
+        text_path           TEXT NOT NULL,
+        stop_path           TEXT NOT NULL,
+        cut_reasons         TEXT NOT NULL,
+        refused_reasons     TEXT NOT NULL,
+        error_path          TEXT NOT NULL,
+        model_path          TEXT NOT NULL,
+        input_tokens_path   TEXT NOT NULL,
+        output_tokens_path  TEXT NOT NULL,
+        done_marker         TEXT NOT NULL,
+        key_origin          TEXT,
+        message_template    TEXT NOT NULL DEFAULT '{\"role\": \"{{role}}\", \"content\": \"{{text}}\"}'
+    );
+";
+
+/// The tables of the documents of standards and of the test projects
+/// (steps 16 to 22 and 25 of docs/todo.md). Times are seconds since 1970 (UTC).
+const EVALUATION_SCHEMA: &str = "
+    -- A document of a standard: the PDF and what the user told about
+    -- it; the text of its pages in standard_pages.
+    CREATE TABLE IF NOT EXISTS standard_documents (
+        id          INTEGER PRIMARY KEY,
+        title       TEXT NOT NULL,
+        part        TEXT NOT NULL,
+        version     TEXT NOT NULL,
+        file_name   TEXT NOT NULL,
+        sha256      TEXT NOT NULL UNIQUE,
+        page_count  INTEGER NOT NULL,
+        pdf         BLOB NOT NULL,
+        added       INTEGER NOT NULL DEFAULT (CAST(strftime('%s', 'now') AS INTEGER))
+    );
+
+    CREATE TABLE IF NOT EXISTS standard_pages (
+        document_id INTEGER NOT NULL REFERENCES standard_documents (id),
+        number      INTEGER NOT NULL,
+        text        TEXT NOT NULL,
+        PRIMARY KEY (document_id, number)
+    );
+
+    -- A test project: the map of a standard (evaluation/scheme.rs).
+    CREATE TABLE IF NOT EXISTS projects (
+        id          INTEGER PRIMARY KEY,
+        name        TEXT NOT NULL UNIQUE,
+        version     TEXT NOT NULL,
+        description TEXT NOT NULL,
+        author      TEXT NOT NULL,
+        ready       INTEGER NOT NULL
+    );
+
+    -- The documents a project uses, in the order the user gave them.
+    CREATE TABLE IF NOT EXISTS project_documents (
+        project_id  INTEGER NOT NULL REFERENCES projects (id),
+        document_id INTEGER NOT NULL REFERENCES standard_documents (id),
+        position    INTEGER NOT NULL,
+        PRIMARY KEY (project_id, document_id)
+    );
+
+    -- A scheme: one chapter of the standard. state: proposed or
+    -- accepted; document_id, first_page, last_page: the pages of the
+    -- chapter, all NULL when not known; position: the place in the
+    -- list of the project.
+    CREATE TABLE IF NOT EXISTS schemes (
+        id          INTEGER PRIMARY KEY,
+        project_id  INTEGER NOT NULL REFERENCES projects (id),
+        number      TEXT NOT NULL,
+        name        TEXT NOT NULL,
+        state       TEXT NOT NULL,
+        document_id INTEGER REFERENCES standard_documents (id),
+        first_page  INTEGER,
+        last_page   INTEGER,
+        position    INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS schemes_of_project ON schemes (project_id);
+
+    -- kind: input, requirement or output; state: proposed or accepted;
+    -- external_*: an input described in a document not loaded;
+    -- sections: the sections of the report of an output, by name,
+    -- separated by commas (evaluation/scheme.rs).
+    CREATE TABLE IF NOT EXISTS tiles (
+        id                  INTEGER PRIMARY KEY,
+        scheme_id           INTEGER NOT NULL REFERENCES schemes (id),
+        kind                TEXT NOT NULL,
+        identifier          TEXT NOT NULL,
+        title               TEXT NOT NULL,
+        description         TEXT NOT NULL,
+        place               TEXT NOT NULL,
+        state               TEXT NOT NULL,
+        external_document   TEXT,
+        external_place      TEXT,
+        sections            TEXT NOT NULL,
+        instructions        TEXT NOT NULL,
+        x                   REAL NOT NULL,
+        y                   REAL NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS tiles_of_scheme ON tiles (scheme_id);
+
+    -- found: whether the quote was found on its page (evaluation/quote.rs).
+    CREATE TABLE IF NOT EXISTS tile_sources (
+        id          INTEGER PRIMARY KEY,
+        tile_id     INTEGER NOT NULL REFERENCES tiles (id),
+        document_id INTEGER NOT NULL REFERENCES standard_documents (id),
+        page        INTEGER NOT NULL,
+        quote       TEXT NOT NULL,
+        found       INTEGER NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS sources_of_tile ON tile_sources (tile_id);
+
+    -- A link belongs to the project: its two tiles may be in two
+    -- schemes of it.
+    CREATE TABLE IF NOT EXISTS links (
+        id          INTEGER PRIMARY KEY,
+        project_id  INTEGER NOT NULL REFERENCES projects (id),
+        from_tile   INTEGER NOT NULL REFERENCES tiles (id),
+        to_tile     INTEGER NOT NULL REFERENCES tiles (id),
+        UNIQUE (from_tile, to_tile)
+    );
+";
+
+/// The column `message_template`, for a table `ai_connections` made
+/// before it existed (the same day, during step 15 of docs/todo.md).
+///
+/// TODO (step 10 of docs/todo.md): remove before the release, with
+/// [`REMOVED`].
+const MESSAGE_TEMPLATE_COLUMN: &str = "ALTER TABLE ai_connections ADD COLUMN message_template TEXT NOT NULL \
+    DEFAULT '{\"role\": \"{{role}}\", \"content\": \"{{text}}\"}'";
+
+/// What earlier versions kept and this one no longer uses: the API
+/// key of Anthropic and the chosen Claude model, replaced by the AI
+/// connections (step 15 of docs/todo.md). Removed, the key
+/// overwritten in the file, whenever a database is opened.
+///
+/// TODO (step 10 of docs/todo.md): remove before the release; no
+/// database of a released version holds these.
+const REMOVED: &str = "
+    PRAGMA secure_delete = ON;
+    DELETE FROM secrets WHERE name = 'anthropic.api_key';
+    DELETE FROM settings WHERE name = 'ai.model';
 ";
 
 /// The open database of one evaluator.
@@ -86,6 +249,18 @@ impl UserDb {
     /// Prepares an open connection: the tables that are missing.
     fn from(connection: Connection) -> Result<UserDb, DbError> {
         connection.execute_batch(SCHEMA)?;
+        connection.execute_batch(EVALUATION_SCHEMA)?;
+        connection.execute_batch(REMOVED)?;
+
+        let has_template: bool = connection.query_row(
+            "SELECT COUNT(*) > 0 FROM pragma_table_info('ai_connections') WHERE name = 'message_template'",
+            [],
+            |row| row.get(0),
+        )?;
+
+        if !has_template {
+            connection.execute_batch(MESSAGE_TEMPLATE_COLUMN)?;
+        }
 
         Ok(UserDb { connection })
     }

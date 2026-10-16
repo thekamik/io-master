@@ -1,12 +1,16 @@
-//! A fake Anthropic service for the tests: an HTTPS server on
-//! 127.0.0.1 that answers every request with a prepared answer and
-//! keeps the requests it received.
+//! A fake AI service for the tests: a server on 127.0.0.1 that
+//! answers every request with a prepared answer and keeps the
+//! requests it received.
 //!
 //! It speaks real TLS (1.3 by default, or only 1.2 to test that the
 //! client refuses it) with a certificate made for the test and
-//! signed by a test authority; [`FakeAnthropic::client`] is an
-//! [`Anthropic`] that trusts only that authority. No request ever
-//! leaves the computer.
+//! signed by a test authority, or plain HTTP (which the rules allow
+//! only on the loopback). No request ever leaves the computer.
+//!
+//! The program knows no provider; the tests use two different
+//! formats of answer, each described only by the paths of a
+//! connection: the chat API of local servers ([`completions`]) and a
+//! format with named events and blocks ([`messages_format`]).
 //!
 //! The HTTP side is the least that works: one request per
 //! connection, the answer ends when the connection is closed.
@@ -15,18 +19,19 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use rcgen::{BasicConstraints, CertificateParams, IsCa, Issuer, KeyPair};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use serde_json::json;
+use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use tokio::net::TcpListener;
 use tokio_rustls::TlsAcceptor;
 use tokio_rustls::rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs8KeyDer};
 use tokio_rustls::rustls::{self, ServerConfig};
 
-use super::anthropic::Anthropic;
+use super::connection::{AnswerMode, Checked, Connection};
 
 /// What the fake service answers.
 #[derive(Debug, Clone)]
 pub enum FakeAnswer {
-    /// A complete answer: status and JSON body.
+    /// A complete answer: status and body.
     Json(u16, String),
     /// A streamed reply: these events, then the end of the stream.
     Stream(Vec<String>),
@@ -56,32 +61,50 @@ impl FakeRequest {
 }
 
 /// A running fake service.
-pub struct FakeAnthropic {
-    /// `https://127.0.0.1:<port>`.
+pub struct FakeService {
+    /// `https://127.0.0.1:<port>` (or `http://` without TLS).
     pub url: String,
-    /// The certificate of the test authority (DER).
-    root: Vec<u8>,
+    /// The certificate of the test authority (PEM); empty without
+    /// TLS.
+    pub ca_pem: String,
     /// The requests received so far.
-    pub requests: Arc<Mutex<Vec<FakeRequest>>>,
+    requests: Arc<Mutex<Vec<FakeRequest>>>,
 }
 
-/// One event of a streamed reply in the format of the stream.
+/// One event of a stream in its format, with a name.
 pub fn sse(name: &str, data: &serde_json::Value) -> String {
     format!("event: {name}\ndata: {data}\n\n")
 }
 
-/// The events of a complete streamed reply with the given pieces of
-/// text.
-pub fn reply_events(pieces: &[&str]) -> Vec<String> {
-    use serde_json::json;
+/// One event of a stream without a name.
+pub fn data(text: &str) -> String {
+    format!("data: {text}\n\n")
+}
 
-    let mut events = vec![
-        sse(
-            "message_start",
-            &json!({"type": "message_start", "message": {"model": "claude-opus-5-5", "usage": {"input_tokens": 10, "output_tokens": 1}}}),
-        ),
-        sse("content_block_start", &json!({"type": "content_block_start", "index": 0, "content_block": {"type": "text", "text": ""}})),
-    ];
+/// The events of a complete streamed reply in the chat API of local
+/// servers, with the given pieces of text.
+pub fn completions_events(pieces: &[&str]) -> Vec<String> {
+    let mut events: Vec<String> = pieces
+        .iter()
+        .map(|piece| data(&json!({"model": "local-model", "choices": [{"delta": {"content": piece}}]}).to_string()))
+        .collect();
+
+    events.push(data(
+        &json!({"choices": [{"delta": {}, "finish_reason": "stop"}], "usage": {"prompt_tokens": 10, "completion_tokens": 5}})
+            .to_string(),
+    ));
+    events.push(data("[DONE]"));
+
+    events
+}
+
+/// The events of a complete streamed reply in the format with named
+/// events and blocks, with the given pieces of text.
+pub fn messages_events(pieces: &[&str]) -> Vec<String> {
+    let mut events = vec![sse(
+        "message_start",
+        &json!({"type": "message_start", "message": {"model": "named-model", "usage": {"input_tokens": 10, "output_tokens": 1}}}),
+    )];
 
     for piece in pieces {
         events.push(sse(
@@ -90,7 +113,6 @@ pub fn reply_events(pieces: &[&str]) -> Vec<String> {
         ));
     }
 
-    events.push(sse("content_block_stop", &json!({"type": "content_block_stop", "index": 0})));
     events.push(sse(
         "message_delta",
         &json!({"type": "message_delta", "delta": {"stop_reason": "end_turn"}, "usage": {"output_tokens": 5}}),
@@ -100,25 +122,89 @@ pub fn reply_events(pieces: &[&str]) -> Vec<String> {
     events
 }
 
-impl FakeAnthropic {
+/// A connection to `service` in the chat API of local servers (the
+/// template), with the key in a header.
+pub fn completions(service: &FakeService) -> Connection {
+    Connection {
+        name: "Local".to_owned(),
+        url: format!("{}/v1/chat/completions", service.url),
+        model: "local-model".to_owned(),
+        ca_certificate: service.ca_pem.clone(),
+        headers: "authorization: Bearer {{api_key}}".to_owned(),
+        ..Connection::template()
+    }
+}
+
+/// A connection to `service` in the format with named events and
+/// blocks, the instructions in a field of their own.
+pub fn messages_format(service: &FakeService) -> Connection {
+    Connection {
+        name: "Messages".to_owned(),
+        url: format!("{}/v1/messages", service.url),
+        model: "named-model".to_owned(),
+        ca_certificate: service.ca_pem.clone(),
+        headers: "x-api-key: {{api_key}}\nx-version: 1".to_owned(),
+        body: r#"{"model": "{{model}}", "max_tokens": 1000, "system": "{{system}}", "messages": "{{messages}}", "stream": true}"#
+            .to_owned(),
+        system_role: String::new(),
+        answer: AnswerMode::Stream,
+        text_path: "delta.text".to_owned(),
+        stop_path: "delta.stop_reason".to_owned(),
+        cut_reasons: "max_tokens".to_owned(),
+        refused_reasons: "refusal".to_owned(),
+        error_path: "error.message".to_owned(),
+        model_path: "message.model".to_owned(),
+        input_tokens_path: "message.usage.input_tokens".to_owned(),
+        output_tokens_path: "usage.output_tokens".to_owned(),
+        done_marker: String::new(),
+        ..Connection::template()
+    }
+}
+
+/// The connection, checked.
+pub fn checked(connection: Connection) -> Checked {
+    connection.check().expect("the connection of the test is valid")
+}
+
+impl FakeService {
     /// Starts a service that speaks TLS 1.3.
-    pub async fn start(answer: FakeAnswer) -> FakeAnthropic {
-        FakeAnthropic::start_with(answer, &[&rustls::version::TLS13]).await
+    pub async fn start(answer: FakeAnswer) -> FakeService {
+        FakeService::start_tls(answer, &[&rustls::version::TLS13]).await
     }
 
     /// Starts a service that speaks only TLS 1.2, which the client
     /// must refuse.
-    pub async fn start_tls12(answer: FakeAnswer) -> FakeAnthropic {
-        FakeAnthropic::start_with(answer, &[&rustls::version::TLS12]).await
+    pub async fn start_tls12(answer: FakeAnswer) -> FakeService {
+        FakeService::start_tls(answer, &[&rustls::version::TLS12]).await
     }
 
-    async fn start_with(answer: FakeAnswer, versions: &[&'static rustls::SupportedProtocolVersion]) -> FakeAnthropic {
+    /// Starts a service with plain HTTP on 127.0.0.1.
+    pub async fn start_plain(answer: FakeAnswer) -> FakeService {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let requests = Arc::new(Mutex::new(Vec::new()));
+        let received = Arc::clone(&requests);
+
+        tokio::spawn(async move {
+            while let Ok((connection, _)) = listener.accept().await {
+                tokio::spawn(serve(connection, answer.clone(), Arc::clone(&received)));
+            }
+        });
+
+        FakeService {
+            url,
+            ca_pem: String::new(),
+            requests,
+        }
+    }
+
+    async fn start_tls(answer: FakeAnswer, versions: &[&'static rustls::SupportedProtocolVersion]) -> FakeService {
         // The test authority, and the certificate of the service
         // for 127.0.0.1 signed by it.
         let authority_key = KeyPair::generate().unwrap();
         let mut authority = CertificateParams::new(Vec::<String>::new()).unwrap();
         authority.is_ca = IsCa::Ca(BasicConstraints::Unconstrained);
-        let root = authority.self_signed(&authority_key).unwrap().der().to_vec();
+        let ca_pem = authority.self_signed(&authority_key).unwrap().pem();
         let issuer = Issuer::new(authority, authority_key);
 
         let server_key = KeyPair::generate().unwrap();
@@ -152,38 +238,31 @@ impl FakeAnthropic {
 
                 tokio::spawn(async move {
                     // A failed handshake (TLS 1.2 refused) ends here.
-                    let Ok(mut stream) = acceptor.accept(connection).await else {
-                        return;
-                    };
-
-                    let Some(request) = read_request(&mut stream).await else {
-                        return;
-                    };
-
-                    received.lock().unwrap().push(request);
-
-                    let _ = write_answer(&mut stream, &answer).await;
+                    if let Ok(stream) = acceptor.accept(connection).await {
+                        serve(stream, answer, received).await;
+                    }
                 });
             }
         });
 
-        FakeAnthropic { url, root, requests }
-    }
-
-    /// A client that trusts the certificate of this service.
-    pub fn client(&self) -> Anthropic {
-        Anthropic::with_service(&self.url, &self.root)
-    }
-
-    /// The certificate of the test authority of this service (DER).
-    pub fn root(&self) -> &[u8] {
-        &self.root
+        FakeService { url, ca_pem, requests }
     }
 
     /// The requests received so far.
     pub fn received(&self) -> Vec<FakeRequest> {
         self.requests.lock().unwrap().clone()
     }
+}
+
+/// Reads one request, keeps it and writes the prepared answer.
+async fn serve<S: AsyncRead + AsyncWrite + Unpin>(mut stream: S, answer: FakeAnswer, received: Arc<Mutex<Vec<FakeRequest>>>) {
+    let Some(request) = read_request(&mut stream).await else {
+        return;
+    };
+
+    received.lock().unwrap().push(request);
+
+    let _ = write_answer(&mut stream, &answer).await;
 }
 
 /// Reads one HTTP/1.1 request: the head up to the empty line, then

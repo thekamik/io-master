@@ -1,0 +1,25 @@
+{
+  "name": "io-master-ui",
+  "private": true,
+  "type": "module",
+  "description": "The page of the desktop interface of IO Master (Tauri 2 + Svelte 5). Built into ui/dist and embedded in the program.",
+  "scripts": {
+    "build": "node scripts/copy-pdfjs.mjs && vite build",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
+    "tauri": "tauri"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "@tauri-apps/cli": "2.12.3",
+    "@tsconfig/svelte": "5.0.8",
+    "svelte": "5.57.2",
+    "svelte-check": "4.7.6",
+    "typescript": "5.9.3",
+    "vite": "8.3.4"
+  },
+  "dependencies": {
+    "@tauri-apps/api": "2.12.4",
+    "@xyflow/svelte": "1.7.0",
+    "pdfjs-dist": "6.3.289"
+  }
+}

@@ -1,22 +1,21 @@
 //! Reading a stream of server-sent events (SSE), the format in
-//! which Anthropic sends a reply while it is written.
+//! which most AI services send a reply while it is written.
 //!
 //! The stream is text in lines; an empty line ends an event:
 //!
 //! ```text
-//! event: content_block_delta
-//! data: {"type":"content_block_delta","delta":{"text":"Hello"}}
+//! data: {"choices":[{"delta":{"content":"Hel"}}]}
 //!
-//! event: ping
-//! data: {"type":"ping"}
+//! event: content_block_delta
+//! data: {"delta":{"text":"lo"}}
 //!
 //! ```
 //!
 //! The bytes arrive from the network in pieces of any size: a piece
 //! may end in the middle of a line, even in the middle of a UTF-8
 //! character. [`SseDecoder`] keeps what is not complete yet and
-//! gives out only whole events. Only what Anthropic uses is read:
-//! the fields `event` and `data`; comments (lines starting with
+//! gives out only whole events. Only the fields `event` and `data`
+//! are read; comments (lines starting with
 //! `:`) and other fields are passed over.
 
 /// One event of the stream.
