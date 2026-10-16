@@ -123,7 +123,6 @@ fn document(title: &str, body: &str) -> String {
          <meta charset=\"utf-8\">\n\
          <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n\
          <title>{} - IO Master</title>\n\
-         <link rel=\"icon\" type=\"image/png\" href=\"/static/logo.png\">\n\
          <link rel=\"stylesheet\" href=\"/static/style.css\">\n\
          </head>\n\
          <body>\n{}\n</body>\n\
@@ -150,7 +149,7 @@ pub fn page(installation: &Installation, user: &str, active: Page, content: &str
         "{bars}\n\
          <div class=\"layout\">\n\
          <nav>\n\
-         <div class=\"brand\"><img src=\"/static/logo.png\" alt=\"\">IO Master</div>\n\
+         <div class=\"brand\">IO Master</div>\n\
          <div class=\"role\">{role}</div>\n\
          {links}\n\
          <div class=\"user\">{user}\n\
@@ -181,7 +180,6 @@ pub fn login_page(installation: &Installation, problem: Option<&str>) -> String 
     let body = format!(
         "{bars}\n\
          <div class=\"login\">\n\
-         <img class=\"logo\" src=\"/static/logo.png\" alt=\"IO Master\">\n\
          <h1>IO Master</h1>\n\
          {problem}\n\
          <form method=\"post\" action=\"/login\">\n\
@@ -210,7 +208,6 @@ pub fn problem_text(problem: Option<&str>) -> String {
 pub fn setup_page(problem: Option<&str>) -> String {
     let body = format!(
         "<div class=\"login wide\">\n\
-         <img class=\"logo\" src=\"/static/logo.png\" alt=\"IO Master\">\n\
          <h1>IO Master: first start</h1>\n\
          <p class=\"note\">Nothing is installed yet. Create the first user and choose \
          the role of this installation.</p>\n\

@@ -16,7 +16,7 @@
 //! session.rs    sessions and the login check
 //! security.rs   Host and Origin checks, protective headers
 //! pages.rs      the HTML of the pages
-//! static/       the style sheet, the script of the chat, the logo
+//! static/       the style sheet and the script of the chat
 //! ```
 //!
 //! Until the installation is done, every address leads to the
@@ -61,14 +61,6 @@ const STYLE: &str = include_str!("static/style.css");
 /// The script of the chat page, built into the program
 /// (chat_page.rs).
 const CHAT_SCRIPT: &str = include_str!("static/chat.js");
-
-/// The logo, built into the program: a 192-pixel copy of
-/// `static/logo.png` (the original, 1254 pixels), small enough to
-/// load with every page.
-const LOGO: &[u8] = include_bytes!("static/logo-small.png");
-
-/// The address of the logo.
-pub const LOGO_PATH: &str = "/static/logo.png";
 
 /// What every request handler can reach.
 #[derive(Debug, Clone)]
@@ -182,7 +174,6 @@ pub fn router(state: AppState) -> Router {
         .route("/login", get(login_form).post(login))
         .route("/static/style.css", get(style))
         .route("/static/chat.js", get(chat_script))
-        .route(LOGO_PATH, get(logo))
         .fallback(not_found)
         .layer(from_fn_with_state(state.clone(), require_installed))
         .layer(from_fn_with_state(state.clone(), check_origin))
@@ -200,7 +191,6 @@ async fn require_installed(State(state): State<AppState>, request: Request, next
     match (installed, path) {
         (true, "/setup") => Redirect::to("/").into_response(),
         (false, "/setup" | "/static/style.css") | (true, _) => next.run(request).await,
-        (false, path) if path == LOGO_PATH => next.run(request).await,
         (false, _) => Redirect::to("/setup").into_response(),
     }
 }
@@ -300,11 +290,6 @@ async fn style() -> Response {
 /// The script of the chat page.
 async fn chat_script() -> Response {
     ([(CONTENT_TYPE, "text/javascript; charset=utf-8")], CHAT_SCRIPT).into_response()
-}
-
-/// The logo.
-async fn logo() -> Response {
-    ([(CONTENT_TYPE, "image/png")], LOGO).into_response()
 }
 
 /// Any other address, also the pages of the other role.

@@ -50,11 +50,6 @@ nav .brand {
     gap: 0.5rem;
 }
 
-nav .brand img {
-    width: 2.2rem;
-    height: 2.2rem;
-}
-
 nav .role {
     color: #8c959f;
     font-size: 0.8rem;
@@ -90,13 +85,6 @@ main {
 }
 
 /* The login and setup pages. */
-.login .logo {
-    display: block;
-    width: 6rem;
-    height: 6rem;
-    margin: 0 auto 0.5rem;
-}
-
 .login h1 {
     text-align: center;
 }

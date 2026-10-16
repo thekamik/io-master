@@ -6,7 +6,6 @@ use super::*;
 
 use axum::http::Method;
 use axum::http::header::LOCATION;
-use http_body_util::BodyExt;
 
 use crate::installation::installation::Role;
 use crate::installation::lifecycle;
@@ -365,20 +364,6 @@ async fn the_style_sheet_is_served() {
 
     assert_eq!(response.status(), StatusCode::OK);
     assert!(response.headers()[CONTENT_TYPE].to_str().unwrap().starts_with("text/css"));
-}
-
-#[tokio::test]
-async fn the_logo_is_served_also_before_the_installation() {
-    for server in [installed(Role::Workstation, &["anna"]), first_start()] {
-        let response = send(&server.state, request(Method::GET, LOGO_PATH, None, "")).await;
-
-        assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(response.headers()[CONTENT_TYPE], "image/png");
-
-        // A PNG file starts with these eight bytes.
-        let bytes = response.into_body().collect().await.unwrap().to_bytes();
-        assert!(bytes.starts_with(b"\x89PNG\r\n\x1a\n"));
-    }
 }
 
 #[tokio::test]
