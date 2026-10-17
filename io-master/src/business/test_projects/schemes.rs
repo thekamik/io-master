@@ -18,8 +18,9 @@ use crate::business::test_projects::workspace::OpenProject;
 use crate::db::error::DbError;
 use crate::db::test_projects as db_test_projects;
 use crate::db::user::database::UserDb;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{ProposalState, Scheme, SchemeFields};
+use crate::model::text::{Entity, Field};
 
 /* ---------------------------------------------------------------
  * Read
@@ -32,7 +33,7 @@ pub fn get(open: &OpenProject, id: i64) -> Option<&Scheme> {
 
 /// Scheme `id` of the open project, or the error that it has no such.
 pub fn existing(open: &OpenProject, id: i64) -> Result<&Scheme, StoreError> {
-    get(open, id).ok_or(StoreError::Scheme(SchemeError::NotFound("scheme")))
+    get(open, id).ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Scheme)))
 }
 
 /* ---------------------------------------------------------------
@@ -49,8 +50,8 @@ pub(super) fn check(db: &UserDb, open: &OpenProject, id: Option<i64>, fields: &S
 
     if let Some(pages) = fields.pages {
         if !data.project.fields.documents.contains(&pages.document_id) {
-            return Err(SchemeError::Invalid(
-                "pages",
+            return Err(ProjectError::Invalid(
+                Field::Pages,
                 "the pages of a scheme must be in a document of its project".to_owned(),
             )
             .into());
@@ -59,7 +60,7 @@ pub(super) fn check(db: &UserDb, open: &OpenProject, id: Option<i64>, fields: &S
         let count = standards::documents::get(db, pages.document_id)?.map_or(0, |document| document.page_count);
 
         if pages.last_page > count {
-            return Err(SchemeError::Invalid("pages", format!("the document has only {count} pages")).into());
+            return Err(ProjectError::Invalid(Field::Pages, format!("the document has only {count} pages")).into());
         }
     }
 
@@ -71,9 +72,11 @@ pub(super) fn check(db: &UserDb, open: &OpenProject, id: Option<i64>, fields: &S
             .iter()
             .any(|other| Some(other.id) != id && other.fields.number.trim().eq_ignore_ascii_case(number))
     {
-        return Err(
-            SchemeError::Invalid("number", format!("another scheme of the project has the number {number}")).into()
-        );
+        return Err(ProjectError::Invalid(
+            Field::Number,
+            format!("another scheme of the project has the number {number}"),
+        )
+        .into());
     }
 
     Ok(())
@@ -119,7 +122,7 @@ pub fn accept(db: &UserDb, open: &mut OpenProject, id: i64) -> Result<(), StoreE
     existing(open, id)?;
 
     if !db_test_projects::update::accept_scheme(db, id)? {
-        return Err(SchemeError::NotFound("scheme").into());
+        return Err(ProjectError::NotFound(Entity::Scheme).into());
     }
 
     if let Some(scheme) = open.data_mut().schemes.iter_mut().find(|scheme| scheme.id == id) {

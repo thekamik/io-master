@@ -24,8 +24,9 @@ use crate::db::evaluations::create::FrozenCopy;
 use crate::db::evaluations::journal::create::JournalStep;
 use crate::db::user::database::UserDb;
 use crate::model::evaluations::{Actor, Evaluation, EvaluationData, EvaluationFields, JournalAction, Origin, Skipped};
-use crate::model::test_projects::rules::{SchemeError, check_link};
+use crate::model::test_projects::rules::{ProjectError, check_link};
 use crate::model::test_projects::{Link, Project, ProjectData, ProposalState, Scheme, Tile, TileKind};
+use crate::model::text::{Entity, Field};
 
 /* ---------------------------------------------------------------
  * Read
@@ -73,11 +74,11 @@ pub struct Imported {
 /// project marked ready is imported: the person who made it has
 /// declared it complete (step 21 of `docs/todo.md`).
 pub fn from_project(db: &UserDb, project: i64, fields: &EvaluationFields) -> Result<Imported, EvaluationError> {
-    let data = test_projects::data(db, project)?.ok_or(EvaluationError::NotFound("test project"))?;
+    let data = test_projects::data(db, project)?.ok_or(EvaluationError::NotFound(Entity::TestProject))?;
 
     if !data.project.ready {
         return Err(EvaluationError::Invalid(
-            "project",
+            Field::Project,
             "the test project is not marked ready; mark it ready in Create evaluation scheme first".to_owned(),
         ));
     }
@@ -102,9 +103,9 @@ pub fn from_exchange(
     // The documents of the file are numbered 1, 2, ... in its order.
     let document = |number: i64| {
         documents
-            .get(usize::try_from(number - 1).map_err(|_| EvaluationError::NotFound("document"))?)
+            .get(usize::try_from(number - 1).map_err(|_| EvaluationError::NotFound(Entity::Document))?)
             .copied()
-            .ok_or(EvaluationError::NotFound("document"))
+            .ok_or(EvaluationError::NotFound(Entity::Document))
     };
 
     let mut schemes = exchange.schemes.clone();
@@ -173,7 +174,7 @@ fn copy(db: &UserDb, data: &ProjectData, fields: &EvaluationFields) -> Result<Im
 
         if scheme.fields.pages.is_some_and(|pages| !project.documents.contains(&pages.document_id)) {
             let reason = "a scheme covers pages of a document the project does not use".to_owned();
-            return Err(SchemeError::Invalid("pages", reason).into());
+            return Err(ProjectError::Invalid(Field::Pages, reason).into());
         }
     }
 
@@ -182,7 +183,7 @@ fn copy(db: &UserDb, data: &ProjectData, fields: &EvaluationFields) -> Result<Im
 
         if tile.fields.sources.iter().any(|source| !project.documents.contains(&source.document_id)) {
             let reason = "a source quotes a document the project does not use".to_owned();
-            return Err(SchemeError::Invalid("sources", reason).into());
+            return Err(ProjectError::Invalid(Field::Sources, reason).into());
         }
     }
 

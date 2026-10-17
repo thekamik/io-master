@@ -15,8 +15,9 @@ use crate::business::test_projects::workspace::OpenProject;
 use crate::db::error::DbError;
 use crate::db::test_projects as db_test_projects;
 use crate::db::user::database::UserDb;
-use crate::model::test_projects::rules::{SchemeError, check_link};
+use crate::model::test_projects::rules::{ProjectError, check_link};
 use crate::model::test_projects::{Link, TileKind};
+use crate::model::text::Field;
 
 /* ---------------------------------------------------------------
  * Read
@@ -42,7 +43,7 @@ pub fn create(db: &UserDb, open: &mut OpenProject, from: i64, to: i64) -> Result
     let kinds: Vec<(i64, TileKind)> = data.tiles.iter().map(|tile| (tile.id, tile.fields.kind)).collect();
 
     if !kinds.iter().any(|(id, _)| *id == from) || !kinds.iter().any(|(id, _)| *id == to) {
-        return Err(SchemeError::Invalid("link", "only tiles of one project can be linked".to_owned()).into());
+        return Err(ProjectError::Invalid(Field::Link, "only tiles of one project can be linked".to_owned()).into());
     }
 
     check_link(&kinds, &data.links, from, to)?;

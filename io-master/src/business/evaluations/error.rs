@@ -3,22 +3,22 @@
 use std::fmt;
 
 use crate::db::error::DbError;
-use crate::model::test_projects::rules::SchemeError;
-use crate::model::text::Invalid;
+use crate::model::test_projects::rules::ProjectError;
+use crate::model::text::{Entity, Field, Invalid};
 
 /// Why an operation on an evaluation was refused.
 #[derive(Debug)]
 pub enum EvaluationError {
     /// A field is wrong: the field and the reason.
-    Invalid(&'static str, String),
+    Invalid(Field, String),
     /// Another evaluation has this name.
     NameTaken,
     /// The evaluation, test project, tile or proposal does not exist.
-    NotFound(&'static str),
+    NotFound(Entity),
     /// Results belong to requirements only.
     NotARequirement,
     /// The test project breaks a rule of its own (a broken file).
-    Scheme(SchemeError),
+    Scheme(ProjectError),
     /// The database failed.
     Db(DbError),
 }
@@ -44,8 +44,8 @@ impl From<DbError> for EvaluationError {
     }
 }
 
-impl From<SchemeError> for EvaluationError {
-    fn from(error: SchemeError) -> EvaluationError {
+impl From<ProjectError> for EvaluationError {
+    fn from(error: ProjectError) -> EvaluationError {
         EvaluationError::Scheme(error)
     }
 }

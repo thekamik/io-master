@@ -1,6 +1,7 @@
 //! Unit tests of `evaluations.rs`.
 
 use super::*;
+use crate::model::text::Field;
 
 #[test]
 fn names_of_the_enums_go_there_and_back() {
@@ -46,21 +47,21 @@ fn an_evaluation_needs_a_name_and_a_product() {
     assert!(fields.check().is_ok());
 
     let nameless = EvaluationFields { name: "  ".to_owned(), ..fields.clone() };
-    assert!(matches!(nameless.check(), Err(Invalid { field: "name", .. })));
+    assert!(matches!(nameless.check(), Err(Invalid { field: Field::Name, .. })));
 
     let without_product = EvaluationFields { product: String::new(), ..fields.clone() };
-    assert!(matches!(without_product.check(), Err(Invalid { field: "product", .. })));
+    assert!(matches!(without_product.check(), Err(Invalid { field: Field::Product, .. })));
 
     let broken = EvaluationFields { manufacturer: "ACME\u{0}".to_owned(), ..fields.clone() };
-    assert!(matches!(broken.check(), Err(Invalid { field: "manufacturer", .. })));
+    assert!(matches!(broken.check(), Err(Invalid { field: Field::Manufacturer, .. })));
 
     let long = EvaluationFields { name: "x".repeat(MAX_NAME + 1), ..fields };
-    assert!(matches!(long.check(), Err(Invalid { field: "name", .. })));
+    assert!(matches!(long.check(), Err(Invalid { field: Field::Name, .. })));
 }
 
 #[test]
 fn a_result_may_hold_lines_but_no_other_control_characters() {
-    assert!(check_text("text", "line 1\nline 2\tend", MAX_RESULT, true).is_ok());
-    assert!(check_text("text", "bell\u{7}", MAX_RESULT, true).is_err());
-    assert!(check_text("name", "two\nlines", MAX_NAME, false).is_err());
+    assert!(check_text(Field::Text, "line 1\nline 2\tend", MAX_RESULT, true).is_ok());
+    assert!(check_text(Field::Text, "bell\u{7}", MAX_RESULT, true).is_err());
+    assert!(check_text(Field::Name, "two\nlines", MAX_NAME, false).is_err());
 }

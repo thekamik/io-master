@@ -5,10 +5,11 @@
 
 use crate::db::test_projects as db_test_projects;
 use crate::db::user::database::UserDb;
+use crate::model::text::{Entity, Field};
 
 use super::projects::existing;
 use crate::business::test_projects::error::StoreError;
-use crate::model::test_projects::rules::{SchemeError, check_link};
+use crate::model::test_projects::rules::{ProjectError, check_link};
 use crate::model::test_projects::{Link, Tile, TileKind};
 
 /// Replaces the tiles and links of `project` by `tiles` and `links`.
@@ -27,12 +28,12 @@ pub fn replace(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Res
         tile.fields.check()?;
 
         if !schemes.contains(&tile.scheme) {
-            return Err(SchemeError::NotFound("scheme").into());
+            return Err(ProjectError::NotFound(Entity::Scheme).into());
         }
 
         if tile.fields.sources.iter().any(|source| !stored_project.fields.documents.contains(&source.document_id)) {
-            return Err(SchemeError::Invalid(
-                "sources",
+            return Err(ProjectError::Invalid(
+                Field::Sources,
                 "a source quotes a document the project does not use".to_owned(),
             )
             .into());
@@ -47,7 +48,7 @@ pub fn replace(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Res
 
     for link in links {
         if !kinds.iter().any(|(id, _)| *id == link.from) || !kinds.iter().any(|(id, _)| *id == link.to) {
-            return Err(SchemeError::NotFound("tile").into());
+            return Err(ProjectError::NotFound(Entity::Tile).into());
         }
 
         check_link(&kinds, &checked, link.from, link.to)?;

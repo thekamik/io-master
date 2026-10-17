@@ -24,7 +24,7 @@
 
 use sha2::{Digest, Sha256};
 
-use crate::model::text::{Invalid, check_text};
+use crate::model::text::{Field, Invalid, check_text};
 
 /// The longest title, part or version, in characters.
 pub const MAX_SHORT: usize = 200;
@@ -77,12 +77,12 @@ impl DocumentFields {
     /// Checks what the user told about a document.
     pub fn check(&self) -> Result<(), Invalid> {
         if self.title.trim().is_empty() {
-            return Err(Invalid::new("title", "the document needs a title"));
+            return Err(Invalid::new(Field::Title, "the document needs a title"));
         }
 
-        check_text("title", &self.title, MAX_SHORT, false)?;
-        check_text("part", &self.part, MAX_SHORT, false)?;
-        check_text("version", &self.version, MAX_SHORT, false)
+        check_text(Field::Title, &self.title, MAX_SHORT, false)?;
+        check_text(Field::Part, &self.part, MAX_SHORT, false)?;
+        check_text(Field::Version, &self.version, MAX_SHORT, false)
     }
 }
 

@@ -11,10 +11,11 @@ use crate::business::test_projects::test_support::single::*;
 use crate::business::test_projects::test_support::{
     TestDb, database, load, project_fields, project_with_scheme, scheme_fields,
 };
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{
     External, Link, OutputSection, PageSpan, ProposalState, Source, Tile, TileFields, TileKind,
 };
+use crate::model::text::{Entity, Field};
 
 /// A database with the small standard and a project with one scheme;
 /// returns the project, the scheme and the document.
@@ -61,7 +62,7 @@ fn a_scheme_keeps_its_number_unique_and_its_pages_in_the_project() {
 
     assert!(matches!(
         create(&test.db, project, &scheme_fields("5", "Again")),
-        Err(StoreError::Scheme(SchemeError::Invalid("number", _)))
+        Err(StoreError::Rule(ProjectError::Invalid(Field::Number, _)))
     ));
     // Schemes without a number are many.
     create(&test.db, project, &scheme_fields("", "Annex")).unwrap();
@@ -69,11 +70,11 @@ fn a_scheme_keeps_its_number_unique_and_its_pages_in_the_project() {
 
     let mut past = scheme_fields("7", "Past the end");
     past.pages = Some(PageSpan { document_id: document, first_page: 2, last_page: 9 });
-    assert!(matches!(create(&test.db, project, &past), Err(StoreError::Scheme(SchemeError::Invalid("pages", _)))));
+    assert!(matches!(create(&test.db, project, &past), Err(StoreError::Rule(ProjectError::Invalid(Field::Pages, _)))));
 
     let other = load(&test.db, b"%PDF other");
     past.pages = Some(PageSpan { document_id: other, first_page: 1, last_page: 1 });
-    assert!(matches!(create(&test.db, project, &past), Err(StoreError::Scheme(SchemeError::Invalid("pages", _)))));
+    assert!(matches!(create(&test.db, project, &past), Err(StoreError::Rule(ProjectError::Invalid(Field::Pages, _)))));
 }
 
 #[test]
@@ -108,10 +109,16 @@ fn sources_must_be_in_documents_of_the_project_and_on_their_pages() {
 
     let mut tile = TileFields::new(TileKind::Requirement, "R");
     tile.sources = vec![source(other, 1, "Scope")];
-    assert!(matches!(add_tile(&test.db, scheme, &tile), Err(StoreError::Scheme(SchemeError::Invalid("sources", _)))));
+    assert!(matches!(
+        add_tile(&test.db, scheme, &tile),
+        Err(StoreError::Rule(ProjectError::Invalid(Field::Sources, _)))
+    ));
 
     tile.sources = vec![source(document, 9, "Scope")];
-    assert!(matches!(add_tile(&test.db, scheme, &tile), Err(StoreError::Scheme(SchemeError::Invalid("sources", _)))));
+    assert!(matches!(
+        add_tile(&test.db, scheme, &tile),
+        Err(StoreError::Rule(ProjectError::Invalid(Field::Sources, _)))
+    ));
 }
 
 #[test]
@@ -147,13 +154,16 @@ fn links_follow_the_rules_and_go_with_their_tiles() {
     let needed = add_link(&test.db, input, requirement).unwrap();
     add_link(&test.db, requirement, output).unwrap();
 
-    assert!(matches!(add_link(&test.db, input, output), Err(StoreError::Scheme(SchemeError::LinkNotAllowed(..)))));
-    assert!(matches!(add_link(&test.db, requirement, input), Err(StoreError::Scheme(SchemeError::Cycle))));
+    assert!(matches!(add_link(&test.db, input, output), Err(StoreError::Rule(ProjectError::LinkNotAllowed(..)))));
+    assert!(matches!(add_link(&test.db, requirement, input), Err(StoreError::Rule(ProjectError::Cycle))));
 
     // A linked tile keeps its kind.
     let mut changed = TileFields::new(TileKind::Output, "Functional specification");
     changed.state = ProposalState::Accepted;
-    assert!(matches!(update_tile(&test.db, input, &changed), Err(StoreError::Scheme(SchemeError::Invalid("kind", _)))));
+    assert!(matches!(
+        update_tile(&test.db, input, &changed),
+        Err(StoreError::Rule(ProjectError::Invalid(Field::Kind, _)))
+    ));
 
     assert!(delete_link(&test.db, needed).unwrap());
     assert_eq!(links(&test.db, project).unwrap().len(), 1);
@@ -174,13 +184,16 @@ fn links_join_schemes_of_one_project_and_their_circles_are_found() {
 
     // A requirement of one chapter must be met before one of another.
     add_link(&test.db, earlier, later).unwrap();
-    assert!(matches!(add_link(&test.db, later, earlier), Err(StoreError::Scheme(SchemeError::Cycle))));
+    assert!(matches!(add_link(&test.db, later, earlier), Err(StoreError::Rule(ProjectError::Cycle))));
 
     // Tiles of two projects are never linked.
     let other = create_project(&test.db, &project_fields("Other", vec![document])).unwrap();
     let elsewhere = create(&test.db, other, &scheme_fields("1", "X")).unwrap();
     let foreign = add_tile(&test.db, elsewhere, &TileFields::new(TileKind::Requirement, "Y")).unwrap();
-    assert!(matches!(add_link(&test.db, earlier, foreign), Err(StoreError::Scheme(SchemeError::Invalid("link", _)))));
+    assert!(matches!(
+        add_link(&test.db, earlier, foreign),
+        Err(StoreError::Rule(ProjectError::Invalid(Field::Link, _)))
+    ));
 
     // Deleting a scheme takes the links of its tiles, also those to
     // other schemes.
@@ -201,8 +214,8 @@ fn tiles_move_on_the_canvas_and_between_schemes() {
 
     let moved = tile(&test.db, id).unwrap().unwrap();
     assert_eq!((moved.fields.x, moved.fields.y), (40.0, -12.5));
-    assert!(matches!(move_tile(&test.db, id, f64::NAN, 0.0), Err(StoreError::Scheme(_))));
-    assert!(matches!(move_tile(&test.db, 99, 0.0, 0.0), Err(StoreError::Scheme(SchemeError::NotFound("tile")))));
+    assert!(matches!(move_tile(&test.db, id, f64::NAN, 0.0), Err(StoreError::Rule(_))));
+    assert!(matches!(move_tile(&test.db, 99, 0.0, 0.0), Err(StoreError::Rule(ProjectError::NotFound(Entity::Tile)))));
 
     // To another scheme: the link stays.
     move_to_scheme(&test.db, &[id], second).unwrap();
@@ -256,13 +269,13 @@ fn a_content_that_breaks_the_rules_is_not_written() {
     let output = Tile { id: 2, scheme, fields: TileFields::new(TileKind::Output, "B") };
 
     let result = replace_content(&test.db, project, &[input.clone(), output], &[Link { id: 1, from: 1, to: 2 }]);
-    assert!(matches!(result, Err(StoreError::Scheme(SchemeError::LinkNotAllowed(..)))));
+    assert!(matches!(result, Err(StoreError::Rule(ProjectError::LinkNotAllowed(..)))));
     assert!(project_tiles(&test.db, project).unwrap().is_empty());
 
     // A tile of a scheme the project does not have.
     let lost = Tile { scheme: 999, ..input };
     assert!(matches!(
         replace_content(&test.db, project, &[lost], &[]),
-        Err(StoreError::Scheme(SchemeError::NotFound("scheme")))
+        Err(StoreError::Rule(ProjectError::NotFound(Entity::Scheme)))
     ));
 }

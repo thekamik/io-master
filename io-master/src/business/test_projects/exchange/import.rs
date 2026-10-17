@@ -10,6 +10,7 @@ use crate::business::session::Session;
 use crate::business::standards::load::{LoadProgress, read_pdf};
 use crate::business::work::{Cancel, WorkError, on_db};
 use crate::model::standards::DocumentFields;
+use crate::model::text::Entity;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use serde_json::{Map, Value};
@@ -23,7 +24,7 @@ use crate::business::test_projects::{projects, schemes};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::standards::sha256_hex;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{
     External, Link, OutputSection, PageSpan, ProjectFields, ProposalState, Scheme, SchemeFields, Source, Tile,
     TileFields, TileKind,
@@ -310,7 +311,7 @@ fn store_content(
 ) -> Result<(), StoreError> {
     let open = workspace.open(db, project)?;
     let document = |number: i64| {
-        documents.get((number - 1) as usize).copied().ok_or(StoreError::Scheme(SchemeError::NotFound("document")))
+        documents.get((number - 1) as usize).copied().ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Document)))
     };
 
     // The number of every scheme of the file and the scheme it became.
@@ -333,7 +334,7 @@ fn store_content(
             .iter()
             .find(|(number, _)| *number == tile.scheme)
             .map(|(_, id)| *id)
-            .ok_or(StoreError::Scheme(SchemeError::NotFound("scheme")))?;
+            .ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Scheme)))?;
 
         for source in &mut tile.fields.sources {
             source.document_id = document(source.document_id)?;

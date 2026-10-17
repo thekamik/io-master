@@ -3,6 +3,7 @@
 use super::*;
 
 use crate::model::test_projects::{External, OutputSection, PageSpan, ProposalState, Source};
+use crate::model::text::{Entity, Field};
 
 fn link(id: i64, from: i64, to: i64) -> Link {
     Link { id, from, to }
@@ -34,11 +35,11 @@ fn other_links_are_refused() {
     let tiles = tiles();
 
     for (from, to) in [(1, 3), (1, 4), (3, 2), (3, 1)] {
-        assert!(matches!(check_link(&tiles, &[], from, to), Err(SchemeError::LinkNotAllowed(..))), "{from} -> {to}");
+        assert!(matches!(check_link(&tiles, &[], from, to), Err(ProjectError::LinkNotAllowed(..))), "{from} -> {to}");
     }
 
-    assert_eq!(check_link(&tiles, &[], 1, 99), Err(SchemeError::NotFound("tile")));
-    assert_eq!(check_link(&tiles, &[link(1, 1, 2)], 1, 2), Err(SchemeError::LinkExists));
+    assert_eq!(check_link(&tiles, &[], 1, 99), Err(ProjectError::NotFound(Entity::Tile)));
+    assert_eq!(check_link(&tiles, &[link(1, 1, 2)], 1, 2), Err(ProjectError::LinkExists));
 }
 
 #[test]
@@ -48,31 +49,31 @@ fn a_link_that_closes_a_circle_is_refused() {
     let links = [link(1, 4, 2), link(2, 2, 1), link(3, 1, 5)];
 
     // ... so 5 cannot provide 4.
-    assert_eq!(check_link(&tiles, &links, 5, 4), Err(SchemeError::Cycle));
+    assert_eq!(check_link(&tiles, &links, 5, 4), Err(ProjectError::Cycle));
     // A requirement cannot provide its own input either.
-    assert_eq!(check_link(&tiles, &[link(1, 1, 2)], 2, 1), Err(SchemeError::Cycle));
+    assert_eq!(check_link(&tiles, &[link(1, 1, 2)], 2, 1), Err(ProjectError::Cycle));
     // Two requirements cannot precede each other, nor one itself.
-    assert_eq!(check_link(&tiles, &[link(1, 2, 5)], 5, 2), Err(SchemeError::Cycle));
-    assert_eq!(check_link(&tiles, &[], 2, 2), Err(SchemeError::Cycle));
+    assert_eq!(check_link(&tiles, &[link(1, 2, 5)], 5, 2), Err(ProjectError::Cycle));
+    assert_eq!(check_link(&tiles, &[], 2, 2), Err(ProjectError::Cycle));
 }
 
 #[test]
 fn a_tile_needs_a_title_and_keeps_to_its_kind() {
     let mut tile = TileFields::new(TileKind::Requirement, " ");
-    assert!(matches!(tile.check(), Err(SchemeError::Invalid("title", _))));
+    assert!(matches!(tile.check(), Err(ProjectError::Invalid(Field::Title, _))));
 
     tile.title = "Protect stored passwords".to_owned();
     assert_eq!(tile.check(), Ok(()));
 
     tile.external = Some(External { document: "CC Part 3".to_owned(), place: "ALC_FLR.2".to_owned() });
-    assert!(matches!(tile.check(), Err(SchemeError::Invalid("external", _))));
+    assert!(matches!(tile.check(), Err(ProjectError::Invalid(Field::External, _))));
 
     let mut input = TileFields::new(TileKind::Input, "Flaw remediation procedures");
     input.external = tile.external.clone();
     assert_eq!(input.check(), Ok(()));
 
     input.instructions = "Write it all".to_owned();
-    assert!(matches!(input.check(), Err(SchemeError::Invalid("sections", _))));
+    assert!(matches!(input.check(), Err(ProjectError::Invalid(Field::Sections, _))));
 }
 
 #[test]
@@ -82,7 +83,7 @@ fn an_output_has_sections() {
     assert_eq!(output.check(), Ok(()));
 
     output.sections.clear();
-    assert!(matches!(output.check(), Err(SchemeError::Invalid("sections", _))));
+    assert!(matches!(output.check(), Err(ProjectError::Invalid(Field::Sections, _))));
 }
 
 #[test]
@@ -91,13 +92,13 @@ fn sources_are_checked() {
     let source = Source { document_id: 1, page: 3, quote: "The TOE shall".to_owned(), found: false };
 
     tile.sources = vec![Source { page: 0, ..source.clone() }];
-    assert!(matches!(tile.check(), Err(SchemeError::Invalid("sources", _))));
+    assert!(matches!(tile.check(), Err(ProjectError::Invalid(Field::Sources, _))));
 
     tile.sources = vec![Source { quote: " ".to_owned(), ..source.clone() }];
-    assert!(matches!(tile.check(), Err(SchemeError::Invalid("sources", _))));
+    assert!(matches!(tile.check(), Err(ProjectError::Invalid(Field::Sources, _))));
 
     tile.sources = vec![source; MAX_SOURCES + 1];
-    assert!(matches!(tile.check(), Err(SchemeError::Invalid("sources", _))));
+    assert!(matches!(tile.check(), Err(ProjectError::Invalid(Field::Sources, _))));
 }
 
 #[test]
@@ -125,7 +126,7 @@ fn a_project_needs_a_name() {
         documents: Vec::new(),
     };
 
-    assert!(matches!(project.check(), Err(SchemeError::Invalid("name", _))));
+    assert!(matches!(project.check(), Err(ProjectError::Invalid(Field::Name, _))));
 
     project.name = "CC EAL4".to_owned();
     assert_eq!(project.check(), Ok(()));
@@ -136,14 +137,14 @@ fn a_scheme_needs_a_name_and_pages_in_order() {
     let mut scheme =
         SchemeFields { number: "9.1".to_owned(), name: String::new(), pages: None, state: ProposalState::Accepted };
 
-    assert!(matches!(scheme.check(), Err(SchemeError::Invalid("name", _))));
+    assert!(matches!(scheme.check(), Err(ProjectError::Invalid(Field::Name, _))));
 
     scheme.name = "Identification and authentication".to_owned();
     assert_eq!(scheme.check(), Ok(()));
 
     for (first_page, last_page) in [(0, 3), (5, 4)] {
         scheme.pages = Some(PageSpan { document_id: 1, first_page, last_page });
-        assert!(matches!(scheme.check(), Err(SchemeError::Invalid("pages", _))), "{first_page}-{last_page}");
+        assert!(matches!(scheme.check(), Err(ProjectError::Invalid(Field::Pages, _))), "{first_page}-{last_page}");
     }
 
     scheme.pages = Some(PageSpan { document_id: 1, first_page: 4, last_page: 4 });

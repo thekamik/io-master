@@ -149,8 +149,9 @@ pub mod single {
     use crate::db::error::DbError;
     use crate::db::test_projects as db_test_projects;
     use crate::db::user::database::UserDb;
-    use crate::model::test_projects::rules::SchemeError;
+    use crate::model::test_projects::rules::ProjectError;
     use crate::model::test_projects::{Link, ProjectFields, Scheme, SchemeFields, Tile, TileFields};
+    use crate::model::text::{Entity, Field};
 
     use super::opened;
 
@@ -182,7 +183,7 @@ pub mod single {
     }
 
     pub fn existing(db: &UserDb, id: i64) -> Result<Scheme, StoreError> {
-        get(db, id)?.ok_or(StoreError::Scheme(SchemeError::NotFound("scheme")))
+        get(db, id)?.ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Scheme)))
     }
 
     pub fn get(db: &UserDb, id: i64) -> Result<Option<Scheme>, DbError> {
@@ -213,7 +214,7 @@ pub mod single {
         let project = project_of_tile(db, id);
 
         if project == 0 {
-            return Err(SchemeError::NotFound("tile").into());
+            return Err(ProjectError::NotFound(Entity::Tile).into());
         }
 
         on(db, project, |open| tiles::set_position(db, open, id, x, y))
@@ -243,11 +244,11 @@ pub mod single {
         let (one, other) = (project_of_tile(db, from), project_of_tile(db, to));
 
         if one == 0 || other == 0 {
-            return Err(SchemeError::NotFound("tile").into());
+            return Err(ProjectError::NotFound(Entity::Tile).into());
         }
 
         if one != other {
-            return Err(SchemeError::Invalid("link", "only tiles of one project can be linked".to_owned()).into());
+            return Err(ProjectError::Invalid(Field::Link, "only tiles of one project can be linked".to_owned()).into());
         }
 
         on(db, one, |open| link_crud::create(db, open, from, to))

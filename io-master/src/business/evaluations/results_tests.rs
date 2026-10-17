@@ -10,6 +10,7 @@ use crate::business::test_projects::test_support::database;
 use crate::db::user::database::UserDb;
 use crate::model::evaluations::{Actor, EvaluationData, JournalAction, JournalEntry, ResultField, ResultOrigin};
 use crate::model::test_projects::TileKind;
+use crate::model::text::{Entity, Field};
 
 /// A database with one imported evaluation; returns it and the
 /// number of its requirement.
@@ -53,7 +54,7 @@ fn a_proposal_is_no_result_until_it_is_accepted() {
     assert_eq!(entries[2].actor, Actor::Evaluator);
 
     // Done once only.
-    assert!(matches!(accept(&test.db, id), Err(EvaluationError::NotFound("proposal"))));
+    assert!(matches!(accept(&test.db, id), Err(EvaluationError::NotFound(Entity::Proposal))));
 }
 
 #[test]
@@ -78,7 +79,7 @@ fn a_corrected_proposal_keeps_both_texts_in_the_journal() {
 
     // An empty correction is refused: reject instead.
     let id = propose(&test.db, requirement, ResultField::Analysis, "Text.", "gemma4").unwrap();
-    assert!(matches!(correct(&test.db, id, "  "), Err(EvaluationError::Invalid("text", _))));
+    assert!(matches!(correct(&test.db, id, "  "), Err(EvaluationError::Invalid(Field::Text, _))));
 }
 
 #[test]
@@ -141,7 +142,7 @@ fn results_belong_to_requirements_only() {
         propose(&test.db, input, ResultField::Findings, "x", "gemma4"),
         Err(EvaluationError::NotARequirement)
     ));
-    assert!(matches!(write(&test.db, 9_999, ResultField::Findings, "x"), Err(EvaluationError::NotFound("tile"))));
+    assert!(matches!(write(&test.db, 9_999, ResultField::Findings, "x"), Err(EvaluationError::NotFound(Entity::Tile))));
 }
 
 #[test]
@@ -150,11 +151,11 @@ fn texts_are_checked() {
 
     assert!(matches!(
         propose(&test.db, requirement, ResultField::Findings, " ", "gemma4"),
-        Err(EvaluationError::Invalid("text", _))
+        Err(EvaluationError::Invalid(Field::Text, _))
     ));
     assert!(matches!(
         write(&test.db, requirement, ResultField::Findings, "bell\u{7}"),
-        Err(EvaluationError::Invalid("text", _))
+        Err(EvaluationError::Invalid(Field::Text, _))
     ));
     assert!(write(&test.db, requirement, ResultField::Findings, "line 1\nline 2").is_ok());
 }

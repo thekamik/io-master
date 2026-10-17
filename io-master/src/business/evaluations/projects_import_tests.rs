@@ -10,6 +10,7 @@ use crate::business::test_projects::test_support::single as schemes;
 use crate::business::test_projects::test_support::{database, scheme_fields};
 use crate::model::evaluations::JournalAction;
 use crate::model::test_projects::{TileFields, TileKind};
+use crate::model::text::{Entity, Field};
 
 #[test]
 fn a_ready_project_becomes_a_frozen_copy() {
@@ -54,7 +55,7 @@ fn a_project_not_marked_ready_is_refused() {
     schemes::set_ready(&test.db, ready.project, false).unwrap();
 
     let refused = from_project(&test.db, ready.project, &fields("Meter X"));
-    assert!(matches!(refused, Err(EvaluationError::Invalid("project", _))));
+    assert!(matches!(refused, Err(EvaluationError::Invalid(Field::Project, _))));
     assert!(projects::list(&test.db).unwrap().is_empty());
 
     assert!(matches!(from_project(&test.db, 9_999, &fields("Meter X")), Err(EvaluationError::NotFound(_))));
@@ -110,7 +111,7 @@ fn the_file_of_a_project_is_imported_the_same_way() {
 
     // A document of the file that was not found is refused.
     let missing = from_exchange(&test.db, &read, &[], &fields("Missing"));
-    assert!(matches!(missing, Err(EvaluationError::NotFound("document"))));
+    assert!(matches!(missing, Err(EvaluationError::NotFound(Entity::Document))));
 }
 
 #[test]
@@ -126,6 +127,6 @@ fn a_file_changed_by_hand_is_checked_by_the_rules() {
     read.links.push(Link { id: 99, from: output, to: input });
 
     let refused = from_exchange(&test.db, &read, &[ready.document], &fields("Broken"));
-    assert!(matches!(refused, Err(EvaluationError::Scheme(SchemeError::LinkNotAllowed(..)))));
+    assert!(matches!(refused, Err(EvaluationError::Scheme(ProjectError::LinkNotAllowed(..)))));
     assert!(projects::list(&test.db).unwrap().is_empty());
 }

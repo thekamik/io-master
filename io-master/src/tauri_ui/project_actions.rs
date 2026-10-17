@@ -23,8 +23,9 @@ use crate::business::test_projects::workspace::OpenProject;
 use crate::business::test_projects::{projects, schemes};
 use crate::business::work::Cancel;
 use crate::db::user::database::UserDb;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{ProjectData, ProjectFields};
+use crate::model::text::Entity;
 
 use super::blocking::blocking;
 use super::error::UiError;
@@ -38,16 +39,16 @@ impl From<StoreError> for UiError {
     fn from(error: StoreError) -> UiError {
         match error {
             StoreError::Db(error) => UiError::Failed(error.to_string()),
-            StoreError::Scheme(SchemeError::NotFound("project")) => {
+            StoreError::Rule(ProjectError::NotFound(Entity::Project)) => {
                 UiError::Invalid("the test project does not exist".to_owned())
             }
-            StoreError::Scheme(error) => UiError::Invalid(error.to_string()),
+            StoreError::Rule(error) => UiError::Invalid(error.to_string()),
         }
     }
 }
 
-impl From<SchemeError> for UiError {
-    fn from(error: SchemeError) -> UiError {
+impl From<ProjectError> for UiError {
+    fn from(error: ProjectError) -> UiError {
         UiError::Invalid(error.to_string())
     }
 }

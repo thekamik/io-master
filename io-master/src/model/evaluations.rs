@@ -30,7 +30,7 @@
 //! verdict proposition*, written according to the standard.
 
 use crate::model::test_projects::{Link, Scheme, Tile};
-use crate::model::text::{Invalid, check_text};
+use crate::model::text::{Field, Invalid, check_text};
 
 /// The longest name of an evaluation, in characters.
 pub const MAX_NAME: usize = 300;
@@ -284,18 +284,18 @@ impl EvaluationFields {
     /// checked by the storage.
     pub fn check(&self) -> Result<(), Invalid> {
         if self.name.trim().is_empty() {
-            return Err(Invalid::new("name", "the evaluation needs a name"));
+            return Err(Invalid::new(Field::Name, "the evaluation needs a name"));
         }
 
         if self.product.trim().is_empty() {
-            return Err(Invalid::new("product", "the evaluation needs the product it evaluates"));
+            return Err(Invalid::new(Field::Product, "the evaluation needs the product it evaluates"));
         }
 
-        check_text("name", &self.name, MAX_NAME, false)?;
-        check_text("product", &self.product, MAX_SHORT, false)?;
-        check_text("product version", &self.product_version, MAX_SHORT, false)?;
-        check_text("manufacturer", &self.manufacturer, MAX_SHORT, false)?;
-        check_text("evaluator", &self.evaluator, MAX_SHORT, false)
+        check_text(Field::Name, &self.name, MAX_NAME, false)?;
+        check_text(Field::Product, &self.product, MAX_SHORT, false)?;
+        check_text(Field::ProductVersion, &self.product_version, MAX_SHORT, false)?;
+        check_text(Field::Manufacturer, &self.manufacturer, MAX_SHORT, false)?;
+        check_text(Field::Evaluator, &self.evaluator, MAX_SHORT, false)
     }
 }
 

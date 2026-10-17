@@ -30,6 +30,7 @@
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::text::{Entity, Field};
 
 use crate::business::standards;
 use crate::business::standards::quote::normalize;
@@ -41,7 +42,7 @@ use crate::model::test_projects::{PageSpan, ProposalState, SchemeFields};
 
 use crate::ai::api::completions::{self};
 use crate::model::ai::Turn;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 
 use super::parts::{PART_RANGE, parts};
 use crate::ai::tasks::contents::{prompt, read};
@@ -181,7 +182,7 @@ pub fn apply(
                     applied.without_pages += 1;
                 }
             }
-            Err(StoreError::Scheme(error)) => {
+            Err(StoreError::Rule(error)) => {
                 applied.dropped.push(format!("{} {}: {error}", chapter.number, chapter.title).trim().to_owned())
             }
             Err(error) => return Err(error),
@@ -212,15 +213,14 @@ pub fn question(
     instructions: &str,
 ) -> Result<Question, StoreError> {
     if !open.data().project.fields.documents.contains(&document) {
-        return Err(SchemeError::Invalid("document", "read only a document of the project".to_owned()).into());
+        return Err(ProjectError::Invalid(Field::Document, "read only a document of the project".to_owned()).into());
     }
 
     let stored =
-        standards::documents::get(db, document)?.ok_or(StoreError::Scheme(SchemeError::NotFound("document")))?;
-    let part = parts(db, &[(document, first_page, last_page)], PART_RANGE.1)?
-        .into_iter()
-        .next()
-        .ok_or_else(|| SchemeError::Invalid("pages", "the pages of the table of contents hold no text".to_owned()))?;
+        standards::documents::get(db, document)?.ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Document)))?;
+    let part = parts(db, &[(document, first_page, last_page)], PART_RANGE.1)?.into_iter().next().ok_or_else(|| {
+        ProjectError::Invalid(Field::Pages, "the pages of the table of contents hold no text".to_owned())
+    })?;
     let turns = completions::single(prompt(instructions, &stored, &part));
 
     Ok(Question { document: stored, part, turns })

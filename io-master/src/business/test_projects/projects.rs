@@ -20,8 +20,9 @@ use crate::business::test_projects::workspace::{OpenProject, ProjectWorkspace};
 use crate::db::error::DbError;
 use crate::db::test_projects as db_test_projects;
 use crate::db::user::database::UserDb;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{Project, ProjectData, ProjectFields};
+use crate::model::text::{Entity, Field};
 
 /* ---------------------------------------------------------------
  * Read
@@ -39,7 +40,7 @@ pub fn get(db: &UserDb, id: i64) -> Result<Option<Project>, DbError> {
 
 /// The project, or the error that it does not exist.
 pub fn existing(db: &UserDb, id: i64) -> Result<Project, StoreError> {
-    get(db, id)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))
+    get(db, id)?.ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Project)))
 }
 
 /// A project with its schemes, tiles and links, as stored.
@@ -68,14 +69,14 @@ pub(super) fn check(db: &UserDb, id: Option<i64>, fields: &ProjectFields) -> Res
 
     for document in &fields.documents {
         if standards::documents::get(db, *document)?.is_none() {
-            return Err(SchemeError::NotFound("document").into());
+            return Err(ProjectError::NotFound(Entity::Document).into());
         }
     }
 
     let taken = db_test_projects::read::project_named(db, &fields.name)?;
 
     if taken.is_some_and(|other| Some(other) != id) {
-        return Err(SchemeError::NameTaken.into());
+        return Err(ProjectError::NameTaken.into());
     }
 
     Ok(())
@@ -108,8 +109,8 @@ pub fn update(db: &UserDb, open: &mut OpenProject, fields: &ProjectFields) -> Re
     let used: Vec<i64> = quoted.chain(paged).collect();
 
     if used.iter().any(|document| !fields.documents.contains(document)) {
-        return Err(SchemeError::Invalid(
-            "documents",
+        return Err(ProjectError::Invalid(
+            Field::Documents,
             "a tile quotes, or a scheme covers pages of, a document taken away from the project; change those first"
                 .to_owned(),
         )

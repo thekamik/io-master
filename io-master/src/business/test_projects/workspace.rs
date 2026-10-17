@@ -29,10 +29,11 @@ use std::collections::hash_map::Entry;
 
 use crate::db::test_projects as db_test_projects;
 use crate::db::user::database::UserDb;
+use crate::model::text::Entity;
 
 use super::projects;
 use crate::business::test_projects::error::StoreError;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{Link, ProjectData, Tile};
 
 /// How many changes of one test project can be undone.
@@ -106,7 +107,7 @@ impl OpenProject {
     /// project in memory. Refused when there is nothing to undo.
     pub fn undo(&mut self, db: &UserDb) -> Result<(), StoreError> {
         let Some(version) = self.versions.last() else {
-            return Err(SchemeError::Invalid("undo", "there is nothing to undo".to_owned()).into());
+            return Err(ProjectError::NothingToUndo.into());
         };
 
         let project = self.data.project.id;
@@ -128,7 +129,7 @@ impl OpenProject {
         // forgotten too.
         db_test_projects::update::replace_content(db, project, &version.tiles, &version.links)?;
         self.versions.clear();
-        self.data = projects::data(db, project)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))?;
+        self.data = projects::data(db, project)?.ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Project)))?;
 
         Ok(())
     }
@@ -152,7 +153,7 @@ impl ProjectWorkspace {
         match self.open.entry(id) {
             Entry::Occupied(open) => Ok(open.into_mut()),
             Entry::Vacant(place) => {
-                let data = projects::data(db, id)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))?;
+                let data = projects::data(db, id)?.ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Project)))?;
 
                 Ok(place.insert(OpenProject { data, versions: Vec::new() }))
             }

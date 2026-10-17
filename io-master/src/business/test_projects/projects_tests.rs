@@ -12,6 +12,7 @@ use crate::business::test_projects::test_support::{
     database, load, project_fields, project_with_scheme, scheme_fields,
 };
 use crate::model::test_projects::{PageSpan, Source, TileFields, TileKind};
+use crate::model::text::{Entity, Field};
 
 #[test]
 fn a_project_is_made_listed_changed_and_deleted() {
@@ -43,11 +44,11 @@ fn names_are_unique_and_documents_must_exist() {
 
     assert!(matches!(
         create(&test.db, &project_fields("adv AND ate", vec![document])),
-        Err(StoreError::Scheme(SchemeError::NameTaken))
+        Err(StoreError::Rule(ProjectError::NameTaken))
     ));
     assert!(matches!(
         create(&test.db, &project_fields("Other", vec![99])),
-        Err(StoreError::Scheme(SchemeError::NotFound("document")))
+        Err(StoreError::Rule(ProjectError::NotFound(Entity::Document)))
     ));
 }
 
@@ -83,7 +84,7 @@ fn a_used_document_stays() {
     // Not taken from the project while a tile quotes it ...
     assert!(matches!(
         update(&test.db, project, &project_fields("P", vec![])),
-        Err(StoreError::Scheme(SchemeError::Invalid("documents", _)))
+        Err(StoreError::Rule(ProjectError::Invalid(Field::Documents, _)))
     ));
 
     // ... nor while a scheme covers its pages ...

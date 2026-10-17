@@ -25,6 +25,7 @@ use std::collections::hash_map::Entry;
 
 use crate::db::evaluations as db_evaluations;
 use crate::db::user::database::UserDb;
+use crate::model::text::Entity;
 
 use super::projects;
 use crate::business::evaluations::error::EvaluationError;
@@ -92,7 +93,7 @@ impl EvaluationWorkspace {
         match self.open.entry(id) {
             Entry::Occupied(open) => Ok(open.into_mut()),
             Entry::Vacant(place) => {
-                let evaluation = OpenEvaluation::read(db, id)?.ok_or(EvaluationError::NotFound("evaluation"))?;
+                let evaluation = OpenEvaluation::read(db, id)?.ok_or(EvaluationError::NotFound(Entity::Evaluation))?;
                 Ok(place.insert(evaluation))
             }
         }

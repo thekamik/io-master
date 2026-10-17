@@ -4,13 +4,13 @@
 use std::fmt;
 
 use crate::db::error::DbError;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 
 /// Why a change of a project was not made.
 #[derive(Debug)]
 pub enum StoreError {
     /// It breaks a rule of a project.
-    Scheme(SchemeError),
+    Rule(ProjectError),
     /// The database failed.
     Db(DbError),
 }
@@ -18,7 +18,7 @@ pub enum StoreError {
 impl fmt::Display for StoreError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            StoreError::Scheme(error) => write!(formatter, "{error}"),
+            StoreError::Rule(error) => write!(formatter, "{error}"),
             StoreError::Db(error) => write!(formatter, "{error}"),
         }
     }
@@ -26,9 +26,9 @@ impl fmt::Display for StoreError {
 
 impl std::error::Error for StoreError {}
 
-impl From<SchemeError> for StoreError {
-    fn from(error: SchemeError) -> StoreError {
-        StoreError::Scheme(error)
+impl From<ProjectError> for StoreError {
+    fn from(error: ProjectError) -> StoreError {
+        StoreError::Rule(error)
     }
 }
 

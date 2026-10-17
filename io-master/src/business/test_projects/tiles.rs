@@ -23,8 +23,9 @@ use crate::business::test_projects::workspace::OpenProject;
 use crate::db::error::DbError;
 use crate::db::test_projects as db_test_projects;
 use crate::db::user::database::UserDb;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{ProposalState, Source, Tile, TileFields};
+use crate::model::text::{Entity, Field};
 
 /* ---------------------------------------------------------------
  * Read
@@ -37,7 +38,7 @@ pub fn get(open: &OpenProject, id: i64) -> Option<&Tile> {
 
 /// Tile `id` of the open project, or the error that it has no such.
 pub fn existing(open: &OpenProject, id: i64) -> Result<&Tile, StoreError> {
-    get(open, id).ok_or(StoreError::Scheme(SchemeError::NotFound("tile")))
+    get(open, id).ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Tile)))
 }
 
 /// The tiles of scheme `scheme`, in the order they were made.
@@ -60,15 +61,16 @@ pub(super) fn checked_sources(db: &UserDb, open: &OpenProject, fields: &TileFiel
 
     for source in &fields.sources {
         if !documents.contains(&source.document_id) {
-            return Err(SchemeError::Invalid(
-                "sources",
+            return Err(ProjectError::Invalid(
+                Field::Sources,
                 "a source quotes a document the project does not use; add it to the project first".to_owned(),
             )
             .into());
         }
 
-        let text = standards::documents::page(db, source.document_id, source.page)?
-            .ok_or_else(|| SchemeError::Invalid("sources", format!("the document has no page {}", source.page)))?;
+        let text = standards::documents::page(db, source.document_id, source.page)?.ok_or_else(|| {
+            ProjectError::Invalid(Field::Sources, format!("the document has no page {}", source.page))
+        })?;
 
         checked.push(Source { found: is_on_page(&source.quote, &text), ..source.clone() });
     }
@@ -104,8 +106,8 @@ pub fn update(db: &UserDb, open: &mut OpenProject, id: i64, fields: &TileFields)
     let sources = checked_sources(db, open, fields)?;
 
     if old_kind != fields.kind && open.data().links.iter().any(|link| link.from == id || link.to == id) {
-        return Err(SchemeError::Invalid(
-            "kind",
+        return Err(ProjectError::Invalid(
+            Field::Kind,
             "the kind of a linked tile cannot be changed; remove its links first".to_owned(),
         )
         .into());
@@ -123,13 +125,13 @@ pub fn update(db: &UserDb, open: &mut OpenProject, id: i64, fields: &TileFields)
 /// Moves tile `id` on the canvas.
 pub fn set_position(db: &UserDb, open: &mut OpenProject, id: i64, x: f64, y: f64) -> Result<(), StoreError> {
     if !x.is_finite() || !y.is_finite() {
-        return Err(SchemeError::Invalid("position", "the position is not a number".to_owned()).into());
+        return Err(ProjectError::Invalid(Field::Position, "the position is not a number".to_owned()).into());
     }
 
     existing(open, id)?;
 
     if !db_test_projects::update::tile_position(db, id, x, y)? {
-        return Err(SchemeError::NotFound("tile").into());
+        return Err(ProjectError::NotFound(Entity::Tile).into());
     }
 
     if let Some(tile) = open.data_mut().tiles.iter_mut().find(|tile| tile.id == id) {
@@ -145,7 +147,7 @@ pub fn accept(db: &UserDb, open: &mut OpenProject, id: i64) -> Result<(), StoreE
     existing(open, id)?;
 
     if !db_test_projects::update::accept_tile(db, id)? {
-        return Err(SchemeError::NotFound("tile").into());
+        return Err(ProjectError::NotFound(Entity::Tile).into());
     }
 
     if let Some(tile) = open.data_mut().tiles.iter_mut().find(|tile| tile.id == id) {
@@ -163,8 +165,8 @@ pub fn move_to_scheme(db: &UserDb, open: &mut OpenProject, ids: &[i64], scheme: 
 
     for id in ids {
         if get(open, *id).is_none() {
-            return Err(SchemeError::Invalid(
-                "scheme",
+            return Err(ProjectError::Invalid(
+                Field::Scheme,
                 "a tile can only be moved to a scheme of its own project".to_owned(),
             )
             .into());

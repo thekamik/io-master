@@ -73,6 +73,7 @@ pub mod single {
     use crate::db::evaluations as db_evaluations;
     use crate::db::user::database::UserDb;
     use crate::model::evaluations::{Proposal, RequirementResult, ResultField};
+    use crate::model::text::Entity;
 
     /// The results and the proposals of `open`, in one order, the times
     /// of the proposals left out (memory keeps the time of the
@@ -113,7 +114,7 @@ pub mod single {
     fn on_or<T>(
         db: &UserDb,
         evaluation: i64,
-        missing: &'static str,
+        missing: Entity,
         work: impl FnOnce(&mut OpenEvaluation) -> Result<T, EvaluationError>,
     ) -> Result<T, EvaluationError> {
         if evaluation == 0 {
@@ -124,11 +125,11 @@ pub mod single {
     }
 
     pub fn of(db: &UserDb, tile: i64) -> Result<Vec<RequirementResult>, EvaluationError> {
-        on_or(db, of_tile(db, tile), "tile", |open| Ok(results::list(open, tile)))
+        on_or(db, of_tile(db, tile), Entity::Tile, |open| Ok(results::list(open, tile)))
     }
 
     pub fn proposals(db: &UserDb, tile: i64) -> Result<Vec<Proposal>, EvaluationError> {
-        on_or(db, of_tile(db, tile), "tile", |open| Ok(results::proposals(open, tile)))
+        on_or(db, of_tile(db, tile), Entity::Tile, |open| Ok(results::proposals(open, tile)))
     }
 
     pub fn propose(
@@ -138,22 +139,22 @@ pub mod single {
         text: &str,
         model: &str,
     ) -> Result<i64, EvaluationError> {
-        on_or(db, of_tile(db, tile), "tile", |open| results::propose(db, open, tile, field, text, model))
+        on_or(db, of_tile(db, tile), Entity::Tile, |open| results::propose(db, open, tile, field, text, model))
     }
 
     pub fn accept(db: &UserDb, id: i64) -> Result<(), EvaluationError> {
-        on_or(db, of_proposal(db, id), "proposal", |open| results::accept(db, open, id))
+        on_or(db, of_proposal(db, id), Entity::Proposal, |open| results::accept(db, open, id))
     }
 
     pub fn correct(db: &UserDb, id: i64, text: &str) -> Result<(), EvaluationError> {
-        on_or(db, of_proposal(db, id), "proposal", |open| results::correct(db, open, id, text))
+        on_or(db, of_proposal(db, id), Entity::Proposal, |open| results::correct(db, open, id, text))
     }
 
     pub fn reject(db: &UserDb, id: i64) -> Result<(), EvaluationError> {
-        on_or(db, of_proposal(db, id), "proposal", |open| results::reject(db, open, id))
+        on_or(db, of_proposal(db, id), Entity::Proposal, |open| results::reject(db, open, id))
     }
 
     pub fn write(db: &UserDb, tile: i64, field: ResultField, text: &str) -> Result<(), EvaluationError> {
-        on_or(db, of_tile(db, tile), "tile", |open| results::write(db, open, tile, field, text))
+        on_or(db, of_tile(db, tile), Entity::Tile, |open| results::write(db, open, tile, field, text))
     }
 }

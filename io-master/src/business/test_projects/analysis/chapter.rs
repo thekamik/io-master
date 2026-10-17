@@ -40,8 +40,9 @@ use crate::business::test_projects::schemes::existing;
 use crate::business::test_projects::workspace::OpenProject;
 use crate::business::test_projects::{links, tiles as tile_crud};
 use crate::db::user::database::UserDb;
-use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{ProposalState, Tile, TileFields, TileKind};
+use crate::model::text::Entity;
 
 use crate::ai::api::completions::{self};
 use crate::model::ai::Turn;
@@ -168,7 +169,7 @@ pub fn apply(
                 tiles.push(Tile { id, scheme, fields });
                 applied.added += 1;
             }
-            Err(StoreError::Scheme(error)) => applied.dropped.push(format!("{}: {error}", proposed.key)),
+            Err(StoreError::Rule(error)) => applied.dropped.push(format!("{}: {error}", proposed.key)),
             Err(error) => return Err(error),
         }
     }
@@ -199,8 +200,8 @@ pub fn apply(
             Ok(_) => applied.links += 1,
             // The same link proposed twice (or already drawn): what
             // was asked for is there, so nothing is told.
-            Err(StoreError::Scheme(SchemeError::LinkExists)) => {}
-            Err(StoreError::Scheme(error)) => applied.dropped.push(format!("the link {from} → {to}: {error}")),
+            Err(StoreError::Rule(ProjectError::LinkExists)) => {}
+            Err(StoreError::Rule(error)) => applied.dropped.push(format!("the link {from} → {to}: {error}")),
             Err(error) => return Err(error),
         }
     }
@@ -229,7 +230,7 @@ pub fn question(
 ) -> Result<Vec<Turn>, StoreError> {
     let stored = existing(open, scheme)?;
     let document = standards::documents::get(db, part.document_id)?
-        .ok_or(StoreError::Scheme(SchemeError::NotFound("document")))?;
+        .ok_or(StoreError::Rule(ProjectError::NotFound(Entity::Document)))?;
     let (own, others): (Vec<Tile>, Vec<Tile>) =
         open.data().tiles.iter().cloned().partition(|tile| tile.scheme == scheme);
 

@@ -29,7 +29,7 @@ use crate::model::evaluations::{
     Actor, JournalAction, MAX_RESULT, MAX_SHORT, Proposal, RequirementResult, ResultField, ResultOrigin,
 };
 use crate::model::test_projects::TileKind;
-use crate::model::text::check_text;
+use crate::model::text::{Entity, Field, check_text};
 use crate::model::time::now;
 
 /* ---------------------------------------------------------------
@@ -38,7 +38,8 @@ use crate::model::time::now;
 
 /// Checks that `tile` is a requirement of the open evaluation.
 pub(super) fn requirement(open: &OpenEvaluation, tile: i64) -> Result<(), EvaluationError> {
-    let tile = open.data().tiles.iter().find(|known| known.id == tile).ok_or(EvaluationError::NotFound("tile"))?;
+    let tile =
+        open.data().tiles.iter().find(|known| known.id == tile).ok_or(EvaluationError::NotFound(Entity::Tile))?;
 
     if tile.fields.kind != TileKind::Requirement {
         return Err(EvaluationError::NotARequirement);
@@ -49,7 +50,7 @@ pub(super) fn requirement(open: &OpenEvaluation, tile: i64) -> Result<(), Evalua
 
 /// Checks the text of a result or a proposal.
 pub(super) fn check_result(text: &str) -> Result<(), EvaluationError> {
-    Ok(check_text("text", text, MAX_RESULT, true)?)
+    Ok(check_text(Field::Text, text, MAX_RESULT, true)?)
 }
 
 /// The accepted results of requirement `tile`, in the order of
@@ -76,7 +77,11 @@ pub fn proposals(open: &OpenEvaluation, tile: i64) -> Vec<Proposal> {
 
 /// Proposal `id` of the open evaluation; the error that it has no such.
 pub(super) fn proposal(open: &OpenEvaluation, id: i64) -> Result<Proposal, EvaluationError> {
-    open.proposals().iter().find(|proposal| proposal.id == id).cloned().ok_or(EvaluationError::NotFound("proposal"))
+    open.proposals()
+        .iter()
+        .find(|proposal| proposal.id == id)
+        .cloned()
+        .ok_or(EvaluationError::NotFound(Entity::Proposal))
 }
 
 /* ---------------------------------------------------------------
@@ -97,11 +102,11 @@ pub fn propose(
     requirement(open, tile)?;
 
     if text.trim().is_empty() {
-        return Err(EvaluationError::Invalid("text", "the proposal is empty".to_owned()));
+        return Err(EvaluationError::Invalid(Field::Text, "the proposal is empty".to_owned()));
     }
 
     check_result(text)?;
-    check_text("model", model, MAX_SHORT, false)?;
+    check_text(Field::Model, model, MAX_SHORT, false)?;
 
     let evaluation = open.data().evaluation.id;
     let actor = Actor::Model(model.to_owned());
@@ -201,7 +206,7 @@ pub fn correct(db: &UserDb, open: &mut OpenEvaluation, id: i64, text: &str) -> R
 
     if text.trim().is_empty() {
         let reason = "the corrected text is empty; reject the proposal instead".to_owned();
-        return Err(EvaluationError::Invalid("text", reason));
+        return Err(EvaluationError::Invalid(Field::Text, reason));
     }
 
     check_result(text)?;
