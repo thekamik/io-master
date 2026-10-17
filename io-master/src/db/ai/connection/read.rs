@@ -67,8 +67,20 @@ pub fn active(db: &UserDb) -> Result<Option<i64>, DbError> {
 
 /// The API key of a connection, or `None` when none is stored.
 ///
-/// A stored text that is no longer a valid key (impossible unless
-/// the database was changed by hand) counts as no key.
+/// **The key is given out only for the address it was entered for**
+/// (`update.rs`): it is checked here, at every use, against the
+/// address the connection has now, so that no failed or interrupted
+/// save can ever send it to another service. A key bound elsewhere,
+/// or a stored text that is no longer a valid key (impossible unless
+/// the database was changed by hand), counts as no key.
 pub fn api_key(db: &UserDb, id: i64) -> Result<Option<ApiKey>, DbError> {
+    let (Some(stored), Some(bound_to)) = (get(db, id)?, key_origin(db, id)?.flatten()) else {
+        return Ok(None);
+    };
+
+    if stored.connection.origin().as_deref() != Some(bound_to.as_str()) {
+        return Ok(None);
+    }
+
     Ok(db.secret(&key_name(id))?.and_then(|text| ApiKey::new(text.as_str().to_owned()).ok()))
 }

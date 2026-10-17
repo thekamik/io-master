@@ -139,6 +139,55 @@ fn a_changed_address_removes_the_key() {
 }
 
 #[test]
+fn a_key_is_given_out_only_for_the_address_it_is_bound_to() {
+    let directory = TempDir::new();
+    let db = database(&directory);
+    let id = connection(&db, &named("Local")).unwrap().id;
+    update::api_key(&db, id, &key()).unwrap();
+    assert!(read::api_key(&db, id).unwrap().is_some());
+
+    // A save interrupted after the address changed, before the key was
+    // removed: the key stays in the file, but is never given out.
+    db.connection_for_tests()
+        .execute("UPDATE ai_connections SET url = 'https://elsewhere.example/v1/chat' WHERE id = ?1", [id])
+        .unwrap();
+    assert!(read::get(&db, id).unwrap().unwrap().has_key);
+    assert!(read::api_key(&db, id).unwrap().is_none());
+
+    // A key with no recorded address is not given out either.
+    db.connection_for_tests().execute("UPDATE ai_connections SET key_origin = NULL WHERE id = ?1", [id]).unwrap();
+    assert!(read::api_key(&db, id).unwrap().is_none());
+}
+
+#[test]
+fn a_failed_save_leaves_nothing_behind() {
+    let directory = TempDir::new();
+    let db = database(&directory);
+    let id = connection(&db, &named("Local")).unwrap().id;
+    update::api_key(&db, id, &key()).unwrap();
+
+    // The last statement of the save fails: the database refuses to
+    // store the active connection.
+    db.connection_for_tests()
+        .execute_batch(
+            "DELETE FROM settings WHERE name = 'ai.active_connection';
+             CREATE TRIGGER refuse BEFORE INSERT ON settings BEGIN SELECT RAISE(ABORT, 'refused'); END;",
+        )
+        .unwrap();
+
+    let elsewhere = Connection { url: "http://127.0.0.1:8080/api/chat".to_owned(), ..named("Moved") };
+    assert!(update::connection(&db, id, &elsewhere).is_err());
+
+    // Nothing of it was stored: the old address, and its key with it.
+    let stored = read::get(&db, id).unwrap().unwrap();
+    assert_eq!(stored.connection, named("Local"));
+    assert!(read::api_key(&db, id).unwrap().is_some());
+
+    assert!(connection(&db, &named("Second")).is_err());
+    assert_eq!(read::list(&db).unwrap().len(), 1);
+}
+
+#[test]
 fn the_key_cannot_be_read_from_the_file() {
     let directory = TempDir::new();
     let db = database(&directory);

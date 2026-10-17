@@ -18,7 +18,8 @@ use super::read;
 use super::rows::{ACTIVE, SaveError, Saved, key_name, with_connection_values};
 
 /// Changes connection `id`. Its name must stay free of the others;
-/// the key is removed when the address changed.
+/// the key is removed when the address changed. One transaction: a new
+/// address is never stored while the key bound to the old one stays.
 pub fn connection(db: &UserDb, id: i64, connection: &Connection) -> Result<Saved, SaveError> {
     connection.check().map_err(SaveError::Invalid)?;
 
@@ -30,8 +31,10 @@ pub fn connection(db: &UserDb, id: i64, connection: &Connection) -> Result<Saved
         return Err(SaveError::NoSuchConnection);
     };
 
+    let transaction = db.connection().unchecked_transaction().map_err(DbError::from)?;
+
     with_connection_values(connection, |values| {
-        db.connection().execute(
+        transaction.execute(
             "UPDATE ai_connections SET name = ?1, url = ?2, model = ?3, ca_certificate = ?4, headers = ?5, \
              body = ?6, user_role = ?7, model_role = ?8, system_role = ?9, system_prompt = ?10, answer = ?11, \
              text_path = ?12, stop_path = ?13, cut_reasons = ?14, refused_reasons = ?15, error_path = ?16, \
@@ -46,12 +49,14 @@ pub fn connection(db: &UserDb, id: i64, connection: &Connection) -> Result<Saved
     let moved = read::has_key(db, id)? && origin != connection.origin();
 
     if moved {
-        delete::api_key(db, id)?;
+        delete::remove_key(db, id)?;
     }
 
     if read::active(db)?.is_none() {
         db.set_setting(ACTIVE, &id.to_string())?;
     }
+
+    transaction.commit().map_err(DbError::from)?;
 
     Ok(Saved { id, key_removed: moved })
 }
@@ -68,15 +73,19 @@ pub fn active(db: &UserDb, id: i64) -> Result<bool, DbError> {
 }
 
 /// Stores the API key of a connection, bound to its address; returns
-/// whether the connection exists.
+/// whether the connection exists. One transaction: the key and the
+/// address it is bound to are stored together.
 pub fn api_key(db: &UserDb, id: i64, key: &ApiKey) -> Result<bool, DbError> {
     let Some(stored) = read::get(db, id)? else {
         return Ok(false);
     };
 
+    let transaction = db.connection().unchecked_transaction()?;
+
     db.set_secret(&key_name(id), key.expose())?;
-    db.connection()
+    transaction
         .execute("UPDATE ai_connections SET key_origin = ?1 WHERE id = ?2", params![stored.connection.origin(), id])?;
+    transaction.commit()?;
 
     Ok(true)
 }
