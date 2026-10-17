@@ -9,9 +9,8 @@
 //! AI). "AI help" ([`field_instruction`]) gives the instruction for a
 //! chatbot that helps to fill one field.
 
-use crate::ai::api::checks;
-use crate::db::ai::connection::{create, delete, read, update};
-use crate::db::ai::presets::field_help;
+use crate::ai::api::{checks, connections};
+use crate::ai::presets::{self, field_help};
 use crate::model::ai::Field;
 use crate::model::api_key::ApiKey;
 
@@ -27,7 +26,8 @@ fn no_such_connection() -> UiError {
 
 /// The tab AI of Settings.
 pub async fn ai_config(state: &UiState) -> Result<AiConfigView, UiError> {
-    with_user_db(state, |db| Ok(AiConfigView::new(read::list(db)?, read::active(db)?))).await
+    with_user_db(state, |db| Ok(AiConfigView::new(connections::list(db)?, connections::active(db)?, presets::all())))
+        .await
 }
 
 /// Saves a connection (a new one when `id` is `None`).
@@ -36,8 +36,8 @@ pub async fn save_connection(state: &UiState, id: Option<i64>, form: ConnectionF
 
     with_user_db(state, move |db| {
         let saved = match id {
-            None => create::connection(db, &connection)?,
-            Some(id) => update::connection(db, id, &connection)?,
+            None => connections::create(db, &connection)?,
+            Some(id) => connections::update(db, id, &connection)?,
         };
 
         let notice = if saved.key_removed {
@@ -48,7 +48,7 @@ pub async fn save_connection(state: &UiState, id: Option<i64>, form: ConnectionF
         };
 
         Ok(SavedView {
-            config: AiConfigView::new(read::list(db)?, read::active(db)?),
+            config: AiConfigView::new(connections::list(db)?, connections::active(db)?, presets::all()),
             id: saved.id,
             notice: notice.to_owned(),
         })
@@ -58,7 +58,7 @@ pub async fn save_connection(state: &UiState, id: Option<i64>, form: ConnectionF
 
 /// Deletes a connection with its API key.
 pub async fn delete_connection(state: &UiState, id: i64) -> Result<AiConfigView, UiError> {
-    if !with_user_db(state, move |db| Ok(delete::connection(db, id)?)).await? {
+    if !with_user_db(state, move |db| Ok(connections::delete(db, id)?)).await? {
         return Err(no_such_connection());
     }
 
@@ -67,7 +67,7 @@ pub async fn delete_connection(state: &UiState, id: i64) -> Result<AiConfigView,
 
 /// Makes a connection the one the chat uses.
 pub async fn activate_connection(state: &UiState, id: i64) -> Result<AiConfigView, UiError> {
-    if !with_user_db(state, move |db| Ok(update::active(db, id)?)).await? {
+    if !with_user_db(state, move |db| Ok(connections::activate(db, id)?)).await? {
         return Err(no_such_connection());
     }
 
@@ -79,7 +79,7 @@ pub async fn store_key(state: &UiState, id: i64, api_key: String) -> Result<AiCo
     // The text is wiped by ApiKey::new, whether it is a key or not.
     let api_key = ApiKey::new(api_key).map_err(|error| UiError::Invalid(format!("the key was not stored: {error}")))?;
 
-    if !with_user_db(state, move |db| Ok(update::api_key(db, id, &api_key)?)).await? {
+    if !with_user_db(state, move |db| Ok(connections::set_key(db, id, &api_key)?)).await? {
         return Err(no_such_connection());
     }
 
@@ -88,7 +88,7 @@ pub async fn store_key(state: &UiState, id: i64, api_key: String) -> Result<AiCo
 
 /// Deletes the API key of a connection.
 pub async fn delete_key(state: &UiState, id: i64) -> Result<AiConfigView, UiError> {
-    with_user_db(state, move |db| Ok(delete::api_key(db, id)?)).await?;
+    with_user_db(state, move |db| Ok(connections::delete_key(db, id)?)).await?;
 
     ai_config(state).await
 }
@@ -96,7 +96,7 @@ pub async fn delete_key(state: &UiState, id: i64) -> Result<AiConfigView, UiErro
 /// Checks a stored connection with one short message.
 pub async fn check_connection(state: &UiState, id: i64) -> Result<CheckView, UiError> {
     let model = with_user_db(state, move |db| {
-        read::get(db, id)?.ok_or_else(no_such_connection)?;
+        connections::get(db, id)?.ok_or_else(no_such_connection)?;
 
         Ok(checks::target(db, id)?)
     })

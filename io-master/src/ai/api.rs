@@ -3,6 +3,7 @@
 pub mod checks;
 pub mod completions;
 pub mod connection;
+pub mod connections;
 // The communication with the provider: only `ai/api/` reaches
 // it; the rest of the program asks through the files above.
 pub(in crate::ai::api) mod provider;

@@ -7,9 +7,10 @@ use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::StoredConnection;
 use crate::model::api_key::ApiKey;
 
-use super::rows::{ACTIVE, Stored, connection_from_row, key_name};
+use super::rows::{ACTIVE, connection_from_row, key_name};
 
 /// Whether a key is stored for a connection.
 pub(super) fn has_key(db: &UserDb, id: i64) -> Result<bool, DbError> {
@@ -17,22 +18,24 @@ pub(super) fn has_key(db: &UserDb, id: i64) -> Result<bool, DbError> {
 }
 
 /// Every connection, by name.
-pub fn list(db: &UserDb) -> Result<Vec<Stored>, DbError> {
+pub fn list(db: &UserDb) -> Result<Vec<StoredConnection>, DbError> {
     let mut statement = db.connection().prepare("SELECT * FROM ai_connections ORDER BY name COLLATE NOCASE, id")?;
     let rows = statement.query_map([], connection_from_row)?.collect::<Result<Vec<_>, _>>()?;
 
-    rows.into_iter().map(|(id, connection)| Ok(Stored { id, connection, has_key: has_key(db, id)? })).collect()
+    rows.into_iter()
+        .map(|(id, connection)| Ok(StoredConnection { id, connection, has_key: has_key(db, id)? }))
+        .collect()
 }
 
 /// One connection, or `None` when there is no such.
-pub fn get(db: &UserDb, id: i64) -> Result<Option<Stored>, DbError> {
+pub fn get(db: &UserDb, id: i64) -> Result<Option<StoredConnection>, DbError> {
     let row = db
         .connection()
         .query_row("SELECT * FROM ai_connections WHERE id = ?1", [id], connection_from_row)
         .optional()?;
 
     match row {
-        Some((id, connection)) => Ok(Some(Stored { id, connection, has_key: has_key(db, id)? })),
+        Some((id, connection)) => Ok(Some(StoredConnection { id, connection, has_key: has_key(db, id)? })),
         None => Ok(None),
     }
 }

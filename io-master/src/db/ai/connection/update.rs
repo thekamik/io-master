@@ -11,20 +11,18 @@ use rusqlite::types::ToSql;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Connection;
+use crate::model::ai::{Connection, SavedConnection};
 use crate::model::api_key::ApiKey;
 
 use super::delete;
 use super::read;
-use super::rows::{ACTIVE, COLUMNS, SaveError, Saved, key_name, with_connection_values};
+use super::rows::{ACTIVE, COLUMNS, SaveError, key_name, with_connection_values};
 
 /// Changes connection `id`. Its name must stay free of the others;
 /// the key is removed when the address changed. One transaction: a new
 /// address is never stored while the key bound to the old one stays.
-pub fn connection(db: &UserDb, id: i64, connection: &Connection) -> Result<Saved, SaveError> {
-    connection.check().map_err(SaveError::Invalid)?;
-
-    if read::named(db, connection.name.trim())?.is_some_and(|other| other != id) {
+pub fn connection(db: &UserDb, id: i64, connection: &Connection) -> Result<SavedConnection, SaveError> {
+    if read::named(db, &connection.name)?.is_some_and(|other| other != id) {
         return Err(SaveError::NameTaken);
     }
 
@@ -58,7 +56,7 @@ pub fn connection(db: &UserDb, id: i64, connection: &Connection) -> Result<Saved
 
     transaction.commit().map_err(DbError::from)?;
 
-    Ok(Saved { id, key_removed: moved })
+    Ok(SavedConnection { id, key_removed: moved })
 }
 
 /// Makes a connection the active one; returns whether it exists.

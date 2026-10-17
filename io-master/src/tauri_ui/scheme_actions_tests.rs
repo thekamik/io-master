@@ -60,7 +60,7 @@ async fn fake_model(state: &UiState, answer: &str) -> FakeService {
 
     let connection = completions(&service);
     with_user_db(state, move |db| {
-        let id = crate::db::ai::connection::create::connection(db, &connection)?.id;
+        let id = crate::ai::api::connections::create(db, &connection)?.id;
         crate::db::ai::connection::update::api_key(db, id, &ApiKey::new("sk-test".to_owned()).unwrap())?;
         Ok(())
     })

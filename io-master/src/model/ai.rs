@@ -120,7 +120,52 @@ pub struct Connection {
     pub done_marker: String,
 }
 
+/// A connection as it is stored, with its number.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StoredConnection {
+    pub id: i64,
+    pub connection: Connection,
+    /// Whether an API key is stored for it (never the key itself).
+    pub has_key: bool,
+}
+
+/// What saving a connection did.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SavedConnection {
+    pub id: i64,
+    /// The API key was removed because the address changed.
+    pub key_removed: bool,
+}
+
 impl Connection {
+    /// The normal form of what is stored: the fields of one line
+    /// without spaces around them; the headers, the body, the message
+    /// template and the instructions as they were written. The only
+    /// place where a connection is trimmed (step 40).
+    pub fn normalized(&self) -> Connection {
+        let line = |text: &String| text.trim().to_owned();
+
+        Connection {
+            name: line(&self.name),
+            url: line(&self.url),
+            model: line(&self.model),
+            ca_certificate: line(&self.ca_certificate),
+            user_role: line(&self.user_role),
+            model_role: line(&self.model_role),
+            system_role: line(&self.system_role),
+            text_path: line(&self.text_path),
+            stop_path: line(&self.stop_path),
+            cut_reasons: line(&self.cut_reasons),
+            refused_reasons: line(&self.refused_reasons),
+            error_path: line(&self.error_path),
+            model_path: line(&self.model_path),
+            input_tokens_path: line(&self.input_tokens_path),
+            output_tokens_path: line(&self.output_tokens_path),
+            done_marker: line(&self.done_marker),
+            ..self.clone()
+        }
+    }
+
     /// The starting point of a new connection: the request and the
     /// answer of the chat API that most local servers offer
     /// (`/v1/chat/completions`, streamed). Every field can be
@@ -153,7 +198,7 @@ impl Connection {
 }
 
 /// A field of a connection: to say which one breaks a rule, and to
-/// explain one (`db/ai/presets/field_help.rs`).
+/// explain one (`ai/presets/field_help.rs`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Field {
     Name,

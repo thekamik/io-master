@@ -7,7 +7,7 @@
 //! the view says only whether one is stored (`has_key`); a key is
 //! sent alone, from a password field (`store_ai_key`).
 //!
-//! The presets (`db/ai/presets/read.rs`) come with the page as views of the
+//! The presets (`ai/presets.rs`) come with the page as views of the
 //! same shape: the page copies their fields into the form, as if the
 //! evaluator had typed them.
 
@@ -16,8 +16,8 @@ use serde::{Deserialize, Serialize};
 use crate::ai::api::checks::CheckReport;
 use crate::ai::api::completions::ReplyEnd;
 use crate::ai::api::completions::StopReason;
-use crate::db::ai::connection::rows::Stored;
-use crate::db::ai::presets::read::Preset;
+use crate::ai::presets::Preset;
+use crate::model::ai::StoredConnection;
 use crate::model::ai::{API_KEY, AnswerMode, Connection};
 
 use super::super::error::UiError;
@@ -89,8 +89,8 @@ impl ConnectionView {
     }
 }
 
-impl From<Stored> for ConnectionView {
-    fn from(stored: Stored) -> ConnectionView {
+impl From<StoredConnection> for ConnectionView {
+    fn from(stored: StoredConnection) -> ConnectionView {
         ConnectionView::new(Some(stored.id), stored.connection, stored.has_key)
     }
 }
@@ -130,12 +130,12 @@ impl From<Preset> for PresetView {
 }
 
 impl AiConfigView {
-    pub fn new(connections: Vec<Stored>, active: Option<i64>) -> AiConfigView {
+    pub fn new(connections: Vec<StoredConnection>, active: Option<i64>, presets: Vec<Preset>) -> AiConfigView {
         AiConfigView {
             connections: connections.into_iter().map(ConnectionView::from).collect(),
             active,
             template: ConnectionView::new(None, Connection::template(), false),
-            presets: crate::db::ai::presets::read::all().into_iter().map(PresetView::from).collect(),
+            presets: presets.into_iter().map(PresetView::from).collect(),
         }
     }
 }

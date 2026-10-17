@@ -8,7 +8,7 @@ use std::fs;
 use crate::db::ai::connection::{delete, update};
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
-use crate::model::ai::{AnswerMode, Field};
+use crate::model::ai::AnswerMode;
 use crate::model::api_key::ApiKey;
 use crate::security::random::fill_random;
 use crate::test_support::TempDir;
@@ -37,7 +37,7 @@ fn a_connection_is_saved_read_and_changed() {
     let db = database(&directory);
 
     let saved = connection(&db, &named("Local")).unwrap();
-    assert_eq!(saved, Saved { id: 1, key_removed: false });
+    assert_eq!(saved, SavedConnection { id: 1, key_removed: false });
 
     let stored = read::get(&db, 1).unwrap().unwrap();
     assert_eq!(stored.connection, named("Local"));
@@ -53,17 +53,6 @@ fn a_connection_is_saved_read_and_changed() {
     assert_eq!(read::get(&db, 1).unwrap().unwrap().connection, changed);
     assert_eq!(read::list(&db).unwrap().len(), 1);
     assert!(read::get(&db, 7).unwrap().is_none());
-}
-
-#[test]
-fn a_connection_that_breaks_a_rule_is_not_saved() {
-    let directory = TempDir::new();
-    let db = database(&directory);
-
-    let open = Connection { url: "http://192.168.1.10/v1/chat/completions".to_owned(), ..named("Lab") };
-
-    assert!(matches!(connection(&db, &open), Err(SaveError::Invalid(error)) if error.field == Field::Url));
-    assert!(read::list(&db).unwrap().is_empty());
 }
 
 #[test]

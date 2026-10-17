@@ -1,24 +1,21 @@
-//! Making a new AI connection. **A connection is stored only when it
-//! keeps the rules** ([`Connection::check`]); whether the service
-//! answers is not needed: a local model may be switched off while it
-//! is set up, and the check is a separate step (`ai/api/checks.rs`).
+//! Storing a new AI connection. Its fields are checked by
+//! `ai/api/connections.rs` before; here the rules of the stored data:
+//! a name of its own, and the first connection becomes the active one.
 
 use crate::db::error::DbError;
 use crate::db::user;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Connection;
+use crate::model::ai::{Connection, SavedConnection};
 
 use super::read;
-use super::rows::{ACTIVE, COLUMNS, SaveError, Saved, with_connection_values};
+use super::rows::{ACTIVE, COLUMNS, SaveError, with_connection_values};
 
 /// Stores a new connection. Its name must be free; the first
 /// connection becomes the active one. One transaction: the row and
 /// the choice of the active connection are stored together or not at
 /// all.
-pub fn connection(db: &UserDb, connection: &Connection) -> Result<Saved, SaveError> {
-    connection.check().map_err(SaveError::Invalid)?;
-
-    if read::named(db, connection.name.trim())?.is_some() {
+pub fn connection(db: &UserDb, connection: &Connection) -> Result<SavedConnection, SaveError> {
+    if read::named(db, &connection.name)?.is_some() {
         return Err(SaveError::NameTaken);
     }
 
@@ -44,7 +41,7 @@ pub fn connection(db: &UserDb, connection: &Connection) -> Result<Saved, SaveErr
 
     transaction.commit().map_err(DbError::from)?;
 
-    Ok(Saved { id, key_removed: false })
+    Ok(SavedConnection { id, key_removed: false })
 }
 
 // Unit tests, in their own file to keep this one readable. They

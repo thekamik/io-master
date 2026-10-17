@@ -15,6 +15,10 @@
 
 use crate::model::ai::{AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, DEFAULT_SYSTEM_PROMPT};
 
+// The help for the fields of a connection, for a chatbot of the
+// evaluator's choice.
+pub mod field_help;
+
 /// A preset.
 #[derive(Debug, Clone)]
 pub struct Preset {
@@ -199,5 +203,5 @@ fn google() -> Preset {
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "read_tests.rs"]
+#[path = "presets_tests.rs"]
 mod tests;

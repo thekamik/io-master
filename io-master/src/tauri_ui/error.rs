@@ -10,9 +10,9 @@ use std::fmt;
 
 use crate::accounts::accounts::AccountError;
 use crate::ai::api::completions::AiError;
+use crate::ai::api::connections::ConnectionSaveError;
 use crate::ai::api::roles::ModelError;
 use crate::ai::chat::conversation::SendError;
-use crate::db::ai::connection::rows::SaveError;
 use crate::db::error::DbError;
 use crate::installation::lifecycle::LifecycleError;
 use crate::model::ai::{ConnectionError, Field};
@@ -112,15 +112,15 @@ impl From<ModelError> for UiError {
     }
 }
 
-impl From<SaveError> for UiError {
-    fn from(error: SaveError) -> UiError {
+impl From<ConnectionSaveError> for UiError {
+    fn from(error: ConnectionSaveError) -> UiError {
         match error {
-            SaveError::Invalid(error) => UiError::Connection(error),
-            SaveError::NameTaken => {
+            ConnectionSaveError::Invalid(error) => UiError::Connection(error),
+            ConnectionSaveError::NameTaken => {
                 UiError::Connection(ConnectionError { field: Field::Name, reason: error.to_string() })
             }
-            SaveError::NoSuchConnection => UiError::Invalid(error.to_string()),
-            SaveError::Db(error) => UiError::Failed(error.to_string()),
+            ConnectionSaveError::NoSuchConnection => UiError::Invalid(error.to_string()),
+            ConnectionSaveError::Db(error) => UiError::Failed(error.to_string()),
         }
     }
 }

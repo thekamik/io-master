@@ -4,5 +4,4 @@ pub mod chats;
 pub mod connection;
 pub mod instructions;
 pub mod journal;
-pub mod presets;
 pub mod roles;
