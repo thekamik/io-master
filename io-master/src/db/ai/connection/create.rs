@@ -8,7 +8,7 @@ use crate::db::user::database::UserDb;
 use crate::model::ai::Connection;
 
 use super::read;
-use super::rows::{ACTIVE, SaveError, Saved, with_connection_values};
+use super::rows::{ACTIVE, COLUMNS, SaveError, Saved, with_connection_values};
 
 /// Stores a new connection. Its name must be free; the first
 /// connection becomes the active one. One transaction: the row and
@@ -25,11 +25,11 @@ pub fn connection(db: &UserDb, connection: &Connection) -> Result<Saved, SaveErr
 
     with_connection_values(connection, |values| {
         transaction.execute(
-            "INSERT INTO ai_connections (name, url, model, ca_certificate, headers, body, user_role, \
-             model_role, system_role, system_prompt, answer, text_path, stop_path, cut_reasons, \
-             refused_reasons, error_path, model_path, input_tokens_path, output_tokens_path, done_marker, \
-             message_template) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21)",
+            &format!(
+                "INSERT INTO ai_connections ({}) VALUES ({})",
+                COLUMNS.join(", "),
+                COLUMNS.map(|column| format!(":{column}")).join(", ")
+            ),
             values,
         )
     })

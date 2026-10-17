@@ -2,7 +2,8 @@
 //! evaluation: kept apart, marked AI, never a result until the
 //! evaluator accepts it (`read.rs`).
 
-use crate::db::evaluations::create::{self as store, Step};
+use crate::db::evaluations::create as store;
+use crate::db::evaluations::journal::create::JournalStep;
 use crate::db::user::database::UserDb;
 use crate::evaluation::error::EvaluationError;
 use crate::evaluation::workspace::OpenEvaluation;
@@ -34,8 +35,13 @@ pub fn propose(
 
     let evaluation = open.data().evaluation.id;
     let actor = Actor::Model(model.to_owned());
-    let step =
-        Step { actor: &actor, action: JournalAction::Proposed, tile: Some(tile), field: Some(field), detail: text };
+    let step = JournalStep {
+        actor: &actor,
+        action: JournalAction::Proposed,
+        tile: Some(tile),
+        field: Some(field),
+        detail: text,
+    };
 
     let id = store::proposal(db, evaluation, tile, field, text, model, &step)?;
 

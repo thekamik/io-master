@@ -8,7 +8,7 @@ use std::fmt;
 use rusqlite::Row;
 use rusqlite::types::ToSql;
 
-use crate::db::error::DbError;
+use crate::db::error::{DbError, named};
 use crate::model::ai::{AnswerMode, Connection, ConnectionError};
 
 /// Name of the setting with the active connection (`db/user/`).
@@ -68,89 +68,90 @@ impl From<DbError> for SaveError {
     }
 }
 
-/// The columns of a connection, in the order of [`connection_from_row`].
-pub(super) const CONNECTION_COLUMNS: &str = "id, name, url, model, ca_certificate, headers, body, user_role, \
-model_role, system_role, system_prompt, answer, text_path, stop_path, cut_reasons, refused_reasons, error_path, \
-model_path, input_tokens_path, output_tokens_path, done_marker, message_template";
-
-/// A connection from a row with [`CONNECTION_COLUMNS`].
+/// A connection from a row of `ai_connections`, with its number.
 pub(super) fn connection_from_row(row: &Row<'_>) -> rusqlite::Result<(i64, Connection)> {
-    let answer: String = row.get(11)?;
+    let answer: String = row.get("answer")?;
 
     Ok((
-        row.get(0)?,
+        row.get("id")?,
         Connection {
-            name: row.get(1)?,
-            url: row.get(2)?,
-            model: row.get(3)?,
-            ca_certificate: row.get(4)?,
-            headers: row.get(5)?,
-            body: row.get(6)?,
-            user_role: row.get(7)?,
-            model_role: row.get(8)?,
-            system_role: row.get(9)?,
-            system_prompt: row.get(10)?,
-            // Only valid names are written; a changed database falls
-            // back to the stream.
-            answer: AnswerMode::from_name(&answer).unwrap_or(AnswerMode::Stream),
-            text_path: row.get(12)?,
-            stop_path: row.get(13)?,
-            cut_reasons: row.get(14)?,
-            refused_reasons: row.get(15)?,
-            error_path: row.get(16)?,
-            model_path: row.get(17)?,
-            input_tokens_path: row.get(18)?,
-            output_tokens_path: row.get(19)?,
-            done_marker: row.get(20)?,
-            message_template: row.get(21)?,
+            name: row.get("name")?,
+            url: row.get("url")?,
+            model: row.get("model")?,
+            ca_certificate: row.get("ca_certificate")?,
+            headers: row.get("headers")?,
+            body: row.get("body")?,
+            user_role: row.get("user_role")?,
+            model_role: row.get("model_role")?,
+            system_role: row.get("system_role")?,
+            system_prompt: row.get("system_prompt")?,
+            answer: named("ai_connections", "answer", &answer, AnswerMode::from_name)?,
+            text_path: row.get("text_path")?,
+            stop_path: row.get("stop_path")?,
+            cut_reasons: row.get("cut_reasons")?,
+            refused_reasons: row.get("refused_reasons")?,
+            error_path: row.get("error_path")?,
+            model_path: row.get("model_path")?,
+            input_tokens_path: row.get("input_tokens_path")?,
+            output_tokens_path: row.get("output_tokens_path")?,
+            done_marker: row.get("done_marker")?,
+            message_template: row.get("message_template")?,
         },
     ))
 }
 
-/// Calls `write` with the values of a connection as they are stored
-/// (the single-line fields trimmed), in the order of the columns of
-/// the INSERT and the UPDATE (?1 to ?21).
-pub(super) fn with_connection_values<T>(connection: &Connection, write: impl FnOnce(&[&dyn ToSql]) -> T) -> T {
-    let name = connection.name.trim();
-    let url = connection.url.trim();
-    let model = connection.model.trim();
-    let ca_certificate = connection.ca_certificate.trim();
-    let user_role = connection.user_role.trim();
-    let model_role = connection.model_role.trim();
-    let system_role = connection.system_role.trim();
-    let answer = connection.answer.name();
-    let text_path = connection.text_path.trim();
-    let stop_path = connection.stop_path.trim();
-    let cut_reasons = connection.cut_reasons.trim();
-    let refused_reasons = connection.refused_reasons.trim();
-    let error_path = connection.error_path.trim();
-    let model_path = connection.model_path.trim();
-    let input_tokens_path = connection.input_tokens_path.trim();
-    let output_tokens_path = connection.output_tokens_path.trim();
-    let done_marker = connection.done_marker.trim();
+/// The columns a connection is stored in (all but `id` and
+/// `key_origin`); the parameter of each is its name with a colon.
+pub(super) const COLUMNS: [&str; 21] = [
+    "name",
+    "url",
+    "model",
+    "ca_certificate",
+    "headers",
+    "body",
+    "user_role",
+    "model_role",
+    "system_role",
+    "system_prompt",
+    "answer",
+    "text_path",
+    "stop_path",
+    "cut_reasons",
+    "refused_reasons",
+    "error_path",
+    "model_path",
+    "input_tokens_path",
+    "output_tokens_path",
+    "done_marker",
+    "message_template",
+];
 
-    let values: [&dyn ToSql; 21] = [
-        &name,
-        &url,
-        &model,
-        &ca_certificate,
-        &connection.headers,
-        &connection.body,
-        &user_role,
-        &model_role,
-        &system_role,
-        &connection.system_prompt,
-        &answer,
-        &text_path,
-        &stop_path,
-        &cut_reasons,
-        &refused_reasons,
-        &error_path,
-        &model_path,
-        &input_tokens_path,
-        &output_tokens_path,
-        &done_marker,
-        &connection.message_template,
+/// Calls `write` with the values of a connection as they are stored
+/// (the single-line fields trimmed), by the names of [`COLUMNS`].
+pub(super) fn with_connection_values<T>(connection: &Connection, write: impl FnOnce(&[(&str, &dyn ToSql)]) -> T) -> T {
+    let answer = connection.answer.name();
+    let values: [(&str, &dyn ToSql); 21] = [
+        (":name", &connection.name.trim()),
+        (":url", &connection.url.trim()),
+        (":model", &connection.model.trim()),
+        (":ca_certificate", &connection.ca_certificate.trim()),
+        (":headers", &connection.headers),
+        (":body", &connection.body),
+        (":user_role", &connection.user_role.trim()),
+        (":model_role", &connection.model_role.trim()),
+        (":system_role", &connection.system_role.trim()),
+        (":system_prompt", &connection.system_prompt),
+        (":answer", &answer),
+        (":text_path", &connection.text_path.trim()),
+        (":stop_path", &connection.stop_path.trim()),
+        (":cut_reasons", &connection.cut_reasons.trim()),
+        (":refused_reasons", &connection.refused_reasons.trim()),
+        (":error_path", &connection.error_path.trim()),
+        (":model_path", &connection.model_path.trim()),
+        (":input_tokens_path", &connection.input_tokens_path.trim()),
+        (":output_tokens_path", &connection.output_tokens_path.trim()),
+        (":done_marker", &connection.done_marker.trim()),
+        (":message_template", &connection.message_template),
     ];
 
     write(&values)

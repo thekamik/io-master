@@ -22,7 +22,8 @@
 //! A proposal of the AI that no person accepted never enters an
 //! evaluation (P1 of `architecture.md`, user 2026-10-17).
 
-use crate::db::evaluations::create::{self as store, Copy, Step};
+use crate::db::evaluations::create::{self as store, FrozenCopy};
+use crate::db::evaluations::journal::create::JournalStep;
 use crate::db::evaluations::read as stored;
 use crate::db::user::database::UserDb;
 use crate::evaluation::error::EvaluationError;
@@ -189,7 +190,7 @@ fn copy(db: &UserDb, data: &ProjectData, fields: &EvaluationFields) -> Result<Im
         skipped.links
     );
 
-    let copy = Copy { documents: &project.documents, schemes: &schemes, tiles: &tiles, links: &links };
+    let copy = FrozenCopy { documents: &project.documents, schemes: &schemes, tiles: &tiles, links: &links };
 
     let id = create(db, fields, &origin, &copy, &detail)?;
 
@@ -204,7 +205,7 @@ fn create(
     db: &UserDb,
     fields: &EvaluationFields,
     origin: &Origin,
-    copy: &Copy<'_>,
+    copy: &FrozenCopy<'_>,
     detail: &str,
 ) -> Result<i64, EvaluationError> {
     // The normal form (model/): trimmed here, stored as it is.
@@ -215,7 +216,8 @@ fn create(
         return Err(EvaluationError::NameTaken);
     }
 
-    let step = Step { actor: &Actor::Evaluator, action: JournalAction::Imported, tile: None, field: None, detail };
+    let step =
+        JournalStep { actor: &Actor::Evaluator, action: JournalAction::Imported, tile: None, field: None, detail };
 
     Ok(store::evaluation(db, fields, origin, copy, &step)?)
 }

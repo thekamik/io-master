@@ -46,15 +46,16 @@ impl Ending {
         }
     }
 
-    /// The ending from its name; an unknown name counts as a
-    /// complete reply.
-    pub fn from_name(name: &str) -> Ending {
+    /// The ending with the name `name`; `None` for a name the
+    /// program never writes.
+    pub fn from_name(name: &str) -> Option<Ending> {
         match name {
-            "cut" => Ending::Cut,
-            "stopped" => Ending::Stopped,
-            "refused" => Ending::Refused,
-            "failed" => Ending::Failed,
-            _ => Ending::Complete,
+            "complete" => Some(Ending::Complete),
+            "cut" => Some(Ending::Cut),
+            "stopped" => Some(Ending::Stopped),
+            "refused" => Some(Ending::Refused),
+            "failed" => Some(Ending::Failed),
+            _ => None,
         }
     }
 }

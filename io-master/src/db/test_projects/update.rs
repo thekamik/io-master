@@ -1,25 +1,44 @@
 //! Changing test projects, schemes and tiles. The rules of
-//! `model/test_projects.rs` are checked by the callers before. A
-//! function that changes a row that does not exist returns `false`.
+//! `model/test_projects/rules.rs` are checked by the callers
+//! (`test_projects/`) before. A change of a row that does not exist is
+//! the error `DbError::NoRow`; the functions that return `bool` say
+//! whether the row existed instead.
 
-use rusqlite::params;
+use std::collections::HashMap;
+
+use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::test_projects::{Link, ProjectFields, ProposalState, SchemeFields, Source, Tile, TileFields};
 
-use super::rows::{INSERT_TILE, write_documents, write_scheme, write_sources, write_tile};
+use super::create::{documents, insert_tile, sources};
+use super::delete::content;
+use super::rows::sections_text;
+
+/// The error for a change of `table` that found no row `id`.
+fn changed(count: usize, table: &'static str, id: i64) -> Result<(), DbError> {
+    if count == 0 { Err(DbError::NoRow { table, id }) } else { Ok(()) }
+}
 
 /// Changes the fields and the documents of a project, in one
 /// transaction.
 pub fn project(db: &UserDb, id: i64, fields: &ProjectFields) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
-    transaction.execute(
-        "UPDATE projects SET name = ?1, version = ?2, description = ?3, author = ?4 WHERE id = ?5",
-        params![fields.name, fields.version, fields.description, fields.author, id],
+    let count = transaction.execute(
+        "UPDATE projects SET name = :name, version = :version, description = :description, author = :author \
+         WHERE id = :id",
+        named_params! {
+            ":id": id,
+            ":name": fields.name,
+            ":version": fields.version,
+            ":description": fields.description,
+            ":author": fields.author,
+        },
     )?;
-    write_documents(&transaction, id, &fields.documents)?;
+    changed(count, "projects", id)?;
+    documents(&transaction, id, &fields.documents)?;
     transaction.commit()?;
 
     Ok(())
@@ -27,54 +46,79 @@ pub fn project(db: &UserDb, id: i64, fields: &ProjectFields) -> Result<(), DbErr
 
 /// Marks a project ready, or a draft again.
 pub fn ready(db: &UserDb, id: i64, ready: bool) -> Result<(), DbError> {
-    db.connection().execute("UPDATE projects SET ready = ?1 WHERE id = ?2", params![ready, id])?;
+    let count = db
+        .connection()
+        .execute("UPDATE projects SET ready = :ready WHERE id = :id", named_params! { ":ready": ready, ":id": id })?;
 
-    Ok(())
+    changed(count, "projects", id)
 }
 
 /// Changes the fields of a scheme.
 pub fn scheme(db: &UserDb, id: i64, fields: &SchemeFields) -> Result<(), DbError> {
-    write_scheme(
-        db.connection(),
-        "UPDATE schemes SET number = ?2, name = ?3, state = ?4, document_id = ?5, first_page = ?6, last_page = ?7 \
-         WHERE id = ?1",
-        id,
-        fields,
+    let count = db.connection().execute(
+        "UPDATE schemes SET number = :number, name = :name, state = :state, document_id = :document, \
+         first_page = :first_page, last_page = :last_page WHERE id = :id",
+        named_params! {
+            ":id": id,
+            ":number": fields.number,
+            ":name": fields.name,
+            ":state": fields.state.name(),
+            ":document": fields.pages.map(|pages| pages.document_id),
+            ":first_page": fields.pages.map(|pages| pages.first_page),
+            ":last_page": fields.pages.map(|pages| pages.last_page),
+        },
     )?;
 
-    Ok(())
+    changed(count, "schemes", id)
 }
 
-/// Marks a scheme proposed by the AI accepted.
+/// Marks a scheme proposed by the AI accepted; returns whether it
+/// exists.
 pub fn accept_scheme(db: &UserDb, id: i64) -> Result<bool, DbError> {
-    Ok(db
-        .connection()
-        .execute("UPDATE schemes SET state = ?1 WHERE id = ?2", params![ProposalState::Accepted.name(), id])?
-        > 0)
+    Ok(db.connection().execute(
+        "UPDATE schemes SET state = :state WHERE id = :id",
+        named_params! { ":state": ProposalState::Accepted.name(), ":id": id },
+    )? > 0)
 }
 
 /// Changes a tile and replaces its sources (already checked on their
 /// pages), in one transaction.
-pub fn tile(db: &UserDb, id: i64, fields: &TileFields, sources: &[Source]) -> Result<(), DbError> {
+pub fn tile(db: &UserDb, id: i64, fields: &TileFields, new_sources: &[Source]) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
-    write_tile(
-        &transaction,
-        "UPDATE tiles SET kind = ?2, identifier = ?3, title = ?4, description = ?5, place = ?6, state = ?7, \
-         external_document = ?8, external_place = ?9, sections = ?10, instructions = ?11, x = ?12, y = ?13 \
-         WHERE id = ?1",
-        id,
-        fields,
+    let count = transaction.execute(
+        "UPDATE tiles SET kind = :kind, identifier = :identifier, title = :title, description = :description, \
+         place = :place, state = :state, external_document = :external_document, external_place = :external_place, \
+         sections = :sections, instructions = :instructions, x = :x, y = :y WHERE id = :id",
+        named_params! {
+            ":id": id,
+            ":kind": fields.kind.name(),
+            ":identifier": fields.identifier,
+            ":title": fields.title,
+            ":description": fields.description,
+            ":place": fields.place,
+            ":state": fields.state.name(),
+            ":external_document": fields.external.as_ref().map(|external| external.document.as_str()),
+            ":external_place": fields.external.as_ref().map(|external| external.place.as_str()),
+            ":sections": sections_text(&fields.sections),
+            ":instructions": fields.instructions,
+            ":x": fields.x,
+            ":y": fields.y,
+        },
     )?;
-    write_sources(&transaction, id, sources)?;
+    changed(count, "tiles", id)?;
+    sources(&transaction, id, new_sources)?;
     transaction.commit()?;
 
     Ok(())
 }
 
-/// Moves a tile on the canvas.
+/// Moves a tile on the canvas; returns whether it exists.
 pub fn tile_position(db: &UserDb, id: i64, x: f64, y: f64) -> Result<bool, DbError> {
-    Ok(db.connection().execute("UPDATE tiles SET x = ?1, y = ?2 WHERE id = ?3", params![x, y, id])? > 0)
+    Ok(db
+        .connection()
+        .execute("UPDATE tiles SET x = :x, y = :y WHERE id = :id", named_params! { ":x": x, ":y": y, ":id": id })?
+        > 0)
 }
 
 /// Moves tiles to the scheme `scheme`, in one transaction.
@@ -82,7 +126,11 @@ pub fn tiles_scheme(db: &UserDb, ids: &[i64], scheme: i64) -> Result<(), DbError
     let transaction = db.connection().unchecked_transaction()?;
 
     for id in ids {
-        transaction.execute("UPDATE tiles SET scheme_id = ?1 WHERE id = ?2", params![scheme, id])?;
+        let count = transaction.execute(
+            "UPDATE tiles SET scheme_id = :scheme WHERE id = :id",
+            named_params! { ":scheme": scheme, ":id": id },
+        )?;
+        changed(count, "tiles", *id)?;
     }
 
     transaction.commit()?;
@@ -90,12 +138,12 @@ pub fn tiles_scheme(db: &UserDb, ids: &[i64], scheme: i64) -> Result<(), DbError
     Ok(())
 }
 
-/// Marks a tile proposed by the AI accepted.
+/// Marks a tile proposed by the AI accepted; returns whether it exists.
 pub fn accept_tile(db: &UserDb, id: i64) -> Result<bool, DbError> {
-    Ok(db
-        .connection()
-        .execute("UPDATE tiles SET state = ?1 WHERE id = ?2", params![ProposalState::Accepted.name(), id])?
-        > 0)
+    Ok(db.connection().execute(
+        "UPDATE tiles SET state = :state WHERE id = :id",
+        named_params! { ":state": ProposalState::Accepted.name(), ":id": id },
+    )? > 0)
 }
 
 /// Replaces the tiles and links of `project` by `tiles` and `links`,
@@ -107,32 +155,23 @@ pub fn accept_tile(db: &UserDb, id: i64) -> Result<bool, DbError> {
 pub fn replace_content(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Result<Vec<(i64, i64)>, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
-    transaction.execute(
-        "DELETE FROM tile_sources WHERE tile_id IN \
-         (SELECT t.id FROM tiles t JOIN schemes c ON c.id = t.scheme_id WHERE c.project_id = ?1)",
-        [project],
-    )?;
-    transaction.execute("DELETE FROM links WHERE project_id = ?1", [project])?;
-    transaction
-        .execute("DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)", [project])?;
+    content(&transaction, project)?;
 
     let mut numbers = Vec::with_capacity(tiles.len());
 
     for tile in tiles {
-        write_tile(&transaction, INSERT_TILE, tile.scheme, &tile.fields)?;
-
-        let id = transaction.last_insert_rowid();
-        write_sources(&transaction, id, &tile.fields.sources)?;
+        let id = insert_tile(&transaction, None, tile.scheme, &tile.fields)?;
+        sources(&transaction, id, &tile.fields.sources)?;
         numbers.push((tile.id, id));
     }
 
-    let new = |old: i64| numbers.iter().find(|(from, _)| *from == old).map(|(_, to)| *to);
+    let new: HashMap<i64, i64> = numbers.iter().copied().collect();
 
     for link in links {
-        if let (Some(from), Some(to)) = (new(link.from), new(link.to)) {
+        if let (Some(from), Some(to)) = (new.get(&link.from), new.get(&link.to)) {
             transaction.execute(
-                "INSERT INTO links (project_id, from_tile, to_tile) VALUES (?1, ?2, ?3)",
-                params![project, from, to],
+                "INSERT INTO links (project_id, from_tile, to_tile) VALUES (:project, :from, :to)",
+                named_params! { ":project": project, ":from": from, ":to": to },
             )?;
         }
     }
@@ -150,28 +189,17 @@ pub fn replace_content(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]
 pub fn restore_content(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
-    transaction.execute(
-        "DELETE FROM tile_sources WHERE tile_id IN \
-         (SELECT t.id FROM tiles t JOIN schemes c ON c.id = t.scheme_id WHERE c.project_id = ?1)",
-        [project],
-    )?;
-    transaction.execute("DELETE FROM links WHERE project_id = ?1", [project])?;
-    transaction
-        .execute("DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)", [project])?;
+    content(&transaction, project)?;
 
     for tile in tiles {
-        write_tile(&transaction, INSERT_TILE, tile.scheme, &tile.fields)?;
-
-        // The tile gets back the number it had.
-        let given = transaction.last_insert_rowid();
-        transaction.execute("UPDATE tiles SET id = ?1 WHERE id = ?2", params![tile.id, given])?;
-        write_sources(&transaction, tile.id, &tile.fields.sources)?;
+        insert_tile(&transaction, Some(tile.id), tile.scheme, &tile.fields)?;
+        sources(&transaction, tile.id, &tile.fields.sources)?;
     }
 
     for link in links {
         transaction.execute(
-            "INSERT INTO links (id, project_id, from_tile, to_tile) VALUES (?1, ?2, ?3, ?4)",
-            params![link.id, project, link.from, link.to],
+            "INSERT INTO links (id, project_id, from_tile, to_tile) VALUES (:id, :project, :from, :to)",
+            named_params! { ":id": link.id, ":project": project, ":from": link.from, ":to": link.to },
         )?;
     }
 

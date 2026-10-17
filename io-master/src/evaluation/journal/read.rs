@@ -4,18 +4,18 @@
 //!
 //! The journal is **only added to**. An entry is written by the
 //! storage itself, in the same transaction as the change it records
-//! (`db/evaluations/create.rs`, `journal`); nothing changes or removes
+//! (`db/evaluations/journal/create.rs`); nothing changes or removes
 //! an entry, and the database refuses it as well (two triggers,
 //! `db/evaluations/schema.rs`): an entry is removed only with its
-//! whole evaluation (`projects.rs`, `delete`).
+//! whole evaluation (`evaluation/projects/delete.rs`).
 
 use crate::db::error::DbError;
-use crate::db::evaluations::read;
+use crate::db::evaluations::journal::read;
 use crate::db::user::database::UserDb;
 
 use crate::model::evaluations::JournalEntry;
 
 /// The journal of an evaluation, the oldest entry first.
 pub fn of(db: &UserDb, evaluation: i64) -> Result<Vec<JournalEntry>, DbError> {
-    read::journal(db, evaluation)
+    read::entries(db, evaluation)
 }

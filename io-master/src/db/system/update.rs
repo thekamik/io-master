@@ -27,6 +27,6 @@ impl SystemDb {
             ],
         )?;
 
-        if changed == 1 { Ok(()) } else { Err(DbError::Sql(format!("no account {id}"))) }
+        if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "users", id }) }
     }
 }

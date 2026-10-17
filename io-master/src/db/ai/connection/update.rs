@@ -15,7 +15,7 @@ use crate::model::api_key::ApiKey;
 
 use super::delete;
 use super::read;
-use super::rows::{ACTIVE, SaveError, Saved, key_name, with_connection_values};
+use super::rows::{ACTIVE, COLUMNS, SaveError, Saved, key_name, with_connection_values};
 
 /// Changes connection `id`. Its name must stay free of the others;
 /// the key is removed when the address changed. One transaction: a new
@@ -35,12 +35,11 @@ pub fn connection(db: &UserDb, id: i64, connection: &Connection) -> Result<Saved
 
     with_connection_values(connection, |values| {
         transaction.execute(
-            "UPDATE ai_connections SET name = ?1, url = ?2, model = ?3, ca_certificate = ?4, headers = ?5, \
-             body = ?6, user_role = ?7, model_role = ?8, system_role = ?9, system_prompt = ?10, answer = ?11, \
-             text_path = ?12, stop_path = ?13, cut_reasons = ?14, refused_reasons = ?15, error_path = ?16, \
-             model_path = ?17, input_tokens_path = ?18, output_tokens_path = ?19, done_marker = ?20, \
-             message_template = ?21 WHERE id = ?22",
-            &[values, &[&id as &dyn ToSql]].concat()[..],
+            &format!(
+                "UPDATE ai_connections SET {} WHERE id = :id",
+                COLUMNS.map(|column| format!("{column} = :{column}")).join(", ")
+            ),
+            &[values, &[(":id", &id as &dyn ToSql)]].concat()[..],
         )
     })
     .map_err(|error| SaveError::Db(error.into()))?;

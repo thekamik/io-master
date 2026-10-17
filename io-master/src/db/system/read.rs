@@ -2,7 +2,7 @@
 
 use rusqlite::OptionalExtension;
 
-use crate::db::error::DbError;
+use crate::db::error::{Corrupt, DbError};
 use crate::model::installation::{ID_LENGTH, Installation, InstallationId, Role};
 
 use super::database::SystemDb;
@@ -15,10 +15,16 @@ impl SystemDb {
             self.connection()
                 .query_row("SELECT id, role FROM installation", [], |row| Ok((row.get(0)?, row.get(1)?)))?;
 
-        let id: InstallationId =
-            id.try_into().map_err(|_| DbError::Sql(format!("the identifier does not have {ID_LENGTH} bytes")))?;
+        let id: InstallationId = id.try_into().map_err(|id: Vec<u8>| {
+            DbError::Corrupt(Corrupt {
+                table: "installation",
+                column: "id",
+                value: format!("{} bytes, not {ID_LENGTH}", id.len()),
+            })
+        })?;
 
-        let role = Role::from_name(&role).ok_or_else(|| DbError::Sql(format!("unknown role '{role}'")))?;
+        let role = Role::from_name(&role)
+            .ok_or_else(|| DbError::Corrupt(Corrupt { table: "installation", column: "role", value: role.clone() }))?;
 
         Ok(Installation { id, role })
     }

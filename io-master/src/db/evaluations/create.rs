@@ -1,61 +1,25 @@
-//! Creating evaluation projects, proposals of the AI, and entries of
-//! the journal. The rules are checked by `evaluation/` before.
-//!
-//! **The journal is only added to** ([`journal`]): no file of this
-//! folder changes or removes an entry, and the database refuses it as
-//! well (two triggers, `schema.rs`). An entry is written in the same
-//! transaction as the change it records, so there is never a change
-//! without its entry, nor an entry of a change that did not happen.
+//! Creating evaluation projects and proposals of the AI, each with its
+//! entry of the journal (`journal/create.rs`) in one transaction. The
+//! rules are checked by `evaluation/` before, on the normal form of the
+//! fields; this file writes what it gets.
 
 use std::collections::HashMap;
 
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, named_params};
 
 use crate::db::error::DbError;
+use crate::db::test_projects::rows::sections_text;
 use crate::db::user::database::UserDb;
-use crate::model::evaluations::{Actor, EvaluationFields, JournalAction, Origin, ResultField};
+use crate::model::evaluations::{EvaluationFields, Origin, ResultField};
 use crate::model::test_projects::{Link, Scheme, Tile};
 
-use super::rows::actor_columns;
-
-/// One entry of the journal to write.
-#[derive(Debug, Clone)]
-pub struct Step<'a> {
-    pub actor: &'a Actor,
-    pub action: JournalAction,
-    pub tile: Option<i64>,
-    pub field: Option<ResultField>,
-    pub detail: &'a str,
-}
-
-/// Adds an entry to the journal of `evaluation`. `connection` is the
-/// open transaction of the change the entry records (a `Transaction`
-/// dereferences to a `Connection`).
-pub(super) fn journal(connection: &Connection, evaluation: i64, step: &Step<'_>) -> rusqlite::Result<()> {
-    let (actor, model) = actor_columns(step.actor);
-
-    connection.execute(
-        "INSERT INTO evaluation_journal (evaluation_id, actor, model, action, tile_id, field, detail) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-        params![
-            evaluation,
-            actor,
-            model,
-            step.action.name(),
-            step.tile,
-            step.field.map(ResultField::name),
-            step.detail
-        ],
-    )?;
-
-    Ok(())
-}
+use super::journal::create::{JournalStep, entry};
 
 /// The frozen structure of a new evaluation, with the numbers it had
 /// in its source: tiles name their scheme, links their tiles, by those
 /// numbers; sources and pages name loaded documents.
 #[derive(Debug, Clone)]
-pub struct Copy<'a> {
+pub struct FrozenCopy<'a> {
     pub documents: &'a [i64],
     pub schemes: &'a [Scheme],
     pub tiles: &'a [Tile],
@@ -69,31 +33,32 @@ pub fn evaluation(
     db: &UserDb,
     fields: &EvaluationFields,
     origin: &Origin,
-    copy: &Copy<'_>,
-    step: &Step<'_>,
+    copy: &FrozenCopy<'_>,
+    step: &JournalStep<'_>,
 ) -> Result<i64, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
     transaction.execute(
         "INSERT INTO evaluations (name, product, product_version, manufacturer, evaluator, \
          source_name, source_version, source_author, source_description) \
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
-        params![
-            fields.name,
-            fields.product,
-            fields.product_version,
-            fields.manufacturer,
-            fields.evaluator,
-            origin.name,
-            origin.version,
-            origin.author,
-            origin.description
-        ],
+         VALUES (:name, :product, :product_version, :manufacturer, :evaluator, \
+         :source_name, :source_version, :source_author, :source_description)",
+        named_params! {
+            ":name": fields.name,
+            ":product": fields.product,
+            ":product_version": fields.product_version,
+            ":manufacturer": fields.manufacturer,
+            ":evaluator": fields.evaluator,
+            ":source_name": origin.name,
+            ":source_version": origin.version,
+            ":source_author": origin.author,
+            ":source_description": origin.description,
+        },
     )?;
 
     let id = transaction.last_insert_rowid();
     write_copy(&transaction, id, copy)?;
-    journal(&transaction, id, step)?;
+    entry(&transaction, id, step)?;
     transaction.commit()?;
 
     Ok(id)
@@ -101,11 +66,12 @@ pub fn evaluation(
 
 /// Writes the documents, schemes, tiles with their sources and links
 /// of evaluation `id`, numbering them anew.
-fn write_copy(connection: &Connection, id: i64, copy: &Copy<'_>) -> Result<(), DbError> {
+fn write_copy(connection: &Connection, id: i64, copy: &FrozenCopy<'_>) -> Result<(), DbError> {
     for (position, document) in copy.documents.iter().enumerate() {
         connection.execute(
-            "INSERT OR IGNORE INTO evaluation_documents (evaluation_id, document_id, position) VALUES (?1, ?2, ?3)",
-            params![id, document, position as i64],
+            "INSERT INTO evaluation_documents (evaluation_id, document_id, position) \
+             VALUES (:evaluation, :document, :position)",
+            named_params! { ":evaluation": id, ":document": document, ":position": position as i64 },
         )?;
     }
 
@@ -117,16 +83,16 @@ fn write_copy(connection: &Connection, id: i64, copy: &Copy<'_>) -> Result<(), D
 
         connection.execute(
             "INSERT INTO evaluation_schemes (evaluation_id, number, name, document_id, first_page, last_page, \
-             position) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![
-                id,
-                scheme.fields.number,
-                scheme.fields.name,
-                pages.map(|pages| pages.document_id),
-                pages.map(|pages| pages.first_page),
-                pages.map(|pages| pages.last_page),
-                position as i64
-            ],
+             position) VALUES (:evaluation, :number, :name, :document, :first_page, :last_page, :position)",
+            named_params! {
+                ":evaluation": id,
+                ":number": scheme.fields.number,
+                ":name": scheme.fields.name,
+                ":document": pages.map(|pages| pages.document_id),
+                ":first_page": pages.map(|pages| pages.first_page),
+                ":last_page": pages.map(|pages| pages.last_page),
+                ":position": position as i64,
+            },
         )?;
         schemes.insert(scheme.id, connection.last_insert_rowid());
     }
@@ -136,29 +102,29 @@ fn write_copy(connection: &Connection, id: i64, copy: &Copy<'_>) -> Result<(), D
     for tile in copy.tiles {
         let scheme = *schemes
             .get(&tile.scheme)
-            .ok_or_else(|| DbError::Sql(format!("tile {} names a scheme that is not copied", tile.id)))?;
+            .ok_or_else(|| DbError::Inconsistent(format!("tile {} names a scheme that is not copied", tile.id)))?;
         let fields = &tile.fields;
-        let sections: Vec<&str> = fields.sections.iter().map(|section| section.name()).collect();
 
         connection.execute(
             "INSERT INTO evaluation_tiles (evaluation_id, scheme_id, kind, identifier, title, description, place, \
              external_document, external_place, sections, instructions, x, y) \
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
-            params![
-                id,
-                scheme,
-                fields.kind.name(),
-                fields.identifier,
-                fields.title,
-                fields.description,
-                fields.place,
-                fields.external.as_ref().map(|external| external.document.as_str()),
-                fields.external.as_ref().map(|external| external.place.as_str()),
-                sections.join(","),
-                fields.instructions,
-                fields.x,
-                fields.y
-            ],
+             VALUES (:evaluation, :scheme, :kind, :identifier, :title, :description, :place, \
+             :external_document, :external_place, :sections, :instructions, :x, :y)",
+            named_params! {
+                ":evaluation": id,
+                ":scheme": scheme,
+                ":kind": fields.kind.name(),
+                ":identifier": fields.identifier,
+                ":title": fields.title,
+                ":description": fields.description,
+                ":place": fields.place,
+                ":external_document": fields.external.as_ref().map(|external| external.document.as_str()),
+                ":external_place": fields.external.as_ref().map(|external| external.place.as_str()),
+                ":sections": sections_text(&fields.sections),
+                ":instructions": fields.instructions,
+                ":x": fields.x,
+                ":y": fields.y,
+            },
         )?;
 
         let new = connection.last_insert_rowid();
@@ -167,20 +133,26 @@ fn write_copy(connection: &Connection, id: i64, copy: &Copy<'_>) -> Result<(), D
         for source in &fields.sources {
             connection.execute(
                 "INSERT INTO evaluation_tile_sources (tile_id, document_id, page, quote, found) \
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
-                params![new, source.document_id, source.page, source.quote, source.found],
+                 VALUES (:tile, :document, :page, :quote, :found)",
+                named_params! {
+                    ":tile": new,
+                    ":document": source.document_id,
+                    ":page": source.page,
+                    ":quote": source.quote,
+                    ":found": source.found,
+                },
             )?;
         }
     }
 
     for link in copy.links {
         let (Some(from), Some(to)) = (tiles.get(&link.from), tiles.get(&link.to)) else {
-            return Err(DbError::Sql(format!("link {} names a tile that is not copied", link.id)));
+            return Err(DbError::Inconsistent(format!("link {} names a tile that is not copied", link.id)));
         };
 
         connection.execute(
-            "INSERT INTO evaluation_links (evaluation_id, from_tile, to_tile) VALUES (?1, ?2, ?3)",
-            params![id, from, to],
+            "INSERT INTO evaluation_links (evaluation_id, from_tile, to_tile) VALUES (:evaluation, :from, :to)",
+            named_params! { ":evaluation": id, ":from": from, ":to": to },
         )?;
     }
 
@@ -197,24 +169,18 @@ pub fn proposal(
     field: ResultField,
     text: &str,
     model: &str,
-    step: &Step<'_>,
+    step: &JournalStep<'_>,
 ) -> Result<i64, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
     transaction.execute(
-        "INSERT INTO evaluation_proposals (tile_id, field, text, model) VALUES (?1, ?2, ?3, ?4)",
-        params![tile, field.name(), text, model],
+        "INSERT INTO evaluation_proposals (tile_id, field, text, model) VALUES (:tile, :field, :text, :model)",
+        named_params! { ":tile": tile, ":field": field.name(), ":text": text, ":model": model },
     )?;
 
     let id = transaction.last_insert_rowid();
-    journal(&transaction, evaluation, step)?;
+    entry(&transaction, evaluation, step)?;
     transaction.commit()?;
 
     Ok(id)
 }
-
-// Unit tests, in their own file to keep this one readable. They
-// are part of this module, so they can use its private items.
-#[cfg(test)]
-#[path = "create_tests.rs"]
-mod tests;

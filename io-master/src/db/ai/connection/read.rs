@@ -8,7 +8,7 @@ use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::api_key::ApiKey;
 
-use super::rows::{ACTIVE, CONNECTION_COLUMNS, Stored, connection_from_row, key_name};
+use super::rows::{ACTIVE, Stored, connection_from_row, key_name};
 
 /// Whether a key is stored for a connection.
 pub(super) fn has_key(db: &UserDb, id: i64) -> Result<bool, DbError> {
@@ -17,9 +17,7 @@ pub(super) fn has_key(db: &UserDb, id: i64) -> Result<bool, DbError> {
 
 /// Every connection, by name.
 pub fn list(db: &UserDb) -> Result<Vec<Stored>, DbError> {
-    let mut statement = db
-        .connection()
-        .prepare(&format!("SELECT {CONNECTION_COLUMNS} FROM ai_connections ORDER BY name COLLATE NOCASE, id"))?;
+    let mut statement = db.connection().prepare("SELECT * FROM ai_connections ORDER BY name COLLATE NOCASE, id")?;
     let rows = statement.query_map([], connection_from_row)?.collect::<Result<Vec<_>, _>>()?;
 
     rows.into_iter().map(|(id, connection)| Ok(Stored { id, connection, has_key: has_key(db, id)? })).collect()
@@ -29,7 +27,7 @@ pub fn list(db: &UserDb) -> Result<Vec<Stored>, DbError> {
 pub fn get(db: &UserDb, id: i64) -> Result<Option<Stored>, DbError> {
     let row = db
         .connection()
-        .query_row(&format!("SELECT {CONNECTION_COLUMNS} FROM ai_connections WHERE id = ?1"), [id], connection_from_row)
+        .query_row("SELECT * FROM ai_connections WHERE id = ?1", [id], connection_from_row)
         .optional()?;
 
     match row {

@@ -1,8 +1,10 @@
 //! The rows of the chats and their messages, and the Rust types they
-//! become (`ai/chat/chats.rs`).
+//! become (`model/chats.rs`). Columns are read by their names; a value
+//! the program never writes is an error (`DbError::Corrupt`).
 
 use rusqlite::Row;
 
+use crate::db::error::{corrupt, named};
 use crate::model::ai::Speaker;
 use crate::model::chats::{ChatMessage, ChatSummary, Ending};
 
@@ -22,23 +24,31 @@ pub(super) fn speaker_name(speaker: Speaker) -> &'static str {
     }
 }
 
-/// A chat from a row of `id, title, local time of created`.
+/// A chat from a row of `chats` with `local_created`, the local time
+/// it was started ([`local_time`]).
 pub(super) fn summary_from_row(row: &Row<'_>) -> rusqlite::Result<ChatSummary> {
-    Ok(ChatSummary { id: row.get(0)?, title: row.get(1)?, created: row.get(2)? })
+    Ok(ChatSummary { id: row.get("id")?, title: row.get("title")?, created: row.get("local_created")? })
 }
 
-/// A message from a row of `speaker, text, local time of created,
-/// model, ending, note`.
+/// A message from a row of `messages` with `local_created`. A message
+/// of the evaluator has no ending (NULL): it is complete.
 pub(super) fn message_from_row(row: &Row<'_>) -> rusqlite::Result<ChatMessage> {
-    let speaker: String = row.get(0)?;
-    let ending: Option<String> = row.get(4)?;
+    let speaker: String = row.get("speaker")?;
+    let ending: Option<String> = row.get("ending")?;
 
     Ok(ChatMessage {
-        speaker: if speaker == "model" { Speaker::Model } else { Speaker::Evaluator },
-        text: row.get(1)?,
-        created: row.get(2)?,
-        model: row.get(3)?,
-        ending: ending.as_deref().map(Ending::from_name).unwrap_or(Ending::Complete),
-        note: row.get(5)?,
+        speaker: match speaker.as_str() {
+            "evaluator" => Speaker::Evaluator,
+            "model" => Speaker::Model,
+            _ => return Err(corrupt("messages", "speaker", &speaker)),
+        },
+        text: row.get("text")?,
+        created: row.get("local_created")?,
+        model: row.get("model")?,
+        ending: match ending {
+            Some(ending) => named("messages", "ending", &ending, Ending::from_name)?,
+            None => Ending::Complete,
+        },
+        note: row.get("note")?,
     })
 }

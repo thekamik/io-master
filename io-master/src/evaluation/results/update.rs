@@ -3,7 +3,7 @@
 //! alone. Every change is written through with its entry of the
 //! journal, then made in memory.
 
-use crate::db::evaluations::create::Step;
+use crate::db::evaluations::journal::create::JournalStep;
 use crate::db::evaluations::update as store;
 use crate::db::user::database::UserDb;
 use crate::evaluation::error::EvaluationError;
@@ -45,8 +45,13 @@ fn settle(
     requirement(open, proposal.tile)?;
 
     let evaluation = open.data().evaluation.id;
-    let step =
-        Step { actor: &Actor::Evaluator, action, tile: Some(proposal.tile), field: Some(proposal.field), detail };
+    let step = JournalStep {
+        actor: &Actor::Evaluator,
+        action,
+        tile: Some(proposal.tile),
+        field: Some(proposal.field),
+        detail,
+    };
 
     store::settle_proposal(db, evaluation, proposal, text, origin, &step)?;
 
@@ -114,7 +119,7 @@ pub fn write(
     } else {
         replacing(earlier.as_deref(), text)
     };
-    let step = Step {
+    let step = JournalStep {
         actor: &Actor::Evaluator,
         action: JournalAction::Written,
         tile: Some(tile),
@@ -123,7 +128,7 @@ pub fn write(
     };
     let text = if removed { None } else { Some(text) };
 
-    store::result(db, open.data().evaluation.id, tile, text, &step)?;
+    store::result(db, open.data().evaluation.id, tile, field, text, &step)?;
     keep(open, tile, field, text, ResultOrigin::Evaluator);
 
     Ok(())

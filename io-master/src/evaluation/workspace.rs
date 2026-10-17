@@ -28,7 +28,7 @@ use crate::db::user::database::UserDb;
 
 use super::projects::read;
 use crate::evaluation::error::EvaluationError;
-use crate::model::evaluations::{EvaluationData, Proposal, RequirementResult, ResultField, ResultOrigin};
+use crate::model::evaluations::{EvaluationData, Proposal, RequirementResult};
 
 /// An evaluation open for work.
 #[derive(Debug)]
@@ -46,19 +46,7 @@ impl OpenEvaluation {
             return Ok(None);
         };
 
-        let results = stored::results_of(db, id)?
-            .into_iter()
-            .filter_map(|(tile, field, text, origin)| {
-                Some(RequirementResult {
-                    tile,
-                    field: ResultField::from_name(&field)?,
-                    text,
-                    // Only valid names are written; a row changed by
-                    // hand is shown as the evaluator's, the safe side.
-                    origin: ResultOrigin::from_name(&origin).unwrap_or(ResultOrigin::Evaluator),
-                })
-            })
-            .collect();
+        let results = stored::results_of(db, id)?;
 
         Ok(Some(OpenEvaluation { data, results, proposals: stored::proposals_of(db, id)? }))
     }
