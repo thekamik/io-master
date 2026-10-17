@@ -9,8 +9,8 @@ use crate::model::test_projects::ProjectFields;
 use crate::model::test_projects::rules::SchemeError;
 use crate::test_projects::error::StoreError;
 
-/// Checks the fields and the documents of a project, and its name
-/// against the other projects (`id`: the project itself, when it is
+/// Checks the fields (normalized) and the documents of a project, and
+/// its name against the other projects (`id`: the project itself, when it is
 /// changed).
 pub(super) fn check(db: &UserDb, id: Option<i64>, fields: &ProjectFields) -> Result<(), StoreError> {
     fields.check()?;
@@ -21,7 +21,7 @@ pub(super) fn check(db: &UserDb, id: Option<i64>, fields: &ProjectFields) -> Res
         }
     }
 
-    let taken = stored::project_named(db, fields.name.trim())?;
+    let taken = stored::project_named(db, &fields.name)?;
 
     if taken.is_some_and(|other| Some(other) != id) {
         return Err(SchemeError::NameTaken.into());
@@ -32,6 +32,8 @@ pub(super) fn check(db: &UserDb, id: Option<i64>, fields: &ProjectFields) -> Res
 
 /// Makes a project; returns its number.
 pub fn project(db: &UserDb, fields: &ProjectFields) -> Result<i64, StoreError> {
+    // The normal form (model/): trimmed here, stored as it is.
+    let fields = &fields.normalized();
     check(db, None, fields)?;
 
     Ok(store::project(db, fields)?)

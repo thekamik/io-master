@@ -14,6 +14,8 @@ use super::create::check;
 /// Changes the fields of the open project. A document still quoted by
 /// a tile, or holding the pages of a scheme, cannot be taken away.
 pub fn fields(db: &UserDb, open: &mut OpenProject, fields: &ProjectFields) -> Result<(), StoreError> {
+    // The normal form (model/): trimmed here, stored as it is.
+    let fields = &fields.normalized();
     let id = open.data().project.id;
     check(db, Some(id), fields)?;
 
@@ -34,29 +36,9 @@ pub fn fields(db: &UserDb, open: &mut OpenProject, fields: &ProjectFields) -> Re
     store::project(db, id, fields)?;
 
     let project = &mut open.data_mut().project;
-    project.fields = ProjectFields {
-        name: fields.name.trim().to_owned(),
-        version: fields.version.trim().to_owned(),
-        description: fields.description.clone(),
-        author: fields.author.trim().to_owned(),
-        documents: dedup(&fields.documents),
-    };
+    project.fields = fields.clone();
 
     Ok(())
-}
-
-/// The documents in their order, each once (as the database keeps
-/// them: `INSERT OR IGNORE`).
-fn dedup(documents: &[i64]) -> Vec<i64> {
-    let mut seen = Vec::with_capacity(documents.len());
-
-    for document in documents {
-        if !seen.contains(document) {
-            seen.push(*document);
-        }
-    }
-
-    seen
 }
 
 /// Marks the open project ready, or a draft again.

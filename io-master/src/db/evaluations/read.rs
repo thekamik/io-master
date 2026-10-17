@@ -39,9 +39,7 @@ pub fn evaluation(db: &UserDb, id: i64) -> Result<Option<Evaluation>, DbError> {
 pub fn name_taken(db: &UserDb, name: &str) -> Result<bool, DbError> {
     Ok(db
         .connection()
-        .query_row("SELECT id FROM evaluations WHERE name = ?1 COLLATE NOCASE", [name.trim()], |row| {
-            row.get::<_, i64>(0)
-        })
+        .query_row("SELECT id FROM evaluations WHERE name = ?1 COLLATE NOCASE", [name], |row| row.get::<_, i64>(0))
         .optional()?
         .is_some())
 }

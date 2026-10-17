@@ -85,3 +85,18 @@ impl DocumentFields {
         check_text("version", &self.version, MAX_SHORT, false)
     }
 }
+
+/// The normal form of what is stored: the texts of one line without
+/// spaces around them. **The only place where text is trimmed** (step
+/// 40): the work normalizes what it gets before it checks and stores
+/// it, `db/` writes it as it is, so memory and the database hold the
+/// same text.
+impl DocumentFields {
+    pub fn normalized(&self) -> DocumentFields {
+        DocumentFields {
+            title: self.title.trim().to_owned(),
+            part: self.part.trim().to_owned(),
+            version: self.version.trim().to_owned(),
+        }
+    }
+}

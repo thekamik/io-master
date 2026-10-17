@@ -8,7 +8,9 @@ use std::fmt;
 use crate::model::standards::MAX_QUOTE;
 use crate::model::text::{Invalid, check_text};
 
-use super::{Link, MAX_SHORT, MAX_SOURCES, MAX_TEXT, MAX_TITLE, ProjectFields, SchemeFields, TileFields, TileKind};
+use super::{
+    External, Link, MAX_SHORT, MAX_SOURCES, MAX_TEXT, MAX_TITLE, ProjectFields, SchemeFields, TileFields, TileKind,
+};
 
 /// What a link means, from the kinds it joins.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -232,6 +234,54 @@ fn reaches(links: &[Link], start: i64, target: i64) -> bool {
     }
 
     false
+}
+
+/// The normal forms of what is stored: the texts of one line without
+/// spaces around them. **The only place where text is trimmed** (step
+/// 40): the work normalizes what it gets before it checks and stores
+/// it, `db/` writes it as it is, so memory and the database hold the
+/// same text.
+impl ProjectFields {
+    /// The documents keep their order, each once (as the database
+    /// keeps them).
+    pub fn normalized(&self) -> ProjectFields {
+        let mut documents = Vec::with_capacity(self.documents.len());
+
+        for document in &self.documents {
+            if !documents.contains(document) {
+                documents.push(*document);
+            }
+        }
+
+        ProjectFields {
+            name: self.name.trim().to_owned(),
+            version: self.version.trim().to_owned(),
+            description: self.description.clone(),
+            author: self.author.trim().to_owned(),
+            documents,
+        }
+    }
+}
+
+impl SchemeFields {
+    pub fn normalized(&self) -> SchemeFields {
+        SchemeFields { number: self.number.trim().to_owned(), name: self.name.trim().to_owned(), ..self.clone() }
+    }
+}
+
+impl TileFields {
+    pub fn normalized(&self) -> TileFields {
+        TileFields {
+            identifier: self.identifier.trim().to_owned(),
+            title: self.title.trim().to_owned(),
+            place: self.place.trim().to_owned(),
+            external: self.external.as_ref().map(|external| External {
+                document: external.document.trim().to_owned(),
+                place: external.place.trim().to_owned(),
+            }),
+            ..self.clone()
+        }
+    }
 }
 
 // Unit tests, in their own file to keep this one readable. They

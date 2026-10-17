@@ -28,7 +28,7 @@ use crate::db::user::database::UserDb;
 use crate::evaluation::error::EvaluationError;
 use crate::model::evaluations::{Actor, EvaluationFields, JournalAction, Origin, Skipped};
 use crate::model::test_projects::rules::{SchemeError, check_link};
-use crate::model::test_projects::{Link, Project, ProjectData, ProposalState, TileKind};
+use crate::model::test_projects::{Link, Project, ProjectData, ProposalState, Scheme, Tile, TileKind};
 use crate::standards;
 use crate::standards::quote::is_on_page;
 use crate::test_projects::exchange::format::Exchange;
@@ -114,11 +114,16 @@ pub fn from_exchange(
 
 /// Copies the accepted part of `data` into a new evaluation.
 fn copy(db: &UserDb, data: &ProjectData, fields: &EvaluationFields) -> Result<Imported, EvaluationError> {
-    let project = &data.project.fields;
+    // The normal form (model/): trimmed here, stored as it is.
+    let project = &data.project.fields.normalized();
     let mut skipped = Skipped::default();
 
-    let schemes: Vec<_> =
-        data.schemes.iter().filter(|scheme| scheme.fields.state == ProposalState::Accepted).cloned().collect();
+    let schemes: Vec<_> = data
+        .schemes
+        .iter()
+        .filter(|scheme| scheme.fields.state == ProposalState::Accepted)
+        .map(|scheme| Scheme { fields: scheme.fields.normalized(), ..scheme.clone() })
+        .collect();
     skipped.schemes = data.schemes.len() - schemes.len();
 
     let tiles: Vec<_> = data
@@ -127,7 +132,7 @@ fn copy(db: &UserDb, data: &ProjectData, fields: &EvaluationFields) -> Result<Im
         .filter(|tile| {
             tile.fields.state == ProposalState::Accepted && schemes.iter().any(|scheme| scheme.id == tile.scheme)
         })
-        .cloned()
+        .map(|tile| Tile { fields: tile.fields.normalized(), ..tile.clone() })
         .collect();
     skipped.tiles = data.tiles.len() - tiles.len();
 
@@ -164,9 +169,9 @@ fn copy(db: &UserDb, data: &ProjectData, fields: &EvaluationFields) -> Result<Im
     }
 
     let origin = Origin {
-        name: project.name.trim().to_owned(),
-        version: project.version.trim().to_owned(),
-        author: project.author.trim().to_owned(),
+        name: project.name.clone(),
+        version: project.version.clone(),
+        author: project.author.clone(),
         description: project.description.clone(),
     };
 
@@ -202,6 +207,8 @@ fn create(
     copy: &Copy<'_>,
     detail: &str,
 ) -> Result<i64, EvaluationError> {
+    // The normal form (model/): trimmed here, stored as it is.
+    let fields = &fields.normalized();
     fields.check()?;
 
     if stored::name_taken(db, &fields.name)? {

@@ -11,12 +11,14 @@ use crate::test_projects::error::StoreError;
 use crate::test_projects::schemes::read::existing as existing_scheme;
 use crate::test_projects::workspace::OpenProject;
 
-use super::create::{checked_sources, stored};
+use super::create::checked_sources;
 use super::read::existing;
 
 /// Changes tile `id`. Its kind can be changed only while no link joins
 /// it: a link is allowed by the kinds it joins.
 pub fn tile(db: &UserDb, open: &mut OpenProject, id: i64, fields: &TileFields) -> Result<(), StoreError> {
+    // The normal form (model/): trimmed here, stored as it is.
+    let fields = &fields.normalized();
     let old_kind = existing(open, id)?.fields.kind;
     let sources = checked_sources(db, open, fields)?;
 
@@ -31,7 +33,7 @@ pub fn tile(db: &UserDb, open: &mut OpenProject, id: i64, fields: &TileFields) -
     store::tile(db, id, fields, &sources)?;
 
     if let Some(tile) = open.data_mut().tiles.iter_mut().find(|tile| tile.id == id) {
-        tile.fields = stored(fields, sources);
+        tile.fields = TileFields { sources, ..fields.clone() };
     }
 
     Ok(())

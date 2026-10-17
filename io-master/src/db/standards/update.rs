@@ -11,6 +11,6 @@ use crate::model::standards::DocumentFields;
 pub fn document(db: &UserDb, id: i64, fields: &DocumentFields) -> Result<bool, DbError> {
     Ok(db.connection().execute(
         "UPDATE standard_documents SET title = ?1, part = ?2, version = ?3 WHERE id = ?4",
-        params![fields.title.trim(), fields.part.trim(), fields.version.trim(), id],
+        params![fields.title, fields.part, fields.version, id],
     )? > 0)
 }

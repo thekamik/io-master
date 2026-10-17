@@ -8,7 +8,7 @@ use crate::standards;
 use crate::standards::quote::is_on_page;
 
 use crate::model::test_projects::rules::SchemeError;
-use crate::model::test_projects::{External, Source, Tile, TileFields};
+use crate::model::test_projects::{Source, Tile, TileFields};
 use crate::test_projects::error::StoreError;
 use crate::test_projects::schemes::read::existing;
 use crate::test_projects::workspace::OpenProject;
@@ -40,32 +40,17 @@ pub(super) fn checked_sources(db: &UserDb, open: &OpenProject, fields: &TileFiel
     Ok(checked)
 }
 
-/// The fields of a tile as the database keeps them (the single-line
-/// texts trimmed), with its checked `sources`: what memory holds, so
-/// that it stays the same as the database.
-pub(super) fn stored(fields: &TileFields, sources: Vec<Source>) -> TileFields {
-    TileFields {
-        identifier: fields.identifier.trim().to_owned(),
-        title: fields.title.trim().to_owned(),
-        place: fields.place.trim().to_owned(),
-        external: fields.external.as_ref().map(|external| External {
-            document: external.document.trim().to_owned(),
-            place: external.place.trim().to_owned(),
-        }),
-        sources,
-        ..fields.clone()
-    }
-}
-
 /// Adds a tile to scheme `scheme` of the open project; returns its
 /// number.
 pub fn tile(db: &UserDb, open: &mut OpenProject, scheme: i64, fields: &TileFields) -> Result<i64, StoreError> {
+    // The normal form (model/): trimmed here, stored as it is.
+    let fields = &fields.normalized();
     existing(open, scheme)?;
     let sources = checked_sources(db, open, fields)?;
 
     let id = store::tile(db, scheme, fields, &sources)?;
 
-    open.data_mut().tiles.push(Tile { id, scheme, fields: stored(fields, sources) });
+    open.data_mut().tiles.push(Tile { id, scheme, fields: TileFields { sources, ..fields.clone() } });
 
     Ok(id)
 }

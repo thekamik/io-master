@@ -79,11 +79,11 @@ pub fn evaluation(
          source_name, source_version, source_author, source_description) \
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![
-            fields.name.trim(),
-            fields.product.trim(),
-            fields.product_version.trim(),
-            fields.manufacturer.trim(),
-            fields.evaluator.trim(),
+            fields.name,
+            fields.product,
+            fields.product_version,
+            fields.manufacturer,
+            fields.evaluator,
             origin.name,
             origin.version,
             origin.author,
@@ -120,8 +120,8 @@ fn write_copy(connection: &Connection, id: i64, copy: &Copy<'_>) -> Result<(), D
              position) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
                 id,
-                scheme.fields.number.trim(),
-                scheme.fields.name.trim(),
+                scheme.fields.number,
+                scheme.fields.name,
                 pages.map(|pages| pages.document_id),
                 pages.map(|pages| pages.first_page),
                 pages.map(|pages| pages.last_page),

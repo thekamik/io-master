@@ -17,7 +17,7 @@ pub fn project(db: &UserDb, fields: &ProjectFields) -> Result<i64, DbError> {
 
     transaction.execute(
         "INSERT INTO projects (name, version, description, author, ready) VALUES (?1, ?2, ?3, ?4, 0)",
-        params![fields.name.trim(), fields.version.trim(), fields.description, fields.author.trim()],
+        params![fields.name, fields.version, fields.description, fields.author],
     )?;
 
     let id = transaction.last_insert_rowid();

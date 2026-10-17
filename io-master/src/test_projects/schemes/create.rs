@@ -51,20 +51,17 @@ pub(super) fn check(db: &UserDb, open: &OpenProject, id: Option<i64>, fields: &S
     Ok(())
 }
 
-/// The fields as the database keeps them (the names trimmed).
-pub(super) fn stored(fields: &SchemeFields) -> SchemeFields {
-    SchemeFields { number: fields.number.trim().to_owned(), name: fields.name.trim().to_owned(), ..fields.clone() }
-}
-
 /// Adds a scheme at the end of the list of the open project; returns
 /// its number.
 pub fn scheme(db: &UserDb, open: &mut OpenProject, fields: &SchemeFields) -> Result<i64, StoreError> {
+    // The normal form (model/): trimmed here, stored as it is.
+    let fields = &fields.normalized();
     check(db, open, None, fields)?;
 
     let project = open.data().project.id;
     let id = store::scheme(db, project, fields)?;
 
-    open.data_mut().schemes.push(Scheme { id, project, fields: stored(fields) });
+    open.data_mut().schemes.push(Scheme { id, project, fields: fields.clone() });
 
     Ok(id)
 }

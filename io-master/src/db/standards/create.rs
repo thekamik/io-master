@@ -23,15 +23,7 @@ pub fn document(
     transaction.execute(
         "INSERT INTO standard_documents (title, part, version, file_name, sha256, page_count, pdf)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-        params![
-            fields.title.trim(),
-            fields.part.trim(),
-            fields.version.trim(),
-            file_name,
-            sha256,
-            pages.len() as i64,
-            pdf
-        ],
+        params![fields.title, fields.part, fields.version, file_name, sha256, pages.len() as i64, pdf],
     )?;
 
     let id = transaction.last_insert_rowid();

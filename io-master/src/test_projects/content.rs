@@ -17,6 +17,9 @@ use crate::test_projects::error::StoreError;
 /// stored as they come, with their `found`, which the caller has
 /// checked. Returns the new number of every old one.
 pub fn replace(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Result<Vec<(i64, i64)>, StoreError> {
+    // The normal form (model/): trimmed here, stored as it is.
+    let tiles: Vec<Tile> = tiles.iter().map(|tile| Tile { fields: tile.fields.normalized(), ..tile.clone() }).collect();
+    let tiles = tiles.as_slice();
     let stored_project = existing(db, project)?;
     let schemes: Vec<i64> = stored::schemes(db, project)?.iter().map(|scheme| scheme.id).collect();
 

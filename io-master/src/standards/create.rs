@@ -17,6 +17,8 @@ pub fn add(
     pdf: &[u8],
     pages: &[String],
 ) -> Result<i64, DocumentError> {
+    // The normal form (model/): trimmed here, stored as it is.
+    let fields = &fields.normalized();
     fields.check()?;
 
     if pages.is_empty() {

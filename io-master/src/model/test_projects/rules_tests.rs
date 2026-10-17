@@ -149,3 +149,30 @@ fn a_scheme_needs_a_name_and_pages_in_order() {
     scheme.pages = Some(PageSpan { document_id: 1, first_page: 4, last_page: 4 });
     assert_eq!(scheme.check(), Ok(()));
 }
+
+#[test]
+fn the_normal_forms_trim_the_texts_of_one_line_only() {
+    let project = ProjectFields {
+        name: "  EN 18031-1 ".to_owned(),
+        version: " 2024 ".to_owned(),
+        description: "  kept\nas written  ".to_owned(),
+        author: " Anna ".to_owned(),
+        documents: vec![3, 1, 3, 2, 1],
+    }
+    .normalized();
+    assert_eq!(
+        (project.name.as_str(), project.version.as_str(), project.author.as_str()),
+        ("EN 18031-1", "2024", "Anna")
+    );
+    assert_eq!(project.description, "  kept\nas written  ");
+    assert_eq!(project.documents, [3, 1, 2]);
+
+    let mut tile = TileFields::new(TileKind::Input, "  Sample ");
+    tile.identifier = " A.1 ".to_owned();
+    tile.description = " as written ".to_owned();
+    tile.external = Some(External { document: " CC Part 3 ".to_owned(), place: " ALC ".to_owned() });
+    let tile = tile.normalized();
+    assert_eq!((tile.title.as_str(), tile.identifier.as_str()), ("Sample", "A.1"));
+    assert_eq!(tile.description, " as written ");
+    assert_eq!(tile.external, Some(External { document: "CC Part 3".to_owned(), place: "ALC".to_owned() }));
+}

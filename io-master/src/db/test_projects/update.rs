@@ -17,7 +17,7 @@ pub fn project(db: &UserDb, id: i64, fields: &ProjectFields) -> Result<(), DbErr
 
     transaction.execute(
         "UPDATE projects SET name = ?1, version = ?2, description = ?3, author = ?4 WHERE id = ?5",
-        params![fields.name.trim(), fields.version.trim(), fields.description, fields.author.trim(), id],
+        params![fields.name, fields.version, fields.description, fields.author, id],
     )?;
     write_documents(&transaction, id, &fields.documents)?;
     transaction.commit()?;

@@ -299,6 +299,23 @@ impl EvaluationFields {
     }
 }
 
+/// The normal form of what is stored: the texts of one line without
+/// spaces around them. **The only place where text is trimmed** (step
+/// 40): the work normalizes what it gets before it checks and stores
+/// it, `db/` writes it as it is, so memory and the database hold the
+/// same text.
+impl EvaluationFields {
+    pub fn normalized(&self) -> EvaluationFields {
+        EvaluationFields {
+            name: self.name.trim().to_owned(),
+            product: self.product.trim().to_owned(),
+            product_version: self.product_version.trim().to_owned(),
+            manufacturer: self.manufacturer.trim().to_owned(),
+            evaluator: self.evaluator.trim().to_owned(),
+        }
+    }
+}
+
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
