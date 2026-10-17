@@ -15,6 +15,7 @@
 //! stops the page from working.
 
 use crate::db::error::DbError;
+use crate::db::user;
 use crate::db::user::database::UserDb;
 
 use super::devices::{PortFilter, PortType};
@@ -69,7 +70,7 @@ impl ScanSettings {
     pub fn load(db: &UserDb) -> Result<ScanSettings, DbError> {
         let defaults = ScanSettings::default();
 
-        let filter = match db.setting(PORT_TYPES)? {
+        let filter = match user::read::setting(db, PORT_TYPES)? {
             None => defaults.filter,
             Some(text) if text == ALL => PortFilter::All,
             Some(text) => {
@@ -80,7 +81,7 @@ impl ScanSettings {
             }
         };
 
-        let columns = match db.setting(COLUMNS)? {
+        let columns = match user::read::setting(db, COLUMNS)? {
             None => defaults.columns,
             Some(text) => {
                 let columns: Vec<PortProperty> = text.split(',').filter_map(PortProperty::from_key).collect();
@@ -101,8 +102,8 @@ impl ScanSettings {
 
         let columns = self.columns.iter().map(|column| column.key()).collect::<Vec<_>>().join(",");
 
-        db.set_setting(PORT_TYPES, &types)?;
-        db.set_setting(COLUMNS, &columns)
+        user::update::set_setting(db, PORT_TYPES, &types)?;
+        user::update::set_setting(db, COLUMNS, &columns)
     }
 }
 

@@ -10,7 +10,7 @@
 //!
 //! ```text
 //! db/user/            settings, secrets            (this folder)
-//! db/ai/              AI: connections, memory of the chat, roles,
+//! db/ai/              AI: connections, chats, roles,
 //!                     instructions, journal, presets
 //! db/standards/       documents of standards
 //! db/test_projects/   test projects, schemes, tiles, links
@@ -69,7 +69,7 @@ impl UserDb {
 
         connection.execute_batch(schema::SCHEMA)?;
         connection.execute_batch(ai::connection::schema::SCHEMA)?;
-        connection.execute_batch(ai::memory::schema::SCHEMA)?;
+        connection.execute_batch(ai::chats::schema::SCHEMA)?;
         connection.execute_batch(ai::roles::schema::SCHEMA)?;
         connection.execute_batch(ai::instructions::schema::SCHEMA)?;
         connection.execute_batch(ai::journal::schema::SCHEMA)?;

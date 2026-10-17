@@ -23,6 +23,7 @@
 //! [`uninstall`] removes all parts, also of a damaged installation,
 //! so that a new first start is possible.
 
+use crate::db::system;
 use std::fmt;
 use std::fs;
 use std::io;
@@ -111,7 +112,8 @@ pub fn open(data_dir: &Path) -> Result<Opened, LifecycleError> {
     }
 
     let system_db = SystemDb::open(data_dir)?;
-    let installation = system_db.installation().map_err(|error| LifecycleError::Damaged(error.to_string()))?;
+    let installation =
+        system::read::installation(&system_db).map_err(|error| LifecycleError::Damaged(error.to_string()))?;
 
     Ok(Opened::Installed(Running { installation, system_db, device_secret: None }))
 }

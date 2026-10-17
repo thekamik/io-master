@@ -2,6 +2,7 @@
 //! and the removal, with passwords only (no TPM).
 
 use super::*;
+use crate::db::system;
 
 use crate::tpm::test_support::TempDir;
 
@@ -29,7 +30,7 @@ fn an_installation_opens_at_the_next_start() {
     };
 
     assert_eq!(running.installation, installed.installation);
-    assert_eq!(running.system_db.user_names().unwrap(), ["anna"]);
+    assert_eq!(system::read::user_names(&running.system_db).unwrap(), ["anna"]);
     assert!(running.device_secret.is_none());
 
     // The first account logs in with its password alone.

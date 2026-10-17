@@ -18,6 +18,7 @@
 //! On a workstation every logged-in user may add further users; a
 //! master keeps the one user who installed it.
 
+use crate::db::system;
 use std::fmt;
 use std::path::Path;
 
@@ -121,7 +122,7 @@ pub fn add(
     name: &str,
     password: &str,
 ) -> Result<Account, AccountError> {
-    if !system_db.installation()?.role.can_add_users() {
+    if !system::read::installation(system_db)?.role.can_add_users() {
         return Err(AccountError::NotAllowed);
     }
 
@@ -140,19 +141,19 @@ fn create(
     installation::check_user_name(name)?;
     keys::check_password(password)?;
 
-    if system_db.user(name)?.is_some() {
+    if system::read::user(system_db, name)?.is_some() {
         return Err(AccountError::NameTaken);
     }
 
     let key = generate_database_key().map_err(|error| AccountError::Key(KeyError::Failed(error.to_string())))?;
     let wrapped = keys::wrap(&key, password, device_secret, &binding(name))?;
 
-    let id = system_db.add_user(name, &wrapped)?;
+    let id = system::create::add_user(system_db, name, &wrapped)?;
 
     // The database of the account. If it cannot be made, the row is
     // removed again, so that no account exists without its data.
     if let Err(error) = user_db::create(data_dir, id, &key) {
-        let _ = system_db.remove_user(id);
+        let _ = system::delete::remove_user(system_db, id);
 
         return Err(error.into());
     }
@@ -170,7 +171,7 @@ pub fn log_in(
     name: &str,
     password: &str,
 ) -> Result<(Account, DatabaseKey), AccountError> {
-    let Some(user) = system_db.user(name)? else {
+    let Some(user) = system::read::user(system_db, name)? else {
         return Err(AccountError::WrongCredentials);
     };
 
@@ -195,14 +196,14 @@ pub fn change_password(
 ) -> Result<(), AccountError> {
     keys::check_password(new_password)?;
 
-    let Some(user) = system_db.user(name)? else {
+    let Some(user) = system::read::user(system_db, name)? else {
         return Err(AccountError::WrongCredentials);
     };
 
     let key = keys::unwrap(&user.key, old_password, device_secret, &binding(&user.name))?;
     let wrapped = keys::wrap(&key, new_password, device_secret, &binding(&user.name))?;
 
-    system_db.replace_user_key(user.id, &wrapped)?;
+    system::update::replace_user_key(system_db, user.id, &wrapped)?;
 
     Ok(())
 }

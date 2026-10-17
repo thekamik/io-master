@@ -1,6 +1,7 @@
 //! Deleting an AI connection and its API key.
 
 use crate::db::error::DbError;
+use crate::db::user;
 use crate::db::user::database::UserDb;
 
 use super::rows::{ACTIVE, key_name};
@@ -15,8 +16,8 @@ pub fn connection(db: &UserDb, id: i64) -> Result<bool, DbError> {
 
     let deleted = transaction.execute("DELETE FROM ai_connections WHERE id = ?1", [id])? > 0;
 
-    if deleted && db.setting(ACTIVE)?.as_deref() == Some(id.to_string().as_str()) {
-        db.remove_setting(ACTIVE)?;
+    if deleted && user::read::setting(db, ACTIVE)?.as_deref() == Some(id.to_string().as_str()) {
+        user::delete::remove_setting(db, ACTIVE)?;
     }
 
     transaction.commit()?;
@@ -39,7 +40,7 @@ pub fn api_key(db: &UserDb, id: i64) -> Result<(), DbError> {
 /// transaction of the caller (`connection`, `api_key`, and
 /// `update::connection` when the address changed).
 pub(super) fn remove_key(db: &UserDb, id: i64) -> Result<(), DbError> {
-    db.remove_secret(&key_name(id))?;
+    user::delete::remove_secret(db, &key_name(id))?;
     db.connection().execute("UPDATE ai_connections SET key_origin = NULL WHERE id = ?1", [id])?;
 
     Ok(())

@@ -1,6 +1,6 @@
 //! Giving a role of the AI a connection of its own, or taking it away.
 
-use rusqlite::params;
+use rusqlite::named_params;
 
 use crate::db::ai::connection::read as connections;
 use crate::db::error::DbError;
@@ -18,9 +18,9 @@ pub fn connection(db: &UserDb, role: Role, id: Option<i64>) -> Result<bool, DbEr
     }
 
     db.connection().execute(
-        "INSERT INTO ai_roles (role, connection_id) VALUES (?1, ?2) \
+        "INSERT INTO ai_roles (role, connection_id) VALUES (:role, :connection_id) \
          ON CONFLICT (role) DO UPDATE SET connection_id = excluded.connection_id",
-        params![role.name(), id],
+        named_params! { ":role": role.name(), ":connection_id": id },
     )?;
 
     Ok(true)

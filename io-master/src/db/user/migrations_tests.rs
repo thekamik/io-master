@@ -37,14 +37,14 @@ fn version_2_removes_what_earlier_versions_kept() {
     let directory = TempDir::new();
     let (db, key) = database(&directory);
 
-    db.set_secret("anthropic.api_key", "sk-old").unwrap();
-    db.set_setting("ai.model", "claude-opus-5-5").unwrap();
+    crate::db::user::update::set_secret(&db, "anthropic.api_key", "sk-old").unwrap();
+    crate::db::user::update::set_setting(&db, "ai.model", "claude-opus-5-5").unwrap();
     db.connection_for_tests().execute_batch("PRAGMA user_version = 1").unwrap();
     drop(db);
 
     let db = user_db::open(directory.path(), 1, &key).unwrap();
-    assert!(db.secret("anthropic.api_key").unwrap().is_none());
-    assert!(db.setting("ai.model").unwrap().is_none());
+    assert!(crate::db::user::read::secret(&db, "anthropic.api_key").unwrap().is_none());
+    assert!(crate::db::user::read::setting(&db, "ai.model").unwrap().is_none());
     assert_eq!(version(&db), VERSION);
 }
 
@@ -91,9 +91,9 @@ fn a_database_at_the_latest_version_runs_nothing() {
     let (db, key) = database(&directory);
 
     // Something that version 2 would remove: kept, since it does not run.
-    db.set_setting("ai.model", "kept").unwrap();
+    crate::db::user::update::set_setting(&db, "ai.model", "kept").unwrap();
     drop(db);
 
     let db = user_db::open(directory.path(), 1, &key).unwrap();
-    assert_eq!(db.setting("ai.model").unwrap().as_deref(), Some("kept"));
+    assert_eq!(crate::db::user::read::setting(&db, "ai.model").unwrap().as_deref(), Some("kept"));
 }

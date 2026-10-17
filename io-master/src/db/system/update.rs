@@ -1,32 +1,21 @@
 //! Changing rows of the system database: the key of an account.
 
-use rusqlite::params;
+use rusqlite::named_params;
 
 use crate::db::encryption::keys::WrappedKey;
 use crate::db::error::DbError;
 
 use super::database::SystemDb;
 
-impl SystemDb {
-    /// Stores a newly encrypted key of an account, after a change
-    /// of its password.
-    pub fn replace_user_key(&self, id: i64, key: &WrappedKey) -> Result<(), DbError> {
-        let changed = self.connection().execute(
-            "UPDATE users SET key_salt = ?2, key_memory_kib = ?3, key_iterations = ?4,
-                              key_device = ?5, key_nonce = ?6, key_ciphertext = ?7, key_tag = ?8
-             WHERE id = ?1",
-            params![
-                id,
-                key.salt,
-                key.memory_kib,
-                key.iterations,
-                key.with_device_secret,
-                key.nonce,
-                key.ciphertext,
-                key.tag
-            ],
-        )?;
+/// Stores a newly encrypted key of an account, after a change
+/// of its password.
+pub fn replace_user_key(db: &SystemDb, id: i64, key: &WrappedKey) -> Result<(), DbError> {
+    let changed = db.connection().execute(
+        "UPDATE users SET key_salt = :key_salt, key_memory_kib = :key_memory_kib, key_iterations = :key_iterations,
+                          key_device = :key_device, key_nonce = :key_nonce, key_ciphertext = :key_ciphertext, key_tag = :key_tag
+         WHERE id = :id",
+        named_params! { ":id": id, ":key_salt": key.salt, ":key_memory_kib": key.memory_kib, ":key_iterations": key.iterations, ":key_device": key.with_device_secret, ":key_nonce": key.nonce, ":key_ciphertext": key.ciphertext, ":key_tag": key.tag },
+    )?;
 
-        if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "users", id }) }
-    }
+    if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "users", id }) }
 }

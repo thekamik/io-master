@@ -1,6 +1,6 @@
 //! Changing what the user told about a document of a standard.
 
-use rusqlite::params;
+use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -10,7 +10,7 @@ use crate::model::standards::DocumentFields;
 /// it exists.
 pub fn document(db: &UserDb, id: i64, fields: &DocumentFields) -> Result<bool, DbError> {
     Ok(db.connection().execute(
-        "UPDATE standard_documents SET title = ?1, part = ?2, version = ?3 WHERE id = ?4",
-        params![fields.title, fields.part, fields.version, id],
+        "UPDATE standard_documents SET title = :title, part = :part, version = :version WHERE id = :id",
+        named_params! { ":title": fields.title, ":part": fields.part, ":version": fields.version, ":id": id },
     )? > 0)
 }

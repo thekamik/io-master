@@ -44,7 +44,7 @@ Since v0.4 the whole workflow is controlled from a **desktop window** (Tauri 2 +
 - `db/` has one subfolder per area of data; each holds `schema.rs` (its tables), `rows.rs` (row ↔ Rust type) and the files of CRUD: `create.rs`, `read.rs`, `update.rs`, `delete.rs` (a file that an area does not need is missing, which is visible in an audit).
 - `db/encryption/` holds all code of encryption; the head of every area states in which database its data lives and how it is protected.
 - The mechanism of encryption is moved as it is, unchanged; the user audits it and redesigns it later.
-- **Whatever happens in the database is in `db/`, in a subfolder of its own** (user, 2026-10-17), so that nothing is mixed: for example `db/ai/connection/`, `db/ai/memory/`, `db/ai/presets/`. Rules of the stored data (a name unique, a key bound to its address) live there with their CRUD.
+- **Whatever happens in the database is in `db/`, in a subfolder of its own** (user, 2026-10-17), so that nothing is mixed: for example `db/ai/connection/`, `db/ai/chats/`, `db/ai/journal/`. Rules of the stored data (a name unique, a key bound to its address) live there with their CRUD.
 
 ## AI layer (step 38 of docs/todo.md)
 

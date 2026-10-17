@@ -1,6 +1,7 @@
 //! Unit tests of `scan_settings.rs`.
 
 use super::*;
+use crate::db::user;
 
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
@@ -35,8 +36,8 @@ fn stored_settings_are_read_back() {
     settings.save(&db).unwrap();
 
     assert_eq!(ScanSettings::load(&db).unwrap(), settings);
-    assert_eq!(db.setting("scan.port_types").unwrap().as_deref(), Some("ttyACM,ttyUSB"));
-    assert_eq!(db.setting("scan.columns").unwrap().as_deref(), Some("path,driver"));
+    assert_eq!(user::read::setting(&db, "scan.port_types").unwrap().as_deref(), Some("ttyACM,ttyUSB"));
+    assert_eq!(user::read::setting(&db, "scan.columns").unwrap().as_deref(), Some("path,driver"));
 }
 
 #[test]
@@ -72,11 +73,11 @@ fn unusable_stored_settings_fall_back_to_the_defaults() {
     let directory = TempDir::new();
     let db = database(&directory);
 
-    db.set_setting("scan.columns", "removed_column,path,also_unknown").unwrap();
+    user::update::set_setting(&db, "scan.columns", "removed_column,path,also_unknown").unwrap();
     assert_eq!(ScanSettings::load(&db).unwrap().columns, [PortProperty::Path]);
 
-    db.set_setting("scan.columns", "nothing,known").unwrap();
-    db.set_setting("scan.port_types", ",").unwrap();
+    user::update::set_setting(&db, "scan.columns", "nothing,known").unwrap();
+    user::update::set_setting(&db, "scan.port_types", ",").unwrap();
 
     assert_eq!(ScanSettings::load(&db).unwrap(), ScanSettings::default());
 }

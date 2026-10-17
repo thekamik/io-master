@@ -5,7 +5,8 @@
 //! connection is saved with another address, its key is removed, so
 //! that a changed URL never sends the key to another service.
 
-use rusqlite::params;
+use crate::db::user;
+use rusqlite::named_params;
 use rusqlite::types::ToSql;
 
 use crate::db::error::DbError;
@@ -52,7 +53,7 @@ pub fn connection(db: &UserDb, id: i64, connection: &Connection) -> Result<Saved
     }
 
     if read::active(db)?.is_none() {
-        db.set_setting(ACTIVE, &id.to_string())?;
+        user::update::set_setting(db, ACTIVE, &id.to_string())?;
     }
 
     transaction.commit().map_err(DbError::from)?;
@@ -66,7 +67,7 @@ pub fn active(db: &UserDb, id: i64) -> Result<bool, DbError> {
         return Ok(false);
     }
 
-    db.set_setting(ACTIVE, &id.to_string())?;
+    user::update::set_setting(db, ACTIVE, &id.to_string())?;
 
     Ok(true)
 }
@@ -81,9 +82,11 @@ pub fn api_key(db: &UserDb, id: i64, key: &ApiKey) -> Result<bool, DbError> {
 
     let transaction = db.connection().unchecked_transaction()?;
 
-    db.set_secret(&key_name(id), key.expose())?;
-    transaction
-        .execute("UPDATE ai_connections SET key_origin = ?1 WHERE id = ?2", params![stored.connection.origin(), id])?;
+    user::update::set_secret(db, &key_name(id), key.expose())?;
+    transaction.execute(
+        "UPDATE ai_connections SET key_origin = :key_origin WHERE id = :id",
+        named_params! { ":key_origin": stored.connection.origin(), ":id": id },
+    )?;
     transaction.commit()?;
 
     Ok(true)

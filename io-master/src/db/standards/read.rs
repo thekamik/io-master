@@ -1,6 +1,6 @@
 //! Reading the documents of standards, their pages and PDFs.
 
-use rusqlite::{OptionalExtension, params};
+use rusqlite::{OptionalExtension, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -39,8 +39,8 @@ pub fn page(db: &UserDb, id: i64, number: u32) -> Result<Option<String>, DbError
     Ok(db
         .connection()
         .query_row(
-            "SELECT text FROM standard_pages WHERE document_id = ?1 AND number = ?2",
-            params![id, number],
+            "SELECT text FROM standard_pages WHERE document_id = :document_id AND number = :number",
+            named_params! { ":document_id": id, ":number": number },
             |row| row.get(0),
         )
         .optional()?)

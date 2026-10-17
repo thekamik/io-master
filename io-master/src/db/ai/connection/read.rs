@@ -2,6 +2,7 @@
 //! connection. The key is given out only as an [`ApiKey`], which is
 //! wiped from memory and never shown (`model/api_key.rs`).
 
+use crate::db::user;
 use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
@@ -12,7 +13,7 @@ use super::rows::{ACTIVE, Stored, connection_from_row, key_name};
 
 /// Whether a key is stored for a connection.
 pub(super) fn has_key(db: &UserDb, id: i64) -> Result<bool, DbError> {
-    Ok(db.secret(&key_name(id))?.is_some())
+    Ok(user::read::secret(db, &key_name(id))?.is_some())
 }
 
 /// Every connection, by name.
@@ -56,7 +57,7 @@ pub(super) fn key_origin(db: &UserDb, id: i64) -> Result<Option<Option<String>>,
 /// The active connection, or `None` when none is chosen (or the
 /// chosen one no longer exists).
 pub fn active(db: &UserDb) -> Result<Option<i64>, DbError> {
-    let Some(id) = db.setting(ACTIVE)?.and_then(|text| text.parse::<i64>().ok()) else {
+    let Some(id) = user::read::setting(db, ACTIVE)?.and_then(|text| text.parse::<i64>().ok()) else {
         return Ok(None);
     };
 
@@ -80,5 +81,5 @@ pub fn api_key(db: &UserDb, id: i64) -> Result<Option<ApiKey>, DbError> {
         return Ok(None);
     }
 
-    Ok(db.secret(&key_name(id))?.and_then(|text| ApiKey::new(text.as_str().to_owned()).ok()))
+    Ok(user::read::secret(db, &key_name(id))?.and_then(|text| ApiKey::new(text.as_str().to_owned()).ok()))
 }

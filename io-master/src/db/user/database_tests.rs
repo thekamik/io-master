@@ -41,15 +41,15 @@ fn settings_are_kept_and_replaced() {
 
     let db = create(directory.path(), 1, &key).unwrap();
 
-    assert_eq!(db.setting("scan.columns").unwrap(), None);
+    assert_eq!(crate::db::user::read::setting(&db, "scan.columns").unwrap(), None);
 
-    db.set_setting("scan.columns", "path,type").unwrap();
-    db.set_setting("scan.columns", "path").unwrap();
+    crate::db::user::update::set_setting(&db, "scan.columns", "path,type").unwrap();
+    crate::db::user::update::set_setting(&db, "scan.columns", "path").unwrap();
     drop(db);
 
     // Kept in the file, and readable only with the key.
     let db = open(directory.path(), 1, &key).unwrap();
-    assert_eq!(db.setting("scan.columns").unwrap().as_deref(), Some("path"));
+    assert_eq!(crate::db::user::read::setting(&db, "scan.columns").unwrap().as_deref(), Some("path"));
 }
 
 #[test]
@@ -58,16 +58,16 @@ fn secrets_are_kept_replaced_and_removed() {
     let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
     let db = create(directory.path(), 1, &key).unwrap();
 
-    assert_eq!(db.secret("api").unwrap(), None);
+    assert_eq!(crate::db::user::read::secret(&db, "api").unwrap(), None);
 
-    db.set_secret("api", "first").unwrap();
-    db.set_secret("api", "second").unwrap();
-    assert_eq!(db.secret("api").unwrap().as_deref().map(String::as_str), Some("second"));
+    crate::db::user::update::set_secret(&db, "api", "first").unwrap();
+    crate::db::user::update::set_secret(&db, "api", "second").unwrap();
+    assert_eq!(crate::db::user::read::secret(&db, "api").unwrap().as_deref().map(String::as_str), Some("second"));
 
     // Secrets and settings do not mix.
-    assert_eq!(db.setting("api").unwrap(), None);
+    assert_eq!(crate::db::user::read::setting(&db, "api").unwrap(), None);
 
-    db.remove_secret("api").unwrap();
-    db.remove_secret("api").unwrap();
-    assert_eq!(db.secret("api").unwrap(), None);
+    crate::db::user::delete::remove_secret(&db, "api").unwrap();
+    crate::db::user::delete::remove_secret(&db, "api").unwrap();
+    assert_eq!(crate::db::user::read::secret(&db, "api").unwrap(), None);
 }

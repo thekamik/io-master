@@ -1,6 +1,6 @@
 //! The chats of an evaluator with an AI model, as data: a chat in the
 //! list, a message, and how a reply ended. The work on them is in
-//! `ai/chat/`; they are kept by `db/ai/memory/`.
+//! `ai/chat/`; they are kept by `db/ai/chats/`.
 //!
 //! ```text
 //! complete   the model finished

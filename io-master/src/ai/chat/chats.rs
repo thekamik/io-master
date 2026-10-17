@@ -1,5 +1,5 @@
 //! The chats of an evaluator with an AI model, kept in their
-//! encrypted database (`db/user/`, tables `chats` and
+//! encrypted database (`db/ai/chats/`, tables `chats` and
 //! `messages`).
 //!
 //! A chat is a list of messages: those of the evaluator and the
@@ -20,11 +20,11 @@
 //!
 //! Times are kept as seconds since 1970 (UTC); SQLite turns them
 //! into the local time of the computer when they are read. The SQL is
-//! in `db/ai/memory/`; what of the history goes to the model is
+//! in `db/ai/chats/`; what of the history goes to the model is
 //! decided by `memory.rs`.
 
 use crate::ai::api::completions::{Reply, ReplyEnd, StopReason};
-use crate::db::ai::memory::{create, delete as remove, read};
+use crate::db::ai::chats::{create, delete as remove, read};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::chats::{ChatMessage, ChatSummary, Ending};

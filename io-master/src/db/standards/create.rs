@@ -2,7 +2,7 @@
 //! pages. The rules (title, a file loaded once) are checked by
 //! `standards/`.
 
-use rusqlite::params;
+use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -22,18 +22,18 @@ pub fn document(
 
     transaction.execute(
         "INSERT INTO standard_documents (title, part, version, file_name, sha256, page_count, pdf)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-        params![fields.title, fields.part, fields.version, file_name, sha256, pages.len() as i64, pdf],
+         VALUES (:title, :part, :version, :file_name, :sha256, :page_count, :pdf)",
+        named_params! { ":title": fields.title, ":part": fields.part, ":version": fields.version, ":file_name": file_name, ":sha256": sha256, ":page_count": pages.len() as i64, ":pdf": pdf },
     )?;
 
     let id = transaction.last_insert_rowid();
 
     {
-        let mut insert =
-            transaction.prepare("INSERT INTO standard_pages (document_id, number, text) VALUES (?1, ?2, ?3)")?;
+        let mut insert = transaction
+            .prepare("INSERT INTO standard_pages (document_id, number, text) VALUES (:document_id, :number, :text)")?;
 
         for (index, text) in pages.iter().enumerate() {
-            insert.execute(params![id, index as i64 + 1, text])?;
+            insert.execute(named_params! { ":document_id": id, ":number": index as i64 + 1, ":text": text })?;
         }
     }
 

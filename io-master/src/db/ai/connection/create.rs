@@ -4,6 +4,7 @@
 //! is set up, and the check is a separate step (`ai/api/checks.rs`).
 
 use crate::db::error::DbError;
+use crate::db::user;
 use crate::db::user::database::UserDb;
 use crate::model::ai::Connection;
 
@@ -38,7 +39,7 @@ pub fn connection(db: &UserDb, connection: &Connection) -> Result<Saved, SaveErr
     let id = transaction.last_insert_rowid();
 
     if read::active(db)?.is_none() {
-        db.set_setting(ACTIVE, &id.to_string())?;
+        user::update::set_setting(db, ACTIVE, &id.to_string())?;
     }
 
     transaction.commit().map_err(DbError::from)?;

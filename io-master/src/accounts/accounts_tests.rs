@@ -2,6 +2,7 @@
 //! factor, as the program runs by default.
 
 use super::*;
+use crate::db::system;
 
 use crate::model::installation::{Installation, Role};
 use crate::tpm::test_support::TempDir;
@@ -82,7 +83,7 @@ fn names_and_passwords_are_checked() {
     assert!(matches!(add(&db, device, directory.path(), "jan", "short"), Err(AccountError::WeakPassword(_))));
 
     // Refused accounts leave nothing behind.
-    assert_eq!(db.user_names().unwrap(), ["anna"]);
+    assert_eq!(system::read::user_names(&db).unwrap(), ["anna"]);
 }
 
 #[test]

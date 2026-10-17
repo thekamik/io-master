@@ -1,7 +1,7 @@
 //! Storing chats and their messages. What a chat keeps of a reply
 //! (a refused reply drops its text) is decided by `ai/chat/chats.rs`.
 
-use rusqlite::params;
+use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -22,8 +22,8 @@ pub fn chat(db: &UserDb, title: &str) -> Result<i64, DbError> {
 /// Adds a message of the evaluator to a chat.
 pub fn message(db: &UserDb, chat_id: i64, text: &str) -> Result<(), DbError> {
     db.connection().execute(
-        &format!("INSERT INTO messages (chat_id, speaker, text, created) VALUES (?1, ?2, ?3, {NOW})"),
-        params![chat_id, speaker_name(Speaker::Evaluator), text],
+        &format!("INSERT INTO messages (chat_id, speaker, text, created) VALUES (:chat_id, :speaker, :text, {NOW})"),
+        named_params! { ":chat_id": chat_id, ":speaker": speaker_name(Speaker::Evaluator), ":text": text },
     )?;
 
     Ok(())
@@ -44,18 +44,18 @@ pub fn reply(db: &UserDb, chat_id: i64, reply: &Reply<'_>) -> Result<(), DbError
     db.connection().execute(
         &format!(
             "INSERT INTO messages (chat_id, speaker, text, created, model, ending, note, input_tokens, output_tokens)
-             VALUES (?1, ?2, ?3, {NOW}, ?4, ?5, ?6, ?7, ?8)"
+             VALUES (:chat_id, :speaker, :text, {NOW}, :model, :ending, :note, :input_tokens, :output_tokens)"
         ),
-        params![
-            chat_id,
-            speaker_name(Speaker::Model),
-            reply.text,
-            reply.model,
-            reply.ending.name(),
-            reply.note,
-            reply.input_tokens as i64,
-            reply.output_tokens as i64,
-        ],
+        named_params! {
+            ":chat_id": chat_id,
+            ":speaker": speaker_name(Speaker::Model),
+            ":text": reply.text,
+            ":model": reply.model,
+            ":ending": reply.ending.name(),
+            ":note": reply.note,
+            ":input_tokens": reply.input_tokens as i64,
+            ":output_tokens": reply.output_tokens as i64,
+        },
     )?;
 
     Ok(())
