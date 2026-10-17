@@ -12,10 +12,10 @@ use crate::business::chats::conversation::{self, ChatEvent};
 use crate::business::chats::history as chats;
 use crate::business::work::Cancel;
 
-use super::error::UiError;
-use super::serializer::chat_view::{self, ChatSummaryView, ChatView, MessageView, ReplyEvent};
-use super::state::UiState;
-use super::user_data::with_user_db;
+use crate::tauri_ui::error::UiError;
+use crate::tauri_ui::serializer::chat_view::{self, ChatSummaryView, ChatView, MessageView, ReplyEvent};
+use crate::tauri_ui::session::with_user_db;
+use crate::tauri_ui::state::UiState;
 
 /// The chats, the newest first.
 pub async fn list_chats(state: &UiState) -> Result<Vec<ChatSummaryView>, UiError> {
@@ -78,5 +78,5 @@ pub async fn send_message(
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "chat_actions_tests.rs"]
+#[path = "chats_tests.rs"]
 mod tests;

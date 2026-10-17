@@ -7,10 +7,10 @@ use crate::business::hardware::scan_settings::ScanSettings;
 use crate::hardware_tests::devices::devices::{self, PortType};
 use crate::hardware_tests::devices::port_property::PortProperty;
 
-use super::error::UiError;
-use super::serializer::scan_view::ScanView;
-use super::state::UiState;
-use super::user_data::with_user_db;
+use crate::tauri_ui::error::UiError;
+use crate::tauri_ui::serializer::scan_view::ScanView;
+use crate::tauri_ui::session::with_user_db;
+use crate::tauri_ui::state::UiState;
 
 /// Scans with the stored settings. A failed scan is shown in the
 /// page (`ScanView::problem`), not as an error of the command.
@@ -44,5 +44,5 @@ pub async fn save_scan_settings(
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "scan_actions_tests.rs"]
+#[path = "scan_tests.rs"]
 mod tests;

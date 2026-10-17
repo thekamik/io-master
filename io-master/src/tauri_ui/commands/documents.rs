@@ -11,24 +11,14 @@
 use std::path::PathBuf;
 
 use crate::business::standards;
-use crate::business::standards::error::DocumentError;
 use crate::business::standards::load::{self, LoadProgress};
 use crate::business::work::Cancel;
 use crate::model::standards::DocumentFields;
 
-use super::error::UiError;
-use super::serializer::standard_view::{DocumentForm, DocumentView, HitView, LoadEvent};
-use super::state::UiState;
-use super::user_data::with_user_db;
-
-impl From<DocumentError> for UiError {
-    fn from(error: DocumentError) -> UiError {
-        match error {
-            DocumentError::Db(error) => UiError::Failed(error.to_string()),
-            other => UiError::Invalid(other.to_string()),
-        }
-    }
-}
+use crate::tauri_ui::error::UiError;
+use crate::tauri_ui::serializer::standard_view::{DocumentForm, DocumentView, HitView, LoadEvent};
+use crate::tauri_ui::session::with_user_db;
+use crate::tauri_ui::state::UiState;
 
 /// The documents, by title and part.
 pub async fn list(state: &UiState) -> Result<Vec<DocumentView>, UiError> {
@@ -104,5 +94,5 @@ pub async fn pdf(state: &UiState, id: i64) -> Result<Vec<u8>, UiError> {
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "standard_actions_tests.rs"]
+#[path = "documents_tests.rs"]
 mod tests;

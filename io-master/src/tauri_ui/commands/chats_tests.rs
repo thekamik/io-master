@@ -1,4 +1,4 @@
-//! Unit tests of `chat_actions.rs`, with a fake AI service.
+//! Unit tests of `commands/chats.rs`, with a fake AI service.
 
 use super::*;
 
@@ -8,8 +8,8 @@ use std::time::Duration;
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
 use crate::db::ai::connection::update as connections_update;
 use crate::model::api_key::ApiKey;
+use crate::tauri_ui::session::with_user_db;
 use crate::tauri_ui::test_support::{TestState, logged_in};
-use crate::tauri_ui::user_data::with_user_db;
 
 /// A logged-in state with an active connection to a fake service
 /// that gives `answer`, and its API key.

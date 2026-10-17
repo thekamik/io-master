@@ -1,4 +1,4 @@
-//! Unit tests of `account_actions.rs`.
+//! Unit tests of `commands/account.rs`.
 
 use super::*;
 

@@ -5,7 +5,7 @@ use crate::business::installation::lifecycle::{self, Opened};
 use crate::model::installation::Role;
 use crate::test_support::TempDir;
 
-use super::account_actions;
+use super::commands::account;
 use super::state::UiState;
 
 /// The password of the user of the tests.
@@ -42,7 +42,7 @@ pub fn installed() -> TestState {
 pub async fn logged_in() -> TestState {
     let test = installed();
 
-    account_actions::log_in(&test.state, "anna".to_owned(), PASSWORD.to_owned()).await.unwrap();
+    account::log_in(&test.state, "anna".to_owned(), PASSWORD.to_owned()).await.unwrap();
 
     test
 }
@@ -63,8 +63,8 @@ pub async fn with_document() -> (TestState, i64) {
     )
     .unwrap();
 
-    super::standard_actions::load(&test.state, vec![path], |_| true).await.unwrap();
-    let id = super::standard_actions::list(&test.state).await.unwrap()[0].id;
+    super::commands::documents::load(&test.state, vec![path], |_| true).await.unwrap();
+    let id = super::commands::documents::list(&test.state).await.unwrap()[0].id;
 
     (test, id)
 }

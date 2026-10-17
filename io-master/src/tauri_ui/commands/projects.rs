@@ -8,7 +8,7 @@
 //! is made on it and written through to the database at once. The page
 //! gets the project back as it is in memory after every change.
 //!
-//! The drawing of one scheme is in `scheme_actions.rs`.
+//! The drawing of one scheme is in `commands/schemes.rs`.
 
 use std::path::Path;
 
@@ -16,48 +16,20 @@ use crate::business::standards;
 use crate::business::standards::load::LoadProgress;
 use crate::business::test_projects::analysis::run::{self, Progress};
 use crate::business::test_projects::checks;
-use crate::business::test_projects::error::StoreError;
-use crate::business::test_projects::exchange::format::ExchangeError;
 use crate::business::test_projects::exchange::{export, import};
 use crate::business::test_projects::workspace::OpenProject;
 use crate::business::test_projects::{projects, schemes};
 use crate::business::work::Cancel;
 use crate::db::user::database::UserDb;
-use crate::model::test_projects::rules::ProjectError;
 use crate::model::test_projects::{ProjectData, ProjectFields};
-use crate::model::text::Entity;
 
-use super::blocking::blocking;
-use super::error::UiError;
-use super::serializer::project_view::{ProjectDataView, ProjectForm, ProjectView, SchemeForm};
-use super::serializer::scheme_view::{AnalysisEvent, PageRange};
-use super::serializer::standard_view::{DocumentView, LoadEvent};
-use super::state::UiState;
-use super::user_data::{with_project, with_user_db, with_workspace};
-
-impl From<StoreError> for UiError {
-    fn from(error: StoreError) -> UiError {
-        match error {
-            StoreError::Db(error) => UiError::Failed(error.to_string()),
-            StoreError::Rule(ProjectError::NotFound(Entity::Project)) => {
-                UiError::Invalid("the test project does not exist".to_owned())
-            }
-            StoreError::Rule(error) => UiError::Invalid(error.to_string()),
-        }
-    }
-}
-
-impl From<ProjectError> for UiError {
-    fn from(error: ProjectError) -> UiError {
-        UiError::Invalid(error.to_string())
-    }
-}
-
-impl From<ExchangeError> for UiError {
-    fn from(error: ExchangeError) -> UiError {
-        UiError::Invalid(error.to_string())
-    }
-}
+use crate::tauri_ui::blocking::blocking;
+use crate::tauri_ui::error::UiError;
+use crate::tauri_ui::serializer::project_view::{ProjectDataView, ProjectForm, ProjectView, SchemeForm};
+use crate::tauri_ui::serializer::scheme_view::{AnalysisEvent, PageRange};
+use crate::tauri_ui::serializer::standard_view::{DocumentView, LoadEvent};
+use crate::tauri_ui::session::{with_project, with_user_db, with_workspace};
+use crate::tauri_ui::state::UiState;
 
 /// The documents of a project, for the page.
 pub fn documents_of(db: &UserDb, data: &ProjectData) -> Result<Vec<DocumentView>, UiError> {
@@ -156,12 +128,7 @@ pub async fn update_scheme(state: &UiState, id: i64, form: SchemeForm) -> Result
 
 pub async fn accept_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Result<ProjectDataView, UiError> {
     with_project(state, project, move |db, open| {
-        for id in ids {
-            if schemes::get(open, id).is_some() {
-                schemes::accept(db, open, id)?;
-            }
-        }
-
+        schemes::accept_many(db, open, &ids)?;
         view(db, open)
     })
     .await
@@ -171,10 +138,7 @@ pub async fn accept_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Res
 /// forgotten: an earlier content names tiles of these schemes.
 pub async fn delete_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Result<ProjectDataView, UiError> {
     with_project(state, project, move |db, open| {
-        for id in ids {
-            schemes::delete(db, open, id)?;
-        }
-
+        schemes::delete_many(db, open, &ids)?;
         view(db, open)
     })
     .await
@@ -183,9 +147,7 @@ pub async fn delete_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Res
 /// The project a scheme belongs to, as stored.
 pub async fn project_of_scheme(state: &UiState, scheme: i64) -> Result<i64, UiError> {
     with_user_db(state, move |db| {
-        Ok(crate::db::test_projects::read::scheme(db, scheme)?
-            .ok_or_else(|| UiError::Invalid("the scheme does not exist".to_owned()))?
-            .project)
+        schemes::project_of(db, scheme)?.ok_or_else(|| UiError::Invalid("the scheme does not exist".to_owned()))
     })
     .await
 }
@@ -255,5 +217,5 @@ pub async fn import(
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "project_actions_tests.rs"]
+#[path = "projects_tests.rs"]
 mod tests;

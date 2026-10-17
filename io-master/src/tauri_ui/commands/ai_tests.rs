@@ -1,4 +1,4 @@
-//! Unit tests of `ai_config_actions.rs`, with a fake AI service
+//! Unit tests of `commands/ai.rs`, with a fake AI service
 //! (`ai/api/test_support.rs`).
 
 use super::*;

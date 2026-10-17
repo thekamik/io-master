@@ -13,6 +13,8 @@
 //! accept()           PUT     /tiles/{id}/accepted
 //! move_to_scheme()   PUT     /tiles/scheme         to another scheme of the project
 //! delete()           DELETE  /tiles/{id}           with its sources and links
+//! scheme_of()        GET     /tiles/{id}/scheme    as stored, before the project is open
+//! accept_in(), delete_in()   the same for several tiles of one scheme
 //! ```
 
 use crate::business::standards;
@@ -199,4 +201,38 @@ pub fn delete(db: &UserDb, open: &mut OpenProject, id: i64) -> Result<bool, DbEr
     data.links.retain(|link| link.from != id && link.to != id);
 
     Ok(deleted)
+}
+
+/* ---------------------------------------------------------------
+ * Several tiles, and the scheme of a tile
+ * ------------------------------------------------------------- */
+
+/// The scheme tile `id` is in, as stored (to open its project before the
+/// tile is worked on); `None` when there is no such.
+pub fn scheme_of(db: &UserDb, id: i64) -> Result<Option<i64>, DbError> {
+    Ok(db_test_projects::read::tile(db, id)?.map(|tile| tile.scheme))
+}
+
+/// Accepts the tiles `ids` of scheme `scheme`; a tile of another
+/// scheme is left out.
+pub fn accept_in(db: &UserDb, open: &mut OpenProject, scheme: i64, ids: &[i64]) -> Result<(), StoreError> {
+    for id in ids {
+        if get(open, *id).is_some_and(|tile| tile.scheme == scheme) {
+            accept(db, open, *id)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Deletes the tiles `ids` of scheme `scheme`; a tile of another scheme
+/// is left out.
+pub fn delete_in(db: &UserDb, open: &mut OpenProject, scheme: i64, ids: &[i64]) -> Result<(), DbError> {
+    for id in ids {
+        if get(open, *id).is_some_and(|tile| tile.scheme == scheme) {
+            delete(db, open, *id)?;
+        }
+    }
+
+    Ok(())
 }

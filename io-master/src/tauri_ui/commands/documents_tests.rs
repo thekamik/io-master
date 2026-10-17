@@ -1,4 +1,4 @@
-//! Unit tests of `standard_actions.rs`, with small PDFs read by the
+//! Unit tests of `commands/documents.rs`, with small PDFs read by the
 //! real tools of Poppler.
 
 use super::*;

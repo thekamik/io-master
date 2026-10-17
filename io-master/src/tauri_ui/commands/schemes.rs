@@ -12,7 +12,7 @@
 //! never has to guess what the program stored.
 //!
 //! The projects and the list of their schemes are in
-//! `project_actions.rs`.
+//! `commands/projects.rs`.
 
 use crate::ai::api::tasks::{self};
 use crate::business::test_projects::analysis::run::{self, Progress};
@@ -23,12 +23,12 @@ use crate::business::work::Cancel;
 use crate::db::user::database::UserDb;
 use crate::model::ai::Task;
 
-use super::error::UiError;
-use super::project_actions::{documents_of, project_of_scheme};
-use super::serializer::project_view::ProjectDataView;
-use super::serializer::scheme_view::{AnalysisEvent, PageRange, SchemeDataView, TileForm};
-use super::state::UiState;
-use super::user_data::{with_project, with_user_db};
+use super::projects::{documents_of, project_of_scheme};
+use crate::tauri_ui::error::UiError;
+use crate::tauri_ui::serializer::project_view::ProjectDataView;
+use crate::tauri_ui::serializer::scheme_view::{AnalysisEvent, PageRange, SchemeDataView, TileForm};
+use crate::tauri_ui::session::{with_project, with_user_db};
+use crate::tauri_ui::state::UiState;
 
 /// The view of `scheme` of the open project, as it is in memory now.
 fn view(db: &UserDb, open: &OpenProject, scheme: i64) -> Result<SchemeDataView, UiError> {
@@ -59,9 +59,7 @@ async fn change(
 /// The scheme a tile is in, as stored.
 async fn scheme_of_tile(state: &UiState, tile: i64) -> Result<i64, UiError> {
     with_user_db(state, move |db| {
-        Ok(crate::db::test_projects::read::tile(db, tile)?
-            .ok_or_else(|| UiError::Invalid("the tile does not exist".to_owned()))?
-            .scheme)
+        tiles::scheme_of(db, tile)?.ok_or_else(|| UiError::Invalid("the tile does not exist".to_owned()))
     })
     .await
 }
@@ -110,29 +108,11 @@ pub async fn move_tiles(state: &UiState, shown: i64, ids: Vec<i64>, to: i64) -> 
 }
 
 pub async fn delete_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
-    change(state, scheme, move |db, open| {
-        for id in ids {
-            if tiles::get(open, id).is_some_and(|tile| tile.scheme == scheme) {
-                tiles::delete(db, open, id)?;
-            }
-        }
-
-        Ok(())
-    })
-    .await
+    change(state, scheme, move |db, open| Ok(tiles::delete_in(db, open, scheme, &ids)?)).await
 }
 
 pub async fn accept_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
-    change(state, scheme, move |db, open| {
-        for id in ids {
-            if tiles::get(open, id).is_some_and(|tile| tile.scheme == scheme) {
-                tiles::accept(db, open, id)?;
-            }
-        }
-
-        Ok(())
-    })
-    .await
+    change(state, scheme, move |db, open| Ok(tiles::accept_in(db, open, scheme, &ids)?)).await
 }
 
 /// Links two tiles of the project of `scheme` (one of them may be in
@@ -176,11 +156,9 @@ pub async fn undo(state: &UiState, scheme: i64) -> Result<SchemeDataView, UiErro
 /// Which instructions: those of the analysis of a chapter, or those
 /// of reading a table of contents (`ai/api/tasks.rs`).
 fn instruction_task(which: &str) -> Result<Task, UiError> {
-    match which {
-        "chapter" => Ok(Task::Chapter),
-        "contents" => Ok(Task::Contents),
-        _ => Err(UiError::Invalid("there are no such instructions".to_owned())),
-    }
+    Task::from_name(which)
+        .filter(|task| tasks::default_instructions(*task).is_some())
+        .ok_or_else(|| UiError::Invalid("there are no such instructions".to_owned()))
 }
 
 /// The instructions `which` ("chapter" or "contents"): those the user
@@ -241,11 +219,11 @@ pub async fn analyse_schemes(
 
     run::analyse_schemes(&session, project, ids, part_size, cancel(state), progress).await?;
 
-    super::project_actions::open(state, project).await
+    super::projects::open(state, project).await
 }
 
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "scheme_actions_tests.rs"]
+#[path = "schemes_tests.rs"]
 mod tests;

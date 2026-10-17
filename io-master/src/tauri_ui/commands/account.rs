@@ -15,10 +15,10 @@ use crate::business::installation::lifecycle::{self, LifecycleError};
 use crate::business::session::{Session, accounts};
 use crate::model::installation::Role;
 
-use super::blocking::blocking;
-use super::error::UiError;
-use super::serializer::app_view::AppView;
-use super::state::UiState;
+use crate::tauri_ui::blocking::blocking;
+use crate::tauri_ui::error::UiError;
+use crate::tauri_ui::serializer::app_view::AppView;
+use crate::tauri_ui::state::UiState;
 
 /// The state of the program as the page shows it.
 pub fn app_view(state: &UiState) -> AppView {
@@ -142,5 +142,5 @@ pub async fn change_password(
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "account_actions_tests.rs"]
+#[path = "account_tests.rs"]
 mod tests;

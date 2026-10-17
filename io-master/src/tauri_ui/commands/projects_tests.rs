@@ -1,4 +1,4 @@
-//! Unit tests of `project_actions.rs`, with small PDFs, the real tools
+//! Unit tests of `commands/projects.rs`, with small PDFs, the real tools
 //! of Poppler and a fake AI service.
 
 use super::*;
@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
 use crate::model::api_key::ApiKey;
-use crate::tauri_ui::scheme_actions;
+use crate::tauri_ui::commands::schemes;
 use crate::tauri_ui::serializer::scheme_view::TileForm;
 use crate::tauri_ui::test_support::{logged_in, project_form, scheme_form, with_document};
 use crate::test_support::TempDir;
@@ -59,7 +59,7 @@ async fn a_project_holds_its_schemes_and_their_counts() {
     let scheme = view.schemes[0].id;
     assert_eq!(view.schemes[0].pages.map(|pages| pages.last_page), Some(2));
 
-    scheme_actions::add_tile(&test.state, scheme, input("Sample")).await.unwrap();
+    schemes::add_tile(&test.state, scheme, input("Sample")).await.unwrap();
 
     let view = open(&test.state, project).await.unwrap();
     assert_eq!((view.schemes[0].tiles, view.schemes[0].findings), (1, 1));
@@ -87,7 +87,7 @@ async fn a_project_goes_to_a_file_and_back() {
     let (test, document) = with_document().await;
     let project = create(&test.state, project_form("To share", vec![document])).await.unwrap().project.id;
     let scheme = create_scheme(&test.state, project, scheme_form("1", "S", None)).await.unwrap().schemes[0].id;
-    scheme_actions::add_tile(&test.state, scheme, input("Sample")).await.unwrap();
+    schemes::add_tile(&test.state, scheme, input("Sample")).await.unwrap();
 
     let directory = TempDir::new();
     let file = directory.path().join("project.json");

@@ -1,17 +1,25 @@
-//! The desktop window: the commands, the state, the serializer.
+//! The desktop window (Tauri 2), the thin layer between the business
+//! (`business/`) and the page (`ui/`), step 40 of docs/todo.md:
+//!
+//! ```text
+//! commands.rs     every command the page may call: the whole surface
+//! commands/       per resource: the session, the form into a type of
+//!                 model/, the call of business/, the result into a view
+//! serializer/     the views and forms (serde), only here
+//! session.rs      the session of the logged-in evaluator, for a command
+//! state.rs        the session and the stop signals
+//! error.rs        every error of the business as an error of the page
+//! blocking.rs     blocking work off the threads of the window
+//! ```
+//!
+//! No rule of the business is here: a rule found in a command is a
+//! finding of the review.
 
-pub mod account_actions;
-pub mod ai_config_actions;
 pub mod blocking;
-pub mod chat_actions;
 pub mod commands;
 pub mod error;
-pub mod project_actions;
-pub mod scan_actions;
-pub mod scheme_actions;
 pub mod serializer;
-pub mod standard_actions;
+pub mod session;
 pub mod state;
 #[cfg(test)]
 pub mod test_support;
-pub mod user_data;

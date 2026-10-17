@@ -16,10 +16,10 @@ use crate::ai::presets::{self, field_help};
 use crate::model::ai::Field;
 use crate::model::api_key::ApiKey;
 
-use super::error::UiError;
-use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
-use super::state::UiState;
-use super::user_data::with_user_db;
+use crate::tauri_ui::error::UiError;
+use crate::tauri_ui::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
+use crate::tauri_ui::session::with_user_db;
+use crate::tauri_ui::state::UiState;
 
 /// The connection does not exist.
 fn no_such_connection() -> UiError {
@@ -131,5 +131,5 @@ pub fn field_instruction(state: &UiState, field: &str, form: ConnectionForm) -> 
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "ai_config_actions_tests.rs"]
+#[path = "ai_tests.rs"]
 mod tests;

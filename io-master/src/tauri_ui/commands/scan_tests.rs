@@ -1,4 +1,4 @@
-//! Unit tests of `scan_actions.rs`. The scan reads the real ports of
+//! Unit tests of `commands/scan.rs`. The scan reads the real ports of
 //! the computer; the tests check the settings, not which ports exist.
 
 use super::*;

@@ -1,4 +1,4 @@
-//! Unit tests of `scheme_actions.rs`, with small PDFs, the real tools
+//! Unit tests of `commands/schemes.rs`, with small PDFs, the real tools
 //! of Poppler and a fake AI service.
 
 use super::*;
@@ -9,24 +9,21 @@ use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, complet
 use crate::ai::tasks::chapter::DEFAULT_INSTRUCTIONS;
 use crate::ai::tasks::contents;
 use crate::model::api_key::ApiKey;
-use crate::tauri_ui::project_actions;
+use crate::tauri_ui::commands::projects;
 use crate::tauri_ui::serializer::scheme_view::SourceView;
 use crate::tauri_ui::test_support::{TestState, logged_in, project_form, scheme_form, with_document};
 
 /// A project "P" on the document with the schemes `numbers` (each
 /// covering the whole document); returns the project and the schemes.
 async fn project_with(test: &TestState, document: i64, numbers: &[&str]) -> (i64, Vec<i64>) {
-    let project = project_actions::create(&test.state, project_form("P", vec![document])).await.unwrap().project.id;
+    let project = projects::create(&test.state, project_form("P", vec![document])).await.unwrap().project.id;
     let mut schemes = Vec::new();
 
     for number in numbers {
-        let view = project_actions::create_scheme(
-            &test.state,
-            project,
-            scheme_form(number, "Chapter", Some((document, 1, 3))),
-        )
-        .await
-        .unwrap();
+        let view =
+            projects::create_scheme(&test.state, project, scheme_form(number, "Chapter", Some((document, 1, 3))))
+                .await
+                .unwrap();
         schemes.push(view.schemes.last().unwrap().id);
     }
 
@@ -170,9 +167,8 @@ async fn tiles_of_other_schemes_are_shadows_and_tiles_move_between_schemes() {
 async fn tiles_of_another_project_are_not_linked() {
     let (test, document) = with_document().await;
     let (_, mine) = project_with(&test, document, &["5"]).await;
-    let other = project_actions::create(&test.state, project_form("Other", vec![document])).await.unwrap().project.id;
-    let theirs =
-        project_actions::create_scheme(&test.state, other, scheme_form("1", "X", None)).await.unwrap().schemes[0].id;
+    let other = projects::create(&test.state, project_form("Other", vec![document])).await.unwrap().project.id;
+    let theirs = projects::create_scheme(&test.state, other, scheme_form("1", "X", None)).await.unwrap().schemes[0].id;
 
     let a = add_tile(&test.state, mine[0], tile("requirement", "A")).await.unwrap().tiles[0].id;
     let b = add_tile(&test.state, theirs, tile("requirement", "B")).await.unwrap().tiles[0].id;
@@ -233,7 +229,7 @@ async fn several_schemes_are_analysed_one_after_another() {
     let (project, schemes) = project_with(&test, document, &["5", "6"]).await;
 
     // A scheme without pages is told and left out.
-    let bare = project_actions::create_scheme(&test.state, project, scheme_form("7", "No pages", None)).await.unwrap();
+    let bare = projects::create_scheme(&test.state, project, scheme_form("7", "No pages", None)).await.unwrap();
     let bare = bare.schemes.last().unwrap().id;
 
     let answer = r#"{"tiles": [{"key": "a", "kind": "input", "title": "Sample"}], "links": []}"#;

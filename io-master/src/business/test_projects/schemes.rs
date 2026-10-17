@@ -10,6 +10,8 @@
 //! update()     PUT     /schemes/{id}
 //! accept()     PUT     /schemes/{id}/accepted
 //! delete()     DELETE  /schemes/{id}     with its tiles and their links; "Undo" forgets
+//! project_of() GET     /schemes/{id}/project   as stored, before the project is open
+//! accept_many(), delete_many()   the same for several schemes
 //! ```
 
 use crate::business::standards;
@@ -153,6 +155,37 @@ pub fn delete(db: &UserDb, open: &mut OpenProject, id: i64) -> Result<bool, DbEr
     open.forget_versions();
 
     Ok(deleted)
+}
+
+/* ---------------------------------------------------------------
+ * Several schemes, and the project of a scheme
+ * ------------------------------------------------------------- */
+
+/// The project scheme `id` belongs to, as stored (to open the project
+/// before the scheme is worked on); `None` when there is no such.
+pub fn project_of(db: &UserDb, id: i64) -> Result<Option<i64>, DbError> {
+    Ok(db_test_projects::read::scheme(db, id)?.map(|scheme| scheme.project))
+}
+
+/// Accepts the schemes `ids` of the open project; a number that is not
+/// a scheme of it is left out.
+pub fn accept_many(db: &UserDb, open: &mut OpenProject, ids: &[i64]) -> Result<(), StoreError> {
+    for id in ids {
+        if get(open, *id).is_some() {
+            accept(db, open, *id)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Deletes the schemes `ids` of the open project with their tiles.
+pub fn delete_many(db: &UserDb, open: &mut OpenProject, ids: &[i64]) -> Result<(), DbError> {
+    for id in ids {
+        delete(db, open, *id)?;
+    }
+
+    Ok(())
 }
 
 // Unit tests, in their own file to keep this one readable. They
