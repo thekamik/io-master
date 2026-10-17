@@ -1,4 +1,6 @@
-//! The work on hardware as the evaluator sees it: the settings of the
-//! scan of the ports. The scan itself is `hardware_tests/devices/`.
+//! The work on hardware as the evaluator sees it: the scan of the
+//! serial ports and its settings. The scan itself is
+//! `hardware_tests/devices/`.
 
+pub mod ports;
 pub mod scan_settings;

@@ -37,6 +37,11 @@ mod tauri_ui;
 #[cfg(test)]
 mod test_support;
 
+// The direction of the dependencies between the folders, checked on
+// the source.
+#[cfg(test)]
+mod architecture_tests;
+
 use std::path::PathBuf;
 use std::process::ExitCode;
 
