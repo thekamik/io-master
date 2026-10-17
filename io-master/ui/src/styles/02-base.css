@@ -1,0 +1,72 @@
+/* ---------------------------------------------------------------
+ * 2. Base
+ * ------------------------------------------------------------- */
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* The window has a fixed height: the bars on top, the sidebar and
+   the page below them, the page scrolling on its own, so that the
+   user and "Log out" stay at the bottom of the sidebar. */
+#app {
+    display: flex;
+    flex-direction: column;
+}
+
+h1,
+h2,
+h3 {
+    line-height: 1.25;
+    margin: 0 0 0.75rem;
+}
+
+h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+h2 {
+    font-size: 1.15rem;
+    font-weight: 650;
+}
+
+h3 {
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+code,
+pre,
+.mono {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+}
+
+svg.icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}

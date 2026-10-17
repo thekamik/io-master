@@ -15,15 +15,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import {
-    analyseScheme,
-    analysisInstructions,
-    saveAnalysisInstructions,
-    sentence,
-    stopWork,
-    type AnalysisEvent,
-    type SchemeDataView,
-  } from "../lib/api";
+  import { stopWork } from "../lib/api/documents";
+import { sentence } from "../lib/api/errors";
+import { analyseScheme, analysisInstructions, saveAnalysisInstructions, type AnalysisEvent, type SchemeDataView } from "../lib/api/projects";
 
   let {
     data,

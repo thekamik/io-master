@@ -11,7 +11,7 @@
 <script lang="ts">
   import { Handle, Position, type NodeProps } from "@xyflow/svelte";
 
-  import type { TileView } from "../lib/api";
+  import { type TileView } from "../lib/api/projects";
 
   let { data, selected }: NodeProps & { data: { tile: TileView; findings: number } } = $props();
 

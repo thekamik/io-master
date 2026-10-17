@@ -1,6 +1,7 @@
 <!-- The login. -->
 <script lang="ts">
-  import { logIn, sentence, type AppView } from "../lib/api";
+  import { logIn, type AppView } from "../lib/api/app";
+import { sentence } from "../lib/api/errors";
 
   let { onchange }: { onchange: (app: AppView) => void } = $props();
 

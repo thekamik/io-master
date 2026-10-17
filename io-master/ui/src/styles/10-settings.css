@@ -1,0 +1,166 @@
+/* ---------------------------------------------------------------
+ * 10. Settings and the tab AI
+ * ------------------------------------------------------------- */
+
+/* Facts about the installation: name and value in two columns. */
+dl.facts {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.55rem 1.5rem;
+    margin: 0;
+}
+
+dl.facts dt {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+dl.facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+ul.plain {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+ul.plain li {
+    margin-bottom: 0.3rem;
+}
+
+.ai-config > h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+/* Several short fields side by side. */
+.ai-config .row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.ai-config .row > label {
+    flex: 1;
+    min-width: 12rem;
+}
+
+.ai-config .row > label.choice {
+    flex: none;
+    min-width: 0;
+    margin-right: 1rem;
+}
+
+.ai-config details summary {
+    cursor: pointer;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 550;
+}
+
+/* The field the program refused. */
+.ai-config label.invalid {
+    color: var(--danger);
+}
+
+.ai-config label.invalid input,
+.ai-config label.invalid textarea {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px var(--danger-soft);
+}
+
+.ai-config form > .buttons {
+    margin: 0 0 1.25rem;
+}
+
+/* "AI help" at a field, and the instruction it shows below it. */
+button.help {
+    min-height: 1.5rem;
+    margin-left: 0.5rem;
+    padding: 0.05rem 0.55rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-color: transparent;
+    border-radius: 999px;
+    vertical-align: middle;
+}
+
+button.help:hover:not(:disabled) {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+}
+
+.ai-config .row > button.help {
+    margin: 0 0 0.9rem;
+}
+
+.help-panel {
+    margin: -0.25rem 0 1rem;
+    padding: 0.85rem;
+    background: var(--accent-soft);
+    border: 1px dashed var(--accent);
+    border-radius: var(--radius-sm);
+}
+
+.help-panel p {
+    margin-top: 0;
+}
+
+.help-panel textarea {
+    margin-top: 0;
+}
+
+.help-panel .buttons {
+    margin-top: 0.6rem;
+}
+
+/* The presets: one card each. */
+.ai-config fieldset.preset p {
+    margin: 0 0 0.6rem;
+}
+
+.ai-config fieldset.preset p.mono {
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+}
+
+/* The report of a check: what went out and what came back, as it
+   was, lines kept. */
+.report h3 {
+    margin: 1.1rem 0 0.4rem;
+    font-size: 0.9rem;
+}
+
+.report pre {
+    margin: 0;
+    padding: 0.65rem 0.85rem;
+    max-height: 20rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+.report dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.3rem 1rem;
+    margin: 0;
+}
+
+.report dt {
+    font-weight: 600;
+}
+
+.report dd {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}

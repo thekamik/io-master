@@ -13,25 +13,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import {
-    createProject,
-    deleteDocument,
-    deleteProject,
-    importProject,
-    listDocuments,
-    listProjects,
-    loadDocuments,
-    searchDocuments,
-    sentence,
-    stopWork,
-    updateDocument,
-    type DocumentView,
-    type HitView,
-    type LoadEvent,
-    type ProjectView,
-  } from "../lib/api";
-  import PdfViewer from "./PdfViewer.svelte";
-  import ProjectEditor from "./ProjectEditor.svelte";
+  import { deleteDocument, listDocuments, loadDocuments, searchDocuments, stopWork, updateDocument, type DocumentView, type HitView, type LoadEvent } from "../lib/api/documents";
+import { sentence } from "../lib/api/errors";
+import { createProject, deleteProject, importProject, listProjects, type ProjectView } from "../lib/api/projects";
+  import PdfViewer from "../components/PdfViewer.svelte";
+  import ProjectEditor from "../components/ProjectEditor.svelte";
 
   type Tab = "projects" | "documents";
 

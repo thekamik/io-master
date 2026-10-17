@@ -15,23 +15,9 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import {
-    acceptSchemes,
-    createScheme,
-    deleteSchemes,
-    exportProject,
-    openProject,
-    schemeName,
-    sentence,
-    setProjectReady,
-    updateProject,
-    updateScheme,
-    type DocumentView,
-    type ProjectDataView,
-    type ProjectFields,
-    type SchemeFields,
-    type SchemeSummaryView,
-  } from "../lib/api";
+  import { type DocumentView } from "../lib/api/documents";
+import { sentence } from "../lib/api/errors";
+import { acceptSchemes, createScheme, deleteSchemes, exportProject, openProject, schemeName, setProjectReady, updateProject, updateScheme, type ProjectDataView, type ProjectFields, type SchemeFields, type SchemeSummaryView } from "../lib/api/projects";
   import ChaptersPanel from "./ChaptersPanel.svelte";
   import ContentsPanel from "./ContentsPanel.svelte";
   import SchemeEditor from "./SchemeEditor.svelte";

@@ -11,17 +11,8 @@
   The panel works on a copy: nothing is stored before "Save".
 -->
 <script lang="ts">
-  import {
-    openScheme,
-    schemeName,
-    sentence,
-    type FindingView,
-    type LinkView,
-    type SchemeDataView,
-    type SourceView,
-    type TileFields,
-    type TileView,
-  } from "../lib/api";
+  import { sentence } from "../lib/api/errors";
+import { openScheme, schemeName, type FindingView, type LinkView, type SchemeDataView, type SourceView, type TileFields, type TileView } from "../lib/api/projects";
 
   let {
     data,

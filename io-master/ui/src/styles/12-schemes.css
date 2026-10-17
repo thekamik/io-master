@@ -1,0 +1,553 @@
+/* ---------------------------------------------------------------
+ * 12. Create evaluation scheme
+ * ------------------------------------------------------------- */
+
+.section-actions {
+    margin-bottom: 1.25rem;
+}
+
+form.search {
+    display: flex;
+    gap: 0.5rem;
+    margin-left: auto;
+    min-width: 22rem;
+}
+
+form.search input {
+    margin: 0;
+}
+
+.load-log {
+    font-size: 0.875rem;
+}
+
+.load-log > * {
+    margin: 0.2rem 0;
+}
+
+.scheme-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(20rem, 1fr));
+    gap: 1rem;
+}
+
+.scheme-card {
+    margin: 0;
+}
+
+.scheme-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.scheme-card-head h3 {
+    margin: 0;
+}
+
+ul.hits,
+ul.findings {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+ul.hits button.link,
+ul.findings button.link {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.1rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: var(--radius-sm);
+    white-space: normal;
+}
+
+ul.hits button.link:hover,
+ul.findings button.link:hover {
+    background: var(--surface-2);
+}
+
+table.documents td.actions {
+    white-space: nowrap;
+    text-align: right;
+}
+
+table.documents td {
+    white-space: normal;
+}
+
+.range {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+}
+
+.range label.choice {
+    flex: 1;
+    margin: 0;
+}
+
+.range input[type="number"] {
+    width: 5.5rem;
+    margin: 0;
+}
+
+.dialog details summary {
+    cursor: pointer;
+    font-weight: 600;
+    margin: 0.75rem 0 0.5rem;
+}
+
+.log {
+    max-height: 14rem;
+    overflow-y: auto;
+    margin: 1rem 0;
+    padding: 0.6rem 0.8rem;
+    font-size: 0.85rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+/* The drawing module: the head, the tools, the canvas and the panel
+   on the right, filling the height of the page. */
+.editor {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 12.5rem);
+    min-height: 32rem;
+}
+
+.editor-head {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.editor-head h2 {
+    margin: 0;
+}
+
+.editor-head .push {
+    margin-left: auto;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem;
+    margin-bottom: 0.75rem;
+}
+
+.toolbar .separator {
+    width: 1px;
+    height: 1.6rem;
+    margin: 0 0.3rem;
+    background: var(--border);
+}
+
+.toolbar input.filter {
+    width: 12rem;
+    margin: 0;
+}
+
+.toolbar select {
+    width: auto;
+    margin: 0;
+}
+
+.toolbar button.kind::before {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    background: var(--kind);
+}
+
+.editor > p.problem,
+.editor > p.done {
+    margin: 0 0 0.6rem;
+}
+
+.editor-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    gap: 1rem;
+}
+
+.canvas {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.canvas .legend {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.6rem;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+}
+
+.dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 3px;
+    background: var(--kind);
+}
+
+.side {
+    width: 24rem;
+    flex-shrink: 0;
+    overflow-y: auto;
+    padding: 1rem 1.1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.side h3 {
+    margin-top: 0;
+}
+
+/* The colour of each kind of tile. */
+.input {
+    --kind: #2f9e6b;
+    --kind-soft: rgb(47 158 107 / 12%);
+}
+
+.requirement {
+    --kind: #3b5bdb;
+    --kind-soft: rgb(59 91 219 / 12%);
+}
+
+.output {
+    --kind: #c2410c;
+    --kind-soft: rgb(194 65 12 / 12%);
+}
+
+/* A tile on the canvas. */
+.tile {
+    width: 15rem;
+    padding: 0.55rem 0.75rem 0.65rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-left: 4px solid var(--kind);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.tile.proposed {
+    border-style: dashed;
+    border-left-style: solid;
+    background: var(--kind-soft);
+}
+
+.tile.selected {
+    box-shadow: 0 0 0 2px var(--kind), var(--shadow-raised);
+}
+
+.tile-head {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.2rem;
+}
+
+.tile-kind {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--kind);
+}
+
+.tile-flag {
+    padding: 0 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    border-radius: 999px;
+    color: var(--accent);
+    background: var(--accent-soft);
+}
+
+.tile-flag.warn {
+    margin-left: auto;
+    color: var(--warning);
+    background: var(--warning-soft);
+}
+
+.tile-id {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.tile-title {
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.tile-external {
+    margin-top: 0.25rem;
+    font-size: 0.7rem;
+    color: var(--warning);
+}
+
+/* Tiles that do not match the filter. */
+.svelte-flow__node.dimmed {
+    opacity: 0.25;
+}
+
+/* The links: the colour of what they mean. */
+.svelte-flow__edge.needed_by .svelte-flow__edge-path {
+    stroke: #2f9e6b;
+}
+
+.svelte-flow__edge.reported_in .svelte-flow__edge-path {
+    stroke: #c2410c;
+}
+
+.svelte-flow__edge.provides .svelte-flow__edge-path {
+    stroke: #3b5bdb;
+    stroke-dasharray: 6 4;
+}
+
+/* A requirement that must be met before another: dotted. */
+.svelte-flow__edge.precedes .svelte-flow__edge-path {
+    stroke: #9c36b5;
+    stroke-dasharray: 2 4;
+}
+
+.svelte-flow__edge .svelte-flow__edge-path {
+    stroke-width: 1.8;
+}
+
+.svelte-flow__edge.selected .svelte-flow__edge-path {
+    stroke-width: 3.2;
+}
+
+.svelte-flow__handle {
+    width: 10px;
+    height: 10px;
+    background: var(--kind, var(--accent));
+    border: 2px solid var(--surface);
+}
+
+/* The panel of the tile chosen. */
+.tile-panel .panel-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
+}
+
+.tile-panel .panel-head h3 {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.tile-panel .row {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.tile-panel .row > label {
+    flex: 1;
+    min-width: 0;
+}
+
+.tile-panel select {
+    margin-top: 0.3rem;
+}
+
+.finding {
+    margin: 0 0 0.4rem;
+    padding: 0.35rem 0.6rem;
+    color: var(--warning);
+    background: var(--warning-soft);
+    border-radius: var(--radius-sm);
+}
+
+.source {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.source-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.source blockquote {
+    margin: 0.35rem 0;
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+    border-left: 3px solid var(--border-strong);
+    background: var(--surface);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.source .buttons button.small,
+.link-line button.small {
+    margin-left: 0;
+}
+
+.link-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.4rem;
+    font-size: 0.875rem;
+}
+
+/* ---------------------------------------------------------------
+ * A test project: the list of its schemes on the left, the scheme
+ * chosen drawn on the right (ProjectEditor.svelte).
+ * ------------------------------------------------------------- */
+
+.project-body {
+    display: flex;
+    gap: 1rem;
+    /* Below the head of the page and of the project. */
+    height: calc(100vh - 16rem);
+    min-height: 32rem;
+}
+
+.chapters {
+    width: 16rem;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    overflow-y: auto;
+    padding: 0.9rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.chapters.hidden {
+    display: none;
+}
+
+.chapters .buttons {
+    margin: 0;
+    flex-wrap: wrap;
+}
+
+ul.chapter-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+ul.chapter-list li {
+    padding: 0.35rem 0.5rem;
+    border-radius: 8px;
+}
+
+ul.chapter-list li.active {
+    background: var(--accent-soft);
+}
+
+ul.chapter-list li.proposed .chapter-name {
+    font-style: italic;
+}
+
+ul.chapter-list li.proposed .chapter-name::after {
+    content: " · proposed";
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+ul.chapter-list button.link {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    text-align: left;
+}
+
+ul.chapter-list .chapter-name {
+    font-weight: 600;
+}
+
+ul.chapter-list li .buttons {
+    margin: 0.35rem 0 0.15rem;
+}
+
+.drawing {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* The drawing of a scheme fills the place beside the list; its
+   panel is narrower there, so that the canvas keeps its room. */
+.drawing .editor {
+    height: 100%;
+    min-height: 0;
+}
+
+.drawing .side {
+    width: 19rem;
+}
+
+.editor-head h3 {
+    margin: 0;
+}
+
+/* A tile of another scheme (ShadowNode.svelte). */
+.tile.shadow {
+    opacity: 0.8;
+    border-style: dashed;
+    border-left-style: dashed;
+    background: var(--surface-2);
+    box-shadow: none;
+    cursor: pointer;
+}
+
+.dot.other {
+    background: var(--surface-2);
+    border: 1px dashed var(--text-muted);
+}
+
+/* Linking to and moving into another scheme (TilePanel.svelte). */
+details.cross {
+    margin: 0.75rem 0;
+}
+
+details.cross summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+fieldset.chapter-choice {
+    max-height: 18rem;
+    overflow-y: auto;
+}

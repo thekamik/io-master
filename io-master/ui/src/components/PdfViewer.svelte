@@ -14,7 +14,8 @@
   import { onMount, tick } from "svelte";
   import type { PDFDocumentProxy } from "pdfjs-dist";
 
-  import { documentPdf, sentence, type DocumentView } from "../lib/api";
+  import { documentPdf, type DocumentView } from "../lib/api/documents";
+import { sentence } from "../lib/api/errors";
   import { drawPage, highlight, openPdf, type DrawnPage } from "../lib/pdf";
 
   let {

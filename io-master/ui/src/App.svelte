@@ -7,7 +7,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import { appState, sentence, type AppView } from "./lib/api";
+  import { appState, type AppView } from "./lib/api/app";
+import { sentence } from "./lib/api/errors";
   import Login from "./pages/Login.svelte";
   import Setup from "./pages/Setup.svelte";
   import Shell from "./pages/Shell.svelte";

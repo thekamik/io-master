@@ -35,26 +35,8 @@
   } from "@xyflow/svelte";
   import "@xyflow/svelte/dist/style.css";
 
-  import {
-    acceptTiles,
-    addLink,
-    addTile,
-    deleteLink,
-    deleteTiles,
-    moveTile,
-    moveTiles,
-    openScheme,
-    schemeName,
-    sentence,
-    undoScheme,
-    updateTile,
-    type LinkView,
-    type SchemeDataView,
-    type ShadowView,
-    type SourceView,
-    type TileFields,
-    type TileKind,
-  } from "../lib/api";
+  import { sentence } from "../lib/api/errors";
+import { acceptTiles, addLink, addTile, deleteLink, deleteTiles, moveTile, moveTiles, openScheme, schemeName, undoScheme, updateTile, type LinkView, type SchemeDataView, type ShadowView, type SourceView, type TileFields, type TileKind } from "../lib/api/projects";
   import AnalysisPanel from "./AnalysisPanel.svelte";
   import PdfViewer from "./PdfViewer.svelte";
   import ShadowNode from "./ShadowNode.svelte";

@@ -1,0 +1,63 @@
+/* ---------------------------------------------------------------
+ * 7. Login and setup
+ * ------------------------------------------------------------- */
+
+main.login {
+    width: 100%;
+    max-width: 24rem;
+    margin: auto;
+    padding: 2.25rem 2rem 1.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: var(--shadow-raised);
+}
+
+main.login.wide {
+    max-width: 36rem;
+}
+
+/* The page behind the panel. */
+#app:has(> main.login) {
+    padding: 2rem 1rem;
+    overflow-y: auto;
+    background:
+        radial-gradient(circle at 15% 10%, rgb(76 110 245 / 14%), transparent 45%),
+        radial-gradient(circle at 85% 90%, rgb(31 78 121 / 16%), transparent 45%),
+        var(--bg);
+}
+
+main.login h1 {
+    text-align: center;
+    font-size: 1.45rem;
+}
+
+main.login > .note {
+    text-align: center;
+    margin-top: -0.25rem;
+}
+
+main.login form button[type="submit"] {
+    width: 100%;
+    min-height: 2.5rem;
+    margin-top: 0.4rem;
+}
+
+main.login fieldset {
+    padding: 0.9rem 1rem 0.3rem;
+    box-shadow: none;
+    background: var(--surface-2);
+}
+
+main.login fieldset label.choice {
+    padding: 0.55rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    margin-bottom: 0.6rem;
+}
+
+main.login fieldset label.choice:has(input:checked) {
+    border-color: var(--accent);
+    box-shadow: var(--focus);
+}

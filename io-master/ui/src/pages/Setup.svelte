@@ -5,7 +5,8 @@
   protected a network port, and the window has none.
 -->
 <script lang="ts">
-  import { sentence, setUp, type AppView } from "../lib/api";
+  import { setUp, type AppView } from "../lib/api/app";
+import { sentence } from "../lib/api/errors";
 
   let { onchange }: { onchange: (app: AppView) => void } = $props();
 

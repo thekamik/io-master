@@ -7,7 +7,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import { listProjects, sentence, type ProjectView } from "../lib/api";
+  import { sentence } from "../lib/api/errors";
+import { listProjects, type ProjectView } from "../lib/api/projects";
 
   let projects: ProjectView[] = $state([]);
   let problem = $state("");

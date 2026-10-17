@@ -22,23 +22,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import {
-    activateAiConnection,
-    aiConfig,
-    aiFieldInstruction,
-    checkAiConnection,
-    deleteAiConnection,
-    deleteAiKey,
-    isUiError,
-    saveAiConnection,
-    sentence,
-    storeAiKey,
-    type AiConfigView,
-    type CheckView,
-    type ConnectionFields,
-    type ConnectionView,
-    type PresetView,
-  } from "../lib/api";
+  import { activateAiConnection, aiConfig, aiFieldInstruction, checkAiConnection, deleteAiConnection, deleteAiKey, saveAiConnection, storeAiKey, type AiConfigView, type CheckView, type ConnectionFields, type ConnectionView, type PresetView } from "../lib/api/ai";
+import { isUiError, sentence } from "../lib/api/errors";
 
   /** A message after an action. */
   type Notice = { done: boolean; text: string } | null;

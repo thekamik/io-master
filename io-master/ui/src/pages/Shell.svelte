@@ -7,7 +7,7 @@
   library), in the colour of the text around them.
 -->
 <script lang="ts">
-  import { logOut, type AppView } from "../lib/api";
+  import { logOut, type AppView } from "../lib/api/app";
   import Chat from "./Chat.svelte";
   import Documentation from "./Documentation.svelte";
   import Evaluation from "./Evaluation.svelte";

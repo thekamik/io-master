@@ -10,7 +10,7 @@
 <script lang="ts">
   import { Handle, Position, type NodeProps } from "@xyflow/svelte";
 
-  import { schemeName, type ShadowView } from "../lib/api";
+  import { schemeName, type ShadowView } from "../lib/api/projects";
 
   let { data }: NodeProps & { data: { shadow: ShadowView } } = $props();
 
