@@ -15,42 +15,39 @@ rustix = { version = "1.1.5", default-features = false, features = ["std", "fs",
 zeroize = "1.9.1"
 
 # The TPM 2.0: sealing the secret of the device and keeping the
-# marker of the installation (tpm/). A Rust wrapper of tpm2-tss,
+# marker of the installation (security/tpm/). A Rust wrapper of tpm2-tss,
 # the TPM library of the system (package libtss2-dev).
 tss-esapi = "7.7.0"
 
-# Reading and writing the temporary installation file as JSON
-# (installation/installation.rs), until the system database
-# exists. The file is read into a plain JSON value and checked by
-# hand, so the types of the program carry no serialization code.
-# Also the templates of the AI connections (ai/connection.rs):
-# "preserve_order" keeps the fields of a template in the order the
+# JSON read and written by hand into plain values, so that the types
+# of the program carry no serialization code: the requests and
+# answers of the AI services (ai/api/provider/), the answers of the
+# tasks of the AI (ai/tasks/), the file of a test project
+# (business/test_projects/exchange/). For the templates of the AI
+# connections (ai/api/connection.rs), "preserve_order" keeps the fields of a template in the order the
 # evaluator wrote them, in the request and in the report of a check
 # (without it they come out sorted by name).
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 
-# The asynchronous runtime the web server runs on: many browser
-# requests are served at once without a thread for each.
-# "rt-multi-thread" and "macros" start it from main(), "net" opens
-# the listening socket, "signal" notices Ctrl+C for a clean stop.
-# "sync" gives the channels that carry a reply while it is written.
+# The asynchronous runtime under the window (Tauri) and the requests
+# to the AI services: the long works wait for the model without a
+# thread each, and blocking work goes to its own threads
+# (spawn_blocking). "sync" gives the channels that carry a reply while
+# it is written and the stop signals; "net" serves the fake AI
+# service of the tests.
 tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "net", "signal", "sync"] }
 
-# The web framework: routes requests to handler functions. Made by
-# the tokio team; the most widely used Rust web framework.
-axum = "0.8.9"
-
-# Reading the fields of HTML forms (the login form) into a Rust
-# struct. Used only in web_ui/, at the boundary to the browser.
+# The views and forms of the page as JSON, at the boundary to the
+# window only (src/tauri_ui/serializer/).
 serde = { version = "1.0", features = ["derive"] }
 
 # The databases: SQLite with SQLCipher, which encrypts the whole
-# file with AES-256 (db/). "bundled-sqlcipher" compiles a fixed,
+# file with AES-256 (db/, db/encryption/sqlcipher.rs). "bundled-sqlcipher" compiles a fixed,
 # known version of SQLCipher into the program; it uses the
 # cryptography of the system's OpenSSL (package libssl-dev).
 rusqlite = { version = "0.40.2", features = ["bundled-sqlcipher"] }
 
-# Turning a password into a key (db/keys.rs): Argon2id, the
+# Turning a password into a key (db/encryption/keys.rs): Argon2id, the
 # recommended password hashing function, slow on purpose so that
 # guessing passwords is expensive.
 argon2 = "0.6.0"
@@ -64,18 +61,13 @@ aes-gcm = "0.11.1"
 hkdf = "0.13.0"
 sha2 = "0.11.1"
 
-# The HTTPS client for the AI connections (ai/client.rs).
+# The HTTPS client for the AI connections (ai/api/provider/client.rs).
 # The most widely used HTTP client of Rust, from the tokio world.
 # "rustls" is TLS written in Rust (no OpenSSL), with the trusted
 # certificates of the system; "http2" for the services that prefer
 # it. The defaults are switched off so that no proxy of the
 # environment is used.
 reqwest = { version = "0.13.5", default-features = false, features = ["rustls", "http2"] }
-
-# Turning the channel of a streamed reply into a stream of
-# server-sent events for the browser (web_ui/chat_page.rs). Already
-# used by axum and reqwest themselves, so it adds no new code.
-futures-util = { version = "0.3.34", default-features = false }
 
 # The desktop interface (src/tauri_ui/, ui/): a window of the
 # system with a web view (WebKitGTK on Linux) that shows the page of
@@ -85,25 +77,18 @@ futures-util = { version = "0.3.34", default-features = false }
 tauri = { version = "2.12.4", features = ["custom-protocol"] }
 
 # The PDFs carried in an exported scheme, as text in its JSON
-# (evaluation/exchange.rs). The standard crate for it; already used
+# (business/test_projects/exchange/). The standard crate for it; already used
 # by Tauri, so it adds no new code.
 base64 = "0.22.1"
 
 # The dialogs of the system to choose files (the PDFs of a standard,
-# the files of schemes; src/tauri_ui/standard_actions.rs). The
+# the files of projects; src/tauri_ui/commands.rs). The
 # official plugin of Tauri; it is called only from Rust, so the page
 # never gets a way to the files of the computer itself.
 tauri-plugin-dialog = "2.8.3"
 
 [dev-dependencies]
-# Sending requests to the web server in tests without opening
-# a network port ("util" gives the oneshot() call).
-tower = { version = "0.5.3", features = ["util"] }
-
-# Reading the body of a response in tests.
-http-body-util = "0.1.5"
-
-# A fake AI service for the tests (ai/test_support.rs): an HTTPS
+# A fake AI service for the tests (ai/api/test_support.rs): an HTTPS
 # server on 127.0.0.1 with a certificate made for the test (rcgen;
 # "pem" writes it as the CA certificate of a connection) and TLS
 # from rustls (tokio-rustls), so that the client is tested with real
