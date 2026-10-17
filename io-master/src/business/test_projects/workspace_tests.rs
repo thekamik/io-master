@@ -149,7 +149,7 @@ fn a_workspace_opens_a_project_once_and_closes_it() {
     let test = database();
     let document = load(&test.db, b"%PDF open");
     let (project, _) = project_with_scheme(&test.db, document);
-    let mut workspace = Workspace::default();
+    let mut workspace = ProjectWorkspace::default();
 
     workspace.open(&test.db, project).unwrap().remember();
     assert!(workspace.open(&test.db, project).unwrap().can_undo(), "the same object, not read again");

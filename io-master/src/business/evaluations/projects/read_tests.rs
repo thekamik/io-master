@@ -8,7 +8,7 @@ use crate::business::evaluations::journal;
 use crate::business::evaluations::projects::{create as import, delete as remove};
 use crate::business::evaluations::test_support::single as results;
 use crate::business::evaluations::test_support::{fields, ready_project};
-use crate::business::evaluations::workspace::Workspace;
+use crate::business::evaluations::workspace::EvaluationWorkspace;
 use crate::business::standards;
 use crate::business::standards::error::DocumentError;
 use crate::business::test_projects::test_support::database;
@@ -34,7 +34,7 @@ fn an_evaluation_is_listed_read_and_deleted_with_everything_in_it() {
     // While the evaluation uses the standard, the standard stays.
     assert!(matches!(standards::delete::delete(&test.db, ready.document), Err(DocumentError::InUse)));
 
-    let mut workspace = Workspace::default();
+    let mut workspace = EvaluationWorkspace::default();
     workspace.open(&test.db, id).unwrap();
 
     assert!(remove::evaluation(&test.db, &mut workspace, id).unwrap());
@@ -66,7 +66,7 @@ fn an_open_evaluation_holds_its_structure_and_results() {
     let requirement = data(&test.db, id).unwrap().unwrap().tiles[1].id;
     results::write(&test.db, requirement, ResultField::Findings, "None.").unwrap();
 
-    let mut workspace = Workspace::default();
+    let mut workspace = EvaluationWorkspace::default();
     let open = workspace.open(&test.db, id).unwrap();
 
     assert_eq!(open.data(), &data(&test.db, id).unwrap().unwrap());

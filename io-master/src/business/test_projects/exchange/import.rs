@@ -11,7 +11,7 @@ use crate::business::standards;
 use crate::business::standards::quote::is_on_page;
 use crate::business::test_projects::content;
 use crate::business::test_projects::error::StoreError;
-use crate::business::test_projects::workspace::Workspace;
+use crate::business::test_projects::workspace::ProjectWorkspace;
 use crate::business::test_projects::{projects, schemes};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -282,7 +282,7 @@ pub fn store(db: &UserDb, exchange: &Exchange, documents: &[i64]) -> Result<i64,
 
     // The new project is opened in a workspace of its own, so that its
     // schemes are added by the same rules as by hand.
-    let mut workspace = Workspace::default();
+    let mut workspace = ProjectWorkspace::default();
 
     match store_content(db, &mut workspace, project, exchange, documents) {
         Ok(()) => Ok(project),
@@ -296,7 +296,7 @@ pub fn store(db: &UserDb, exchange: &Exchange, documents: &[i64]) -> Result<i64,
 /// The schemes, tiles and links of an imported project.
 fn store_content(
     db: &UserDb,
-    workspace: &mut Workspace,
+    workspace: &mut ProjectWorkspace,
     project: i64,
     exchange: &Exchange,
     documents: &[i64],

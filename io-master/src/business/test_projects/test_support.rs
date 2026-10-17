@@ -7,7 +7,7 @@ use crate::db::user::database::{self as user_db, UserDb};
 use crate::security::random::fill_random;
 use crate::test_support::TempDir;
 
-use super::workspace::{OpenProject, Workspace};
+use super::workspace::{OpenProject, ProjectWorkspace};
 use super::{projects, schemes};
 use crate::business::standards;
 use crate::model::standards::DocumentFields;
@@ -121,7 +121,7 @@ pub fn scheme_fields(number: &str, name: &str) -> SchemeFields {
 /// returns the project and the scheme.
 pub fn project_with_scheme(db: &UserDb, document: i64) -> (i64, i64) {
     let project = projects::create::project(db, &project_fields("P", vec![document])).unwrap();
-    let mut workspace = Workspace::default();
+    let mut workspace = ProjectWorkspace::default();
     let scheme = schemes::create::scheme(db, workspace.open(db, project).unwrap(), &scheme_fields("5", "ADV")).unwrap();
 
     (project, scheme)
@@ -130,7 +130,7 @@ pub fn project_with_scheme(db: &UserDb, document: i64) -> (i64, i64) {
 /// Project `project`, opened in a workspace of its own (read from the
 /// database as it is stored now).
 pub fn opened(db: &UserDb, project: i64) -> OpenProject {
-    let mut workspace = Workspace::default();
+    let mut workspace = ProjectWorkspace::default();
     workspace.open(db, project).unwrap();
 
     workspace.take(project).expect("just opened")
@@ -144,7 +144,7 @@ pub mod single {
     use crate::business::test_projects::content;
     use crate::business::test_projects::error::StoreError;
     use crate::business::test_projects::projects;
-    use crate::business::test_projects::workspace::{OpenProject, Workspace};
+    use crate::business::test_projects::workspace::{OpenProject, ProjectWorkspace};
     use crate::business::test_projects::{links as link_crud, schemes, tiles};
     use crate::db::error::DbError;
     use crate::db::test_projects::read as stored;
@@ -292,6 +292,6 @@ pub mod single {
     }
 
     pub fn delete_project(db: &UserDb, project: i64) -> Result<bool, DbError> {
-        projects::delete::project(db, &mut Workspace::default(), project)
+        projects::delete::project(db, &mut ProjectWorkspace::default(), project)
     }
 }

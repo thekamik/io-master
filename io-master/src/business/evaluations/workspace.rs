@@ -81,11 +81,11 @@ impl OpenEvaluation {
 
 /// The evaluations open for work of the logged-in evaluator.
 #[derive(Debug, Default)]
-pub struct Workspace {
+pub struct EvaluationWorkspace {
     open: HashMap<i64, OpenEvaluation>,
 }
 
-impl Workspace {
+impl EvaluationWorkspace {
     /// The open evaluation `id`; read from the database when it is not
     /// open yet.
     pub fn open(&mut self, db: &UserDb, id: i64) -> Result<&mut OpenEvaluation, EvaluationError> {

@@ -6,10 +6,10 @@ use crate::db::error::DbError;
 use crate::db::evaluations::delete as remove;
 use crate::db::user::database::UserDb;
 
-use crate::business::evaluations::workspace::Workspace;
+use crate::business::evaluations::workspace::EvaluationWorkspace;
 
 /// Deletes evaluation `id` and closes it; returns whether it existed.
-pub fn evaluation(db: &UserDb, workspace: &mut Workspace, id: i64) -> Result<bool, DbError> {
+pub fn evaluation(db: &UserDb, workspace: &mut EvaluationWorkspace, id: i64) -> Result<bool, DbError> {
     let deleted = remove::evaluation(db, id)?;
     workspace.close(id);
 

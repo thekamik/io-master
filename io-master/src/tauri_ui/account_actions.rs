@@ -12,7 +12,7 @@
 use zeroize::Zeroizing;
 
 use crate::business::installation::lifecycle::{self, LifecycleError};
-use crate::business::session::accounts;
+use crate::business::session::{Session, accounts};
 use crate::model::installation::Role;
 
 use super::blocking::blocking;
@@ -69,8 +69,10 @@ pub async fn set_up(
     })
     .await?;
 
+    let session = Session::open(&state.data_dir, account, key)?;
+
     state.install(running);
-    state.log_in(account, key);
+    state.log_in(session);
 
     Ok(app_view(state))
 }
@@ -82,12 +84,15 @@ pub async fn log_in(state: &UiState, name: String, password: String) -> Result<A
     let data_dir = state.data_dir.clone();
     let name = name.trim().to_owned();
 
-    let (account, key) = blocking(move || {
-        Ok(accounts::log_in(&running.system_db, running.device_secret.as_ref(), &data_dir, &name, &password)?)
+    let session = blocking(move || {
+        let (account, key) =
+            accounts::log_in(&running.system_db, running.device_secret.as_ref(), &data_dir, &name, &password)?;
+
+        Ok(Session::open(&data_dir, account, key)?)
     })
     .await?;
 
-    state.log_in(account, key);
+    state.log_in(session);
 
     Ok(app_view(state))
 }

@@ -1,8 +1,7 @@
 //! The state of the desktop interface, kept in Rust and never in
-//! the page: the installation, the logged-in evaluator with the key
-//! of their database, and the reply that is being written. (The AI
-//! connections are data of the evaluator, kept in their database:
-//! `db/ai/connection/`.)
+//! the page: the installation, the session of the logged-in evaluator
+//! (`business/session.rs`: the account, the open database and the work
+//! in memory), and the stop signals of the work that is running.
 //!
 //! The page (`ui/`) holds no secret and no state that matters: it
 //! asks through the commands (`commands.rs`) and shows what it gets
@@ -15,21 +14,10 @@ use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 use tokio::sync::watch;
 
 use crate::business::installation::lifecycle::{Opened, Running};
+use crate::business::session::Session;
 use crate::business::session::accounts::Account;
-use crate::business::test_projects::workspace::Workspace;
-use crate::db::encryption::database_key::DatabaseKey;
 
 use super::error::UiError;
-
-/// The logged-in evaluator.
-#[derive(Debug, Clone)]
-pub struct Session {
-    pub account: Account,
-    /// The key of the database of the account, opened by the
-    /// password at login. Shared with the work that runs at the
-    /// moment; wiped when the last holder drops it.
-    pub key: Arc<DatabaseKey>,
-}
 
 /// Everything the commands reach. One for the whole program.
 #[derive(Debug)]
@@ -39,19 +27,15 @@ pub struct UiState {
     /// The running installation; `None` until the first start is
     /// done. Written once, by the setup.
     running: RwLock<Option<Arc<Running>>>,
-    /// The logged-in evaluator; `None` while nobody is logged in.
-    session: Mutex<Option<Session>>,
+    /// The session of the logged-in evaluator; `None` while nobody is
+    /// logged in. Shared with the work that runs at the moment.
+    session: Mutex<Option<Arc<Session>>>,
     /// The stop signal of the reply that is being written, if one
     /// is: sending `true` stops it (the "Stop" button).
     reply_stop: Mutex<Option<watch::Sender<bool>>>,
     /// The stop signal of a long work (loading a standard, an
     /// analysis), the same way.
     work_stop: Mutex<Option<watch::Sender<bool>>>,
-    /// The test projects open for editing, with their versions for
-    /// "Undo" (`business/test_projects/workspace.rs`): the objects in memory of
-    /// the session. Shared with the work on the database, which runs
-    /// on a thread of its own (`user_data.rs`, `with_project`).
-    workspace: Arc<Mutex<Workspace>>,
 }
 
 /// Locks a mutex. A panic in another command while it held the lock
@@ -75,7 +59,6 @@ impl UiState {
             session: Mutex::new(None),
             reply_stop: Mutex::new(None),
             work_stop: Mutex::new(None),
-            workspace: Arc::new(Mutex::new(Workspace::default())),
         }
     }
 
@@ -96,10 +79,10 @@ impl UiState {
         *self.running.write().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(Arc::new(running));
     }
 
-    /// The logged-in evaluator, or the error that nobody is logged
-    /// in. Every command that reads or changes the data of the
-    /// evaluator starts with this check.
-    pub fn session(&self) -> Result<Session, UiError> {
+    /// The session of the logged-in evaluator, or the error that
+    /// nobody is logged in. Every command that reads or changes the
+    /// data of the evaluator starts with this check.
+    pub fn session(&self) -> Result<Arc<Session>, UiError> {
         lock(&self.session).clone().ok_or(UiError::NotLoggedIn)
     }
 
@@ -110,16 +93,17 @@ impl UiState {
 
     /// Starts the session of a logged-in evaluator, replacing an
     /// earlier one.
-    pub fn log_in(&self, account: Account, key: DatabaseKey) {
-        *lock(&self.session) = Some(Session { account, key: Arc::new(key) });
+    pub fn log_in(&self, session: Session) {
+        *lock(&self.session) = Some(Arc::new(session));
     }
 
     /// Ends the session; a reply being written and a long work are
-    /// stopped.
+    /// stopped. The database closes and the work in memory is forgotten
+    /// when the last holder of the session (a work still finishing)
+    /// lets it go.
     pub fn log_out(&self) {
         self.stop_reply();
         self.stop_work();
-        lock(&self.workspace).clear();
         *lock(&self.session) = None;
     }
 
@@ -153,12 +137,6 @@ impl UiState {
         }
 
         receiver
-    }
-
-    /// The test projects open for editing, to be used on the thread
-    /// of the database (`user_data.rs`, `with_project`).
-    pub fn workspace(&self) -> Arc<Mutex<Workspace>> {
-        self.workspace.clone()
     }
 
     /// Stops the long work, if there is one.

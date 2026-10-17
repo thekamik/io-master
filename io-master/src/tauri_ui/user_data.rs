@@ -1,5 +1,6 @@
-//! The database of the logged-in evaluator, and the test projects
-//! open for editing, for the commands.
+//! The session of the logged-in evaluator (`business/session.rs`), for
+//! the commands: its database and the test projects open for editing,
+//! on a thread for blocking work.
 //!
 //! ```text
 //! with_user_db()     the database (the lasting state)
@@ -8,17 +9,15 @@
 //!                    the database when it is not open yet)
 //! ```
 
-use std::sync::PoisonError;
-
-use crate::business::test_projects::workspace::{OpenProject, Workspace};
-use crate::db::user::database::{self as user_db, UserDb};
+use crate::business::test_projects::workspace::{OpenProject, ProjectWorkspace};
+use crate::db::user::database::UserDb;
 
 use super::blocking::blocking;
 use super::error::UiError;
 use super::state::UiState;
 
-/// Runs `work` on the database of the logged-in evaluator, on
-/// a thread for blocking work. Fails with `NotLoggedIn` when nobody
+/// Runs `work` on the database of the logged-in evaluator, on a
+/// thread for blocking work. Fails with `NotLoggedIn` when nobody
 /// is logged in: every command that touches the data of the
 /// evaluator goes through here, so none can skip that check.
 pub async fn with_user_db<T: Send + 'static>(
@@ -26,26 +25,22 @@ pub async fn with_user_db<T: Send + 'static>(
     work: impl FnOnce(&UserDb) -> Result<T, UiError> + Send + 'static,
 ) -> Result<T, UiError> {
     let session = state.session()?;
-    let data_dir = state.data_dir.clone();
 
-    blocking(move || work(&user_db::open(&data_dir, session.account.id, &session.key)?)).await
+    blocking(move || work(&session.db())).await
 }
 
 /// Runs `work` on the database and the projects open for editing.
-/// The open projects are locked while `work` runs, so that two
-/// commands never change one project at the same time. A panic of
-/// another command while it held the lock cannot leave a project half
-/// changed in memory (a change is made in memory only after the
-/// database stored it), so a poisoned lock is used as it is.
+/// Both are locked while `work` runs (`business/session.rs`), so that
+/// two commands never change one project at the same time.
 pub async fn with_workspace<T: Send + 'static>(
     state: &UiState,
-    work: impl FnOnce(&UserDb, &mut Workspace) -> Result<T, UiError> + Send + 'static,
+    work: impl FnOnce(&UserDb, &mut ProjectWorkspace) -> Result<T, UiError> + Send + 'static,
 ) -> Result<T, UiError> {
-    let workspace = state.workspace();
+    let session = state.session()?;
 
-    with_user_db(state, move |db| {
-        let mut workspace = workspace.lock().unwrap_or_else(PoisonError::into_inner);
-        work(db, &mut workspace)
+    blocking(move || {
+        let (db, mut projects) = session.projects();
+        work(&db, &mut projects)
     })
     .await
 }

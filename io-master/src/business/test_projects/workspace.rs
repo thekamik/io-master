@@ -141,11 +141,11 @@ impl OpenProject {
 
 /// The projects open for editing of the logged-in evaluator.
 #[derive(Debug, Default)]
-pub struct Workspace {
+pub struct ProjectWorkspace {
     open: HashMap<i64, OpenProject>,
 }
 
-impl Workspace {
+impl ProjectWorkspace {
     /// The open project `id`; read from the database when it is not
     /// open yet.
     pub fn open(&mut self, db: &UserDb, id: i64) -> Result<&mut OpenProject, StoreError> {
