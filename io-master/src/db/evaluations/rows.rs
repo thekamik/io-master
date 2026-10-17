@@ -1,12 +1,12 @@
 //! The rows of the evaluation projects and the Rust types they become
-//! (`product_evaluation/model.rs`, `evaluation/scheme.rs`).
+//! (`evaluation/model.rs`, `test_projects/model.rs`).
 
 use rusqlite::Row;
 
-use crate::evaluation::scheme::{
+use crate::test_projects::model::{
     External, OutputSection, PageSpan, ProposalState, Scheme, SchemeFields, Tile, TileFields, TileKind,
 };
-use crate::product_evaluation::model::{
+use crate::evaluation::model::{
     Actor, Evaluation, EvaluationFields, JournalAction, JournalEntry, Origin, ResultField,
 };
 

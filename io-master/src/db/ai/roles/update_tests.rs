@@ -5,7 +5,7 @@ use super::*;
 use crate::ai::api::connection::Connection;
 use crate::db::ai::connection::create;
 use crate::db::ai::roles::read;
-use crate::evaluation::test_support::database;
+use crate::test_projects::test_support::database;
 
 #[test]
 fn a_role_gets_a_connection_and_loses_it() {

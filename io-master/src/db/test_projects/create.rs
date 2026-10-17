@@ -1,12 +1,12 @@
 //! Creating test projects, schemes, tiles and links. The rules of
-//! `evaluation/scheme.rs` are checked by the callers
-//! (`evaluation/projects.rs`, `evaluation/schemes.rs`) before.
+//! `test_projects/model.rs` are checked by the callers
+//! (`test_projects/projects/`, `test_projects/`) before.
 
 use rusqlite::params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::scheme::{ProjectFields, SchemeFields, Source, TileFields};
+use crate::test_projects::model::{ProjectFields, SchemeFields, Source, TileFields};
 
 use super::rows::{INSERT_TILE, write_documents, write_scheme, write_sources, write_tile};
 

@@ -4,7 +4,7 @@ use rusqlite::params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::documents::DocumentFields;
+use crate::standards::model::DocumentFields;
 
 /// Changes the title, part and version of a document; returns whether
 /// it exists.

@@ -3,25 +3,31 @@
 //! of its schemes, the export and import of a project as a file, and
 //! the table of contents read by the AI as proposed schemes.
 //!
+//! A project the page shows is open for editing in memory
+//! (`test_projects/workspace.rs`, through `with_project`): every change
+//! is made on it and written through to the database at once. The page
+//! gets the project back as it is in memory after every change.
+//!
 //! The drawing of one scheme is in `scheme_actions.rs`.
 
 use std::path::Path;
-
 use std::sync::Arc;
 
 use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::{self, Role};
 use crate::ai::api::tasks::{self, Task};
 use crate::db::user::database::UserDb;
-use crate::evaluation::analysis;
-use crate::evaluation::checks;
-use crate::evaluation::contents;
-use crate::evaluation::documents::{self, DocumentFields};
-use crate::evaluation::exchange::{self, ExchangeError};
-use crate::evaluation::pdf_text;
-use crate::evaluation::projects::{self, ProjectData};
-use crate::evaluation::scheme::{ProjectFields, SchemeError};
-use crate::evaluation::schemes::{self, StoreError};
+use crate::standards;
+use crate::standards::model::DocumentFields;
+use crate::standards::pdf_text;
+use crate::test_projects::analysis::contents::{self, Answered};
+use crate::test_projects::checks;
+use crate::test_projects::exchange::format::{self, ExchangeError};
+use crate::test_projects::exchange::{export, import};
+use crate::test_projects::model::{ProjectData, ProjectFields};
+use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::test_projects::workspace::OpenProject;
+use crate::test_projects::{projects, schemes};
 
 use super::blocking::blocking;
 use super::error::UiError;
@@ -29,12 +35,15 @@ use super::serializer::project_view::{ProjectDataView, ProjectForm, ProjectView,
 use super::serializer::scheme_view::{AnalysisEvent, PageRange};
 use super::serializer::standard_view::{DocumentView, LoadEvent};
 use super::state::UiState;
-use super::user_data::with_user_db;
+use super::user_data::{with_project, with_user_db, with_workspace};
 
 impl From<StoreError> for UiError {
     fn from(error: StoreError) -> UiError {
         match error {
             StoreError::Db(error) => UiError::Failed(error.to_string()),
+            StoreError::Scheme(SchemeError::NotFound("project")) => {
+                UiError::Invalid("the test project does not exist".to_owned())
+            }
             StoreError::Scheme(error) => UiError::Invalid(error.to_string()),
         }
     }
@@ -52,17 +61,12 @@ impl From<ExchangeError> for UiError {
     }
 }
 
-/// The project, or the error the page shows when it is gone.
-pub fn project_data(db: &UserDb, id: i64) -> Result<ProjectData, UiError> {
-    projects::data(db, id)?.ok_or_else(|| UiError::Invalid("the test project does not exist".to_owned()))
-}
-
 /// The documents of a project, for the page.
 pub fn documents_of(db: &UserDb, data: &ProjectData) -> Result<Vec<DocumentView>, UiError> {
     let mut views = Vec::new();
 
     for document in &data.project.fields.documents {
-        if let Some(document) = documents::get(db, *document)? {
+        if let Some(document) = standards::read::get(db, *document)? {
             views.push(DocumentView::from(document));
         }
     }
@@ -70,13 +74,13 @@ pub fn documents_of(db: &UserDb, data: &ProjectData) -> Result<Vec<DocumentView>
     Ok(views)
 }
 
-/// The view of a project as it is stored now.
-fn view(db: &UserDb, id: i64, can_undo: bool) -> Result<ProjectDataView, UiError> {
-    let data = project_data(db, id)?;
+/// The view of an open project, as it is in memory now.
+pub fn view(db: &UserDb, open: &OpenProject) -> Result<ProjectDataView, UiError> {
+    let data = open.data().clone();
     let findings = checks::check(&data.tiles, &data.links);
     let documents = documents_of(db, &data)?;
 
-    Ok(ProjectDataView::new(data, &findings, documents, can_undo))
+    Ok(ProjectDataView::new(data, &findings, documents, open.can_undo()))
 }
 
 /* ---------------------------------------------------------------
@@ -84,54 +88,45 @@ fn view(db: &UserDb, id: i64, can_undo: bool) -> Result<ProjectDataView, UiError
  * ------------------------------------------------------------- */
 
 pub async fn list(state: &UiState) -> Result<Vec<ProjectView>, UiError> {
-    let projects = with_user_db(state, |db| Ok(projects::list(db)?)).await?;
+    let projects = with_user_db(state, |db| Ok(projects::read::list(db)?)).await?;
 
     Ok(projects.into_iter().map(ProjectView::from).collect())
 }
 
 pub async fn create(state: &UiState, form: ProjectForm) -> Result<ProjectDataView, UiError> {
     let fields: ProjectFields = form.into();
+    let id = with_user_db(state, move |db| Ok(projects::create::project(db, &fields)?)).await?;
 
-    with_user_db(state, move |db| {
-        let id = projects::create(db, &fields)?;
-        view(db, id, false)
-    })
-    .await
+    open(state, id).await
 }
 
+/// Opens a project for editing (from the database, the first time).
 pub async fn open(state: &UiState, id: i64) -> Result<ProjectDataView, UiError> {
-    let can_undo = state.can_undo(id);
-
-    with_user_db(state, move |db| view(db, id, can_undo)).await
+    with_project(state, id, |db, open| view(db, open)).await
 }
 
 pub async fn update(state: &UiState, id: i64, form: ProjectForm) -> Result<ProjectDataView, UiError> {
     let fields: ProjectFields = form.into();
-    let can_undo = state.can_undo(id);
 
-    with_user_db(state, move |db| {
-        projects::update(db, id, &fields)?;
-        view(db, id, can_undo)
+    with_project(state, id, move |db, open| {
+        projects::update::fields(db, open, &fields)?;
+        view(db, open)
     })
     .await
 }
 
 pub async fn set_ready(state: &UiState, id: i64, ready: bool) -> Result<ProjectDataView, UiError> {
-    let can_undo = state.can_undo(id);
-
-    with_user_db(state, move |db| {
-        projects::set_ready(db, id, ready)?;
-        view(db, id, can_undo)
+    with_project(state, id, move |db, open| {
+        projects::update::ready(db, open, ready)?;
+        view(db, open)
     })
     .await
 }
 
 pub async fn delete(state: &UiState, id: i64) -> Result<(), UiError> {
-    if !with_user_db(state, move |db| Ok(projects::delete(db, id)?)).await? {
+    if !with_workspace(state, move |db, workspace| Ok(projects::delete::project(db, workspace, id)?)).await? {
         return Err(UiError::Invalid("the test project does not exist".to_owned()));
     }
-
-    state.forget_undo(id);
 
     Ok(())
 }
@@ -142,41 +137,34 @@ pub async fn delete(state: &UiState, id: i64) -> Result<(), UiError> {
 
 pub async fn create_scheme(state: &UiState, project: i64, form: SchemeForm) -> Result<ProjectDataView, UiError> {
     let fields = form.into_fields()?;
-    let can_undo = state.can_undo(project);
 
-    with_user_db(state, move |db| {
-        schemes::create(db, project, &fields)?;
-        view(db, project, can_undo)
+    with_project(state, project, move |db, open| {
+        schemes::create::scheme(db, open, &fields)?;
+        view(db, open)
     })
     .await
 }
 
 pub async fn update_scheme(state: &UiState, id: i64, form: SchemeForm) -> Result<ProjectDataView, UiError> {
     let fields = form.into_fields()?;
+    let project = project_of_scheme(state, id).await?;
 
-    let project = with_user_db(state, move |db| {
-        let project = schemes::existing(db, id)?.project;
-        schemes::update(db, id, &fields)?;
-        Ok(project)
+    with_project(state, project, move |db, open| {
+        schemes::update::scheme(db, open, id, &fields)?;
+        view(db, open)
     })
-    .await?;
-
-    let can_undo = state.can_undo(project);
-
-    with_user_db(state, move |db| view(db, project, can_undo)).await
+    .await
 }
 
 pub async fn accept_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Result<ProjectDataView, UiError> {
-    let can_undo = state.can_undo(project);
-
-    with_user_db(state, move |db| {
+    with_project(state, project, move |db, open| {
         for id in ids {
-            if schemes::get(db, id)?.is_some_and(|scheme| scheme.project == project) {
-                schemes::accept(db, id)?;
+            if schemes::read::get(open, id).is_some() {
+                schemes::update::accept(db, open, id)?;
             }
         }
 
-        view(db, project, can_undo)
+        view(db, open)
     })
     .await
 }
@@ -184,55 +172,47 @@ pub async fn accept_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Res
 /// Deletes schemes with their tiles. "Undo" of the project is
 /// forgotten: an earlier content names tiles of these schemes.
 pub async fn delete_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Result<ProjectDataView, UiError> {
-    with_user_db(state, move |db| {
+    with_project(state, project, move |db, open| {
         for id in ids {
-            if schemes::get(db, id)?.is_some_and(|scheme| scheme.project == project) {
-                schemes::delete(db, id)?;
-            }
+            schemes::delete::scheme(db, open, id)?;
         }
 
-        Ok(())
+        view(db, open)
     })
-    .await?;
+    .await
+}
 
-    state.forget_undo(project);
-
-    with_user_db(state, move |db| view(db, project, false)).await
+/// The project a scheme belongs to, as stored.
+pub async fn project_of_scheme(state: &UiState, scheme: i64) -> Result<i64, UiError> {
+    with_user_db(state, move |db| {
+        Ok(crate::db::test_projects::read::scheme(db, scheme)?
+            .ok_or_else(|| UiError::Invalid("the scheme does not exist".to_owned()))?
+            .project)
+    })
+    .await
 }
 
 /* ---------------------------------------------------------------
  * The table of contents as proposed schemes
  * ------------------------------------------------------------- */
 
-/// Reads the table of contents on the pages `range` with the AI of
-/// the active connection, and stores the chapters it finds as proposed
-/// schemes of `project`, each with the pages where it was found.
-/// Reports to `events`; "Stop" ends it.
+/// Reads the table of contents on the pages `range` with the AI (the
+/// task `contents`, in the role of its connection), and stores the
+/// chapters it finds as proposed schemes of `project`, each with the
+/// pages where it was found. Reports to `events`; "Stop" ends it.
 pub async fn propose_schemes(
     state: &UiState,
     project: i64,
     range: PageRange,
     events: impl Fn(AnalysisEvent) -> bool + Send + Sync + Clone + 'static,
 ) -> Result<ProjectDataView, UiError> {
-    let (document, part, instructions, model) = with_user_db(state, move |db| {
-        let data = project_data(db, project)?;
-
-        if !data.project.fields.documents.contains(&range.document_id) {
-            return Err(UiError::Invalid("read only a document of the project".to_owned()));
-        }
-
-        let document = documents::get(db, range.document_id)?
-            .ok_or_else(|| UiError::Invalid("the document does not exist".to_owned()))?;
-        let model = roles::model(db, Role::TextAnalysis)?;
-
-        // The table of contents as one part, however long it is.
-        let part = analysis::parts(db, &[(range.document_id, range.first_page, range.last_page)], analysis::PART_RANGE.1)?
-            .into_iter()
-            .next()
-            .ok_or_else(|| UiError::Invalid("the pages of the table of contents hold no text".to_owned()))?;
+    let (question, model) = with_project(state, project, move |db, open| {
         let instructions = tasks::instructions(db, Task::Contents)?.unwrap_or_default();
+        let question =
+            contents::question(db, open, range.document_id, range.first_page, range.last_page, &instructions)?;
+        let model = roles::model(db, Task::Contents.role().unwrap_or(Role::TextAnalysis))?;
 
-        Ok((document, part, instructions, model))
+        Ok((question, model))
     })
     .await?;
 
@@ -241,12 +221,11 @@ pub async fn propose_schemes(
     events(AnalysisEvent::Part {
         index: 1,
         count: 1,
-        document: document.fields.title.clone(),
-        first_page: part.first_page,
-        last_page: part.last_page,
+        document: question.document.fields.title.clone(),
+        first_page: question.part.first_page,
+        last_page: question.part.last_page,
     });
 
-    let turns = completions::single(contents::prompt(&instructions, &document, &part));
     let writing = {
         let events = events.clone();
         move |characters| {
@@ -255,37 +234,31 @@ pub async fn propose_schemes(
     };
 
     let model = Arc::new(model);
-    let reply = completions::create(&model, &turns, &stop, completions::counting(400, writing)).await;
+    let reply = completions::create(&model, &question.turns, &stop, completions::counting(400, writing)).await;
     let outcome = completions::outcome(&reply, &stop);
-    super::scheme_actions::record(state, &model, Task::Contents, turns, reply, &events).await;
+    super::scheme_actions::record(state, &model, Task::Contents, question.turns.clone(), reply, &events).await;
 
     match outcome {
-        Outcome::Answer(answer) => match contents::read(&answer) {
-            Ok((chapters, dropped)) => {
-                let last = part.last_page;
+        Outcome::Answer(text) => {
+            let answered =
+                with_project(state, project, move |db, open| Ok(contents::answer(db, open, &question, &text)?)).await?;
 
-                let applied = with_user_db(state, move |db| {
-                    let starts = contents::locate(db, &document, last, &chapters)?;
-                    let spans = contents::spans(&document, &starts);
-                    let mut applied = contents::apply(db, project, &chapters, &spans)?;
-                    applied.dropped.splice(0..0, dropped);
-                    Ok(applied)
-                })
-                .await?;
+            match answered {
+                Answered::Applied(applied) => {
+                    events(AnalysisEvent::Chapters {
+                        added: applied.added,
+                        known: applied.known,
+                        without_pages: applied.without_pages,
+                        dropped: applied.dropped,
+                    });
+                }
+                Answered::Unreadable(reason) => {
+                    events(AnalysisEvent::Failed { message: reason });
+                }
+            }
 
-                events(AnalysisEvent::Chapters {
-                    added: applied.added,
-                    known: applied.known,
-                    without_pages: applied.without_pages,
-                    dropped: applied.dropped,
-                });
-                events(AnalysisEvent::End { stopped: false });
-            }
-            Err(reason) => {
-                events(AnalysisEvent::Failed { message: reason });
-                events(AnalysisEvent::End { stopped: false });
-            }
-        },
+            events(AnalysisEvent::End { stopped: false });
+        }
         Outcome::Stopped => {
             events(AnalysisEvent::End { stopped: true });
         }
@@ -306,7 +279,7 @@ pub async fn propose_schemes(
 /// `path`.
 pub async fn export(state: &UiState, id: i64, with_pdfs: bool, path: &Path) -> Result<(), UiError> {
     let file = with_user_db(state, move |db| {
-        exchange::export(db, id, with_pdfs)?.ok_or_else(|| UiError::Invalid("the test project does not exist".to_owned()))
+        export::export(db, id, with_pdfs)?.ok_or_else(|| UiError::Invalid("the test project does not exist".to_owned()))
     })
     .await?;
 
@@ -331,13 +304,13 @@ pub async fn import(
     let exchange = blocking(move || {
         let size = std::fs::metadata(&path).map_err(|error| UiError::Invalid(error.to_string()))?.len();
 
-        if size as usize > exchange::MAX_FILE {
+        if size as usize > format::MAX_FILE {
             return Err(UiError::Invalid("the file is larger than 512 MiB".to_owned()));
         }
 
         let file = std::fs::read(&path).map_err(|error| UiError::Invalid(error.to_string()))?;
 
-        Ok(exchange::read(&file)?)
+        Ok(import::read(&file)?)
     })
     .await?;
 
@@ -349,7 +322,7 @@ pub async fn import(
     for (index, document) in exchange.documents.iter().enumerate() {
         let sha256 = document.sha256.clone();
 
-        if let Some(found) = with_user_db(state, move |db| Ok(documents::by_sha256(db, &sha256)?)).await? {
+        if let Some(found) = with_user_db(state, move |db| Ok(standards::read::by_sha256(db, &sha256)?)).await? {
             loaded.push(found.id);
             continue;
         }
@@ -389,7 +362,7 @@ pub async fn import(
         };
         let file_name = document.file_name.clone();
 
-        let id = with_user_db(state, move |db| Ok(documents::add(db, &fields, &file_name, &pdf, &pages)?)).await?;
+        let id = with_user_db(state, move |db| Ok(standards::create::add(db, &fields, &file_name, &pdf, &pages)?)).await?;
         loaded.push(id);
     }
 
@@ -402,11 +375,9 @@ pub async fn import(
         )));
     }
 
-    with_user_db(state, move |db| {
-        let id = exchange::store(db, &exchange, &loaded)?;
-        view(db, id, false)
-    })
-    .await
+    let id = with_user_db(state, move |db| Ok(import::store(db, &exchange, &loaded)?)).await?;
+
+    open(state, id).await
 }
 
 // Unit tests, in their own file to keep this one readable. They

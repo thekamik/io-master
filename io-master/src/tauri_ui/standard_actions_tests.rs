@@ -5,7 +5,7 @@ use super::*;
 
 use std::sync::{Arc, Mutex};
 
-use crate::evaluation::test_support::pdf as make_pdf;
+use crate::test_projects::test_support::pdf as make_pdf;
 use crate::tauri_ui::test_support::{installed, logged_in};
 use crate::tpm::test_support::TempDir;
 

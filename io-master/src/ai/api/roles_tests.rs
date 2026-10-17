@@ -4,7 +4,7 @@ use super::*;
 
 use crate::ai::api::connection::Connection;
 use crate::db::ai::connection::{create, delete, update};
-use crate::evaluation::test_support::database;
+use crate::test_projects::test_support::database;
 
 /// A connection named `name` that needs a key.
 fn connection(name: &str) -> Connection {
@@ -60,7 +60,7 @@ fn a_role_uses_its_own_connection_else_the_active_one() {
     assert!(!set_connection(&test.db, Role::Summary, Some(9_999)).unwrap());
 }
 
-fn connection_of(test: &crate::evaluation::test_support::TestDb, role: Role) -> Option<i64> {
+fn connection_of(test: &crate::test_projects::test_support::TestDb, role: Role) -> Option<i64> {
     super::connection(&test.db, role).unwrap()
 }
 

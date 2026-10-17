@@ -17,11 +17,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::evaluation::checks::Finding;
-use crate::evaluation::projects::ProjectData;
-use crate::evaluation::scheme::{
-    External, LinkMeaning, OutputSection, ProposalState, Source, Tile, TileFields, TileKind,
-};
+use crate::test_projects::checks::Finding;
+use crate::test_projects::model::ProjectData;
+use crate::test_projects::model::{External, OutputSection, ProposalState, Source, Tile, TileFields, TileKind};
+use crate::test_projects::rules::LinkMeaning;
 
 use super::super::error::UiError;
 use super::project_view::{ProjectView, SchemeSummaryView, summaries, summary};

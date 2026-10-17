@@ -2,11 +2,12 @@
 
 use super::*;
 
-use crate::evaluation::scheme::TileKind;
-use crate::evaluation::test_support::database;
-use crate::product_evaluation::model::ResultField;
-use crate::product_evaluation::test_support::{fields, ready_project};
-use crate::product_evaluation::{import, projects, results};
+use crate::test_projects::model::TileKind;
+use crate::test_projects::test_support::database;
+use crate::evaluation::model::ResultField;
+use crate::evaluation::test_support::{fields, ready_project};
+use crate::evaluation::projects::{create as import, read as projects};
+use crate::evaluation::test_support::single as results;
 
 /// The rows of `table`.
 fn rows(db: &UserDb, table: &str) -> i64 {

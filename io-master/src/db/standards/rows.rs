@@ -1,9 +1,9 @@
 //! The rows of the documents of standards and the Rust type they
-//! become (`evaluation/documents.rs`).
+//! become (`standards/`).
 
 use rusqlite::Row;
 
-use crate::evaluation::documents::{Document, DocumentFields};
+use crate::standards::model::{Document, DocumentFields};
 
 /// The columns of a document, in the order of [`document_from_row`].
 /// The PDF and the pages are read on their own (`read.rs`).

@@ -1,135 +1,158 @@
-//! Help for the tests of the test projects: a database of an
-//! evaluator in a temporary directory, a small standard of three pages
-//! loaded into it, and a project with schemes on it.
+//! Help for the tests of the evaluation projects: a ready test project
+//! on the small standard of `evaluation/test_support.rs`, and the
+//! fields of an evaluation.
 
-use crate::db::encryption::database_key::DatabaseKey;
-use crate::db::user::database::{self as user_db, UserDb};
-use crate::random::random::fill_random;
-use crate::tpm::test_support::TempDir;
+use crate::db::user::database::UserDb;
+use crate::test_projects::model::{Source, TileFields, TileKind};
+use crate::test_projects::test_support::{self as standard, PAGES, opened};
+use crate::test_projects::{links, projects as test_projects, tiles};
 
-use super::documents::{self, DocumentFields};
-use super::projects;
-use super::scheme::{ProjectFields, ProposalState, SchemeFields};
-use super::schemes;
+use super::model::EvaluationFields;
 
-/// The pages of the small standard of the tests.
-pub const PAGES: [&str; 3] = [
-    "Part 3: Security assurance components\n1 Scope\nThis part defines the assurance requirements.",
-    "ADV_FSP.4 Complete functional specification\nThe developer shall provide a functional specifi-\ncation.\n\
-     ADV_FSP.4.1E The evaluator shall confirm that the information provided meets all requirements.",
-    "ATE_IND.2 Independent testing - sample\nThe developer shall provide the TOE for testing.\n\
-     ATE_IND.2.1E The evaluator shall test a subset of the TSF.",
-];
-
-/// A database of an evaluator; the directory lives as long as the
-/// returned value.
-pub struct TestDb {
-    /// Held so that the folder lives as long as the database.
-    #[allow(dead_code)]
-    pub directory: TempDir,
-    pub db: UserDb,
+/// The tiles of [`ready_project`].
+pub struct ReadyProject {
+    pub document: i64,
+    pub project: i64,
+    pub scheme: i64,
+    pub input: i64,
+    pub requirement: i64,
+    pub output: i64,
 }
 
-pub fn database() -> TestDb {
-    let directory = TempDir::new();
-    let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
-    let db = user_db::create(directory.path(), 1, &key).unwrap();
+/// A ready test project "P" on the small standard: one scheme with an
+/// input, a requirement quoting page 2 and an output, linked
+/// input → requirement → output.
+pub fn ready_project(db: &UserDb) -> ReadyProject {
+    let document = standard::load(db, b"standard");
+    let (project, scheme) = standard::project_with_scheme(db, document);
 
-    TestDb { directory, db }
-}
+    let mut open = opened(db, project);
+    let input = tiles::create::tile(db, &mut open, scheme, &TileFields::new(TileKind::Input, "Functional specification")).unwrap();
 
-/// The fields of the small standard.
-pub fn fields() -> DocumentFields {
-    DocumentFields {
-        title: "Common Criteria".to_owned(),
-        part: "Part 3".to_owned(),
-        version: "CC:2022 R1".to_owned(),
+    let mut fields = TileFields::new(TileKind::Requirement, "Complete functional specification");
+    fields.identifier = "ADV_FSP.4.1E".to_owned();
+    fields.sources = vec![Source {
+        document_id: document,
+        page: 2,
+        quote: "The evaluator shall confirm that the information provided meets all requirements.".to_owned(),
+        found: false,
+    }];
+    let requirement = tiles::create::tile(db, &mut open, scheme, &fields).unwrap();
+
+    let output = tiles::create::tile(db, &mut open, scheme, &TileFields::new(TileKind::Output, "ADV report")).unwrap();
+
+    links::create::link(db, &mut open, input, requirement).unwrap();
+    links::create::link(db, &mut open, requirement, output).unwrap();
+    test_projects::update::ready(db, &mut open, true).unwrap();
+
+    assert!(PAGES[1].contains("ADV_FSP.4.1E"));
+
+    ReadyProject {
+        document,
+        project,
+        scheme,
+        input,
+        requirement,
+        output,
     }
 }
 
-/// Loads the small standard (with `content` as its file, so that
-/// different calls make different files); returns its number.
-pub fn load(db: &UserDb, content: &[u8]) -> i64 {
-    let pages: Vec<String> = PAGES.iter().map(|page| (*page).to_owned()).collect();
-
-    documents::add(db, &fields(), "cc-part3.pdf", content, &pages).unwrap()
-}
-
-/// A small but real PDF with one page per text (Helvetica; a line
-/// break in a text starts a new line), for the tests that run
-/// `pdftotext`.
-pub fn pdf(pages: &[&str]) -> Vec<u8> {
-    let font = 3 + pages.len() * 2;
-    let kids: Vec<String> = (0..pages.len()).map(|index| format!("{} 0 R", 3 + index * 2)).collect();
-
-    let mut objects = vec![
-        "<< /Type /Catalog /Pages 2 0 R >>".to_owned(),
-        format!("<< /Type /Pages /Kids [{}] /Count {} >>", kids.join(" "), pages.len()),
-    ];
-
-    for (index, text) in pages.iter().enumerate() {
-        let lines: Vec<String> = text.split('\n').map(|line| format!("({line}) Tj 0 -14 Td")).collect();
-        let content = format!("BT /F1 12 Tf 72 720 Td {} ET", lines.join(" "));
-
-        objects.push(format!(
-            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 {font} 0 R >> >> \
-             /Contents {} 0 R >>",
-            4 + index * 2
-        ));
-        objects.push(format!("<< /Length {} >>\nstream\n{content}\nendstream", content.len()));
-    }
-
-    objects.push("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_owned());
-
-    let mut file = String::from("%PDF-1.4\n");
-    let mut offsets = Vec::new();
-
-    for (number, object) in objects.iter().enumerate() {
-        offsets.push(file.len());
-        file.push_str(&format!("{} 0 obj\n{object}\nendobj\n", number + 1));
-    }
-
-    let xref = file.len();
-    file.push_str(&format!("xref\n0 {}\n0000000000 65535 f \n", objects.len() + 1));
-
-    for offset in offsets {
-        file.push_str(&format!("{offset:010} 00000 n \n"));
-    }
-
-    file.push_str(&format!(
-        "trailer\n<< /Size {} /Root 1 0 R /Info << /Title (Test standard) >> >>\nstartxref\n{xref}\n%%EOF\n",
-        objects.len() + 1
-    ));
-
-    file.into_bytes()
-}
-
-/// The fields of a project that uses `documents`.
-pub fn project_fields(name: &str, documents: Vec<i64>) -> ProjectFields {
-    ProjectFields {
+/// The fields of an evaluation named `name`.
+pub fn fields(name: &str) -> EvaluationFields {
+    EvaluationFields {
         name: name.to_owned(),
-        version: "1.0".to_owned(),
-        description: "The plan of the tests".to_owned(),
-        author: "Head of the laboratory".to_owned(),
-        documents,
+        product: "Smart meter X".to_owned(),
+        product_version: "2.1".to_owned(),
+        manufacturer: "ACME".to_owned(),
+        evaluator: "Kamil".to_owned(),
     }
 }
 
-/// The fields of an accepted scheme without pages.
-pub fn scheme_fields(number: &str, name: &str) -> SchemeFields {
-    SchemeFields {
-        number: number.to_owned(),
-        name: name.to_owned(),
-        pages: None,
-        state: ProposalState::Accepted,
+/// The CRUD of an open evaluation as single calls on the database, for
+/// the tests of the rules: each call opens the evaluation of the tile
+/// (or proposal) from the database, makes one change on it, and checks
+/// that memory and the database are still the same.
+pub mod single {
+    use crate::db::evaluations::read as stored;
+    use crate::db::user::database::UserDb;
+    use crate::evaluation::model::{EvaluationError, Proposal, RequirementResult, ResultField};
+    use crate::evaluation::results;
+    use crate::evaluation::workspace::OpenEvaluation;
+
+    /// The results and the proposals of `open`, in one order, the times
+    /// of the proposals left out (memory keeps the time of the
+    /// computer, the database its own, a moment apart).
+    fn content(open: &OpenEvaluation) -> (Vec<RequirementResult>, Vec<Proposal>) {
+        let mut results = open.results().to_vec();
+        results.sort_by_key(|result| (result.tile, result.field.name()));
+
+        let proposals = open.proposals().iter().map(|proposal| Proposal { created: 0, ..proposal.clone() }).collect();
+
+        (results, proposals)
     }
-}
 
-/// A project "P" that uses `document`, with one scheme "5 ADV";
-/// returns the project and the scheme.
-pub fn project_with_scheme(db: &UserDb, document: i64) -> (i64, i64) {
-    let project = projects::create(db, &project_fields("P", vec![document])).unwrap();
-    let scheme = schemes::create(db, project, &scheme_fields("5", "ADV")).unwrap();
+    /// Runs `work` on evaluation `evaluation` opened from the database,
+    /// and checks afterwards that memory and the database agree.
+    pub fn on<T>(db: &UserDb, evaluation: i64, work: impl FnOnce(&mut OpenEvaluation) -> T) -> T {
+        let mut open = OpenEvaluation::read(db, evaluation).unwrap().expect("the evaluation exists");
+        let result = work(&mut open);
+        let again = OpenEvaluation::read(db, evaluation).unwrap().expect("the evaluation exists");
 
-    (project, scheme)
+        assert_eq!(content(&open), content(&again), "memory and database differ");
+
+        result
+    }
+
+    /// The evaluation of tile `tile`; 0 when there is no such tile.
+    fn of_tile(db: &UserDb, tile: i64) -> i64 {
+        stored::tile(db, tile).unwrap().map_or(0, |(evaluation, _)| evaluation)
+    }
+
+    /// The evaluation of proposal `id`; 0 when there is no such.
+    fn of_proposal(db: &UserDb, id: i64) -> i64 {
+        stored::proposal_tile(db, id).unwrap().map_or(0, |tile| of_tile(db, tile))
+    }
+
+    /// Runs `work` on the evaluation `evaluation`, or gives the error
+    /// `missing` when there is none.
+    fn on_or<T>(
+        db: &UserDb,
+        evaluation: i64,
+        missing: &'static str,
+        work: impl FnOnce(&mut OpenEvaluation) -> Result<T, EvaluationError>,
+    ) -> Result<T, EvaluationError> {
+        if evaluation == 0 {
+            return Err(EvaluationError::NotFound(missing));
+        }
+
+        on(db, evaluation, work)
+    }
+
+    pub fn of(db: &UserDb, tile: i64) -> Result<Vec<RequirementResult>, EvaluationError> {
+        on_or(db, of_tile(db, tile), "tile", |open| Ok(results::read::of(open, tile)))
+    }
+
+    pub fn proposals(db: &UserDb, tile: i64) -> Result<Vec<Proposal>, EvaluationError> {
+        on_or(db, of_tile(db, tile), "tile", |open| Ok(results::read::proposals(open, tile)))
+    }
+
+    pub fn propose(db: &UserDb, tile: i64, field: ResultField, text: &str, model: &str) -> Result<i64, EvaluationError> {
+        on_or(db, of_tile(db, tile), "tile", |open| results::create::propose(db, open, tile, field, text, model))
+    }
+
+    pub fn accept(db: &UserDb, id: i64) -> Result<(), EvaluationError> {
+        on_or(db, of_proposal(db, id), "proposal", |open| results::update::accept(db, open, id))
+    }
+
+    pub fn correct(db: &UserDb, id: i64, text: &str) -> Result<(), EvaluationError> {
+        on_or(db, of_proposal(db, id), "proposal", |open| results::update::correct(db, open, id, text))
+    }
+
+    pub fn reject(db: &UserDb, id: i64) -> Result<(), EvaluationError> {
+        on_or(db, of_proposal(db, id), "proposal", |open| results::delete::reject(db, open, id))
+    }
+
+    pub fn write(db: &UserDb, tile: i64, field: ResultField, text: &str) -> Result<(), EvaluationError> {
+        on_or(db, of_tile(db, tile), "tile", |open| results::update::write(db, open, tile, field, text))
+    }
 }

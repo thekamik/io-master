@@ -51,29 +51,78 @@ mod ai {
     }
 }
 
-mod evaluation {
-    pub mod analysis;
-    pub mod checks;
-    pub mod contents;
-    pub mod documents;
-    pub mod exchange;
+mod standards {
+    pub mod create;
+    pub mod delete;
+    pub mod model;
     pub mod pdf_text;
-    pub mod projects;
     pub mod quote;
-    pub mod scheme;
-    pub mod schemes;
-    #[cfg(test)]
-    pub mod test_support;
+    pub mod read;
+    pub mod update;
 }
 
-mod product_evaluation {
-    pub mod import;
-    pub mod journal;
+mod test_projects {
+    pub mod analysis {
+        pub mod chapter;
+        pub mod contents;
+        pub mod parts;
+    }
+    pub mod checks;
+    pub mod content;
+    pub mod exchange {
+        pub mod export;
+        pub mod format;
+        pub mod import;
+    }
+    pub mod links {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+    }
     pub mod model;
-    pub mod projects;
-    pub mod results;
+    pub mod projects {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod update;
+    }
+    pub mod rules;
+    pub mod schemes {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod update;
+    }
     #[cfg(test)]
     pub mod test_support;
+    pub mod tiles {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod update;
+    }
+    pub mod workspace;
+}
+
+mod evaluation {
+    pub mod journal {
+        pub mod read;
+    }
+    pub mod model;
+    pub mod projects {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+    }
+    pub mod results {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod update;
+    }
+    #[cfg(test)]
+    pub mod test_support;
+    pub mod workspace;
 }
 
 mod accounts {

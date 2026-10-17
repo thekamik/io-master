@@ -14,7 +14,7 @@
 /// The tables, created with `IF NOT EXISTS` whenever the database is
 /// opened (`db/user/database.rs`).
 pub const SCHEMA: &str = "
-    -- A test project: the map of a standard (evaluation/scheme.rs).
+    -- A test project: the map of a standard (test_projects/model.rs).
     CREATE TABLE IF NOT EXISTS projects (
         id          INTEGER PRIMARY KEY,
         name        TEXT NOT NULL UNIQUE,
@@ -53,7 +53,7 @@ pub const SCHEMA: &str = "
     -- kind: input, requirement or output; state: proposed or accepted;
     -- external_*: an input described in a document not loaded;
     -- sections: the sections of the report of an output, by name,
-    -- separated by commas (evaluation/scheme.rs).
+    -- separated by commas (test_projects/model.rs).
     CREATE TABLE IF NOT EXISTS tiles (
         id                  INTEGER PRIMARY KEY,
         scheme_id           INTEGER NOT NULL REFERENCES schemes (id),
@@ -73,7 +73,7 @@ pub const SCHEMA: &str = "
 
     CREATE INDEX IF NOT EXISTS tiles_of_scheme ON tiles (scheme_id);
 
-    -- found: whether the quote was found on its page (evaluation/quote.rs).
+    -- found: whether the quote was found on its page (standards/quote.rs).
     CREATE TABLE IF NOT EXISTS tile_sources (
         id          INTEGER PRIMARY KEY,
         tile_id     INTEGER NOT NULL REFERENCES tiles (id),

@@ -1,0 +1,67 @@
+//! Changing an open test project: its fields and documents, and the
+//! mark "ready". Written through to the database, then made in memory.
+
+use crate::db::test_projects::update as store;
+use crate::db::user::database::UserDb;
+
+use crate::test_projects::model::ProjectFields;
+use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::test_projects::workspace::OpenProject;
+
+use super::create::check;
+
+/// Changes the fields of the open project. A document still quoted by
+/// a tile, or holding the pages of a scheme, cannot be taken away.
+pub fn fields(db: &UserDb, open: &mut OpenProject, fields: &ProjectFields) -> Result<(), StoreError> {
+    let id = open.data().project.id;
+    check(db, Some(id), fields)?;
+
+    let data = open.data();
+    let quoted = data.tiles.iter().flat_map(|tile| tile.fields.sources.iter().map(|source| source.document_id));
+    let paged = data.schemes.iter().filter_map(|scheme| scheme.fields.pages.map(|pages| pages.document_id));
+    let used: Vec<i64> = quoted.chain(paged).collect();
+
+    if used.iter().any(|document| !fields.documents.contains(document)) {
+        return Err(SchemeError::Invalid(
+            "documents",
+            "a tile quotes, or a scheme covers pages of, a document taken away from the project; change those first"
+                .to_owned(),
+        )
+        .into());
+    }
+
+    store::project(db, id, fields)?;
+
+    let project = &mut open.data_mut().project;
+    project.fields = ProjectFields {
+        name: fields.name.trim().to_owned(),
+        version: fields.version.trim().to_owned(),
+        description: fields.description.clone(),
+        author: fields.author.trim().to_owned(),
+        documents: dedup(&fields.documents),
+    };
+
+    Ok(())
+}
+
+/// The documents in their order, each once (as the database keeps
+/// them: `INSERT OR IGNORE`).
+fn dedup(documents: &[i64]) -> Vec<i64> {
+    let mut seen = Vec::with_capacity(documents.len());
+
+    for document in documents {
+        if !seen.contains(document) {
+            seen.push(*document);
+        }
+    }
+
+    seen
+}
+
+/// Marks the open project ready, or a draft again.
+pub fn ready(db: &UserDb, open: &mut OpenProject, ready: bool) -> Result<(), StoreError> {
+    store::ready(db, open.data().project.id, ready)?;
+    open.data_mut().project.ready = ready;
+
+    Ok(())
+}

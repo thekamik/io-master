@@ -9,7 +9,6 @@
 //! back. Reloading the page loses nothing; ending the program ends
 //! the session and wipes the key of the database from memory.
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
@@ -17,7 +16,7 @@ use tokio::sync::watch;
 
 use crate::accounts::accounts::Account;
 use crate::db::encryption::database_key::DatabaseKey;
-use crate::evaluation::projects::ProjectData;
+use crate::test_projects::workspace::Workspace;
 use crate::installation::lifecycle::{Opened, Running};
 
 use super::error::UiError;
@@ -48,16 +47,12 @@ pub struct UiState {
     /// The stop signal of a long work (loading a standard, an
     /// analysis), the same way.
     work_stop: Mutex<Option<watch::Sender<bool>>>,
-    /// For "Undo" in the drawing of the schemes: the content (tiles
-    /// and links) of every test project before its last changes, the
-    /// newest last; one stack per project, because a change may touch
-    /// two schemes (a link between them, a moved tile). Kept in memory
-    /// only, for the session.
-    undo: Mutex<HashMap<i64, Vec<ProjectData>>>,
+    /// The test projects open for editing, with their versions for
+    /// "Undo" (`test_projects/workspace.rs`): the objects in memory of
+    /// the session. Shared with the work on the database, which runs
+    /// on a thread of its own (`user_data.rs`, `with_project`).
+    workspace: Arc<Mutex<Workspace>>,
 }
-
-/// How many changes of one test project can be undone.
-const UNDO_DEPTH: usize = 50;
 
 /// Locks a mutex. A panic in another command while it held the lock
 /// cannot leave the value half-written (every change is a single
@@ -80,7 +75,7 @@ impl UiState {
             session: Mutex::new(None),
             reply_stop: Mutex::new(None),
             work_stop: Mutex::new(None),
-            undo: Mutex::new(HashMap::new()),
+            workspace: Arc::new(Mutex::new(Workspace::default())),
         }
     }
 
@@ -127,7 +122,7 @@ impl UiState {
     pub fn log_out(&self) {
         self.stop_reply();
         self.stop_work();
-        lock(&self.undo).clear();
+        lock(&self.workspace).clear();
         *lock(&self.session) = None;
     }
 
@@ -163,34 +158,10 @@ impl UiState {
         receiver
     }
 
-    /// Keeps the content of a test project before a change, for
-    /// "Undo".
-    pub fn remember(&self, before: ProjectData) {
-        let mut undo = lock(&self.undo);
-        let stack = undo.entry(before.project.id).or_default();
-
-        stack.push(before);
-
-        if stack.len() > UNDO_DEPTH {
-            stack.remove(0);
-        }
-    }
-
-    /// The content of a test project before its last change, taken
-    /// off the stack; `None` when there is nothing to undo.
-    pub fn take_undo(&self, project: i64) -> Option<ProjectData> {
-        lock(&self.undo).get_mut(&project).and_then(Vec::pop)
-    }
-
-    /// Whether a change of the test project can be undone.
-    pub fn can_undo(&self, project: i64) -> bool {
-        lock(&self.undo).get(&project).is_some_and(|stack| !stack.is_empty())
-    }
-
-    /// Forgets the changes of a test project (it was deleted, or one of
-    /// its schemes was, which an earlier content may still name).
-    pub fn forget_undo(&self, project: i64) {
-        lock(&self.undo).remove(&project);
+    /// The test projects open for editing, to be used on the thread
+    /// of the database (`user_data.rs`, `with_project`).
+    pub fn workspace(&self) -> Arc<Mutex<Workspace>> {
+        self.workspace.clone()
     }
 
     /// Stops the long work, if there is one.

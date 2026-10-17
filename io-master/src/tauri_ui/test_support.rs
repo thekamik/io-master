@@ -55,7 +55,7 @@ pub async fn with_document() -> (TestState, i64) {
     let path = directory.path().join("cc-part3.pdf");
     std::fs::write(
         &path,
-        crate::evaluation::test_support::pdf(&[
+        crate::test_projects::test_support::pdf(&[
             "ADV_FSP.4 Complete functional specification",
             "The developer shall provide a functional specification.",
             "ATE_IND.2 The evaluator shall test a subset of the TSF.",

@@ -3,12 +3,13 @@
 //! the project), moving tiles between schemes, "Undo", the checks, and
 //! the analysis of chapters with AI.
 //!
-//! Every change of tiles or links goes through [`change`]: the content
-//! of the project before the change is kept for "Undo"
-//! (`UiState::remember`; one stack per project, since a change may
-//! touch two schemes), the change is made, and the page gets the whole
-//! scheme back with its new findings, so that it never has to guess
-//! what the program stored.
+//! The project of the scheme is open for editing in memory
+//! (`test_projects/workspace.rs`, through `with_project`). Every action
+//! of the user is one change of it ([`change`]): it keeps one version
+//! for "Undo" (one per project, since a change may touch two schemes),
+//! makes the change in memory after the database has stored it, and the
+//! page gets the whole scheme back with its new findings, so that it
+//! never has to guess what the program stored.
 //!
 //! The projects and the list of their schemes are in
 //! `project_actions.rs`.
@@ -19,76 +20,59 @@ use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::{self, Role};
 use crate::ai::api::tasks::{self, Task};
 use crate::db::user::database::UserDb;
-use crate::evaluation::analysis;
-use crate::evaluation::checks;
-use crate::evaluation::documents;
-use crate::evaluation::projects::ProjectData;
-use crate::evaluation::scheme::Tile;
-use crate::evaluation::schemes;
+use crate::test_projects::analysis::chapter::{self, Answered};
+use crate::test_projects::analysis::parts;
+use crate::test_projects::checks;
+use crate::test_projects::workspace::OpenProject;
+use crate::test_projects::{links, schemes, tiles};
 
 use super::error::UiError;
-use super::project_actions::{documents_of, project_data};
+use super::project_actions::{documents_of, project_of_scheme};
 use super::serializer::project_view::ProjectDataView;
 use super::serializer::scheme_view::{AnalysisEvent, PageRange, SchemeDataView, TileForm};
 use super::state::UiState;
-use super::user_data::with_user_db;
+use super::user_data::{with_project, with_user_db};
 
-/// The project a scheme belongs to.
-fn project_of(db: &UserDb, scheme: i64) -> Result<i64, UiError> {
-    Ok(schemes::existing(db, scheme)?.project)
-}
-
-/// The view of a scheme as it is stored now.
-fn view(db: &UserDb, scheme: i64, can_undo: bool) -> Result<SchemeDataView, UiError> {
-    let project = project_of(db, scheme)?;
-    let data = project_data(db, project)?;
+/// The view of `scheme` of the open project, as it is in memory now.
+fn view(db: &UserDb, open: &OpenProject, scheme: i64) -> Result<SchemeDataView, UiError> {
+    let data = open.data().clone();
     let findings = checks::check(&data.tiles, &data.links);
     let documents = documents_of(db, &data)?;
 
-    SchemeDataView::new(data, scheme, findings, documents, can_undo)
+    SchemeDataView::new(data, scheme, findings, documents, open.can_undo())
         .ok_or_else(|| UiError::Invalid("the scheme does not exist".to_owned()))
 }
 
-/// Makes a change of tiles or links, shown in `scheme`: keeps the
-/// content of its project before it for "Undo", makes it, and gives
-/// the scheme as it is afterwards.
+/// Makes one change of tiles or links, shown in `scheme`: one version
+/// for "Undo", the change, and the scheme as it is afterwards.
 async fn change(
     state: &UiState,
     scheme: i64,
-    work: impl FnOnce(&UserDb) -> Result<(), UiError> + Send + 'static,
+    work: impl FnOnce(&UserDb, &mut OpenProject) -> Result<(), UiError> + Send + 'static,
 ) -> Result<SchemeDataView, UiError> {
-    let before = with_user_db(state, move |db| {
-        let before = project_data(db, project_of(db, scheme)?)?;
-        work(db)?;
-        Ok(before)
-    })
-    .await?;
+    let project = project_of_scheme(state, scheme).await?;
 
-    let project = before.project.id;
-    state.remember(before);
-    let can_undo = state.can_undo(project);
-
-    with_user_db(state, move |db| view(db, scheme, can_undo)).await
-}
-
-/// The scheme a tile is in.
-async fn scheme_of_tile(state: &UiState, tile: i64) -> Result<i64, UiError> {
-    with_user_db(state, move |db| {
-        Ok(schemes::tile(db, tile)?.ok_or_else(|| UiError::Invalid("the tile does not exist".to_owned()))?.scheme)
+    with_project(state, project, move |db, open| {
+        open.change(|open| work(db, open))?;
+        view(db, open, scheme)
     })
     .await
 }
 
-/// Whether the tile `id` is in the project of `scheme`.
-fn in_project_of(db: &UserDb, scheme: i64, id: i64) -> Result<bool, UiError> {
-    Ok(schemes::project_of_tile(db, id)? == Some(project_of(db, scheme)?))
+/// The scheme a tile is in, as stored.
+async fn scheme_of_tile(state: &UiState, tile: i64) -> Result<i64, UiError> {
+    with_user_db(state, move |db| {
+        Ok(crate::db::test_projects::read::tile(db, tile)?
+            .ok_or_else(|| UiError::Invalid("the tile does not exist".to_owned()))?
+            .scheme)
+    })
+    .await
 }
 
 pub async fn open(state: &UiState, scheme: i64) -> Result<SchemeDataView, UiError> {
-    let project = with_user_db(state, move |db| project_of(db, scheme)).await?;
-    let can_undo = state.can_undo(project);
+    let project = project_of_scheme(state, scheme).await?;
 
-    with_user_db(state, move |db| view(db, scheme, can_undo)).await
+    with_project(state, project, move |db, open| view(db, open, scheme)).await
 }
 
 /* ---------------------------------------------------------------
@@ -98,8 +82,8 @@ pub async fn open(state: &UiState, scheme: i64) -> Result<SchemeDataView, UiErro
 pub async fn add_tile(state: &UiState, scheme: i64, form: TileForm) -> Result<SchemeDataView, UiError> {
     let fields = form.into_fields()?;
 
-    change(state, scheme, move |db| {
-        schemes::add_tile(db, scheme, &fields)?;
+    change(state, scheme, move |db, open| {
+        tiles::create::tile(db, open, scheme, &fields)?;
         Ok(())
     })
     .await
@@ -109,7 +93,7 @@ pub async fn update_tile(state: &UiState, id: i64, form: TileForm) -> Result<Sch
     let fields = form.into_fields()?;
     let scheme = scheme_of_tile(state, id).await?;
 
-    change(state, scheme, move |db| Ok(schemes::update_tile(db, id, &fields)?)).await
+    change(state, scheme, move |db, open| Ok(tiles::update::tile(db, open, id, &fields)?)).await
 }
 
 /// Moves a tile on the canvas; gives nothing back, the page knows
@@ -117,7 +101,7 @@ pub async fn update_tile(state: &UiState, id: i64, form: TileForm) -> Result<Sch
 pub async fn move_tile(state: &UiState, id: i64, x: f64, y: f64) -> Result<(), UiError> {
     let scheme = scheme_of_tile(state, id).await?;
 
-    change(state, scheme, move |db| Ok(schemes::move_tile(db, id, x, y)?)).await?;
+    change(state, scheme, move |db, open| Ok(tiles::update::position(db, open, id, x, y)?)).await?;
 
     Ok(())
 }
@@ -125,14 +109,14 @@ pub async fn move_tile(state: &UiState, id: i64, x: f64, y: f64) -> Result<(), U
 /// Moves tiles of the project to the scheme `to` (step 26); the page
 /// gets the scheme `shown` back.
 pub async fn move_tiles(state: &UiState, shown: i64, ids: Vec<i64>, to: i64) -> Result<SchemeDataView, UiError> {
-    change(state, shown, move |db| Ok(schemes::move_to_scheme(db, &ids, to)?)).await
+    change(state, shown, move |db, open| Ok(tiles::update::to_scheme(db, open, &ids, to)?)).await
 }
 
 pub async fn delete_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
-    change(state, scheme, move |db| {
+    change(state, scheme, move |db, open| {
         for id in ids {
-            if schemes::tile(db, id)?.is_some_and(|tile| tile.scheme == scheme) {
-                schemes::delete_tile(db, id)?;
+            if tiles::read::get(open, id).is_some_and(|tile| tile.scheme == scheme) {
+                tiles::delete::tile(db, open, id)?;
             }
         }
 
@@ -142,10 +126,10 @@ pub async fn delete_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result
 }
 
 pub async fn accept_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
-    change(state, scheme, move |db| {
+    change(state, scheme, move |db, open| {
         for id in ids {
-            if schemes::tile(db, id)?.is_some_and(|tile| tile.scheme == scheme) {
-                schemes::accept_tile(db, id)?;
+            if tiles::read::get(open, id).is_some_and(|tile| tile.scheme == scheme) {
+                tiles::update::accept(db, open, id)?;
             }
         }
 
@@ -157,23 +141,20 @@ pub async fn accept_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result
 /// Links two tiles of the project of `scheme` (one of them may be in
 /// another scheme of it).
 pub async fn add_link(state: &UiState, scheme: i64, from: i64, to: i64) -> Result<SchemeDataView, UiError> {
-    change(state, scheme, move |db| {
-        if !in_project_of(db, scheme, from)? || !in_project_of(db, scheme, to)? {
+    change(state, scheme, move |db, open| {
+        if tiles::read::get(open, from).is_none() || tiles::read::get(open, to).is_none() {
             return Err(UiError::Invalid("only tiles of this test project can be linked".to_owned()));
         }
 
-        schemes::add_link(db, from, to)?;
+        links::create::link(db, open, from, to)?;
         Ok(())
     })
     .await
 }
 
 pub async fn delete_link(state: &UiState, scheme: i64, id: i64) -> Result<SchemeDataView, UiError> {
-    change(state, scheme, move |db| {
-        if schemes::links(db, project_of(db, scheme)?)?.iter().any(|link| link.id == id) {
-            schemes::delete_link(db, id)?;
-        }
-
+    change(state, scheme, move |db, open| {
+        links::delete::link(db, open, id)?;
         Ok(())
     })
     .await
@@ -182,17 +163,11 @@ pub async fn delete_link(state: &UiState, scheme: i64, id: i64) -> Result<Scheme
 /// Undoes the last change of tiles or links in the project of
 /// `scheme` (in any of its schemes); gives `scheme` back.
 pub async fn undo(state: &UiState, scheme: i64) -> Result<SchemeDataView, UiError> {
-    let project = with_user_db(state, move |db| project_of(db, scheme)).await?;
+    let project = project_of_scheme(state, scheme).await?;
 
-    let Some(before) = state.take_undo(project) else {
-        return Err(UiError::Invalid("there is nothing to undo".to_owned()));
-    };
-
-    let can_undo = state.can_undo(project);
-
-    with_user_db(state, move |db| {
-        schemes::replace_content(db, project, &before.tiles, &before.links)?;
-        view(db, scheme, can_undo)
+    with_project(state, project, move |db, open| {
+        open.undo(db)?;
+        view(db, open, scheme)
     })
     .await
 }
@@ -236,7 +211,7 @@ struct Job {
 }
 
 /// Analyses one scheme with `ranges` of pages (or, when empty, the
-/// pages of the scheme) over the active AI connection, part by part
+/// pages of the scheme) with the AI (the task `chapter`), part by part
 /// (at most `part_size` characters each), and stores what the model
 /// proposes as proposed tiles. Reports to `events`; "Stop" ends it.
 pub async fn analyse(
@@ -248,11 +223,16 @@ pub async fn analyse(
 ) -> Result<SchemeDataView, UiError> {
     let ranges: Vec<(i64, u32, u32)> =
         ranges.into_iter().map(|range| (range.document_id, range.first_page, range.last_page)).collect();
+    let project = project_of_scheme(state, scheme).await?;
 
-    let job = with_user_db(state, move |db| {
-        let stored = schemes::existing(db, scheme)?;
+    let job = with_project(state, project, move |_, open| {
+        let stored = schemes::read::existing(open, scheme)?;
         let ranges = if ranges.is_empty() {
-            stored.fields.pages.map(|pages| vec![(pages.document_id, pages.first_page, pages.last_page)]).unwrap_or_default()
+            stored
+                .fields
+                .pages
+                .map(|pages| vec![(pages.document_id, pages.first_page, pages.last_page)])
+                .unwrap_or_default()
         } else {
             ranges
         };
@@ -263,14 +243,14 @@ pub async fn analyse(
 
         Ok(Job {
             scheme,
-            number: stored.fields.number,
-            name: stored.fields.name,
+            number: stored.fields.number.clone(),
+            name: stored.fields.name.clone(),
             ranges,
         })
     })
     .await?;
 
-    run(state, vec![job], part_size, events).await?;
+    run(state, project, vec![job], part_size, events).await?;
 
     open(state, scheme).await
 }
@@ -285,19 +265,18 @@ pub async fn analyse_schemes(
     part_size: usize,
     events: impl Fn(AnalysisEvent) -> bool + Send + Sync + Clone + 'static,
 ) -> Result<ProjectDataView, UiError> {
-    let (jobs, without) = with_user_db(state, move |db| {
-        let data = project_data(db, project)?;
+    let (jobs, without) = with_project(state, project, move |_, open| {
         let mut jobs = Vec::new();
         let mut without = Vec::new();
 
-        for scheme in data.schemes.into_iter().filter(|scheme| ids.contains(&scheme.id)) {
+        for scheme in open.data().schemes.iter().filter(|scheme| ids.contains(&scheme.id)) {
             let name = format!("{} {}", scheme.fields.number, scheme.fields.name).trim().to_owned();
 
             match scheme.fields.pages {
                 Some(pages) => jobs.push(Job {
                     scheme: scheme.id,
-                    number: scheme.fields.number,
-                    name: scheme.fields.name,
+                    number: scheme.fields.number.clone(),
+                    name: scheme.fields.name.clone(),
                     ranges: vec![(pages.document_id, pages.first_page, pages.last_page)],
                 }),
                 None => without.push(name),
@@ -314,39 +293,44 @@ pub async fn analyse_schemes(
         });
     }
 
-    run(state, jobs, part_size, events).await?;
+    run(state, project, jobs, part_size, events).await?;
 
     super::project_actions::open(state, project).await
 }
 
 /// The common work of [`analyse`] and [`analyse_schemes`]: every job
-/// part by part; one "Undo" for all of it.
+/// part by part; one "Undo" for all of it. Each part is the pipeline
+/// of `test_projects/analysis/chapter.rs`: the question from the open
+/// project, the reply of the model over `ai/api/`, written into the
+/// journal of the AI, and the answer applied to the open project.
 async fn run(
     state: &UiState,
+    project: i64,
     jobs: Vec<Job>,
     part_size: usize,
     events: impl Fn(AnalysisEvent) -> bool + Send + Sync + Clone + 'static,
 ) -> Result<(), UiError> {
-    let Some(first) = jobs.first().map(|job| job.scheme) else {
+    if jobs.is_empty() {
         events(AnalysisEvent::End { stopped: false });
         return Ok(());
-    };
+    }
 
-    // Everything the work needs, read once: the instructions, the
-    // connection and its key; and the project before it, for "Undo".
-    let (model, instructions, before) = with_user_db(state, move |db| {
-        let model = roles::model(db, Role::TextAnalysis)?;
+    // Read once: the instructions of the task and the connection of
+    // its role; and one version of the project before the work, for
+    // "Undo".
+    let (model, instructions) = with_project(state, project, move |db, open| {
+        let model = roles::model(db, Task::Chapter.role().unwrap_or(Role::TextAnalysis))?;
         let instructions = tasks::instructions(db, Task::Chapter)?.unwrap_or_default();
-        let before: ProjectData = project_data(db, project_of(db, first)?)?;
+        open.remember();
 
-        Ok((model, instructions, before))
+        Ok((model, instructions))
     })
     .await?;
 
     // Shared with the writes of the journal, one per question.
     let model = Arc::new(model);
+    let instructions = Arc::new(instructions);
     let stop = state.start_work();
-    state.remember(before);
 
     let count = jobs.len();
     let mut stopped = false;
@@ -365,8 +349,9 @@ async fn run(
         }
 
         let ranges = job.ranges.clone();
-        let parts = with_user_db(state, move |db| Ok(analysis::parts(db, &ranges, part_size)?)).await?;
+        let parts = with_user_db(state, move |db| Ok(parts::parts(db, &ranges, part_size)?)).await?;
         let parts_count = parts.len();
+        let scheme = job.scheme;
 
         for (index, part) in parts.into_iter().enumerate() {
             if *stop.borrow() {
@@ -374,23 +359,23 @@ async fn run(
                 break 'jobs;
             }
 
-            let (document_id, scheme) = (part.document_id, job.scheme);
-            let (document, stored, own, others) = with_user_db(state, move |db| {
-                let document =
-                    documents::get(db, document_id)?.ok_or_else(|| UiError::Invalid("a document is gone".to_owned()))?;
-                let stored = schemes::existing(db, scheme)?;
-                let (own, others): (Vec<Tile>, Vec<Tile>) = schemes::project_tiles(db, stored.project)?
-                    .into_iter()
-                    .partition(|tile| tile.scheme == scheme);
+            let (title, turns) = {
+                let (part, instructions) = (part.clone(), instructions.clone());
 
-                Ok((document, stored, own, others))
-            })
-            .await?;
+                with_project(state, project, move |db, open| {
+                    let title = crate::standards::read::get(db, part.document_id)?
+                        .map(|document| document.fields.title)
+                        .unwrap_or_default();
+
+                    Ok((title, chapter::question(db, open, scheme, &part, &instructions)?))
+                })
+                .await?
+            };
 
             if !events(AnalysisEvent::Part {
                 index: index + 1,
                 count: parts_count,
-                document: document.fields.title.clone(),
+                document: title,
                 first_page: part.first_page,
                 last_page: part.last_page,
             }) {
@@ -398,7 +383,6 @@ async fn run(
                 break 'jobs;
             }
 
-            let turns = completions::single(analysis::prompt(&instructions, &document, &part, &stored, &own, &others));
             let writing = {
                 let events = events.clone();
                 move |characters| {
@@ -410,8 +394,8 @@ async fn run(
             let outcome = completions::outcome(&reply, &stop);
             record(state, &model, Task::Chapter, turns, reply, &events).await;
 
-            let answer = match outcome {
-                Outcome::Answer(answer) => answer,
+            let text = match outcome {
+                Outcome::Answer(text) => text,
                 Outcome::Stopped => {
                     stopped = true;
                     break 'jobs;
@@ -424,24 +408,25 @@ async fn run(
                 }
             };
 
-            let proposal = match analysis::read(&answer, &part) {
-                Ok(proposal) => proposal,
-                Err(reason) => {
-                    events(AnalysisEvent::Failed {
-                        message: format!("pages {} to {}: {reason}", part.first_page, part.last_page),
+            let (first_page, last_page) = (part.first_page, part.last_page);
+            let answer = move |db: &UserDb, open: &mut OpenProject| Ok(chapter::answer(db, open, scheme, &part, &text)?);
+            let answered = with_project(state, project, answer).await?;
+
+            match answered {
+                Answered::Applied(applied) => {
+                    events(AnalysisEvent::Applied {
+                        added: applied.added,
+                        joined: applied.joined,
+                        links: applied.links,
+                        dropped: applied.dropped,
                     });
-                    continue;
                 }
-            };
-
-            let applied = with_user_db(state, move |db| Ok(analysis::apply(db, scheme, &proposal)?)).await?;
-
-            events(AnalysisEvent::Applied {
-                added: applied.added,
-                joined: applied.joined,
-                links: applied.links,
-                dropped: applied.dropped,
-            });
+                Answered::Unreadable(reason) => {
+                    events(AnalysisEvent::Failed {
+                        message: format!("pages {first_page} to {last_page}: {reason}"),
+                    });
+                }
+            }
         }
     }
 

@@ -3,7 +3,7 @@
 use super::*;
 
 use crate::db::ai::journal::read;
-use crate::evaluation::test_support::database;
+use crate::test_projects::test_support::database;
 
 fn sample(task: &str) -> Entry {
     Entry {

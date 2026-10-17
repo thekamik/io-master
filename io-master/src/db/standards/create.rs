@@ -1,12 +1,12 @@
 //! Storing a document of a standard: the file and the text of its
 //! pages. The rules (title, a file loaded once) are checked by
-//! `evaluation/documents.rs`.
+//! `standards/`.
 
 use rusqlite::params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::documents::DocumentFields;
+use crate::standards::model::DocumentFields;
 
 /// Stores a document with the text of its pages (one text per page,
 /// in order, numbered from 1), in one transaction; returns its number.

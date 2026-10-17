@@ -1,0 +1,64 @@
+//! A text of the AI proposed for a field of a requirement of an open
+//! evaluation: kept apart, marked AI, never a result until the
+//! evaluator accepts it (`read.rs`).
+
+use crate::db::evaluations::create::{self as store, Step};
+use crate::db::user::database::UserDb;
+use crate::evaluation::model::{
+    Actor, EvaluationError, JournalAction, MAX_SHORT, Proposal, ResultField, check_text,
+};
+use crate::evaluation::workspace::OpenEvaluation;
+
+use super::read::{check_result, requirement};
+
+/// Stores a text the AI proposes for `field` of requirement `tile`;
+/// `model` names the model that wrote it. Returns the number of the
+/// proposal.
+pub fn propose(
+    db: &UserDb,
+    open: &mut OpenEvaluation,
+    tile: i64,
+    field: ResultField,
+    text: &str,
+    model: &str,
+) -> Result<i64, EvaluationError> {
+    requirement(open, tile)?;
+
+    if text.trim().is_empty() {
+        return Err(EvaluationError::Invalid("text", "the proposal is empty".to_owned()));
+    }
+
+    check_result(text)?;
+    check_text("model", model, MAX_SHORT, false)?;
+
+    let evaluation = open.data().evaluation.id;
+    let actor = Actor::Model(model.to_owned());
+    let step = Step {
+        actor: &actor,
+        action: JournalAction::Proposed,
+        tile: Some(tile),
+        field: Some(field),
+        detail: text,
+    };
+
+    let id = store::proposal(db, evaluation, tile, field, text, model, &step)?;
+
+    open.proposals_mut().push(Proposal {
+        id,
+        tile,
+        field,
+        text: text.to_owned(),
+        model: model.to_owned(),
+        created: now(),
+    });
+
+    Ok(id)
+}
+
+/// Seconds since 1970, as the database keeps the time of a proposal;
+/// what memory holds until the evaluation is read again.
+fn now() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |time| i64::try_from(time.as_secs()).unwrap_or(i64::MAX))
+}

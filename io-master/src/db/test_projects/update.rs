@@ -1,12 +1,12 @@
 //! Changing test projects, schemes and tiles. The rules of
-//! `evaluation/scheme.rs` are checked by the callers before. A
+//! `test_projects/model.rs` are checked by the callers before. A
 //! function that changes a row that does not exist returns `false`.
 
 use rusqlite::params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::scheme::{Link, ProjectFields, ProposalState, SchemeFields, Source, Tile, TileFields};
+use crate::test_projects::model::{Link, ProjectFields, ProposalState, SchemeFields, Source, Tile, TileFields};
 
 use super::rows::{INSERT_TILE, write_documents, write_scheme, write_sources, write_tile};
 
@@ -142,4 +142,44 @@ pub fn replace_content(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]
     transaction.commit()?;
 
     Ok(numbers)
+}
+
+/// Brings the tiles and links of `project` back to `tiles` and `links`
+/// (a version kept for "Undo", `test_projects/workspace.rs`), in one
+/// transaction, **with the numbers they had**, so that the project in
+/// memory and in the database stay the same. Every tile names a scheme
+/// of the project.
+pub fn restore_content(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    transaction.execute(
+        "DELETE FROM tile_sources WHERE tile_id IN \
+         (SELECT t.id FROM tiles t JOIN schemes c ON c.id = t.scheme_id WHERE c.project_id = ?1)",
+        [project],
+    )?;
+    transaction.execute("DELETE FROM links WHERE project_id = ?1", [project])?;
+    transaction.execute(
+        "DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)",
+        [project],
+    )?;
+
+    for tile in tiles {
+        write_tile(&transaction, INSERT_TILE, tile.scheme, &tile.fields)?;
+
+        // The tile gets back the number it had.
+        let given = transaction.last_insert_rowid();
+        transaction.execute("UPDATE tiles SET id = ?1 WHERE id = ?2", params![tile.id, given])?;
+        write_sources(&transaction, tile.id, &tile.fields.sources)?;
+    }
+
+    for link in links {
+        transaction.execute(
+            "INSERT INTO links (id, project_id, from_tile, to_tile) VALUES (?1, ?2, ?3, ?4)",
+            params![link.id, project, link.from, link.to],
+        )?;
+    }
+
+    transaction.commit()?;
+
+    Ok(())
 }

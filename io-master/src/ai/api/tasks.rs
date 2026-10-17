@@ -4,8 +4,8 @@
 //!
 //! ```text
 //! task       role            instructions
-//! chapter    text_analysis   evaluation/analysis.rs (the analysis of a chapter)
-//! contents   text_analysis   evaluation/contents.rs (the table of contents)
+//! chapter    text_analysis   test_projects/analysis/chapter.rs (the analysis of a chapter)
+//! contents   text_analysis   test_projects/analysis/contents.rs (the table of contents)
 //! chat       consultation    none here: the system prompt of the connection
 //! check      none            none: the check of a connection (checks.rs)
 //! ```
@@ -18,7 +18,7 @@
 use crate::db::ai::instructions::{delete as remove, read, update};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::{analysis, contents};
+use crate::test_projects::analysis::{chapter as analysis, contents};
 
 use super::roles::Role;
 

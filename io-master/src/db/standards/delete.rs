@@ -1,5 +1,5 @@
 //! Removing a document of a standard. Whether a project still uses it
-//! is checked by `evaluation/documents.rs` (`read::in_use`).
+//! is checked by `standards/` (`read::in_use`).
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;

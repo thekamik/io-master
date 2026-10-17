@@ -5,7 +5,7 @@
 use super::*;
 
 use crate::db::evaluations::read;
-use crate::evaluation::test_support::database;
+use crate::test_projects::test_support::database;
 
 fn step<'a>(actor: &'a Actor, action: JournalAction, detail: &'a str) -> Step<'a> {
     Step {

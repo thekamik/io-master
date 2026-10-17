@@ -7,8 +7,8 @@ use rusqlite::{OptionalExtension, params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::scheme::{Link, Scheme, Source, Tile};
-use crate::product_evaluation::model::{Evaluation, JournalEntry, Proposal, ResultField};
+use crate::test_projects::model::{Link, Scheme, Source, Tile};
+use crate::evaluation::model::{Evaluation, JournalEntry, Proposal, ResultField};
 
 use super::rows::{
     EVALUATION_COLUMNS, TILE_COLUMNS, entry_from_row, evaluation_from_row, scheme_from_row, tile_from_row,
@@ -146,7 +146,7 @@ fn tiles_where(db: &UserDb, condition: &str, key: i64) -> Result<Vec<Tile>, DbEr
  * ------------------------------------------------------------- */
 
 /// The accepted results of a requirement as stored: field, text,
-/// origin (by their names, as `product_evaluation/results.rs` reads
+/// origin (by their names, as `evaluation/results/` reads
 /// them).
 pub fn results(db: &UserDb, tile: i64) -> Result<Vec<(String, String, String)>, DbError> {
     let mut statement =
@@ -201,6 +201,37 @@ pub fn proposals(db: &UserDb, tile: i64) -> Result<Vec<Proposal>, DbError> {
             })
         })
         .collect())
+}
+
+/// The accepted results of every requirement of an evaluation as
+/// stored: tile, field, text, origin (by their names).
+pub fn results_of(db: &UserDb, evaluation: i64) -> Result<Vec<(i64, String, String, String)>, DbError> {
+    let mut statement = db.connection().prepare(
+        "SELECT r.tile_id, r.field, r.text, r.origin FROM evaluation_results r \
+         JOIN evaluation_tiles t ON t.id = r.tile_id WHERE t.evaluation_id = ?1 ORDER BY r.tile_id",
+    )?;
+
+    Ok(statement
+        .query_map([evaluation], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))?
+        .collect::<Result<Vec<_>, _>>()?)
+}
+
+/// The proposals of the AI waiting in an evaluation, the oldest first.
+pub fn proposals_of(db: &UserDb, evaluation: i64) -> Result<Vec<Proposal>, DbError> {
+    let mut statement = db.connection().prepare(
+        "SELECT p.tile_id FROM evaluation_proposals p JOIN evaluation_tiles t ON t.id = p.tile_id \
+         WHERE t.evaluation_id = ?1 GROUP BY p.tile_id",
+    )?;
+    let tiles = statement.query_map([evaluation], |row| row.get::<_, i64>(0))?.collect::<Result<Vec<_>, _>>()?;
+    let mut all = Vec::new();
+
+    for tile in tiles {
+        all.extend(proposals(db, tile)?);
+    }
+
+    all.sort_by_key(|proposal| proposal.id);
+
+    Ok(all)
 }
 
 /// The requirement a proposal belongs to; `None` when there is no such.

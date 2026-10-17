@@ -50,7 +50,7 @@ pub enum Role {
 /// The form of the answer a role expects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AnswerForm {
-    /// One JSON object, read by the task (`evaluation/analysis.rs`).
+    /// One JSON object, read by the task (`test_projects/analysis/chapter.rs`).
     Json,
     /// Free text.
     Text,

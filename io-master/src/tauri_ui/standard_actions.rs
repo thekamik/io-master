@@ -3,15 +3,16 @@
 //! search, and the PDF itself for the viewer.
 //!
 //! Loading is a long work: the text is read in parts
-//! (`evaluation/pdf_text.rs`), every part is reported to the page, and
+//! (`standards/pdf_text.rs`), every part is reported to the page, and
 //! "Stop" ([`UiState::stop_work`]) ends it after the part being read.
 //! The files are chosen in a dialog of the system by the command
 //! (`commands.rs`); this file gets only their paths.
 
 use std::path::PathBuf;
 
-use crate::evaluation::documents::{self, DocumentError, DocumentFields};
-use crate::evaluation::pdf_text::{self, PdfError};
+use crate::standards;
+use crate::standards::model::{DocumentError, DocumentFields};
+use crate::standards::pdf_text::{self, PdfError};
 
 use super::blocking::blocking;
 use super::error::UiError;
@@ -30,7 +31,7 @@ impl From<DocumentError> for UiError {
 
 /// The documents, by title and part.
 pub async fn list(state: &UiState) -> Result<Vec<DocumentView>, UiError> {
-    let documents = with_user_db(state, |db| Ok(documents::list(db)?)).await?;
+    let documents = with_user_db(state, |db| Ok(standards::read::list(db)?)).await?;
 
     Ok(documents.into_iter().map(DocumentView::from).collect())
 }
@@ -118,17 +119,17 @@ pub async fn load(state: &UiState, paths: Vec<PathBuf>, events: impl Fn(LoadEven
 
         let stored_name = name.clone();
         let stored = with_user_db(state, move |db| {
-            let id = match documents::add(db, &fields, &stored_name, &bytes, &pages) {
+            let id = match standards::create::add(db, &fields, &stored_name, &bytes, &pages) {
                 Ok(id) => id,
                 // Which document it is already, so that the user finds it.
                 Err(DocumentError::Duplicate(existing)) => {
-                    let title = documents::get(db, existing)?.map(|document| document.fields.title).unwrap_or_default();
+                    let title = standards::read::get(db, existing)?.map(|document| document.fields.title).unwrap_or_default();
                     return Err(UiError::Invalid(format!("this file is loaded already, as the document {title}")));
                 }
                 Err(error) => return Err(error.into()),
             };
 
-            Ok(documents::get(db, id)?)
+            Ok(standards::read::get(db, id)?)
         })
         .await;
 
@@ -158,18 +159,18 @@ pub async fn update(state: &UiState, id: i64, form: DocumentForm) -> Result<Docu
     let fields: DocumentFields = form.into();
 
     with_user_db(state, move |db| {
-        if !documents::update(db, id, &fields)? {
+        if !standards::update::update(db, id, &fields)? {
             return Err(UiError::Invalid("the document does not exist".to_owned()));
         }
 
-        Ok(documents::get(db, id)?.map(DocumentView::from).expect("the document was just changed"))
+        Ok(standards::read::get(db, id)?.map(DocumentView::from).expect("the document was just changed"))
     })
     .await
 }
 
 /// Deletes a document no scheme uses.
 pub async fn delete(state: &UiState, id: i64) -> Result<(), UiError> {
-    if with_user_db(state, move |db| Ok(documents::delete(db, id)?)).await? {
+    if with_user_db(state, move |db| Ok(standards::delete::delete(db, id)?)).await? {
         Ok(())
     } else {
         Err(UiError::Invalid("the document does not exist".to_owned()))
@@ -179,14 +180,14 @@ pub async fn delete(state: &UiState, id: i64) -> Result<(), UiError> {
 /// The text of a page.
 pub async fn page(state: &UiState, id: i64, number: u32) -> Result<String, UiError> {
     with_user_db(state, move |db| {
-        documents::page(db, id, number)?.ok_or_else(|| UiError::Invalid(format!("there is no page {number}")))
+        standards::read::page(db, id, number)?.ok_or_else(|| UiError::Invalid(format!("there is no page {number}")))
     })
     .await
 }
 
 /// Searches the text of the documents (all, or one).
 pub async fn search(state: &UiState, text: String, document: Option<i64>) -> Result<Vec<HitView>, UiError> {
-    let hits = with_user_db(state, move |db| Ok(documents::search(db, &text, document)?)).await?;
+    let hits = with_user_db(state, move |db| Ok(standards::read::search(db, &text, document)?)).await?;
 
     Ok(hits.into_iter().map(HitView::from).collect())
 }
@@ -194,7 +195,7 @@ pub async fn search(state: &UiState, text: String, document: Option<i64>) -> Res
 /// The PDF of a document, for the viewer.
 pub async fn pdf(state: &UiState, id: i64) -> Result<Vec<u8>, UiError> {
     with_user_db(state, move |db| {
-        documents::pdf(db, id)?.ok_or_else(|| UiError::Invalid("the document does not exist".to_owned()))
+        standards::read::pdf(db, id)?.ok_or_else(|| UiError::Invalid("the document does not exist".to_owned()))
     })
     .await
 }

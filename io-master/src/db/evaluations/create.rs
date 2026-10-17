@@ -1,5 +1,5 @@
 //! Creating evaluation projects, proposals of the AI, and entries of
-//! the journal. The rules are checked by `product_evaluation/` before.
+//! the journal. The rules are checked by `evaluation/` before.
 //!
 //! **The journal is only added to** ([`journal`]): no file of this
 //! folder changes or removes an entry, and the database refuses it as
@@ -13,8 +13,8 @@ use rusqlite::{Connection, params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::scheme::{Link, Scheme, Tile};
-use crate::product_evaluation::model::{Actor, EvaluationFields, JournalAction, Origin, ResultField};
+use crate::test_projects::model::{Link, Scheme, Tile};
+use crate::evaluation::model::{Actor, EvaluationFields, JournalAction, Origin, ResultField};
 
 use super::rows::actor_columns;
 
