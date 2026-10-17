@@ -26,7 +26,7 @@ use crate::model::ai::Role;
 use crate::model::ai::Turn;
 
 use super::chats;
-use super::memory;
+use crate::ai::tasks::chat as memory;
 
 /// The longest message an evaluator can send, in characters. A
 /// longer text is better given to the model as a document (a later

@@ -90,7 +90,7 @@ fn unfinished_replies_are_kept_with_their_ending() {
 
     // The text of a refused reply is not kept, and not sent again.
     assert_eq!(messages[4].text, "");
-    assert_eq!(crate::ai::chat::memory::turns(&messages).len(), 4);
+    assert_eq!(crate::ai::tasks::chat::turns(&messages).len(), 4);
 }
 
 #[test]

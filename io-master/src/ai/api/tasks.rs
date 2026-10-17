@@ -4,8 +4,8 @@
 //!
 //! ```text
 //! task       role            instructions
-//! chapter    text_analysis   test_projects/analysis/chapter.rs (the analysis of a chapter)
-//! contents   text_analysis   test_projects/analysis/contents.rs (the table of contents)
+//! chapter    text_analysis   ai/tasks/chapter.rs (the analysis of a chapter)
+//! contents   text_analysis   ai/tasks/contents.rs (the table of contents)
 //! chat       consultation    none here: the system prompt of the connection
 //! check      none            none: the check of a connection (checks.rs)
 //! ```
@@ -15,10 +15,10 @@
 //! set_instructions()   PUT    /tasks/{task}/instructions (empty text: DELETE)
 //! ```
 
+use crate::ai::tasks::{chapter, contents};
 use crate::db::ai::instructions::{delete as remove, read, update};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::test_projects::analysis::{chapter as analysis, contents};
 
 use crate::model::ai::Task;
 
@@ -26,7 +26,7 @@ use crate::model::ai::Task;
 /// for a task without instructions of its own.
 pub fn default_instructions(task: Task) -> Option<&'static str> {
     match task {
-        Task::Chapter => Some(analysis::DEFAULT_INSTRUCTIONS),
+        Task::Chapter => Some(chapter::DEFAULT_INSTRUCTIONS),
         Task::Contents => Some(contents::DEFAULT_INSTRUCTIONS),
         Task::Chat | Task::Check => None,
     }

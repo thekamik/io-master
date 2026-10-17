@@ -4,6 +4,7 @@
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::analysis::Part;
 use crate::standards;
 
 /// The size of a part when the user gives none, in characters: about
@@ -13,16 +14,6 @@ pub const DEFAULT_PART: usize = 12_000;
 
 /// The smallest and largest size of a part the user may choose.
 pub const PART_RANGE: (usize, usize) = (2_000, 400_000);
-
-/// A part of the text of one document, for one request.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Part {
-    pub document_id: i64,
-    pub first_page: u32,
-    pub last_page: u32,
-    /// The pages, each after a line "=== Page N ===".
-    pub text: String,
-}
 
 /// The pages `first` to `last` of the documents, cut into parts of at
 /// most `size` characters (0: [`DEFAULT_PART`]; a page longer than a

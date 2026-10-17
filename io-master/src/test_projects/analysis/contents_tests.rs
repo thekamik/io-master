@@ -28,32 +28,18 @@ fn document(db: &UserDb) -> Document {
     standards::read::get(db, id).unwrap().unwrap()
 }
 
-fn chapter(number: &str, title: &str, printed_page: Option<u32>) -> Chapter {
-    Chapter { number: number.to_owned(), title: title.to_owned(), printed_page }
+fn chapter(number: &str, title: &str, printed_page: Option<u32>) -> ProposedChapter {
+    ProposedChapter { number: number.to_owned(), title: title.to_owned(), printed_page }
 }
 
 /// Applies the chapters to `project`, opened from the database.
 fn apply(
     db: &UserDb,
     project: i64,
-    chapters: &[Chapter],
+    chapters: &[ProposedChapter],
     spans: &[Option<PageSpan>],
 ) -> Result<AppliedChapters, StoreError> {
     on(db, project, |open| super::apply(db, open, chapters, spans))
-}
-
-#[test]
-fn the_answer_is_read_in_its_order() {
-    let answer = r#"Here: {"chapters": [
-        {"number": "5.1", "title": "Access control", "page": 2},
-        {"number": "5.2", "title": "Secure update", "page": null},
-        {"number": "5.3", "title": ""}]}"#;
-
-    let (chapters, dropped) = read(answer).unwrap();
-
-    assert_eq!(chapters, [chapter("5.1", "Access control", Some(2)), chapter("5.2", "Secure update", None)]);
-    assert_eq!(dropped.len(), 1);
-    assert!(read("no JSON here").is_err());
 }
 
 #[test]
@@ -116,18 +102,4 @@ fn the_chapters_become_proposed_schemes_and_known_numbers_are_left_out() {
     assert_eq!(stored[1].fields.number, "5.2");
     assert_eq!(stored[1].fields.state, ProposalState::Proposed);
     assert_eq!(stored[1].fields.pages, None);
-}
-
-#[test]
-fn the_prompt_holds_the_instructions_and_the_table() {
-    let test = database();
-    let document = document(&test.db);
-    let part =
-        Part { document_id: document.id, first_page: 1, last_page: 1, text: "=== Page 1 ===\nContents".to_owned() };
-
-    let text = prompt(DEFAULT_INSTRUCTIONS, &document, &part);
-
-    assert!(text.starts_with("You help to map a standard"));
-    assert!(text.contains("The table of contents of EN 18031-1, pages 1 to 1."));
-    assert!(text.ends_with("=== Page 1 ===\nContents"));
 }

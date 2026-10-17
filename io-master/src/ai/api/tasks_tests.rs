@@ -22,7 +22,7 @@ fn every_task_has_its_role() {
 fn instructions_are_changed_and_brought_back() {
     let test = database();
 
-    assert_eq!(instructions(&test.db, Task::Chapter).unwrap().as_deref(), Some(analysis::DEFAULT_INSTRUCTIONS));
+    assert_eq!(instructions(&test.db, Task::Chapter).unwrap().as_deref(), Some(chapter::DEFAULT_INSTRUCTIONS));
 
     assert_eq!(set_instructions(&test.db, Task::Chapter, "Mine.").unwrap().as_deref(), Some("Mine."));
     assert_eq!(instructions(&test.db, Task::Chapter).unwrap().as_deref(), Some("Mine."));
@@ -31,8 +31,8 @@ fn instructions_are_changed_and_brought_back() {
 
     // Empty text: the default ones again.
     let brought_back = set_instructions(&test.db, Task::Chapter, "  ").unwrap();
-    assert_eq!(brought_back.as_deref(), Some(analysis::DEFAULT_INSTRUCTIONS));
-    assert_eq!(instructions(&test.db, Task::Chapter).unwrap().as_deref(), Some(analysis::DEFAULT_INSTRUCTIONS));
+    assert_eq!(brought_back.as_deref(), Some(chapter::DEFAULT_INSTRUCTIONS));
+    assert_eq!(instructions(&test.db, Task::Chapter).unwrap().as_deref(), Some(chapter::DEFAULT_INSTRUCTIONS));
 
     // A task without instructions stores none.
     assert_eq!(set_instructions(&test.db, Task::Chat, "x").unwrap(), None);

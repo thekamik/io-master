@@ -47,7 +47,7 @@ const ANSWER: &str = r#"Here is the scheme:
 
 /// Applies `proposal` to `scheme`, on its project opened from the
 /// database.
-fn apply(db: &UserDb, scheme: i64, proposal: &Proposal) -> Result<Applied, StoreError> {
+fn apply(db: &UserDb, scheme: i64, proposal: &ChapterProposal) -> Result<Applied, StoreError> {
     on(db, project_of_scheme(db, scheme), |open| super::apply(db, open, scheme, proposal))
 }
 
@@ -68,62 +68,6 @@ fn the_pages_are_cut_into_parts_that_fit() {
     // A range past the end stops at the last page.
     let past = parts(&test.db, &[(document, 3, 9)], DEFAULT_PART).unwrap();
     assert_eq!((past[0].first_page, past[0].last_page), (3, 3));
-}
-
-#[test]
-fn the_prompt_holds_the_instructions_the_chapter_the_known_tiles_and_the_text() {
-    let (test, scheme, document) = ready();
-    let document = standards::read::get(&test.db, document).unwrap().unwrap();
-    let scheme = schemes::existing(&test.db, scheme).unwrap();
-
-    let mut known = TileFields::new(TileKind::Requirement, "Confirm");
-    known.identifier = "ADV_FSP.4.1E".to_owned();
-    let mut elsewhere = TileFields::new(TileKind::Requirement, "Test a subset");
-    elsewhere.identifier = "ATE_IND.2.1E".to_owned();
-    let other_input = TileFields::new(TileKind::Input, "Not named");
-
-    let text = prompt(
-        DEFAULT_INSTRUCTIONS,
-        &document,
-        &Part { text: "=== Page 2 ===\nTEXT".to_owned(), ..part(document.id) },
-        &scheme,
-        &[Tile { id: 1, scheme: scheme.id, fields: known }],
-        &[Tile { id: 2, scheme: 99, fields: elsewhere }, Tile { id: 3, scheme: 99, fields: other_input }],
-    );
-
-    assert!(text.starts_with("You help to build an evaluation scheme"));
-    assert!(text.contains("The chapter analysed: 5 ADV."));
-    assert!(text.contains("- requirement ADV_FSP.4.1E: Confirm"));
-    // Of the other chapters only the requirements are named.
-    assert!(text.contains("- requirement ATE_IND.2.1E: Test a subset"));
-    assert!(!text.contains("Not named"));
-    assert!(text.contains("Common Criteria, Part 3 (CC:2022 R1), pages 2 to 3."));
-    assert!(text.ends_with("=== Page 2 ===\nTEXT"));
-}
-
-#[test]
-fn an_answer_is_read_and_its_bad_parts_dropped() {
-    let proposal = read(ANSWER, &part(7)).unwrap();
-
-    assert_eq!(proposal.tiles.len(), 5);
-    assert_eq!(proposal.tiles[0].fields.state, ProposalState::Proposed);
-    assert_eq!(proposal.tiles[0].fields.sources[0].document_id, 7);
-    assert!(proposal.tiles[2].fields.external.is_some());
-    assert_eq!(proposal.tiles[3].fields.sections, OutputSection::ALL);
-    assert_eq!(proposal.links.len(), 4);
-    assert!(proposal.dropped.iter().any(|reason| reason.starts_with("t6")));
-
-    assert!(read("no json at all", &part(7)).is_err());
-}
-
-#[test]
-fn a_quote_outside_the_part_is_dropped() {
-    let answer =
-        r#"{"tiles": [{"key": "a", "kind": "requirement", "title": "R", "quotes": [{"page": 1, "text": "Scope"}]}]}"#;
-    let proposal = read(answer, &part(7)).unwrap();
-
-    assert!(proposal.tiles[0].fields.sources.is_empty());
-    assert!(proposal.dropped[0].contains("outside the part"));
 }
 
 #[test]

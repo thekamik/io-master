@@ -28,8 +28,6 @@
 //! other); the last chapter runs to the end of the document. The user
 //! can correct every range.
 
-use serde_json::Value;
-
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
@@ -45,30 +43,9 @@ use crate::ai::api::completions::{self};
 use crate::model::ai::Turn;
 use crate::model::test_projects::rules::SchemeError;
 
-use super::parts::{PART_RANGE, Part, parts};
-
-/// The instructions to the model when the user has not changed them
-/// (the task `contents` of `ai/api/tasks.rs`; changed ones are kept in
-/// `db/ai/instructions/`).
-pub const DEFAULT_INSTRUCTIONS: &str = r#"You help to map a standard for an evaluation. The standard will be split into chapters; each chapter becomes a scheme of its own, in which its requirements, their inputs and outputs are drawn later.
-
-Below is the table of contents of the standard. Propose the chapters that hold requirements (criteria, activities, tests) of the product or of the evaluation. Rules:
-1. Choose the level of the table at which a chapter holds a coherent group of requirements, usually the second level (for example "9.1", not "9" and not "9.1.5"). Leave out the introduction, the scope, the references, the terms, the annexes without requirements and the bibliography.
-2. Copy the number and the title of each chapter exactly as the table gives them.
-3. Give the page number the table shows for each chapter, or null when it shows none.
-4. Keep the order of the table.
-
-Answer with one JSON object and nothing else, in this form:
-{"chapters": [{"number": "9.1", "title": "...", "page": 41}]}"#;
-
-/// A chapter as the model proposed it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Chapter {
-    pub number: String,
-    pub title: String,
-    /// The page printed in the table of contents, if it gives one.
-    pub printed_page: Option<u32>,
-}
+use super::parts::{PART_RANGE, parts};
+use crate::ai::tasks::contents::{prompt, read};
+use crate::model::analysis::{Part, ProposedChapter};
 
 /// What a table of contents gave.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -83,64 +60,9 @@ pub struct AppliedChapters {
     pub dropped: Vec<String>,
 }
 
-/// The message to the model for the table of contents in `part` of
-/// `document`.
-pub fn prompt(instructions: &str, document: &Document, part: &Part) -> String {
-    format!(
-        "{}\n\nThe table of contents of {}, pages {} to {}.\n\n{}",
-        instructions.trim(),
-        document.fields.title,
-        part.first_page,
-        part.last_page,
-        part.text
-    )
-}
-
-/// The JSON object in an answer: the answer itself, or the first
-/// object in it (a model may put it in a code block, or add words).
-fn json_object(answer: &str) -> Option<Value> {
-    if let Ok(value) = serde_json::from_str::<Value>(answer.trim())
-        && value.is_object()
-    {
-        return Some(value);
-    }
-
-    let start = answer.find('{')?;
-    let end = answer.rfind('}')?;
-
-    serde_json::from_str::<Value>(answer.get(start..=end)?).ok().filter(Value::is_object)
-}
-
-/// Reads the answer of the model. A chapter without a title is
-/// dropped; the rest is kept in the order of the answer.
-pub fn read(answer: &str) -> Result<(Vec<Chapter>, Vec<String>), String> {
-    let value = json_object(answer).ok_or("the answer holds no JSON object")?;
-    let text = |item: &Value, name: &str| item.get(name).and_then(Value::as_str).unwrap_or_default().trim().to_owned();
-
-    let mut chapters = Vec::new();
-    let mut dropped = Vec::new();
-
-    for (index, item) in value.get("chapters").and_then(Value::as_array).into_iter().flatten().enumerate() {
-        let title = text(item, "title");
-
-        if title.is_empty() {
-            dropped.push(format!("chapter {}: no title", index + 1));
-            continue;
-        }
-
-        chapters.push(Chapter {
-            number: text(item, "number"),
-            title,
-            printed_page: item.get("page").and_then(Value::as_u64).map(|page| page as u32).filter(|page| *page > 0),
-        });
-    }
-
-    Ok((chapters, dropped))
-}
-
 /// The heading of a chapter as it is looked for in a page: the number
 /// and the beginning of the title, in the normal form of `quote.rs`.
-fn heading(chapter: &Chapter) -> String {
+fn heading(chapter: &ProposedChapter) -> String {
     let title: String = normalize(&chapter.title).chars().take(40).collect();
 
     normalize(&format!("{} {}", chapter.number, title))
@@ -149,7 +71,12 @@ fn heading(chapter: &Chapter) -> String {
 /// The first page of every chapter in `document`, looked for after the
 /// page `after` (the end of the table of contents); `None` where it is
 /// not found (see the top of this file).
-pub fn locate(db: &UserDb, document: &Document, after: u32, chapters: &[Chapter]) -> Result<Vec<Option<u32>>, DbError> {
+pub fn locate(
+    db: &UserDb,
+    document: &Document,
+    after: u32,
+    chapters: &[ProposedChapter],
+) -> Result<Vec<Option<u32>>, DbError> {
     let mut pages = Vec::new();
 
     for number in after + 1..=document.page_count {
@@ -227,7 +154,7 @@ pub fn spans(document: &Document, starts: &[Option<u32>]) -> Vec<Option<PageSpan
 pub fn apply(
     db: &UserDb,
     open: &mut OpenProject,
-    chapters: &[Chapter],
+    chapters: &[ProposedChapter],
     spans: &[Option<PageSpan>],
 ) -> Result<AppliedChapters, StoreError> {
     let mut applied = AppliedChapters::default();

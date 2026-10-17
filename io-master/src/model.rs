@@ -8,6 +8,7 @@
 //! ```text
 //! ai.rs              a connection to an AI service, the tasks and roles of
 //!                    the AI, a conversation
+//! analysis.rs        a part of a standard sent to the AI, and what it proposed
 //! api_key.rs         an API key, wiped from memory, never shown
 //! chats.rs           the chats with the AI
 //! installation.rs    the installation: identifier, role; user names
@@ -20,6 +21,7 @@
 //! ```
 
 pub mod ai;
+pub mod analysis;
 pub mod api_key;
 pub mod chats;
 pub mod evaluations;
