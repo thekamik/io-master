@@ -1,11 +1,11 @@
 //! The scan of serial ports with the settings of the evaluator.
 //!
 //! The scan only reads the descriptions of the ports and never
-//! opens one (`devices/devices.rs`).
+//! opens one (`hardware_tests/devices/devices.rs`).
 
-use crate::devices::devices::{self, PortType};
-use crate::devices::port_property::PortProperty;
-use crate::devices::scan_settings::ScanSettings;
+use crate::hardware_tests::devices::devices::{self, PortType};
+use crate::hardware_tests::devices::port_property::PortProperty;
+use crate::hardware_tests::devices::scan_settings::ScanSettings;
 
 use super::error::UiError;
 use super::serializer::scan_view::ScanView;

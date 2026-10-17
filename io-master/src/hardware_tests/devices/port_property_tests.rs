@@ -4,7 +4,7 @@ use super::*;
 
 use std::collections::BTreeMap;
 
-use crate::devices::devices::{AccessInfo, PortType, UsbInfo};
+use crate::hardware_tests::devices::devices::{AccessInfo, PortType, UsbInfo};
 
 /// A port with only the properties every port has.
 fn port(name: &str) -> SerialPortInfo {

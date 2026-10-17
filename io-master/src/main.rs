@@ -140,12 +140,16 @@ mod installation {
     pub mod verify;
 }
 
-mod devices {
-    // Same layout as installation/installation.rs.
-    #[allow(clippy::module_inception)]
-    pub mod devices;
-    pub mod port_property;
-    pub mod scan_settings;
+// Everything that talks to hardware (step 40 of docs/todo.md).
+// permissions/permission.rs is empty until step 6 and not compiled.
+mod hardware_tests {
+    pub mod devices {
+        // Same layout as installation/installation.rs.
+        #[allow(clippy::module_inception)]
+        pub mod devices;
+        pub mod port_property;
+        pub mod scan_settings;
+    }
 }
 
 mod tpm {

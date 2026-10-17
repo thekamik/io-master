@@ -199,7 +199,7 @@ The program does not share data between evaluators itself. The laboratory uses i
 
 ## 7. Work on devices
 
-Devices are reached from the workstation only. The first function is the scan of serial ports (`devices/devices.rs`); it reads only the description of the ports and never opens one. Sending to a device follows P2: proposed by the program, executed by an action of the evaluator.
+Devices are reached from the workstation only. The first function is the scan of serial ports (`hardware_tests/devices/devices.rs`); it reads only the description of the ports and never opens one. Sending to a device follows P2: proposed by the program, executed by an action of the evaluator.
 
 ### 7.1 Test projects and evaluation schemes (agreed and built 2026-10-16, steps 16 to 22 and 24 to 27 of `todo.md`)
 

@@ -216,7 +216,7 @@ Each part is one small step: concept approved, implementation, all tests and `cl
 | 40.4 | The safety of the AI connections: one transaction per save, the address of the key checked at its use | A4 |
 | 40.5 | `model/`: the types moved, normalization once, errors with enums of fields | A3, B5, B6 |
 | 40.6 | `db/`: open once, migrations, named parameters, types for rows, `Corrupt`, shared tile code, `COLLATE NOCASE`, renamed areas | A2, B1–B4, B7, B8 |
-| 40.7 | `security/` and `hardware_tests/`: the folders moved | U5 |
+| 40.7 | `security/` and `hardware_tests/`: the folders moved (`hardware_tests/` done 2026-10-17: `devices/`, `permissions/`) | U5 |
 | 40.8 | `ai/`: `connections`, `tasks/`, `presets/`, the journal written by `ask`; no dependency on the business | U4, A3 |
 | 40.9 | `business/`: the session, the resources, the long works with `Progress` and `Cancel` | U2, A1, A2 |
 | 40.10 | `tauri_ui/`: commands per resource, the actions removed, all error conversions in `error.rs`, the test of the command lists | U1, C |
