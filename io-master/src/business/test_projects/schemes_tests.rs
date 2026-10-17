@@ -229,7 +229,7 @@ fn the_content_is_replaced_by_an_earlier_one() {
     add_link(&test.db, input, requirement).unwrap();
     add_link(&test.db, requirement, later).unwrap();
 
-    let before = crate::business::test_projects::projects::read::data(&test.db, project).unwrap().unwrap();
+    let before = crate::business::test_projects::projects::data(&test.db, project).unwrap().unwrap();
 
     // A change, then back.
     delete_tile(&test.db, input).unwrap();
@@ -237,7 +237,7 @@ fn the_content_is_replaced_by_an_earlier_one() {
     add_tile(&test.db, scheme, &TileFields::new(TileKind::Output, "Report")).unwrap();
 
     let numbers = replace_content(&test.db, project, &before.tiles, &before.links).unwrap();
-    let after = crate::business::test_projects::projects::read::data(&test.db, project).unwrap().unwrap();
+    let after = crate::business::test_projects::projects::data(&test.db, project).unwrap().unwrap();
 
     assert_eq!(numbers.len(), 3);
     assert_eq!(after.tiles.len(), 3);

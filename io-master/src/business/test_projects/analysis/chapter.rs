@@ -36,7 +36,7 @@
 use crate::business::standards;
 use crate::business::standards::quote::{is_on_page, normalize};
 use crate::business::test_projects::error::StoreError;
-use crate::business::test_projects::schemes::read::existing;
+use crate::business::test_projects::schemes::existing;
 use crate::business::test_projects::workspace::OpenProject;
 use crate::business::test_projects::{links, tiles as tile_crud};
 use crate::db::user::database::UserDb;
@@ -118,7 +118,7 @@ pub fn apply(
         let mut fields = proposed.fields.clone();
 
         for source in &mut fields.sources {
-            source.found = standards::read::page(db, source.document_id, source.page)?
+            source.found = standards::documents::page(db, source.document_id, source.page)?
                 .is_some_and(|page| is_on_page(&source.quote, &page));
         }
 
@@ -143,7 +143,7 @@ pub fn apply(
                 let mut changed = tile.fields.clone();
                 changed.sources = sources;
 
-                if tile_crud::update::tile(db, open, existing, &changed).is_ok() {
+                if tile_crud::update(db, open, existing, &changed).is_ok() {
                     tile.fields = changed;
                 }
             }
@@ -162,7 +162,7 @@ pub fn apply(
         fields.x = column(fields.kind);
         fields.y = lowest.map_or(0.0, |y| y + ROW);
 
-        match tile_crud::create::tile(db, open, scheme, &fields) {
+        match tile_crud::create(db, open, scheme, &fields) {
             Ok(id) => {
                 keys.push((proposed.key.clone(), id));
                 tiles.push(Tile { id, scheme, fields });
@@ -195,7 +195,7 @@ pub fn apply(
             continue;
         };
 
-        match links::create::link(db, open, from_id, to_id) {
+        match links::create(db, open, from_id, to_id) {
             Ok(_) => applied.links += 1,
             // The same link proposed twice (or already drawn): what
             // was asked for is there, so nothing is told.
@@ -228,8 +228,8 @@ pub fn question(
     instructions: &str,
 ) -> Result<Vec<Turn>, StoreError> {
     let stored = existing(open, scheme)?;
-    let document =
-        standards::read::get(db, part.document_id)?.ok_or(StoreError::Scheme(SchemeError::NotFound("document")))?;
+    let document = standards::documents::get(db, part.document_id)?
+        .ok_or(StoreError::Scheme(SchemeError::NotFound("document")))?;
     let (own, others): (Vec<Tile>, Vec<Tile>) =
         open.data().tiles.iter().cloned().partition(|tile| tile.scheme == scheme);
 

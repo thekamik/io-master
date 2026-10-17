@@ -81,7 +81,7 @@ pub async fn analyse_scheme(
     progress: impl Fn(Progress) -> bool + Send + Sync + Clone + 'static,
 ) -> Result<(), WorkError> {
     let job = on_project(session, project, move |_, open| {
-        let stored = super::super::schemes::read::existing(open, scheme)?;
+        let stored = super::super::schemes::existing(open, scheme)?;
         let ranges = if ranges.is_empty() {
             stored
                 .fields
@@ -193,7 +193,7 @@ async fn run(
                     let (part, instructions) = (part.clone(), instructions.clone());
 
                     on_project(session, project, move |db, open| {
-                        let title = standards::read::get(db, part.document_id)?
+                        let title = standards::documents::get(db, part.document_id)?
                             .map(|document| document.fields.title)
                             .unwrap_or_default();
 

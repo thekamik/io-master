@@ -3,7 +3,7 @@
 
 use crate::business::evaluations::error::EvaluationError;
 use crate::business::evaluations::journal;
-use crate::business::evaluations::projects::{create as import, read as projects};
+use crate::business::evaluations::projects;
 use crate::business::evaluations::test_support::single::{accept, correct, of, proposals, propose, reject, write};
 use crate::business::evaluations::test_support::{fields, ready_project};
 use crate::business::test_projects::test_support::database;
@@ -16,7 +16,7 @@ use crate::model::test_projects::TileKind;
 fn evaluation() -> (crate::business::test_projects::test_support::TestDb, EvaluationData, i64) {
     let test = database();
     let ready = ready_project(&test.db);
-    let id = import::from_project(&test.db, ready.project, &fields("Meter X")).unwrap().id;
+    let id = projects::from_project(&test.db, ready.project, &fields("Meter X")).unwrap().id;
     let data = projects::data(&test.db, id).unwrap().unwrap();
     let requirement = data.tiles.iter().find(|tile| tile.fields.kind == TileKind::Requirement).unwrap().id;
 
@@ -24,7 +24,7 @@ fn evaluation() -> (crate::business::test_projects::test_support::TestDb, Evalua
 }
 
 fn journal_of(db: &UserDb, data: &EvaluationData) -> Vec<JournalEntry> {
-    journal::read::of(db, data.evaluation.id).unwrap()
+    journal::list(db, data.evaluation.id).unwrap()
 }
 
 #[test]

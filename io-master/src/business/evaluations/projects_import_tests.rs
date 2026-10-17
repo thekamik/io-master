@@ -3,7 +3,7 @@
 use super::*;
 
 use crate::business::evaluations::journal;
-use crate::business::evaluations::projects::read as projects;
+use crate::business::evaluations::projects;
 use crate::business::evaluations::test_support::{fields, ready_project};
 use crate::business::test_projects::exchange::{export, import as exchange};
 use crate::business::test_projects::test_support::single as schemes;
@@ -41,7 +41,7 @@ fn a_ready_project_becomes_a_frozen_copy() {
     assert_eq!(again.links.len(), 2);
 
     // The first entry of the journal.
-    let entries = journal::read::of(&test.db, imported.id).unwrap();
+    let entries = journal::list(&test.db, imported.id).unwrap();
     assert_eq!(entries.len(), 1);
     assert_eq!(entries[0].action, JournalAction::Imported);
     assert!(entries[0].detail.contains("\"P\""), "{}", entries[0].detail);
@@ -84,7 +84,7 @@ fn proposals_never_accepted_are_left_out() {
     assert_eq!((data.schemes.len(), data.tiles.len(), data.links.len()), (1, 3, 2));
     assert!(data.tiles.iter().all(|tile| tile.fields.state == ProposalState::Accepted));
 
-    let detail = &journal::read::of(&test.db, imported.id).unwrap()[0].detail;
+    let detail = &journal::list(&test.db, imported.id).unwrap()[0].detail;
     assert!(detail.contains("1 schemes, 2 tiles, 1 links"), "{detail}");
 }
 

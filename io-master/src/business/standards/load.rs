@@ -12,9 +12,9 @@ use crate::business::session::Session;
 use crate::business::work::{Cancel, WorkError, on_db};
 use crate::model::standards::{Document, DocumentFields};
 
+use super::documents;
 use super::error::DocumentError;
 use super::pdf_text::{self, PdfError, PdfInfo};
-use super::{create, read};
 
 /// How a loading goes, for the evaluator.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,11 +122,12 @@ pub async fn load(
 
             let stored_name = name.clone();
             let stored = on_db(session, move |db| {
-                let id = match create::add(db, &fields, &stored_name, &pdf, &pages) {
+                let id = match documents::create(db, &fields, &stored_name, &pdf, &pages) {
                     Ok(id) => id,
                     // Which document it is already, so that the evaluator finds it.
                     Err(DocumentError::Duplicate(existing)) => {
-                        let title = read::get(db, existing)?.map(|document| document.fields.title).unwrap_or_default();
+                        let title =
+                            documents::get(db, existing)?.map(|document| document.fields.title).unwrap_or_default();
                         return Err(WorkError::Invalid(format!(
                             "this file is loaded already, as the document {title}"
                         )));
@@ -134,7 +135,7 @@ pub async fn load(
                     Err(error) => return Err(error.into()),
                 };
 
-                Ok(read::get(db, id)?)
+                Ok(documents::get(db, id)?)
             })
             .await;
 

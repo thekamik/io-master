@@ -257,7 +257,7 @@ pub fn read(file: &[u8]) -> Result<Exchange, ExchangeError> {
 /// a number when the name is taken.
 fn free_name(db: &UserDb, name: &str) -> Result<String, DbError> {
     let taken = |candidate: &str| -> Result<bool, DbError> {
-        Ok(projects::read::list(db)?.iter().any(|project| project.fields.name.eq_ignore_ascii_case(candidate)))
+        Ok(projects::list(db)?.iter().any(|project| project.fields.name.eq_ignore_ascii_case(candidate)))
     };
 
     if !taken(name)? {
@@ -285,7 +285,7 @@ pub fn store(db: &UserDb, exchange: &Exchange, documents: &[i64]) -> Result<i64,
     fields.name = free_name(db, fields.name.trim())?;
     fields.documents = documents.to_vec();
 
-    let project = projects::create::project(db, &fields)?;
+    let project = projects::create(db, &fields)?;
 
     // The new project is opened in a workspace of its own, so that its
     // schemes are added by the same rules as by hand.
@@ -294,7 +294,7 @@ pub fn store(db: &UserDb, exchange: &Exchange, documents: &[i64]) -> Result<i64,
     match store_content(db, &mut workspace, project, exchange, documents) {
         Ok(()) => Ok(project),
         Err(error) => {
-            projects::delete::project(db, &mut workspace, project)?;
+            projects::delete(db, &mut workspace, project)?;
             Err(error)
         }
     }
@@ -323,7 +323,7 @@ fn store_content(
             pages.document_id = document(pages.document_id)?;
         }
 
-        schemes_of.push((scheme.id, schemes::create::scheme(db, open, &fields)?));
+        schemes_of.push((scheme.id, schemes::create(db, open, &fields)?));
     }
 
     let mut tiles = exchange.tiles.clone();
@@ -337,7 +337,7 @@ fn store_content(
 
         for source in &mut tile.fields.sources {
             source.document_id = document(source.document_id)?;
-            source.found = standards::read::page(db, source.document_id, source.page)?
+            source.found = standards::documents::page(db, source.document_id, source.page)?
                 .is_some_and(|page| is_on_page(&source.quote, &page));
         }
     }
@@ -379,7 +379,7 @@ pub async fn from_file(
     for (index, document) in exchange.documents.iter().enumerate() {
         let sha256 = document.sha256.clone();
 
-        if let Some(found) = on_db(session, move |db| Ok(standards::read::by_sha256(db, &sha256)?)).await? {
+        if let Some(found) = on_db(session, move |db| Ok(standards::documents::by_sha256(db, &sha256)?)).await? {
             loaded.push(found.id);
             continue;
         }
@@ -406,7 +406,8 @@ pub async fn from_file(
         };
         let file_name = document.file_name.clone();
 
-        let id = on_db(session, move |db| Ok(standards::create::add(db, &fields, &file_name, &pdf, &pages)?)).await?;
+        let id =
+            on_db(session, move |db| Ok(standards::documents::create(db, &fields, &file_name, &pdf, &pages)?)).await?;
         loaded.push(id);
     }
 

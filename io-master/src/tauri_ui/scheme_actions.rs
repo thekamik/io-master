@@ -80,7 +80,7 @@ pub async fn add_tile(state: &UiState, scheme: i64, form: TileForm) -> Result<Sc
     let fields = form.into_fields()?;
 
     change(state, scheme, move |db, open| {
-        tiles::create::tile(db, open, scheme, &fields)?;
+        tiles::create(db, open, scheme, &fields)?;
         Ok(())
     })
     .await
@@ -90,7 +90,7 @@ pub async fn update_tile(state: &UiState, id: i64, form: TileForm) -> Result<Sch
     let fields = form.into_fields()?;
     let scheme = scheme_of_tile(state, id).await?;
 
-    change(state, scheme, move |db, open| Ok(tiles::update::tile(db, open, id, &fields)?)).await
+    change(state, scheme, move |db, open| Ok(tiles::update(db, open, id, &fields)?)).await
 }
 
 /// Moves a tile on the canvas; gives nothing back, the page knows
@@ -98,7 +98,7 @@ pub async fn update_tile(state: &UiState, id: i64, form: TileForm) -> Result<Sch
 pub async fn move_tile(state: &UiState, id: i64, x: f64, y: f64) -> Result<(), UiError> {
     let scheme = scheme_of_tile(state, id).await?;
 
-    change(state, scheme, move |db, open| Ok(tiles::update::position(db, open, id, x, y)?)).await?;
+    change(state, scheme, move |db, open| Ok(tiles::set_position(db, open, id, x, y)?)).await?;
 
     Ok(())
 }
@@ -106,14 +106,14 @@ pub async fn move_tile(state: &UiState, id: i64, x: f64, y: f64) -> Result<(), U
 /// Moves tiles of the project to the scheme `to` (step 26); the page
 /// gets the scheme `shown` back.
 pub async fn move_tiles(state: &UiState, shown: i64, ids: Vec<i64>, to: i64) -> Result<SchemeDataView, UiError> {
-    change(state, shown, move |db, open| Ok(tiles::update::to_scheme(db, open, &ids, to)?)).await
+    change(state, shown, move |db, open| Ok(tiles::move_to_scheme(db, open, &ids, to)?)).await
 }
 
 pub async fn delete_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
     change(state, scheme, move |db, open| {
         for id in ids {
-            if tiles::read::get(open, id).is_some_and(|tile| tile.scheme == scheme) {
-                tiles::delete::tile(db, open, id)?;
+            if tiles::get(open, id).is_some_and(|tile| tile.scheme == scheme) {
+                tiles::delete(db, open, id)?;
             }
         }
 
@@ -125,8 +125,8 @@ pub async fn delete_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result
 pub async fn accept_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
     change(state, scheme, move |db, open| {
         for id in ids {
-            if tiles::read::get(open, id).is_some_and(|tile| tile.scheme == scheme) {
-                tiles::update::accept(db, open, id)?;
+            if tiles::get(open, id).is_some_and(|tile| tile.scheme == scheme) {
+                tiles::accept(db, open, id)?;
             }
         }
 
@@ -139,11 +139,11 @@ pub async fn accept_tiles(state: &UiState, scheme: i64, ids: Vec<i64>) -> Result
 /// another scheme of it).
 pub async fn add_link(state: &UiState, scheme: i64, from: i64, to: i64) -> Result<SchemeDataView, UiError> {
     change(state, scheme, move |db, open| {
-        if tiles::read::get(open, from).is_none() || tiles::read::get(open, to).is_none() {
+        if tiles::get(open, from).is_none() || tiles::get(open, to).is_none() {
             return Err(UiError::Invalid("only tiles of this test project can be linked".to_owned()));
         }
 
-        links::create::link(db, open, from, to)?;
+        links::create(db, open, from, to)?;
         Ok(())
     })
     .await
@@ -151,7 +151,7 @@ pub async fn add_link(state: &UiState, scheme: i64, from: i64, to: i64) -> Resul
 
 pub async fn delete_link(state: &UiState, scheme: i64, id: i64) -> Result<SchemeDataView, UiError> {
     change(state, scheme, move |db, open| {
-        links::delete::link(db, open, id)?;
+        links::delete(db, open, id)?;
         Ok(())
     })
     .await

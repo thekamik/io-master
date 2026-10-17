@@ -30,7 +30,7 @@ use std::collections::hash_map::Entry;
 use crate::db::test_projects::update as change;
 use crate::db::user::database::UserDb;
 
-use super::projects::read;
+use super::projects;
 use crate::business::test_projects::error::StoreError;
 use crate::model::test_projects::rules::SchemeError;
 use crate::model::test_projects::{Link, ProjectData, Tile};
@@ -128,7 +128,7 @@ impl OpenProject {
         // forgotten too.
         change::replace_content(db, project, &version.tiles, &version.links)?;
         self.versions.clear();
-        self.data = read::data(db, project)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))?;
+        self.data = projects::data(db, project)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))?;
 
         Ok(())
     }
@@ -152,7 +152,7 @@ impl ProjectWorkspace {
         match self.open.entry(id) {
             Entry::Occupied(open) => Ok(open.into_mut()),
             Entry::Vacant(place) => {
-                let data = read::data(db, id)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))?;
+                let data = projects::data(db, id)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))?;
 
                 Ok(place.insert(OpenProject { data, versions: Vec::new() }))
             }

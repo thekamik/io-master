@@ -1,11 +1,6 @@
-//! Unit tests of `business/standards/` (attached to `create.rs`; they cover the
-//! whole folder).
+//! Unit tests of `documents.rs`.
 
 use super::*;
-
-use crate::business::standards::delete::delete;
-use crate::business::standards::read::{get, list, page, pdf, search};
-use crate::business::standards::update::update;
 
 use std::fs;
 
@@ -34,7 +29,7 @@ fn the_same_file_is_loaded_once() {
     let test = database();
     let id = load(&test.db, b"%PDF same");
 
-    let again = add(&test.db, &fields(), "copy.pdf", b"%PDF same", &["x".to_owned()]);
+    let again = create(&test.db, &fields(), "copy.pdf", b"%PDF same", &["x".to_owned()]);
 
     assert!(matches!(again, Err(DocumentError::Duplicate(existing)) if existing == id));
 }
@@ -44,8 +39,8 @@ fn a_document_needs_a_title_and_pages() {
     let test = database();
     let untitled = DocumentFields { title: " ".to_owned(), ..fields() };
 
-    assert!(matches!(add(&test.db, &untitled, "a.pdf", b"a", &["x".to_owned()]), Err(DocumentError::Invalid(_))));
-    assert!(matches!(add(&test.db, &fields(), "a.pdf", b"a", &[]), Err(DocumentError::Invalid(_))));
+    assert!(matches!(create(&test.db, &untitled, "a.pdf", b"a", &["x".to_owned()]), Err(DocumentError::Invalid(_))));
+    assert!(matches!(create(&test.db, &fields(), "a.pdf", b"a", &[]), Err(DocumentError::Invalid(_))));
 }
 
 #[test]

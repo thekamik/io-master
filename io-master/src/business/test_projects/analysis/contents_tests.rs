@@ -23,9 +23,9 @@ const PAGES: [&str; 6] = [
 fn document(db: &UserDb) -> Document {
     let pages: Vec<String> = PAGES.iter().map(|page| (*page).to_owned()).collect();
     let fields = DocumentFields { title: "EN 18031-1".to_owned(), part: String::new(), version: "2024".to_owned() };
-    let id = standards::create::add(db, &fields, "en18031.pdf", b"%PDF contents", &pages).unwrap();
+    let id = standards::documents::create(db, &fields, "en18031.pdf", b"%PDF contents", &pages).unwrap();
 
-    standards::read::get(db, id).unwrap().unwrap()
+    standards::documents::get(db, id).unwrap().unwrap()
 }
 
 fn chapter(number: &str, title: &str, printed_page: Option<u32>) -> ProposedChapter {

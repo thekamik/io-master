@@ -49,7 +49,7 @@ pub fn fields() -> DocumentFields {
 pub fn load(db: &UserDb, content: &[u8]) -> i64 {
     let pages: Vec<String> = PAGES.iter().map(|page| (*page).to_owned()).collect();
 
-    standards::create::add(db, &fields(), "cc-part3.pdf", content, &pages).unwrap()
+    standards::documents::create(db, &fields(), "cc-part3.pdf", content, &pages).unwrap()
 }
 
 /// A small but real PDF with one page per text (Helvetica; a line
@@ -120,9 +120,9 @@ pub fn scheme_fields(number: &str, name: &str) -> SchemeFields {
 /// A project "P" that uses `document`, with one scheme "5 ADV";
 /// returns the project and the scheme.
 pub fn project_with_scheme(db: &UserDb, document: i64) -> (i64, i64) {
-    let project = projects::create::project(db, &project_fields("P", vec![document])).unwrap();
+    let project = projects::create(db, &project_fields("P", vec![document])).unwrap();
     let mut workspace = ProjectWorkspace::default();
-    let scheme = schemes::create::scheme(db, workspace.open(db, project).unwrap(), &scheme_fields("5", "ADV")).unwrap();
+    let scheme = schemes::create(db, workspace.open(db, project).unwrap(), &scheme_fields("5", "ADV")).unwrap();
 
     (project, scheme)
 }
@@ -160,7 +160,7 @@ pub mod single {
         let mut open = opened(db, project);
         let result = work(&mut open);
 
-        assert_eq!(&projects::read::data(db, project).unwrap().unwrap(), open.data(), "memory and database differ");
+        assert_eq!(&projects::data(db, project).unwrap().unwrap(), open.data(), "memory and database differ");
 
         result
     }
@@ -174,7 +174,7 @@ pub mod single {
     }
 
     pub fn create(db: &UserDb, project: i64, fields: &SchemeFields) -> Result<i64, StoreError> {
-        on(db, project, |open| schemes::create::scheme(db, open, fields))
+        on(db, project, |open| schemes::create(db, open, fields))
     }
 
     pub fn of_project(db: &UserDb, project: i64) -> Result<Vec<Scheme>, DbError> {
@@ -190,23 +190,23 @@ pub mod single {
     }
 
     pub fn accept(db: &UserDb, id: i64) -> Result<(), StoreError> {
-        on(db, project_of_scheme(db, id), |open| schemes::update::accept(db, open, id))
+        on(db, project_of_scheme(db, id), |open| schemes::accept(db, open, id))
     }
 
     pub fn update(db: &UserDb, id: i64, fields: &SchemeFields) -> Result<(), StoreError> {
-        on(db, project_of_scheme(db, id), |open| schemes::update::scheme(db, open, id, fields))
+        on(db, project_of_scheme(db, id), |open| schemes::update(db, open, id, fields))
     }
 
     pub fn delete(db: &UserDb, id: i64) -> Result<bool, DbError> {
-        on(db, project_of_scheme(db, id), |open| schemes::delete::scheme(db, open, id))
+        on(db, project_of_scheme(db, id), |open| schemes::delete(db, open, id))
     }
 
     pub fn add_tile(db: &UserDb, scheme: i64, fields: &TileFields) -> Result<i64, StoreError> {
-        on(db, project_of_scheme(db, scheme), |open| tiles::create::tile(db, open, scheme, fields))
+        on(db, project_of_scheme(db, scheme), |open| tiles::create(db, open, scheme, fields))
     }
 
     pub fn update_tile(db: &UserDb, id: i64, fields: &TileFields) -> Result<(), StoreError> {
-        on(db, project_of_tile(db, id), |open| tiles::update::tile(db, open, id, fields))
+        on(db, project_of_tile(db, id), |open| tiles::update(db, open, id, fields))
     }
 
     pub fn move_tile(db: &UserDb, id: i64, x: f64, y: f64) -> Result<(), StoreError> {
@@ -216,19 +216,19 @@ pub mod single {
             return Err(SchemeError::NotFound("tile").into());
         }
 
-        on(db, project, |open| tiles::update::position(db, open, id, x, y))
+        on(db, project, |open| tiles::set_position(db, open, id, x, y))
     }
 
     pub fn move_to_scheme(db: &UserDb, ids: &[i64], scheme: i64) -> Result<(), StoreError> {
-        on(db, project_of_scheme(db, scheme), |open| tiles::update::to_scheme(db, open, ids, scheme))
+        on(db, project_of_scheme(db, scheme), |open| tiles::move_to_scheme(db, open, ids, scheme))
     }
 
     pub fn accept_tile(db: &UserDb, id: i64) -> Result<(), StoreError> {
-        on(db, project_of_tile(db, id), |open| tiles::update::accept(db, open, id))
+        on(db, project_of_tile(db, id), |open| tiles::accept(db, open, id))
     }
 
     pub fn delete_tile(db: &UserDb, id: i64) -> Result<bool, DbError> {
-        on(db, project_of_tile(db, id), |open| tiles::delete::tile(db, open, id))
+        on(db, project_of_tile(db, id), |open| tiles::delete(db, open, id))
     }
 
     pub fn tile(db: &UserDb, id: i64) -> Result<Option<Tile>, DbError> {
@@ -250,11 +250,11 @@ pub mod single {
             return Err(SchemeError::Invalid("link", "only tiles of one project can be linked".to_owned()).into());
         }
 
-        on(db, one, |open| link_crud::create::link(db, open, from, to))
+        on(db, one, |open| link_crud::create(db, open, from, to))
     }
 
     pub fn delete_link(db: &UserDb, id: i64) -> Result<bool, DbError> {
-        let project = projects::read::list(db)?
+        let project = projects::list(db)?
             .into_iter()
             .find(|project| stored::links(db, project.id).unwrap().iter().any(|link| link.id == id))
             .map_or(0, |project| project.id);
@@ -263,7 +263,7 @@ pub mod single {
             return Ok(false);
         }
 
-        on(db, project, |open| link_crud::delete::link(db, open, id))
+        on(db, project, |open| link_crud::delete(db, open, id))
     }
 
     pub fn links(db: &UserDb, project: i64) -> Result<Vec<Link>, DbError> {
@@ -280,18 +280,18 @@ pub mod single {
     }
 
     pub fn create_project(db: &UserDb, fields: &ProjectFields) -> Result<i64, StoreError> {
-        projects::create::project(db, fields)
+        projects::create(db, fields)
     }
 
     pub fn update_project(db: &UserDb, project: i64, fields: &ProjectFields) -> Result<(), StoreError> {
-        on(db, project, |open| projects::update::fields(db, open, fields))
+        on(db, project, |open| projects::update(db, open, fields))
     }
 
     pub fn set_ready(db: &UserDb, project: i64, ready: bool) -> Result<(), StoreError> {
-        on(db, project, |open| projects::update::ready(db, open, ready))
+        on(db, project, |open| projects::set_ready(db, open, ready))
     }
 
     pub fn delete_project(db: &UserDb, project: i64) -> Result<bool, DbError> {
-        projects::delete::project(db, &mut ProjectWorkspace::default(), project)
+        projects::delete(db, &mut ProjectWorkspace::default(), project)
     }
 }

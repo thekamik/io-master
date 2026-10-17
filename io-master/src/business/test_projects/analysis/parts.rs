@@ -27,7 +27,7 @@ pub fn parts(db: &UserDb, ranges: &[(i64, u32, u32)], size: usize) -> Result<Vec
         let mut current: Option<Part> = None;
 
         for number in first..=last {
-            let Some(page) = standards::read::page(db, document, number)? else {
+            let Some(page) = standards::documents::page(db, document, number)? else {
                 break;
             };
 

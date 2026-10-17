@@ -63,7 +63,7 @@ pub fn documents_of(db: &UserDb, data: &ProjectData) -> Result<Vec<DocumentView>
     let mut views = Vec::new();
 
     for document in &data.project.fields.documents {
-        if let Some(document) = standards::read::get(db, *document)? {
+        if let Some(document) = standards::documents::get(db, *document)? {
             views.push(DocumentView::from(document));
         }
     }
@@ -85,14 +85,14 @@ pub fn view(db: &UserDb, open: &OpenProject) -> Result<ProjectDataView, UiError>
  * ------------------------------------------------------------- */
 
 pub async fn list(state: &UiState) -> Result<Vec<ProjectView>, UiError> {
-    let projects = with_user_db(state, |db| Ok(projects::read::list(db)?)).await?;
+    let projects = with_user_db(state, |db| Ok(projects::list(db)?)).await?;
 
     Ok(projects.into_iter().map(ProjectView::from).collect())
 }
 
 pub async fn create(state: &UiState, form: ProjectForm) -> Result<ProjectDataView, UiError> {
     let fields: ProjectFields = form.into();
-    let id = with_user_db(state, move |db| Ok(projects::create::project(db, &fields)?)).await?;
+    let id = with_user_db(state, move |db| Ok(projects::create(db, &fields)?)).await?;
 
     open(state, id).await
 }
@@ -106,7 +106,7 @@ pub async fn update(state: &UiState, id: i64, form: ProjectForm) -> Result<Proje
     let fields: ProjectFields = form.into();
 
     with_project(state, id, move |db, open| {
-        projects::update::fields(db, open, &fields)?;
+        projects::update(db, open, &fields)?;
         view(db, open)
     })
     .await
@@ -114,14 +114,14 @@ pub async fn update(state: &UiState, id: i64, form: ProjectForm) -> Result<Proje
 
 pub async fn set_ready(state: &UiState, id: i64, ready: bool) -> Result<ProjectDataView, UiError> {
     with_project(state, id, move |db, open| {
-        projects::update::ready(db, open, ready)?;
+        projects::set_ready(db, open, ready)?;
         view(db, open)
     })
     .await
 }
 
 pub async fn delete(state: &UiState, id: i64) -> Result<(), UiError> {
-    if !with_workspace(state, move |db, workspace| Ok(projects::delete::project(db, workspace, id)?)).await? {
+    if !with_workspace(state, move |db, workspace| Ok(projects::delete(db, workspace, id)?)).await? {
         return Err(UiError::Invalid("the test project does not exist".to_owned()));
     }
 
@@ -136,7 +136,7 @@ pub async fn create_scheme(state: &UiState, project: i64, form: SchemeForm) -> R
     let fields = form.into_fields()?;
 
     with_project(state, project, move |db, open| {
-        schemes::create::scheme(db, open, &fields)?;
+        schemes::create(db, open, &fields)?;
         view(db, open)
     })
     .await
@@ -147,7 +147,7 @@ pub async fn update_scheme(state: &UiState, id: i64, form: SchemeForm) -> Result
     let project = project_of_scheme(state, id).await?;
 
     with_project(state, project, move |db, open| {
-        schemes::update::scheme(db, open, id, &fields)?;
+        schemes::update(db, open, id, &fields)?;
         view(db, open)
     })
     .await
@@ -156,8 +156,8 @@ pub async fn update_scheme(state: &UiState, id: i64, form: SchemeForm) -> Result
 pub async fn accept_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Result<ProjectDataView, UiError> {
     with_project(state, project, move |db, open| {
         for id in ids {
-            if schemes::read::get(open, id).is_some() {
-                schemes::update::accept(db, open, id)?;
+            if schemes::get(open, id).is_some() {
+                schemes::accept(db, open, id)?;
             }
         }
 
@@ -171,7 +171,7 @@ pub async fn accept_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Res
 pub async fn delete_schemes(state: &UiState, project: i64, ids: Vec<i64>) -> Result<ProjectDataView, UiError> {
     with_project(state, project, move |db, open| {
         for id in ids {
-            schemes::delete::scheme(db, open, id)?;
+            schemes::delete(db, open, id)?;
         }
 
         view(db, open)

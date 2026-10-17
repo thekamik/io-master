@@ -94,10 +94,10 @@ fn a_used_document_stays() {
     assert!(update(&test.db, project, &project_fields("P", vec![])).is_err());
 
     // ... and not deleted while a project uses it.
-    assert!(matches!(standards::delete::delete(&test.db, document), Err(DocumentError::InUse)));
+    assert!(matches!(standards::documents::delete(&test.db, document), Err(DocumentError::InUse)));
 
     delete(&test.db, project).unwrap();
-    assert!(standards::delete::delete(&test.db, document).unwrap());
+    assert!(standards::documents::delete(&test.db, document).unwrap());
 }
 
 #[test]

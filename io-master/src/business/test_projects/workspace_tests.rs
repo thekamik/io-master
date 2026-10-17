@@ -9,7 +9,7 @@ use crate::model::test_projects::{TileFields, TileKind};
 
 /// Whether the project in memory is the same as in the database.
 fn same_as_stored(db: &UserDb, open: &OpenProject) -> bool {
-    &projects::read::data(db, open.data().project.id).unwrap().unwrap() == open.data()
+    &projects::data(db, open.data().project.id).unwrap().unwrap() == open.data()
 }
 
 #[test]
@@ -20,16 +20,16 @@ fn every_change_is_written_through_and_kept_in_memory() {
     let mut open = opened(&test.db, project);
 
     let input = open
-        .change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, "  Sample  ")))
+        .change(|open| tiles::create(&test.db, open, scheme, &TileFields::new(TileKind::Input, "  Sample  ")))
         .unwrap();
     let requirement = open
-        .change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Requirement, "Test")))
+        .change(|open| tiles::create(&test.db, open, scheme, &TileFields::new(TileKind::Requirement, "Test")))
         .unwrap();
-    open.change(|open| links::create::link(&test.db, open, input, requirement)).unwrap();
-    open.change(|open| tiles::update::position(&test.db, open, input, 10.0, 20.0)).unwrap();
+    open.change(|open| links::create(&test.db, open, input, requirement)).unwrap();
+    open.change(|open| tiles::set_position(&test.db, open, input, 10.0, 20.0)).unwrap();
 
     assert_eq!(open.data().tiles.len(), 2);
-    assert_eq!(tiles::read::get(&open, input).unwrap().fields.title, "Sample");
+    assert_eq!(tiles::get(&open, input).unwrap().fields.title, "Sample");
     assert!(same_as_stored(&test.db, &open));
 }
 
@@ -40,8 +40,7 @@ fn a_refused_change_changes_nothing_and_keeps_no_version() {
     let (project, scheme) = project_with_scheme(&test.db, document);
     let mut open = opened(&test.db, project);
 
-    let refused =
-        open.change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, " ")));
+    let refused = open.change(|open| tiles::create(&test.db, open, scheme, &TileFields::new(TileKind::Input, " ")));
 
     assert!(refused.is_err());
     assert!(open.data().tiles.is_empty());
@@ -55,16 +54,15 @@ fn undo_brings_back_the_tiles_and_links_with_their_numbers() {
     let (project, scheme) = project_with_scheme(&test.db, document);
     let mut open = opened(&test.db, project);
 
-    let input = open
-        .change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, "Sample")))
-        .unwrap();
+    let input =
+        open.change(|open| tiles::create(&test.db, open, scheme, &TileFields::new(TileKind::Input, "Sample"))).unwrap();
     let requirement = open
-        .change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Requirement, "Test")))
+        .change(|open| tiles::create(&test.db, open, scheme, &TileFields::new(TileKind::Requirement, "Test")))
         .unwrap();
-    open.change(|open| links::create::link(&test.db, open, input, requirement)).unwrap();
+    open.change(|open| links::create(&test.db, open, input, requirement)).unwrap();
     let before = open.data().clone();
 
-    open.change(|open| tiles::delete::tile(&test.db, open, input)).unwrap();
+    open.change(|open| tiles::delete(&test.db, open, input)).unwrap();
     assert_eq!(open.data().tiles.len(), 1);
     assert!(open.data().links.is_empty());
 
@@ -91,22 +89,20 @@ fn undo_survives_a_number_given_meanwhile_to_another_project() {
     let (project, scheme) = project_with_scheme(&test.db, document);
     let mut open = opened(&test.db, project);
 
-    let tile = open
-        .change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, "Sample")))
-        .unwrap();
-    open.change(|open| tiles::delete::tile(&test.db, open, tile)).unwrap();
+    let tile =
+        open.change(|open| tiles::create(&test.db, open, scheme, &TileFields::new(TileKind::Input, "Sample"))).unwrap();
+    open.change(|open| tiles::delete(&test.db, open, tile)).unwrap();
 
     // Another project takes the freed number.
-    let other = projects::create::project(&test.db, &project_fields("Q", vec![document])).unwrap();
+    let other = projects::create(&test.db, &project_fields("Q", vec![document])).unwrap();
     let mut other_open = opened(&test.db, other);
-    let other_scheme = schemes::create::scheme(
+    let other_scheme = schemes::create(
         &test.db,
         &mut other_open,
         &crate::business::test_projects::test_support::scheme_fields("1", "A"),
     )
     .unwrap();
-    let taken =
-        tiles::create::tile(&test.db, &mut other_open, other_scheme, &TileFields::new(TileKind::Input, "Q")).unwrap();
+    let taken = tiles::create(&test.db, &mut other_open, other_scheme, &TileFields::new(TileKind::Input, "Q")).unwrap();
     assert_eq!(taken, tile, "SQLite gives the freed number again");
 
     // The tile comes back with a new number; memory and database agree.
@@ -127,18 +123,17 @@ fn a_long_work_is_one_version_and_deleting_a_scheme_forgets_them() {
     let mut open = opened(&test.db, project);
 
     open.remember();
-    tiles::create::tile(&test.db, &mut open, scheme, &TileFields::new(TileKind::Input, "One")).unwrap();
-    tiles::create::tile(&test.db, &mut open, scheme, &TileFields::new(TileKind::Input, "Two")).unwrap();
+    tiles::create(&test.db, &mut open, scheme, &TileFields::new(TileKind::Input, "One")).unwrap();
+    tiles::create(&test.db, &mut open, scheme, &TileFields::new(TileKind::Input, "Two")).unwrap();
 
     open.undo(&test.db).unwrap();
     assert!(open.data().tiles.is_empty());
     assert!(!open.can_undo());
 
-    open.change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, "Three")))
-        .unwrap();
+    open.change(|open| tiles::create(&test.db, open, scheme, &TileFields::new(TileKind::Input, "Three"))).unwrap();
     assert!(open.can_undo());
 
-    schemes::delete::scheme(&test.db, &mut open, scheme).unwrap();
+    schemes::delete(&test.db, &mut open, scheme).unwrap();
     assert!(!open.can_undo());
     assert!(open.data().schemes.is_empty() && open.data().tiles.is_empty());
     assert!(same_as_stored(&test.db, &open));

@@ -5,7 +5,7 @@ use super::*;
 
 use crate::business::evaluations::error::EvaluationError;
 use crate::business::evaluations::journal;
-use crate::business::evaluations::projects::{create as import, delete as remove};
+use crate::business::evaluations::projects;
 use crate::business::evaluations::test_support::single as results;
 use crate::business::evaluations::test_support::{fields, ready_project};
 use crate::business::evaluations::workspace::EvaluationWorkspace;
@@ -19,7 +19,7 @@ use crate::model::test_projects::TileKind;
 fn an_evaluation_is_listed_read_and_deleted_with_everything_in_it() {
     let test = database();
     let ready = ready_project(&test.db);
-    let id = import::from_project(&test.db, ready.project, &fields("Meter X")).unwrap().id;
+    let id = projects::from_project(&test.db, ready.project, &fields("Meter X")).unwrap().id;
 
     let listed = list(&test.db).unwrap();
     assert_eq!(listed.len(), 1);
@@ -32,28 +32,28 @@ fn an_evaluation_is_listed_read_and_deleted_with_everything_in_it() {
     results::propose(&test.db, requirement, ResultField::Analysis, "Proposed.", "gemma4").unwrap();
 
     // While the evaluation uses the standard, the standard stays.
-    assert!(matches!(standards::delete::delete(&test.db, ready.document), Err(DocumentError::InUse)));
+    assert!(matches!(standards::documents::delete(&test.db, ready.document), Err(DocumentError::InUse)));
 
     let mut workspace = EvaluationWorkspace::default();
     workspace.open(&test.db, id).unwrap();
 
-    assert!(remove::evaluation(&test.db, &mut workspace, id).unwrap());
+    assert!(projects::delete(&test.db, &mut workspace, id).unwrap());
     assert!(get(&test.db, id).unwrap().is_none());
     assert!(crate::db::evaluations::read::tile(&test.db, requirement).unwrap().is_none());
-    assert!(journal::read::of(&test.db, id).unwrap().is_empty());
+    assert!(journal::list(&test.db, id).unwrap().is_empty());
     // Closed in memory as well.
     assert!(matches!(workspace.open(&test.db, id), Err(EvaluationError::NotFound(_))));
 
-    assert!(!remove::evaluation(&test.db, &mut workspace, id).unwrap());
+    assert!(!projects::delete(&test.db, &mut workspace, id).unwrap());
 }
 
 #[test]
 fn names_are_unique() {
     let test = database();
     let ready = ready_project(&test.db);
-    import::from_project(&test.db, ready.project, &fields("Meter X")).unwrap();
+    projects::from_project(&test.db, ready.project, &fields("Meter X")).unwrap();
 
-    let again = import::from_project(&test.db, ready.project, &fields("meter x"));
+    let again = projects::from_project(&test.db, ready.project, &fields("meter x"));
     assert!(matches!(again, Err(EvaluationError::NameTaken)));
     assert_eq!(list(&test.db).unwrap().len(), 1);
 }
@@ -62,7 +62,7 @@ fn names_are_unique() {
 fn an_open_evaluation_holds_its_structure_and_results() {
     let test = database();
     let ready = ready_project(&test.db);
-    let id = import::from_project(&test.db, ready.project, &fields("Meter X")).unwrap().id;
+    let id = projects::from_project(&test.db, ready.project, &fields("Meter X")).unwrap().id;
     let requirement = data(&test.db, id).unwrap().unwrap().tiles[1].id;
     results::write(&test.db, requirement, ResultField::Findings, "None.").unwrap();
 

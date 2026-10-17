@@ -28,8 +28,7 @@ pub fn ready_project(db: &UserDb) -> ReadyProject {
 
     let mut open = opened(db, project);
     let input =
-        tiles::create::tile(db, &mut open, scheme, &TileFields::new(TileKind::Input, "Functional specification"))
-            .unwrap();
+        tiles::create(db, &mut open, scheme, &TileFields::new(TileKind::Input, "Functional specification")).unwrap();
 
     let mut fields = TileFields::new(TileKind::Requirement, "Complete functional specification");
     fields.identifier = "ADV_FSP.4.1E".to_owned();
@@ -39,13 +38,13 @@ pub fn ready_project(db: &UserDb) -> ReadyProject {
         quote: "The evaluator shall confirm that the information provided meets all requirements.".to_owned(),
         found: false,
     }];
-    let requirement = tiles::create::tile(db, &mut open, scheme, &fields).unwrap();
+    let requirement = tiles::create(db, &mut open, scheme, &fields).unwrap();
 
-    let output = tiles::create::tile(db, &mut open, scheme, &TileFields::new(TileKind::Output, "ADV report")).unwrap();
+    let output = tiles::create(db, &mut open, scheme, &TileFields::new(TileKind::Output, "ADV report")).unwrap();
 
-    links::create::link(db, &mut open, input, requirement).unwrap();
-    links::create::link(db, &mut open, requirement, output).unwrap();
-    test_projects::update::ready(db, &mut open, true).unwrap();
+    links::create(db, &mut open, input, requirement).unwrap();
+    links::create(db, &mut open, requirement, output).unwrap();
+    test_projects::set_ready(db, &mut open, true).unwrap();
 
     assert!(PAGES[1].contains("ADV_FSP.4.1E"));
 
@@ -125,11 +124,11 @@ pub mod single {
     }
 
     pub fn of(db: &UserDb, tile: i64) -> Result<Vec<RequirementResult>, EvaluationError> {
-        on_or(db, of_tile(db, tile), "tile", |open| Ok(results::read::of(open, tile)))
+        on_or(db, of_tile(db, tile), "tile", |open| Ok(results::list(open, tile)))
     }
 
     pub fn proposals(db: &UserDb, tile: i64) -> Result<Vec<Proposal>, EvaluationError> {
-        on_or(db, of_tile(db, tile), "tile", |open| Ok(results::read::proposals(open, tile)))
+        on_or(db, of_tile(db, tile), "tile", |open| Ok(results::proposals(open, tile)))
     }
 
     pub fn propose(
@@ -139,22 +138,22 @@ pub mod single {
         text: &str,
         model: &str,
     ) -> Result<i64, EvaluationError> {
-        on_or(db, of_tile(db, tile), "tile", |open| results::create::propose(db, open, tile, field, text, model))
+        on_or(db, of_tile(db, tile), "tile", |open| results::propose(db, open, tile, field, text, model))
     }
 
     pub fn accept(db: &UserDb, id: i64) -> Result<(), EvaluationError> {
-        on_or(db, of_proposal(db, id), "proposal", |open| results::update::accept(db, open, id))
+        on_or(db, of_proposal(db, id), "proposal", |open| results::accept(db, open, id))
     }
 
     pub fn correct(db: &UserDb, id: i64, text: &str) -> Result<(), EvaluationError> {
-        on_or(db, of_proposal(db, id), "proposal", |open| results::update::correct(db, open, id, text))
+        on_or(db, of_proposal(db, id), "proposal", |open| results::correct(db, open, id, text))
     }
 
     pub fn reject(db: &UserDb, id: i64) -> Result<(), EvaluationError> {
-        on_or(db, of_proposal(db, id), "proposal", |open| results::delete::reject(db, open, id))
+        on_or(db, of_proposal(db, id), "proposal", |open| results::reject(db, open, id))
     }
 
     pub fn write(db: &UserDb, tile: i64, field: ResultField, text: &str) -> Result<(), EvaluationError> {
-        on_or(db, of_tile(db, tile), "tile", |open| results::update::write(db, open, tile, field, text))
+        on_or(db, of_tile(db, tile), "tile", |open| results::write(db, open, tile, field, text))
     }
 }

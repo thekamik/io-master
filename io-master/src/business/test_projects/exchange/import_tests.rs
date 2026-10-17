@@ -4,7 +4,7 @@
 use super::*;
 
 use crate::business::test_projects::exchange::export::export;
-use crate::business::test_projects::projects::read::{data, list};
+use crate::business::test_projects::projects::{data, list};
 use crate::business::test_projects::test_support::single::{add_link, add_tile, create, create_project};
 use crate::business::test_projects::test_support::{TestDb, database, load, project_fields};
 
@@ -105,7 +105,7 @@ fn without_pdfs_the_documents_are_only_named() {
 
     let named = &exchange.documents[0];
     assert!(named.pdf.is_none());
-    assert_eq!(named.sha256, standards::read::get(&source.db, document).unwrap().unwrap().sha256);
+    assert_eq!(named.sha256, standards::documents::get(&source.db, document).unwrap().unwrap().sha256);
     assert_eq!(named.page_count, 3);
 }
 
@@ -129,7 +129,7 @@ fn quotes_are_checked_against_the_copy_of_the_importer() {
     // Another document stands in: the quote is not on its page 2.
     let other = database();
     let pages = vec!["a".to_owned(), "b".to_owned()];
-    let different = standards::create::add(
+    let different = standards::documents::create(
         &other.db,
         &crate::business::test_projects::test_support::fields(),
         "x.pdf",

@@ -1,5 +1,5 @@
 //! A test project as the file of its format (`format.rs`), read from
-//! the database as it is stored (`projects::read::data`).
+//! the database as it is stored (`projects::data`).
 
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
@@ -15,7 +15,7 @@ use super::format::{FORMAT, VERSION};
 /// The file of a project; with the PDFs of its documents when
 /// `with_pdfs`. `None` when there is no such project.
 pub fn export(db: &UserDb, project: i64, with_pdfs: bool) -> Result<Option<Vec<u8>>, DbError> {
-    let Some(data) = projects::read::data(db, project)? else {
+    let Some(data) = projects::data(db, project)? else {
         return Ok(None);
     };
 
@@ -35,7 +35,7 @@ pub fn export(db: &UserDb, project: i64, with_pdfs: bool) -> Result<Option<Vec<u
     let mut documents_json = Vec::new();
 
     for (index, id) in data.project.fields.documents.iter().enumerate() {
-        let Some(document) = standards::read::get(db, *id)? else {
+        let Some(document) = standards::documents::get(db, *id)? else {
             continue;
         };
 
@@ -49,7 +49,7 @@ pub fn export(db: &UserDb, project: i64, with_pdfs: bool) -> Result<Option<Vec<u
             "page_count": document.page_count,
         });
 
-        if with_pdfs && let Some(pdf) = standards::read::pdf(db, *id)? {
+        if with_pdfs && let Some(pdf) = standards::documents::pdf(db, *id)? {
             value["pdf"] = Value::String(BASE64.encode(pdf));
         }
 

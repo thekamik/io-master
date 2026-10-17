@@ -26,7 +26,7 @@ use std::collections::hash_map::Entry;
 use crate::db::evaluations::read as stored;
 use crate::db::user::database::UserDb;
 
-use super::projects::read;
+use super::projects;
 use crate::business::evaluations::error::EvaluationError;
 use crate::model::evaluations::{EvaluationData, Proposal, RequirementResult};
 
@@ -42,7 +42,7 @@ impl OpenEvaluation {
     /// Reads evaluation `id` from the database; `None` when there is no
     /// such.
     pub fn read(db: &UserDb, id: i64) -> Result<Option<OpenEvaluation>, EvaluationError> {
-        let Some(data) = read::data(db, id)? else {
+        let Some(data) = projects::data(db, id)? else {
             return Ok(None);
         };
 

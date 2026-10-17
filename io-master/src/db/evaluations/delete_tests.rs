@@ -2,7 +2,7 @@
 
 use super::*;
 
-use crate::business::evaluations::projects::{create as import, read as projects};
+use crate::business::evaluations::projects;
 use crate::business::evaluations::test_support::single as results;
 use crate::business::evaluations::test_support::{fields, ready_project};
 use crate::business::test_projects::test_support::database;
@@ -18,7 +18,7 @@ fn rows(db: &UserDb, table: &str) -> i64 {
 fn an_evaluation_leaves_no_row_behind() {
     let test = database();
     let ready = ready_project(&test.db);
-    let id = import::from_project(&test.db, ready.project, &fields("Meter X")).unwrap().id;
+    let id = projects::from_project(&test.db, ready.project, &fields("Meter X")).unwrap().id;
 
     let data = projects::data(&test.db, id).unwrap().unwrap();
     let requirement = data.tiles.iter().find(|tile| tile.fields.kind == TileKind::Requirement).unwrap().id;

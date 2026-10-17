@@ -80,7 +80,7 @@ pub fn locate(
     let mut pages = Vec::new();
 
     for number in after + 1..=document.page_count {
-        if let Some(text) = standards::read::page(db, document.id, number)? {
+        if let Some(text) = standards::documents::page(db, document.id, number)? {
             pages.push((number, normalize(&text)));
         }
     }
@@ -173,7 +173,7 @@ pub fn apply(
             state: ProposalState::Proposed,
         };
 
-        match schemes::create::scheme(db, open, &fields) {
+        match schemes::create(db, open, &fields) {
             Ok(_) => {
                 applied.added += 1;
 
@@ -215,7 +215,8 @@ pub fn question(
         return Err(SchemeError::Invalid("document", "read only a document of the project".to_owned()).into());
     }
 
-    let stored = standards::read::get(db, document)?.ok_or(StoreError::Scheme(SchemeError::NotFound("document")))?;
+    let stored =
+        standards::documents::get(db, document)?.ok_or(StoreError::Scheme(SchemeError::NotFound("document")))?;
     let part = parts(db, &[(document, first_page, last_page)], PART_RANGE.1)?
         .into_iter()
         .next()
