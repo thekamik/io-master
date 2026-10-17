@@ -189,10 +189,7 @@ pub fn read(file: &[u8]) -> Result<Exchange, ExchangeError> {
             None | Some(Value::Null) => None,
             Some(value) => {
                 let external = object(value, "\"external\"")?;
-                Some(External {
-                    document: text(external, "document")?,
-                    place: text(external, "place")?,
-                })
+                Some(External { document: text(external, "document")?, place: text(external, "place")? })
             }
         };
 
@@ -241,13 +238,7 @@ pub fn read(file: &[u8]) -> Result<Exchange, ExchangeError> {
         });
     }
 
-    Ok(Exchange {
-        project: fields,
-        documents,
-        schemes,
-        tiles,
-        links,
-    })
+    Ok(Exchange { project: fields, documents, schemes, tiles, links })
 }
 
 /* ---------------------------------------------------------------
@@ -311,10 +302,7 @@ fn store_content(
 ) -> Result<(), StoreError> {
     let open = workspace.open(db, project)?;
     let document = |number: i64| {
-        documents
-            .get((number - 1) as usize)
-            .copied()
-            .ok_or(StoreError::Scheme(SchemeError::NotFound("document")))
+        documents.get((number - 1) as usize).copied().ok_or(StoreError::Scheme(SchemeError::NotFound("document")))
     };
 
     // The number of every scheme of the file and the scheme it became.

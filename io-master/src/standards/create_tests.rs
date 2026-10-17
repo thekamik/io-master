@@ -42,10 +42,7 @@ fn the_same_file_is_loaded_once() {
 #[test]
 fn a_document_needs_a_title_and_pages() {
     let test = database();
-    let untitled = DocumentFields {
-        title: " ".to_owned(),
-        ..fields()
-    };
+    let untitled = DocumentFields { title: " ".to_owned(), ..fields() };
 
     assert!(matches!(add(&test.db, &untitled, "a.pdf", b"a", &["x".to_owned()]), Err(DocumentError::Invalid(_))));
     assert!(matches!(add(&test.db, &fields(), "a.pdf", b"a", &[]), Err(DocumentError::Invalid(_))));
@@ -72,10 +69,7 @@ fn the_fields_are_changed_and_the_document_deleted() {
     let test = database();
     let id = load(&test.db, b"%PDF change");
 
-    let changed = DocumentFields {
-        version: "CC:2022 R2".to_owned(),
-        ..fields()
-    };
+    let changed = DocumentFields { version: "CC:2022 R2".to_owned(), ..fields() };
     assert!(update(&test.db, id, &changed).unwrap());
     assert_eq!(get(&test.db, id).unwrap().unwrap().fields, changed);
 

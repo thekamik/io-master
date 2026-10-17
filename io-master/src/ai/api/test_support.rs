@@ -191,11 +191,7 @@ impl FakeService {
             }
         });
 
-        FakeService {
-            url,
-            ca_pem: String::new(),
-            requests,
-        }
+        FakeService { url, ca_pem: String::new(), requests }
     }
 
     async fn start_tls(answer: FakeAnswer, versions: &[&'static rustls::SupportedProtocolVersion]) -> FakeService {
@@ -208,10 +204,8 @@ impl FakeService {
         let issuer = Issuer::new(authority, authority_key);
 
         let server_key = KeyPair::generate().unwrap();
-        let server_certificate = CertificateParams::new(vec!["127.0.0.1".to_owned()])
-            .unwrap()
-            .signed_by(&server_key, &issuer)
-            .unwrap();
+        let server_certificate =
+            CertificateParams::new(vec!["127.0.0.1".to_owned()]).unwrap().signed_by(&server_key, &issuer).unwrap();
 
         let provider = Arc::new(rustls::crypto::aws_lc_rs::default_provider());
         let config = ServerConfig::builder_with_provider(provider)
@@ -255,7 +249,11 @@ impl FakeService {
 }
 
 /// Reads one request, keeps it and writes the prepared answer.
-async fn serve<S: AsyncRead + AsyncWrite + Unpin>(mut stream: S, answer: FakeAnswer, received: Arc<Mutex<Vec<FakeRequest>>>) {
+async fn serve<S: AsyncRead + AsyncWrite + Unpin>(
+    mut stream: S,
+    answer: FakeAnswer,
+    received: Arc<Mutex<Vec<FakeRequest>>>,
+) {
     let Some(request) = read_request(&mut stream).await else {
         return;
     };
@@ -304,10 +302,7 @@ async fn read_request<S: AsyncReadExt + Unpin>(stream: &mut S) -> Option<FakeReq
         body.extend_from_slice(&buffer[..count]);
     }
 
-    Some(FakeRequest {
-        head,
-        body: serde_json::from_slice(&body).unwrap_or(serde_json::Value::Null),
-    })
+    Some(FakeRequest { head, body: serde_json::from_slice(&body).unwrap_or(serde_json::Value::Null) })
 }
 
 /// Writes the prepared answer.

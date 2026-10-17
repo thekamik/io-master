@@ -19,15 +19,9 @@ fn a_database_opens_again_with_its_key() {
     let path = directory.path().join("test.db");
     let key = key();
 
-    create(&path, &key)
-        .unwrap()
-        .execute_batch("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('kept');")
-        .unwrap();
+    create(&path, &key).unwrap().execute_batch("CREATE TABLE t (v TEXT); INSERT INTO t VALUES ('kept');").unwrap();
 
-    let value: String = open(&path, &key)
-        .unwrap()
-        .query_row("SELECT v FROM t", [], |row| row.get(0))
-        .unwrap();
+    let value: String = open(&path, &key).unwrap().query_row("SELECT v FROM t", [], |row| row.get(0)).unwrap();
 
     assert_eq!(value, "kept");
 }

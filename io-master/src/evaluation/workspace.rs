@@ -59,11 +59,7 @@ impl OpenEvaluation {
             })
             .collect();
 
-        Ok(Some(OpenEvaluation {
-            data,
-            results,
-            proposals: stored::proposals_of(db, id)?,
-        }))
+        Ok(Some(OpenEvaluation { data, results, proposals: stored::proposals_of(db, id)? }))
     }
 
     /// The frozen structure of the evaluation.

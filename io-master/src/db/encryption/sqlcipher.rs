@@ -70,10 +70,7 @@ fn create_file(path: &Path) -> Result<(), DbError> {
             return Err(DbError::Exists(path.to_owned()));
         }
         Err(source) => {
-            return Err(DbError::Io {
-                path: path.to_owned(),
-                source,
-            });
+            return Err(DbError::Io { path: path.to_owned(), source });
         }
     }
 

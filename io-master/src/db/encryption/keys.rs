@@ -111,15 +111,11 @@ pub fn check_password(password: &str) -> Result<(), KeyError> {
     let length = password.chars().count();
 
     if length < PASSWORD_MIN {
-        return Err(KeyError::WeakPassword(format!(
-            "a password has at least {PASSWORD_MIN} characters"
-        )));
+        return Err(KeyError::WeakPassword(format!("a password has at least {PASSWORD_MIN} characters")));
     }
 
     if length > PASSWORD_MAX {
-        return Err(KeyError::WeakPassword(format!(
-            "a password has at most {PASSWORD_MAX} characters"
-        )));
+        return Err(KeyError::WeakPassword(format!("a password has at most {PASSWORD_MAX} characters")));
     }
 
     Ok(())
@@ -155,8 +151,8 @@ fn unlocking_key(
     iterations: u32,
     device_secret: Option<&DeviceSecret>,
 ) -> Result<Zeroizing<[u8; 32]>, KeyError> {
-    let params = Params::new(memory_kib, iterations, 1, Some(32))
-        .map_err(|error| KeyError::Failed(error.to_string()))?;
+    let params =
+        Params::new(memory_kib, iterations, 1, Some(32)).map_err(|error| KeyError::Failed(error.to_string()))?;
 
     // Argon2id of the password, then together with the further
     // factors through HKDF.

@@ -116,10 +116,9 @@ impl From<SaveError> for UiError {
     fn from(error: SaveError) -> UiError {
         match error {
             SaveError::Invalid(error) => UiError::Connection(error),
-            SaveError::NameTaken => UiError::Connection(ConnectionError {
-                field: Field::Name,
-                reason: error.to_string(),
-            }),
+            SaveError::NameTaken => {
+                UiError::Connection(ConnectionError { field: Field::Name, reason: error.to_string() })
+            }
             SaveError::NoSuchConnection => UiError::Invalid(error.to_string()),
             SaveError::Db(error) => UiError::Failed(error.to_string()),
         }

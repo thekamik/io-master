@@ -84,10 +84,9 @@ impl From<TileFields> for TileForm {
             description: fields.description,
             place: fields.place,
             state: fields.state.name().to_owned(),
-            external: fields.external.map(|external| ExternalView {
-                document: external.document,
-                place: external.place,
-            }),
+            external: fields
+                .external
+                .map(|external| ExternalView { document: external.document, place: external.place }),
             sections: fields.sections.iter().map(|section| section.name().to_owned()).collect(),
             instructions: fields.instructions,
             x: fields.x,
@@ -141,10 +140,7 @@ impl TileForm {
                 })
                 .collect(),
             state,
-            external: self.external.map(|external| External {
-                document: external.document,
-                place: external.place,
-            }),
+            external: self.external.map(|external| External { document: external.document, place: external.place }),
             sections,
             instructions: self.instructions,
             x: self.x,
@@ -155,10 +151,7 @@ impl TileForm {
 
 impl From<Tile> for TileView {
     fn from(tile: Tile) -> TileView {
-        TileView {
-            id: tile.id,
-            fields: tile.fields.into(),
-        }
+        TileView { id: tile.id, fields: tile.fields.into() }
     }
 }
 
@@ -196,11 +189,7 @@ pub struct FindingView {
 
 impl From<Finding> for FindingView {
     fn from(finding: Finding) -> FindingView {
-        FindingView {
-            kind: finding.kind.name(),
-            tile: finding.tile,
-            message: finding.kind.sentence(),
-        }
+        FindingView { kind: finding.kind.name(), tile: finding.tile, message: finding.kind.sentence() }
     }
 }
 
@@ -339,37 +328,16 @@ pub struct PageRange {
 #[serde(tag = "event", rename_all = "snake_case")]
 pub enum AnalysisEvent {
     /// A scheme starts, in an analysis of several (counted from 1).
-    Scheme {
-        index: usize,
-        count: usize,
-        number: String,
-        name: String,
-    },
+    Scheme { index: usize, count: usize, number: String, name: String },
     /// A part starts (counted from 1).
-    Part {
-        index: usize,
-        count: usize,
-        document: String,
-        first_page: u32,
-        last_page: u32,
-    },
+    Part { index: usize, count: usize, document: String, first_page: u32, last_page: u32 },
     /// The model is answering: the characters written so far.
     Writing { characters: usize },
     /// What the part gave.
-    Applied {
-        added: usize,
-        joined: usize,
-        links: usize,
-        dropped: Vec<String>,
-    },
+    Applied { added: usize, joined: usize, links: usize, dropped: Vec<String> },
     /// What a table of contents gave: new proposed schemes, chapters
     /// the project has already, chapters whose pages were not found.
-    Chapters {
-        added: usize,
-        known: usize,
-        without_pages: usize,
-        dropped: Vec<String>,
-    },
+    Chapters { added: usize, known: usize, without_pages: usize, dropped: Vec<String> },
     /// The part gave nothing.
     Failed { message: String },
     /// The analysis is over.

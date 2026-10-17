@@ -73,12 +73,17 @@ impl fmt::Display for SendError {
         match self {
             SendError::Empty => formatter.write_str("the message is empty"),
             SendError::TooLong => write!(formatter, "the message is longer than {MAX_MESSAGE} characters"),
-            SendError::NoConnection => formatter.write_str("no AI connection is chosen; set one up in Settings, tab AI"),
+            SendError::NoConnection => {
+                formatter.write_str("no AI connection is chosen; set one up in Settings, tab AI")
+            }
             SendError::BrokenConnection(name, error) => {
                 write!(formatter, "the connection {name} cannot be used: {error}; correct it in Settings, tab AI")
             }
             SendError::NoKey(name) => {
-                write!(formatter, "the connection {name} uses an API key and none is stored; enter one in Settings, tab AI")
+                write!(
+                    formatter,
+                    "the connection {name} uses an API key and none is stored; enter one in Settings, tab AI"
+                )
             }
             SendError::NoSuchChat => formatter.write_str("the chat does not exist"),
             SendError::Db(error) => write!(formatter, "the message was not stored: {error}"),

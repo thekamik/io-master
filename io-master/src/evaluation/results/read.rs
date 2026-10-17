@@ -19,20 +19,13 @@
 //! with its entry of the journal, in one transaction
 //! (`db/evaluations/`), and only then made in memory.
 
-use crate::evaluation::model::{
-    EvaluationError, MAX_RESULT, Proposal, RequirementResult, ResultField, check_text,
-};
+use crate::evaluation::model::{EvaluationError, MAX_RESULT, Proposal, RequirementResult, ResultField, check_text};
 use crate::evaluation::workspace::OpenEvaluation;
 use crate::test_projects::model::TileKind;
 
 /// Checks that `tile` is a requirement of the open evaluation.
 pub(super) fn requirement(open: &OpenEvaluation, tile: i64) -> Result<(), EvaluationError> {
-    let tile = open
-        .data()
-        .tiles
-        .iter()
-        .find(|known| known.id == tile)
-        .ok_or(EvaluationError::NotFound("tile"))?;
+    let tile = open.data().tiles.iter().find(|known| known.id == tile).ok_or(EvaluationError::NotFound("tile"))?;
 
     if tile.fields.kind != TileKind::Requirement {
         return Err(EvaluationError::NotARequirement);
@@ -59,10 +52,7 @@ pub fn of(open: &OpenEvaluation, tile: i64) -> Vec<RequirementResult> {
 
 /// The accepted text of a field, if any.
 pub(super) fn text_of(open: &OpenEvaluation, tile: i64, field: ResultField) -> Option<String> {
-    open.results()
-        .iter()
-        .find(|result| result.tile == tile && result.field == field)
-        .map(|result| result.text.clone())
+    open.results().iter().find(|result| result.tile == tile && result.field == field).map(|result| result.text.clone())
 }
 
 /// The proposals of the AI waiting for requirement `tile`, the oldest
@@ -73,9 +63,5 @@ pub fn proposals(open: &OpenEvaluation, tile: i64) -> Vec<Proposal> {
 
 /// Proposal `id` of the open evaluation; the error that it has no such.
 pub(super) fn proposal(open: &OpenEvaluation, id: i64) -> Result<Proposal, EvaluationError> {
-    open.proposals()
-        .iter()
-        .find(|proposal| proposal.id == id)
-        .cloned()
-        .ok_or(EvaluationError::NotFound("proposal"))
+    open.proposals().iter().find(|proposal| proposal.id == id).cloned().ok_or(EvaluationError::NotFound("proposal"))
 }

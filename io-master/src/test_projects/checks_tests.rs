@@ -8,12 +8,7 @@ fn tile(id: i64, kind: TileKind) -> Tile {
     let mut fields = TileFields::new(kind, "T");
 
     if kind == TileKind::Requirement {
-        fields.sources = vec![Source {
-            document_id: 1,
-            page: 1,
-            quote: "q".to_owned(),
-            found: true,
-        }];
+        fields.sources = vec![Source { document_id: 1, page: 1, quote: "q".to_owned(), found: true }];
     }
 
     Tile { id, scheme: 1, fields }
@@ -50,20 +45,14 @@ fn the_gaps_are_found() {
     let findings = check(&tiles, &[]);
 
     assert_eq!(kinds(&findings, 1), [FindingKind::UnusedInput]);
-    assert_eq!(
-        kinds(&findings, 2),
-        [FindingKind::RequirementWithoutInputs, FindingKind::RequirementNotReported]
-    );
+    assert_eq!(kinds(&findings, 2), [FindingKind::RequirementWithoutInputs, FindingKind::RequirementNotReported]);
     assert_eq!(kinds(&findings, 3), [FindingKind::EmptyOutput]);
 }
 
 #[test]
 fn proposed_external_untraced_and_unfound_are_found() {
     let mut external = tile(1, TileKind::Input);
-    external.fields.external = Some(External {
-        document: "CC Part 3".to_owned(),
-        place: "ALC_FLR".to_owned(),
-    });
+    external.fields.external = Some(External { document: "CC Part 3".to_owned(), place: "ALC_FLR".to_owned() });
 
     let mut requirement = tile(2, TileKind::Requirement);
     requirement.fields.state = ProposalState::Proposed;

@@ -70,11 +70,7 @@ pub struct PageSpanView {
 
 impl From<PageSpan> for PageSpanView {
     fn from(pages: PageSpan) -> PageSpanView {
-        PageSpanView {
-            document_id: pages.document_id,
-            first_page: pages.first_page,
-            last_page: pages.last_page,
-        }
+        PageSpanView { document_id: pages.document_id, first_page: pages.first_page, last_page: pages.last_page }
     }
 }
 
@@ -161,7 +157,12 @@ pub struct ProjectDataView {
 }
 
 impl ProjectDataView {
-    pub fn new(data: ProjectData, findings: &[Finding], documents: Vec<DocumentView>, can_undo: bool) -> ProjectDataView {
+    pub fn new(
+        data: ProjectData,
+        findings: &[Finding],
+        documents: Vec<DocumentView>,
+        can_undo: bool,
+    ) -> ProjectDataView {
         ProjectDataView {
             schemes: summaries(&data, findings),
             findings: findings.len(),

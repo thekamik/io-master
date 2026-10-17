@@ -241,12 +241,7 @@ pub async fn analyse(
             return Err(UiError::Invalid("choose the pages to analyse: the scheme has none".to_owned()));
         }
 
-        Ok(Job {
-            scheme,
-            number: stored.fields.number.clone(),
-            name: stored.fields.name.clone(),
-            ranges,
-        })
+        Ok(Job { scheme, number: stored.fields.number.clone(), name: stored.fields.name.clone(), ranges })
     })
     .await?;
 
@@ -409,7 +404,8 @@ async fn run(
             };
 
             let (first_page, last_page) = (part.first_page, part.last_page);
-            let answer = move |db: &UserDb, open: &mut OpenProject| Ok(chapter::answer(db, open, scheme, &part, &text)?);
+            let answer =
+                move |db: &UserDb, open: &mut OpenProject| Ok(chapter::answer(db, open, scheme, &part, &text)?);
             let answered = with_project(state, project, answer).await?;
 
             match answered {
@@ -422,9 +418,7 @@ async fn run(
                     });
                 }
                 Answered::Unreadable(reason) => {
-                    events(AnalysisEvent::Failed {
-                        message: format!("pages {first_page} to {last_page}: {reason}"),
-                    });
+                    events(AnalysisEvent::Failed { message: format!("pages {first_page} to {last_page}: {reason}") });
                 }
             }
         }

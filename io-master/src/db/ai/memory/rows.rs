@@ -3,8 +3,8 @@
 
 use rusqlite::Row;
 
-use crate::ai::chat::chats::{ChatMessage, ChatSummary, Ending};
 use crate::ai::api::completions::Speaker;
+use crate::ai::chat::chats::{ChatMessage, ChatSummary, Ending};
 
 /// The current time in SQL, as seconds since 1970.
 pub(super) const NOW: &str = "CAST(strftime('%s', 'now') AS INTEGER)";
@@ -24,11 +24,7 @@ pub(super) fn speaker_name(speaker: Speaker) -> &'static str {
 
 /// A chat from a row of `id, title, local time of created`.
 pub(super) fn summary_from_row(row: &Row<'_>) -> rusqlite::Result<ChatSummary> {
-    Ok(ChatSummary {
-        id: row.get(0)?,
-        title: row.get(1)?,
-        created: row.get(2)?,
-    })
+    Ok(ChatSummary { id: row.get(0)?, title: row.get(1)?, created: row.get(2)? })
 }
 
 /// A message from a row of `speaker, text, local time of created,

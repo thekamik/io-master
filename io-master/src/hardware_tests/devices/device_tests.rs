@@ -67,13 +67,7 @@ impl FakeSystem {
 
     /// Creates a device directory below sys/devices, with
     /// its subsystem, an optional driver and attributes.
-    fn device(
-        &self,
-        relative: &str,
-        subsystem: &str,
-        driver: Option<&str>,
-        attributes: &[(&str, &str)],
-    ) -> PathBuf {
+    fn device(&self, relative: &str, subsystem: &str, driver: Option<&str>, attributes: &[(&str, &str)]) -> PathBuf {
         let directory = self.path("sys/devices").join(relative);
 
         fs::create_dir_all(&directory).unwrap();
@@ -135,12 +129,7 @@ impl FakeSystem {
                 ("speed", "12"),
             ],
         );
-        let interface = self.device(
-            "pci0/usb3/3-1/3-1:1.1",
-            "usb",
-            Some("cdc_acm"),
-            &[("bInterfaceNumber", "01")],
-        );
+        let interface = self.device("pci0/usb3/3-1/3-1:1.1", "usb", Some("cdc_acm"), &[("bInterfaceNumber", "01")]);
 
         self.tty("ttyACM0", Some(&interface), "166:0", &[]);
 
@@ -299,10 +288,7 @@ fn a_missing_device_list_is_an_error() {
 
     sources.tty_class = system.path("sys/class/none");
 
-    assert!(matches!(
-        scan_with(&sources, &PortFilter::All),
-        Err(ScanError::DeviceListUnavailable { .. })
-    ));
+    assert!(matches!(scan_with(&sources, &PortFilter::All), Err(ScanError::DeviceListUnavailable { .. })));
 }
 
 #[test]
@@ -320,17 +306,11 @@ fn the_filter_keeps_one_kind_of_port() {
     assert_eq!(names(&scan_fake(&system)), ["ttyACM0", "ttyAMA0", "ttyRP0"]);
     assert_eq!(names(&scan_filtered(&system, &only(&[PortType::UsbAcm]))), ["ttyACM0"]);
     assert_eq!(names(&scan_filtered(&system, &only(&[PortType::ArmPl011]))), ["ttyAMA0"]);
-    assert_eq!(
-        names(&scan_filtered(&system, &only(&[PortType::Other("ttyRP".to_owned())]))),
-        ["ttyRP0"]
-    );
+    assert_eq!(names(&scan_filtered(&system, &only(&[PortType::Other("ttyRP".to_owned())]))), ["ttyRP0"]);
     assert!(scan_filtered(&system, &only(&[PortType::UsbSerial])).is_empty());
 
     // Several kinds at once, and none at all.
-    assert_eq!(
-        names(&scan_filtered(&system, &only(&[PortType::UsbAcm, PortType::ArmPl011]))),
-        ["ttyACM0", "ttyAMA0"]
-    );
+    assert_eq!(names(&scan_filtered(&system, &only(&[PortType::UsbAcm, PortType::ArmPl011]))), ["ttyACM0", "ttyAMA0"]);
     assert!(scan_filtered(&system, &only(&[])).is_empty());
 }
 

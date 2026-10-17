@@ -35,9 +35,7 @@ impl DatabaseKey {
     /// into the memory of the key, so they exist only there.
     /// When `fill` fails, its error is returned and the partly
     /// written bytes are wiped.
-    pub fn fill_with<E>(
-        fill: impl FnOnce(&mut [u8; DATABASE_KEY_LENGTH]) -> Result<(), E>,
-    ) -> Result<DatabaseKey, E> {
+    pub fn fill_with<E>(fill: impl FnOnce(&mut [u8; DATABASE_KEY_LENGTH]) -> Result<(), E>) -> Result<DatabaseKey, E> {
         let mut key = DatabaseKey(Box::new(Zeroizing::new([0; DATABASE_KEY_LENGTH])));
 
         fill(&mut key.0)?;

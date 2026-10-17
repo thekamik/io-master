@@ -56,10 +56,7 @@ fn the_context_fits_the_field() {
 
 #[test]
 fn an_empty_field_is_said_to_be_empty() {
-    let connection = Connection {
-        done_marker: String::new(),
-        ..careless()
-    };
+    let connection = Connection { done_marker: String::new(), ..careless() };
 
     assert!(instruction(Field::DoneMarker, &connection).contains("- This field now: (empty)"));
 }
@@ -76,10 +73,7 @@ fn the_field_itself_is_not_repeated_in_the_context() {
 
 #[test]
 fn headers_that_hold_no_secret_are_shown() {
-    let connection = Connection {
-        headers: "Content-Type: application/json\nx-secret: abc".to_owned(),
-        ..careless()
-    };
+    let connection = Connection { headers: "Content-Type: application/json\nx-secret: abc".to_owned(), ..careless() };
 
     let text = instruction(Field::Body, &connection);
     assert!(text.contains("Content-Type: application/json"));

@@ -23,10 +23,7 @@ pub struct ColumnView {
 
 impl From<PortProperty> for ColumnView {
     fn from(property: PortProperty) -> ColumnView {
-        ColumnView {
-            key: property.key(),
-            title: property.title(),
-        }
+        ColumnView { key: property.key(), title: property.title() }
     }
 }
 
@@ -79,12 +76,7 @@ impl ScanView {
             Err(problem) => (None, Some(problem)),
         };
 
-        ScanView {
-            settings: settings_view(settings),
-            choices: choices(settings),
-            table,
-            problem,
-        }
+        ScanView { settings: settings_view(settings), choices: choices(settings), table, problem }
     }
 }
 
@@ -117,18 +109,12 @@ fn choices(settings: &ScanSettings) -> ScanChoicesView {
         }
     }
 
-    ScanChoicesView {
-        types,
-        columns: PortProperty::ALL.into_iter().map(ColumnView::from).collect(),
-    }
+    ScanChoicesView { types, columns: PortProperty::ALL.into_iter().map(ColumnView::from).collect() }
 }
 
 fn table(ports: &[SerialPortInfo], columns: &[PortProperty]) -> PortTableView {
     PortTableView {
         columns: columns.iter().copied().map(ColumnView::from).collect(),
-        rows: ports
-            .iter()
-            .map(|port| columns.iter().map(|column| column.value(port)).collect())
-            .collect(),
+        rows: ports.iter().map(|port| columns.iter().map(|column| column.value(port)).collect()).collect(),
     }
 }

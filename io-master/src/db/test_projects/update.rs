@@ -47,10 +47,10 @@ pub fn scheme(db: &UserDb, id: i64, fields: &SchemeFields) -> Result<(), DbError
 
 /// Marks a scheme proposed by the AI accepted.
 pub fn accept_scheme(db: &UserDb, id: i64) -> Result<bool, DbError> {
-    Ok(db.connection().execute(
-        "UPDATE schemes SET state = ?1 WHERE id = ?2",
-        params![ProposalState::Accepted.name(), id],
-    )? > 0)
+    Ok(db
+        .connection()
+        .execute("UPDATE schemes SET state = ?1 WHERE id = ?2", params![ProposalState::Accepted.name(), id])?
+        > 0)
 }
 
 /// Changes a tile and replaces its sources (already checked on their
@@ -92,10 +92,10 @@ pub fn tiles_scheme(db: &UserDb, ids: &[i64], scheme: i64) -> Result<(), DbError
 
 /// Marks a tile proposed by the AI accepted.
 pub fn accept_tile(db: &UserDb, id: i64) -> Result<bool, DbError> {
-    Ok(db.connection().execute(
-        "UPDATE tiles SET state = ?1 WHERE id = ?2",
-        params![ProposalState::Accepted.name(), id],
-    )? > 0)
+    Ok(db
+        .connection()
+        .execute("UPDATE tiles SET state = ?1 WHERE id = ?2", params![ProposalState::Accepted.name(), id])?
+        > 0)
 }
 
 /// Replaces the tiles and links of `project` by `tiles` and `links`,
@@ -113,10 +113,8 @@ pub fn replace_content(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]
         [project],
     )?;
     transaction.execute("DELETE FROM links WHERE project_id = ?1", [project])?;
-    transaction.execute(
-        "DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)",
-        [project],
-    )?;
+    transaction
+        .execute("DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)", [project])?;
 
     let mut numbers = Vec::with_capacity(tiles.len());
 
@@ -158,10 +156,8 @@ pub fn restore_content(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]
         [project],
     )?;
     transaction.execute("DELETE FROM links WHERE project_id = ?1", [project])?;
-    transaction.execute(
-        "DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)",
-        [project],
-    )?;
+    transaction
+        .execute("DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)", [project])?;
 
     for tile in tiles {
         write_tile(&transaction, INSERT_TILE, tile.scheme, &tile.fields)?;

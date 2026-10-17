@@ -82,7 +82,11 @@ pub fn project_form(name: &str, documents: Vec<i64>) -> super::serializer::proje
 
 /// The form of an accepted scheme, with the pages `pages` of
 /// `document` when given.
-pub fn scheme_form(number: &str, name: &str, pages: Option<(i64, u32, u32)>) -> super::serializer::project_view::SchemeForm {
+pub fn scheme_form(
+    number: &str,
+    name: &str,
+    pages: Option<(i64, u32, u32)>,
+) -> super::serializer::project_view::SchemeForm {
     super::serializer::project_view::SchemeForm {
         number: number.into(),
         name: name.into(),

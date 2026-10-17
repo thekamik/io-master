@@ -53,11 +53,7 @@ pub struct DocumentForm {
 
 impl From<DocumentForm> for DocumentFields {
     fn from(form: DocumentForm) -> DocumentFields {
-        DocumentFields {
-            title: form.title,
-            part: form.part,
-            version: form.version,
-        }
+        DocumentFields { title: form.title, part: form.part, version: form.version }
     }
 }
 
@@ -71,11 +67,7 @@ pub struct HitView {
 
 impl From<Hit> for HitView {
     fn from(hit: Hit) -> HitView {
-        HitView {
-            document_id: hit.document_id,
-            page: hit.page,
-            snippet: hit.snippet,
-        }
+        HitView { document_id: hit.document_id, page: hit.page, snippet: hit.snippet }
     }
 }
 

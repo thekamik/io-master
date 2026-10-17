@@ -10,10 +10,7 @@ fn state() -> UiState {
 }
 
 fn account() -> Account {
-    Account {
-        id: 1,
-        name: "anna".to_owned(),
-    }
+    Account { id: 1, name: "anna".to_owned() }
 }
 
 #[test]

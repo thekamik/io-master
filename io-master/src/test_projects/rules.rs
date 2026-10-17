@@ -76,9 +76,7 @@ impl fmt::Display for SchemeError {
                 to.with_article()
             ),
             SchemeError::LinkExists => formatter.write_str("the two tiles are linked already"),
-            SchemeError::Cycle => {
-                formatter.write_str("the link would close a circle: a requirement would need itself")
-            }
+            SchemeError::Cycle => formatter.write_str("the link would close a circle: a requirement would need itself"),
         }
     }
 }

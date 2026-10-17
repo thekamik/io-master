@@ -40,7 +40,8 @@ fn a_refused_change_changes_nothing_and_keeps_no_version() {
     let (project, scheme) = project_with_scheme(&test.db, document);
     let mut open = opened(&test.db, project);
 
-    let refused = open.change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, " ")));
+    let refused =
+        open.change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, " ")));
 
     assert!(refused.is_err());
     assert!(open.data().tiles.is_empty());
@@ -98,11 +99,14 @@ fn undo_survives_a_number_given_meanwhile_to_another_project() {
     // Another project takes the freed number.
     let other = projects::create::project(&test.db, &project_fields("Q", vec![document])).unwrap();
     let mut other_open = opened(&test.db, other);
-    let other_scheme =
-        schemes::create::scheme(&test.db, &mut other_open, &crate::test_projects::test_support::scheme_fields("1", "A"))
-            .unwrap();
-    let taken = tiles::create::tile(&test.db, &mut other_open, other_scheme, &TileFields::new(TileKind::Input, "Q"))
-        .unwrap();
+    let other_scheme = schemes::create::scheme(
+        &test.db,
+        &mut other_open,
+        &crate::test_projects::test_support::scheme_fields("1", "A"),
+    )
+    .unwrap();
+    let taken =
+        tiles::create::tile(&test.db, &mut other_open, other_scheme, &TileFields::new(TileKind::Input, "Q")).unwrap();
     assert_eq!(taken, tile, "SQLite gives the freed number again");
 
     // The tile comes back with a new number; memory and database agree.
@@ -130,7 +134,8 @@ fn a_long_work_is_one_version_and_deleting_a_scheme_forgets_them() {
     assert!(open.data().tiles.is_empty());
     assert!(!open.can_undo());
 
-    open.change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, "Three"))).unwrap();
+    open.change(|open| tiles::create::tile(&test.db, open, scheme, &TileFields::new(TileKind::Input, "Three")))
+        .unwrap();
     assert!(open.can_undo());
 
     schemes::delete::scheme(&test.db, &mut open, scheme).unwrap();

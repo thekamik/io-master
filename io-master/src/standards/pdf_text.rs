@@ -131,21 +131,14 @@ pub fn info(pdf: &[u8]) -> Result<PdfInfo, PdfError> {
         return Err(PdfError::Unreadable(format!("the file has {pages} pages")));
     }
 
-    Ok(PdfInfo {
-        pages,
-        title: field("Title:"),
-    })
+    Ok(PdfInfo { pages, title: field("Title:") })
 }
 
 /// The text of the pages `first` to `last` (counted from 1).
 fn part(pdf: &[u8], first: u32, last: u32) -> Result<Vec<String>, PdfError> {
     let (first_text, last_text) = (first.to_string(), last.to_string());
 
-    let output = run(
-        "pdftotext",
-        &["-enc", "UTF-8", "-f", &first_text, "-l", &last_text, "fd://0", "-"],
-        pdf,
-    )?;
+    let output = run("pdftotext", &["-enc", "UTF-8", "-f", &first_text, "-l", &last_text, "fd://0", "-"], pdf)?;
 
     let text = String::from_utf8_lossy(&output.stdout);
     let mut pages: Vec<String> = text.split('\u{000C}').map(|page| page.trim_end().to_owned()).collect();

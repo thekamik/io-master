@@ -32,7 +32,8 @@ fn input(title: &str) -> TileForm {
 /// The active AI connection of the state: a fake service that answers
 /// `answer` in pieces.
 async fn fake_model(state: &UiState, answer: &str) -> FakeService {
-    let pieces: Vec<String> = answer.as_bytes().chunks(40).map(|chunk| String::from_utf8_lossy(chunk).into_owned()).collect();
+    let pieces: Vec<String> =
+        answer.as_bytes().chunks(40).map(|chunk| String::from_utf8_lossy(chunk).into_owned()).collect();
     let pieces: Vec<&str> = pieces.iter().map(String::as_str).collect();
     let service = FakeService::start(FakeAnswer::Stream(completions_events(&pieces))).await;
 
@@ -53,7 +54,8 @@ async fn a_project_holds_its_schemes_and_their_counts() {
     let (test, document) = with_document().await;
     let project = create(&test.state, project_form("ADV", vec![document])).await.unwrap().project.id;
 
-    let view = create_scheme(&test.state, project, scheme_form("5.1", "Specification", Some((document, 1, 2)))).await.unwrap();
+    let view =
+        create_scheme(&test.state, project, scheme_form("5.1", "Specification", Some((document, 1, 2)))).await.unwrap();
     let scheme = view.schemes[0].id;
     assert_eq!(view.schemes[0].pages.map(|pages| pages.last_page), Some(2));
 
@@ -131,11 +133,7 @@ async fn the_table_of_contents_becomes_proposed_schemes() {
 
     let events = Arc::new(Mutex::new(Vec::new()));
     let sink = Arc::clone(&events);
-    let range = PageRange {
-        document_id: document,
-        first_page: 1,
-        last_page: 1,
-    };
+    let range = PageRange { document_id: document, first_page: 1, last_page: 1 };
 
     // The table of contents is page 1 here, so the headings are looked
     // for from page 2: the first chapter is not found, the second is.

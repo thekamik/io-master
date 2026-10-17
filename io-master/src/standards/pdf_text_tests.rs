@@ -9,13 +9,7 @@ use crate::test_projects::test_support::pdf;
 fn the_pages_and_the_title_are_read() {
     let file = pdf(&["First page", "Second page"]);
 
-    assert_eq!(
-        info(&file).unwrap(),
-        PdfInfo {
-            pages: 2,
-            title: Some("Test standard".to_owned())
-        }
-    );
+    assert_eq!(info(&file).unwrap(), PdfInfo { pages: 2, title: Some("Test standard".to_owned()) });
 }
 
 #[test]

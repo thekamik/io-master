@@ -15,10 +15,7 @@ pub fn project(db: &UserDb, id: i64) -> Result<bool, DbError> {
         [id],
     )?;
     transaction.execute("DELETE FROM links WHERE project_id = ?1", [id])?;
-    transaction.execute(
-        "DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)",
-        [id],
-    )?;
+    transaction.execute("DELETE FROM tiles WHERE scheme_id IN (SELECT id FROM schemes WHERE project_id = ?1)", [id])?;
     transaction.execute("DELETE FROM schemes WHERE project_id = ?1", [id])?;
     transaction.execute("DELETE FROM project_documents WHERE project_id = ?1", [id])?;
     let deleted = transaction.execute("DELETE FROM projects WHERE id = ?1", [id])? > 0;
@@ -32,10 +29,8 @@ pub fn project(db: &UserDb, id: i64) -> Result<bool, DbError> {
 pub fn scheme(db: &UserDb, id: i64) -> Result<bool, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
-    transaction.execute(
-        "DELETE FROM tile_sources WHERE tile_id IN (SELECT id FROM tiles WHERE scheme_id = ?1)",
-        [id],
-    )?;
+    transaction
+        .execute("DELETE FROM tile_sources WHERE tile_id IN (SELECT id FROM tiles WHERE scheme_id = ?1)", [id])?;
     transaction.execute(
         "DELETE FROM links WHERE from_tile IN (SELECT id FROM tiles WHERE scheme_id = ?1) \
          OR to_tile IN (SELECT id FROM tiles WHERE scheme_id = ?1)",

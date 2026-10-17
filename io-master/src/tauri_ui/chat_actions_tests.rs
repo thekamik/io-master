@@ -6,8 +6,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::ai::api::api_key::ApiKey;
-use crate::db::ai::connection::{create as connections_create, update as connections_update};
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
+use crate::db::ai::connection::{create as connections_create, update as connections_update};
 use crate::tauri_ui::test_support::{TestState, logged_in};
 use crate::tauri_ui::user_data::with_user_db;
 

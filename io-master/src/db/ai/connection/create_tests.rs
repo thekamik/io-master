@@ -24,11 +24,7 @@ fn database(directory: &TempDir) -> UserDb {
 
 /// A connection that keeps the rules.
 fn named(name: &str) -> Connection {
-    Connection {
-        name: name.to_owned(),
-        model: "llama".to_owned(),
-        ..Connection::template()
-    }
+    Connection { name: name.to_owned(), model: "llama".to_owned(), ..Connection::template() }
 }
 
 fn key() -> ApiKey {
@@ -64,10 +60,7 @@ fn a_connection_that_breaks_a_rule_is_not_saved() {
     let directory = TempDir::new();
     let db = database(&directory);
 
-    let open = Connection {
-        url: "http://192.168.1.10/v1/chat/completions".to_owned(),
-        ..named("Lab")
-    };
+    let open = Connection { url: "http://192.168.1.10/v1/chat/completions".to_owned(), ..named("Lab") };
 
     assert!(matches!(connection(&db, &open), Err(SaveError::Invalid(error)) if error.field == Field::Url));
     assert!(read::list(&db).unwrap().is_empty());
@@ -135,18 +128,12 @@ fn a_changed_address_removes_the_key() {
     update::api_key(&db, id, &key()).unwrap();
 
     // Another path at the same address keeps the key.
-    let other_path = Connection {
-        url: "http://127.0.0.1:11434/api/chat".to_owned(),
-        ..named("Local")
-    };
+    let other_path = Connection { url: "http://127.0.0.1:11434/api/chat".to_owned(), ..named("Local") };
     assert!(!update::connection(&db, id, &other_path).unwrap().key_removed);
     assert!(read::api_key(&db, id).unwrap().is_some());
 
     // Another port is another address.
-    let other_port = Connection {
-        url: "http://127.0.0.1:8080/api/chat".to_owned(),
-        ..named("Local")
-    };
+    let other_port = Connection { url: "http://127.0.0.1:8080/api/chat".to_owned(), ..named("Local") };
     assert!(update::connection(&db, id, &other_port).unwrap().key_removed);
     assert!(read::api_key(&db, id).unwrap().is_none());
 }
@@ -184,9 +171,7 @@ fn a_table_made_before_the_message_template_gets_the_column() {
     let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
     let db = user_db::create(directory.path(), 1, &key).unwrap();
 
-    db.connection_for_tests()
-        .execute_batch("ALTER TABLE ai_connections DROP COLUMN message_template")
-        .unwrap();
+    db.connection_for_tests().execute_batch("ALTER TABLE ai_connections DROP COLUMN message_template").unwrap();
     drop(db);
 
     let db = user_db::open(directory.path(), 1, &key).unwrap();

@@ -7,8 +7,8 @@ use rusqlite::{OptionalExtension, params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::test_projects::model::{Link, Scheme, Source, Tile};
 use crate::evaluation::model::{Evaluation, JournalEntry, Proposal, ResultField};
+use crate::test_projects::model::{Link, Scheme, Source, Tile};
 
 use super::rows::{
     EVALUATION_COLUMNS, TILE_COLUMNS, entry_from_row, evaluation_from_row, scheme_from_row, tile_from_row,
@@ -71,13 +71,7 @@ pub fn links(db: &UserDb, id: i64) -> Result<Vec<Link>, DbError> {
         "SELECT id, evaluation_id, from_tile, to_tile FROM evaluation_links WHERE evaluation_id = ?1 ORDER BY id",
     )?;
     let links = statement
-        .query_map([id], |row| {
-            Ok(Link {
-                id: row.get(0)?,
-                from: row.get(2)?,
-                to: row.get(3)?,
-            })
-        })?
+        .query_map([id], |row| Ok(Link { id: row.get(0)?, from: row.get(2)?, to: row.get(3)? }))?
         .collect::<Result<Vec<_>, _>>()?;
 
     Ok(links)
@@ -106,9 +100,9 @@ pub fn tile(db: &UserDb, id: i64) -> Result<Option<(i64, Tile)>, DbError> {
 /// The tiles that `condition` (on the table `t`, with `?1` = `key`)
 /// selects, with their sources, read in one query for all of them.
 fn tiles_where(db: &UserDb, condition: &str, key: i64) -> Result<Vec<Tile>, DbError> {
-    let mut statement = db.connection().prepare(&format!(
-        "SELECT {TILE_COLUMNS} FROM evaluation_tiles t WHERE {condition} ORDER BY t.id"
-    ))?;
+    let mut statement = db
+        .connection()
+        .prepare(&format!("SELECT {TILE_COLUMNS} FROM evaluation_tiles t WHERE {condition} ORDER BY t.id"))?;
     let mut tiles = statement.query_map([key], tile_from_row)?.collect::<Result<Vec<_>, _>>()?;
 
     let mut statement = db.connection().prepare(&format!(
@@ -118,12 +112,7 @@ fn tiles_where(db: &UserDb, condition: &str, key: i64) -> Result<Vec<Tile>, DbEr
     let rows = statement.query_map([key], |row| {
         Ok((
             row.get::<_, i64>(0)?,
-            Source {
-                document_id: row.get(1)?,
-                page: row.get(2)?,
-                quote: row.get(3)?,
-                found: row.get(4)?,
-            },
+            Source { document_id: row.get(1)?, page: row.get(2)?, quote: row.get(3)?, found: row.get(4)? },
         ))
     })?;
 
@@ -191,14 +180,7 @@ pub fn proposals(db: &UserDb, tile: i64) -> Result<Vec<Proposal>, DbError> {
     Ok(rows
         .into_iter()
         .filter_map(|(id, tile, field, text, model, created)| {
-            Some(Proposal {
-                id,
-                tile,
-                field: ResultField::from_name(&field)?,
-                text,
-                model,
-                created,
-            })
+            Some(Proposal { id, tile, field: ResultField::from_name(&field)?, text, model, created })
         })
         .collect())
 }

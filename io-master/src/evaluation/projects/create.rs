@@ -102,11 +102,7 @@ pub fn from_exchange(
     project_fields.documents = documents.to_vec();
 
     let data = ProjectData {
-        project: Project {
-            id: 0,
-            fields: project_fields,
-            ready: true,
-        },
+        project: Project { id: 0, fields: project_fields, ready: true },
         schemes,
         tiles,
         links: exchange.links.clone(),
@@ -187,12 +183,7 @@ fn copy(db: &UserDb, data: &ProjectData, fields: &EvaluationFields) -> Result<Im
         skipped.links
     );
 
-    let copy = Copy {
-        documents: &project.documents,
-        schemes: &schemes,
-        tiles: &tiles,
-        links: &links,
-    };
+    let copy = Copy { documents: &project.documents, schemes: &schemes, tiles: &tiles, links: &links };
 
     let id = create(db, fields, &origin, &copy, &detail)?;
 
@@ -216,13 +207,7 @@ fn create(
         return Err(EvaluationError::NameTaken);
     }
 
-    let step = Step {
-        actor: &Actor::Evaluator,
-        action: JournalAction::Imported,
-        tile: None,
-        field: None,
-        detail,
-    };
+    let step = Step { actor: &Actor::Evaluator, action: JournalAction::Imported, tile: None, field: None, detail };
 
     Ok(store::evaluation(db, fields, origin, copy, &step)?)
 }

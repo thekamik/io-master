@@ -9,7 +9,13 @@ use super::read::by_sha256;
 
 /// Stores a document: the file and the text of its pages (one text
 /// per page, in order). Refused when the same file is loaded already.
-pub fn add(db: &UserDb, fields: &DocumentFields, file_name: &str, pdf: &[u8], pages: &[String]) -> Result<i64, DocumentError> {
+pub fn add(
+    db: &UserDb,
+    fields: &DocumentFields,
+    file_name: &str,
+    pdf: &[u8],
+    pages: &[String],
+) -> Result<i64, DocumentError> {
     fields.check()?;
 
     if pages.is_empty() {
@@ -24,7 +30,6 @@ pub fn add(db: &UserDb, fields: &DocumentFields, file_name: &str, pdf: &[u8], pa
 
     Ok(create::document(db, fields, file_name, &sha256, pdf, pages)?)
 }
-
 
 // Unit tests, in their own file to keep this one readable. They
 // cover the whole folder (create, read, update, delete).

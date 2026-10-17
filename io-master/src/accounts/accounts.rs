@@ -22,9 +22,9 @@ use std::fmt;
 use std::path::Path;
 
 use crate::db::encryption::database_key::DatabaseKey;
-use crate::db::error::DbError;
 use crate::db::encryption::generate_key::generate_database_key;
 use crate::db::encryption::keys::{self, KeyError};
+use crate::db::error::DbError;
 use crate::db::system::database::SystemDb;
 use crate::db::user::database as user_db;
 use crate::installation::installation::{self, InvalidUserName};
@@ -157,10 +157,7 @@ fn create(
         return Err(error.into());
     }
 
-    Ok(Account {
-        id,
-        name: name.to_owned(),
-    })
+    Ok(Account { id, name: name.to_owned() })
 }
 
 /// Logs in: opens the key of the account with the password, and its
@@ -183,13 +180,7 @@ pub fn log_in(
     // is damaged, which is reported as such.
     user_db::open(data_dir, user.id, &key)?;
 
-    Ok((
-        Account {
-            id: user.id,
-            name: user.name,
-        },
-        key,
-    ))
+    Ok((Account { id: user.id, name: user.name }, key))
 }
 
 /// Changes the password of an account. The old password is needed:

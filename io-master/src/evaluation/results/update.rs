@@ -28,12 +28,7 @@ fn keep(open: &mut OpenEvaluation, tile: i64, field: ResultField, text: Option<&
     results.retain(|result| !(result.tile == tile && result.field == field));
 
     if let Some(text) = text {
-        results.push(RequirementResult {
-            tile,
-            field,
-            text: text.to_owned(),
-            origin,
-        });
+        results.push(RequirementResult { tile, field, text: text.to_owned(), origin });
     }
 }
 
@@ -51,13 +46,8 @@ fn settle(
     requirement(open, proposal.tile)?;
 
     let evaluation = open.data().evaluation.id;
-    let step = Step {
-        actor: &Actor::Evaluator,
-        action,
-        tile: Some(proposal.tile),
-        field: Some(proposal.field),
-        detail,
-    };
+    let step =
+        Step { actor: &Actor::Evaluator, action, tile: Some(proposal.tile), field: Some(proposal.field), detail };
 
     store::settle_proposal(db, evaluation, proposal, text, origin, &step)?;
 

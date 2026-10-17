@@ -351,7 +351,10 @@ impl EvaluationFields {
         }
 
         if self.product.trim().is_empty() {
-            return Err(EvaluationError::Invalid("product", "the evaluation needs the product it evaluates".to_owned()));
+            return Err(EvaluationError::Invalid(
+                "product",
+                "the evaluation needs the product it evaluates".to_owned(),
+            ));
         }
 
         check_text("name", &self.name, MAX_NAME, false)?;

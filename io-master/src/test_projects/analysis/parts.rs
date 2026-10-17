@@ -52,12 +52,7 @@ pub fn parts(db: &UserDb, ranges: &[(i64, u32, u32)], size: usize) -> Result<Vec
                         parts.push(done);
                     }
 
-                    current = Some(Part {
-                        document_id: document,
-                        first_page: number,
-                        last_page: number,
-                        text: block,
-                    });
+                    current = Some(Part { document_id: document, first_page: number, last_page: number, text: block });
                 }
             }
         }

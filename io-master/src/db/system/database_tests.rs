@@ -7,10 +7,7 @@ use crate::installation::installation::{ID_LENGTH, Role};
 use crate::tpm::test_support::TempDir;
 
 fn installation() -> Installation {
-    Installation {
-        id: [5; ID_LENGTH],
-        role: Role::Workstation,
-    }
+    Installation { id: [5; ID_LENGTH], role: Role::Workstation }
 }
 
 fn some_key() -> WrappedKey {

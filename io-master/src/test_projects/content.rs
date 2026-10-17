@@ -27,9 +27,11 @@ pub fn replace(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Res
         }
 
         if tile.fields.sources.iter().any(|source| !stored_project.fields.documents.contains(&source.document_id)) {
-            return Err(
-                SchemeError::Invalid("sources", "a source quotes a document the project does not use".to_owned()).into(),
-            );
+            return Err(SchemeError::Invalid(
+                "sources",
+                "a source quotes a document the project does not use".to_owned(),
+            )
+            .into());
         }
     }
 

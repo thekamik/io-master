@@ -204,21 +204,14 @@ pub fn model(db: &UserDb, role: Role) -> Result<Model, ModelError> {
 pub(super) fn model_of(db: &UserDb, id: i64, needs_key: bool) -> Result<Model, ModelError> {
     let stored = connections::get(db, id)?.ok_or(ModelError::NoConnection)?;
     let name = stored.connection.name.clone();
-    let connection = stored
-        .connection
-        .check()
-        .map_err(|error| ModelError::BrokenConnection(name.clone(), error))?;
+    let connection = stored.connection.check().map_err(|error| ModelError::BrokenConnection(name.clone(), error))?;
     let api_key = connections::api_key(db, id)?;
 
     if needs_key && connection.needs_key() && api_key.is_none() {
         return Err(ModelError::NoKey(name));
     }
 
-    Ok(Model {
-        name,
-        connection,
-        api_key,
-    })
+    Ok(Model { name, connection, api_key })
 }
 
 // Unit tests, in their own file to keep this one readable. They

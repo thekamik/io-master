@@ -5,8 +5,8 @@ use super::*;
 
 use std::sync::{Arc, Mutex};
 
-use crate::test_projects::test_support::pdf as make_pdf;
 use crate::tauri_ui::test_support::{installed, logged_in};
+use crate::test_projects::test_support::pdf as make_pdf;
 use crate::tpm::test_support::TempDir;
 
 /// Collects the events of loading.
@@ -116,11 +116,7 @@ async fn a_document_is_renamed_and_deleted() {
     load(&test.state, files(&directory, &[("a.pdf", &["A"])]), sink).await.unwrap();
     let id = list(&test.state).await.unwrap()[0].id;
 
-    let form = DocumentForm {
-        title: "Common Criteria".into(),
-        part: "Part 3".into(),
-        version: "CC:2022".into(),
-    };
+    let form = DocumentForm { title: "Common Criteria".into(), part: "Part 3".into(), version: "CC:2022".into() };
     assert_eq!(update(&test.state, id, form).await.unwrap().part, "Part 3");
 
     delete(&test.state, id).await.unwrap();

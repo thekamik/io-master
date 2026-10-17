@@ -83,19 +83,14 @@ pub enum TpmError {
 
 impl TpmError {
     pub fn io(path: &Path, source: io::Error) -> TpmError {
-        TpmError::Io {
-            path: path.to_owned(),
-            source,
-        }
+        TpmError::Io { path: path.to_owned(), source }
     }
 }
 
 impl fmt::Display for TpmError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TpmError::EmulatorMissing => {
-                formatter.write_str("the TPM emulator swtpm is not installed (package swtpm)")
-            }
+            TpmError::EmulatorMissing => formatter.write_str("the TPM emulator swtpm is not installed (package swtpm)"),
             TpmError::Emulator(reason) => write!(formatter, "TPM emulator: {reason}"),
             TpmError::Tpm(message) => write!(formatter, "TPM: {message}"),
             TpmError::MarkerExists => formatter.write_str("this computer already has an installation"),
@@ -141,10 +136,7 @@ impl TpmAccess {
             HashingAlgorithm::Sha256,
         )?;
 
-        let (attributes, mask) = SessionAttributesBuilder::new()
-            .with_decrypt(true)
-            .with_encrypt(true)
-            .build();
+        let (attributes, mask) = SessionAttributesBuilder::new().with_decrypt(true).with_encrypt(true).build();
 
         let session = session.ok_or_else(|| TpmError::Tpm("no session".to_owned()))?;
 
@@ -186,10 +178,7 @@ impl SealedEnvelope {
             return Err(TpmError::DamagedEnvelope);
         }
 
-        Ok(SealedEnvelope {
-            public: public.to_vec(),
-            private: private.to_vec(),
-        })
+        Ok(SealedEnvelope { public: public.to_vec(), private: private.to_vec() })
     }
 }
 
@@ -209,10 +198,7 @@ impl Tpm {
             RsaExponent::default(),
         )?;
 
-        Ok(self
-            .context
-            .create_primary(Hierarchy::Owner, template, None, None, None, None)?
-            .key_handle)
+        Ok(self.context.create_primary(Hierarchy::Owner, template, None, None, None, None)?.key_handle)
     }
 
     /// Runs `work` with the primary key and removes the key from
@@ -257,10 +243,7 @@ impl Tpm {
         self.with_primary_key(|context, key| {
             let created = context.create(key, template, None, Some(data), None, None)?;
 
-            Ok(SealedEnvelope {
-                public: created.out_public.marshall()?,
-                private: created.out_private.value().to_vec(),
-            })
+            Ok(SealedEnvelope { public: created.out_public.marshall()?, private: created.out_private.value().to_vec() })
         })
     }
 
@@ -292,9 +275,9 @@ impl Tpm {
         // Without the encrypted session: this command has no
         // parameter that could be encrypted, and the TPM refuses
         // a session that asks for it. Nothing secret is sent.
-        let (data, _) = self.context.execute_without_session(|context| {
-            context.get_capability(CapabilityType::Handles, MARKER_INDEX, 1)
-        })?;
+        let (data, _) = self
+            .context
+            .execute_without_session(|context| context.get_capability(CapabilityType::Handles, MARKER_INDEX, 1))?;
 
         let CapabilityData::Handles(handles) = data else {
             return Ok(false);
@@ -322,10 +305,8 @@ impl Tpm {
         let index = self.open_marker()?;
         let data = self.context.nv_read(NvAuth::Owner, index, MARKER_LENGTH as u16, 0)?;
 
-        let identifier: [u8; MARKER_LENGTH] = data
-            .value()
-            .try_into()
-            .map_err(|_| TpmError::Tpm("the marker has the wrong size".to_owned()))?;
+        let identifier: [u8; MARKER_LENGTH] =
+            data.value().try_into().map_err(|_| TpmError::Tpm("the marker has the wrong size".to_owned()))?;
 
         Ok(Some(identifier))
     }
@@ -339,10 +320,7 @@ impl Tpm {
 
         // Readable and writable with the authorization of the owner
         // of the TPM, which on Linux is empty.
-        let attributes = NvIndexAttributesBuilder::new()
-            .with_owner_write(true)
-            .with_owner_read(true)
-            .build()?;
+        let attributes = NvIndexAttributesBuilder::new().with_owner_write(true).with_owner_read(true).build()?;
 
         let public = NvPublicBuilder::new()
             .with_nv_index(Self::marker_index()?)
@@ -353,8 +331,7 @@ impl Tpm {
 
         let index = self.context.nv_define_space(Provision::Owner, None, public)?;
 
-        self.context
-            .nv_write(NvAuth::Owner, index, MaxNvBuffer::try_from(identifier.to_vec())?, 0)?;
+        self.context.nv_write(NvAuth::Owner, index, MaxNvBuffer::try_from(identifier.to_vec())?, 0)?;
 
         Ok(())
     }

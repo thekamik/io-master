@@ -111,10 +111,7 @@ pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<UserDb
         .recursive(true)
         .mode(0o700)
         .create(&directory)
-        .map_err(|source| DbError::Io {
-            path: directory.clone(),
-            source,
-        })?;
+        .map_err(|source| DbError::Io { path: directory.clone(), source })?;
 
     UserDb::from(sqlcipher::create(&path(data_dir, user_id), key)?)
 }
@@ -130,10 +127,7 @@ pub fn remove_all(data_dir: &Path) -> Result<(), DbError> {
     let directory = data_dir.join(DIRECTORY);
 
     match fs::remove_dir_all(&directory) {
-        Err(source) if source.kind() != io::ErrorKind::NotFound => Err(DbError::Io {
-            path: directory,
-            source,
-        }),
+        Err(source) if source.kind() != io::ErrorKind::NotFound => Err(DbError::Io { path: directory, source }),
         _ => Ok(()),
     }
 }

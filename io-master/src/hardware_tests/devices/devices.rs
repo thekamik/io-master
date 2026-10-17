@@ -301,10 +301,7 @@ impl PortType {
     pub fn base_name(&self) -> &str {
         match self {
             PortType::Other(base_name) => base_name,
-            known => PORT_TYPES
-                .iter()
-                .find(|(port_type, _)| port_type == known)
-                .map_or("", |(_, base_name)| base_name),
+            known => PORT_TYPES.iter().find(|(port_type, _)| port_type == known).map_or("", |(_, base_name)| base_name),
         }
     }
 }
@@ -387,10 +384,7 @@ pub fn scan(filter: &PortFilter) -> Result<Vec<SerialPortInfo>, ScanError> {
 
 /// [`scan`] on the given places.
 fn scan_with(sources: &Sources, filter: &PortFilter) -> Result<Vec<SerialPortInfo>, ScanError> {
-    let unavailable = |source| ScanError::DeviceListUnavailable {
-        path: sources.tty_class.clone(),
-        source,
-    };
+    let unavailable = |source| ScanError::DeviceListUnavailable { path: sources.tty_class.clone(), source };
 
     let entries = fs::read_dir(&sources.tty_class).map_err(unavailable)?;
 
@@ -494,9 +488,7 @@ fn link_name(directory: &Path, link: &str) -> Option<String> {
 /// directory is the device it is attached to. The walk stops at
 /// the first directory that is not a device (has no `uevent`).
 fn ancestors(device: &Path) -> impl Iterator<Item = &Path> {
-    device
-        .ancestors()
-        .take_while(|directory| directory.join("uevent").exists())
+    device.ancestors().take_while(|directory| directory.join("uevent").exists())
 }
 
 /// Kernel layers between a port and its hardware that say
@@ -559,11 +551,7 @@ fn find_usb(device: &Path) -> Option<UsbInfo> {
 ///
 /// A device that udev has no record of yields nothing; that is
 /// not an error.
-fn read_udev_record(
-    udev_data: &Path,
-    device_number: &str,
-    dev: &Path,
-) -> (BTreeMap<String, String>, Vec<String>) {
+fn read_udev_record(udev_data: &Path, device_number: &str, dev: &Path) -> (BTreeMap<String, String>, Vec<String>) {
     let mut properties = BTreeMap::new();
     let mut links = Vec::new();
 
@@ -619,11 +607,7 @@ fn read_id_names(path: &Path) -> BTreeMap<u32, String> {
 
 /// Examines the device file of a port: owner, group, permissions,
 /// and what the current user may do with it.
-fn examine_access(
-    path: &Path,
-    users: &BTreeMap<u32, String>,
-    groups: &BTreeMap<u32, String>,
-) -> Option<AccessInfo> {
+fn examine_access(path: &Path, users: &BTreeMap<u32, String>, groups: &BTreeMap<u32, String>) -> Option<AccessInfo> {
     let metadata = fs::metadata(path).ok()?;
 
     // access() asks the system itself, so group membership and

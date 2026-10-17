@@ -16,8 +16,8 @@ use tokio::sync::watch;
 
 use crate::accounts::accounts::Account;
 use crate::db::encryption::database_key::DatabaseKey;
-use crate::test_projects::workspace::Workspace;
 use crate::installation::lifecycle::{Opened, Running};
+use crate::test_projects::workspace::Workspace;
 
 use super::error::UiError;
 
@@ -111,10 +111,7 @@ impl UiState {
     /// Starts the session of a logged-in evaluator, replacing an
     /// earlier one.
     pub fn log_in(&self, account: Account, key: DatabaseKey) {
-        *lock(&self.session) = Some(Session {
-            account,
-            key: Arc::new(key),
-        });
+        *lock(&self.session) = Some(Session { account, key: Arc::new(key) });
     }
 
     /// Ends the session; a reply being written and a long work are

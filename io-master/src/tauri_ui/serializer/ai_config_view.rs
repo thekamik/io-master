@@ -15,10 +15,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::ai::api::checks::CheckReport;
 use crate::ai::api::completions::ReplyEnd;
+use crate::ai::api::completions::StopReason;
 use crate::ai::api::connection::{API_KEY, AnswerMode, Connection};
 use crate::db::ai::connection::rows::Stored;
 use crate::db::ai::presets::read::Preset;
-use crate::ai::api::completions::StopReason;
 
 use super::super::error::UiError;
 
@@ -252,10 +252,9 @@ impl From<CheckReport> for CheckView {
                     .to_owned(),
             ),
             ReplyEnd::Finished(StopReason::Complete) => (true, "The connection works: the model answered.".to_owned()),
-            ReplyEnd::Finished(StopReason::Cut) => (
-                true,
-                "The connection works; the reply was cut at its largest length (see the body).".to_owned(),
-            ),
+            ReplyEnd::Finished(StopReason::Cut) => {
+                (true, "The connection works; the reply was cut at its largest length (see the body).".to_owned())
+            }
             ReplyEnd::Finished(StopReason::Refused) => {
                 (true, "The connection works; the model declined the test message.".to_owned())
             }
@@ -271,10 +270,7 @@ impl From<CheckReport> for CheckView {
                 .request
                 .headers
                 .iter()
-                .map(|(name, value)| HeaderView {
-                    name: name.clone(),
-                    value: value.as_str().to_owned(),
-                })
+                .map(|(name, value)| HeaderView { name: name.clone(), value: value.as_str().to_owned() })
                 .collect(),
             body: serde_json::to_string_pretty(&report.request.body).unwrap_or_default(),
             status: report.status,

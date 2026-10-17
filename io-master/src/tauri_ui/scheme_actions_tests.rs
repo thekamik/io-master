@@ -7,11 +7,11 @@ use std::sync::{Arc, Mutex};
 
 use crate::ai::api::api_key::ApiKey;
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
-use crate::test_projects::analysis::chapter::DEFAULT_INSTRUCTIONS;
-use crate::test_projects::analysis::contents;
 use crate::tauri_ui::project_actions;
 use crate::tauri_ui::serializer::scheme_view::SourceView;
 use crate::tauri_ui::test_support::{TestState, logged_in, project_form, scheme_form, with_document};
+use crate::test_projects::analysis::chapter::DEFAULT_INSTRUCTIONS;
+use crate::test_projects::analysis::contents;
 
 /// A project "P" on the document with the schemes `numbers` (each
 /// covering the whole document); returns the project and the schemes.
@@ -20,9 +20,13 @@ async fn project_with(test: &TestState, document: i64, numbers: &[&str]) -> (i64
     let mut schemes = Vec::new();
 
     for number in numbers {
-        let view = project_actions::create_scheme(&test.state, project, scheme_form(number, "Chapter", Some((document, 1, 3))))
-            .await
-            .unwrap();
+        let view = project_actions::create_scheme(
+            &test.state,
+            project,
+            scheme_form(number, "Chapter", Some((document, 1, 3))),
+        )
+        .await
+        .unwrap();
         schemes.push(view.schemes.last().unwrap().id);
     }
 
@@ -49,7 +53,8 @@ fn tile(kind: &str, title: &str) -> TileForm {
 /// The active AI connection of the state: a fake service that answers
 /// `answer` in pieces.
 async fn fake_model(state: &UiState, answer: &str) -> FakeService {
-    let pieces: Vec<String> = answer.as_bytes().chunks(40).map(|chunk| String::from_utf8_lossy(chunk).into_owned()).collect();
+    let pieces: Vec<String> =
+        answer.as_bytes().chunks(40).map(|chunk| String::from_utf8_lossy(chunk).into_owned()).collect();
     let pieces: Vec<&str> = pieces.iter().map(String::as_str).collect();
     let service = FakeService::start(FakeAnswer::Stream(completions_events(&pieces))).await;
 
@@ -166,7 +171,8 @@ async fn tiles_of_another_project_are_not_linked() {
     let (test, document) = with_document().await;
     let (_, mine) = project_with(&test, document, &["5"]).await;
     let other = project_actions::create(&test.state, project_form("Other", vec![document])).await.unwrap().project.id;
-    let theirs = project_actions::create_scheme(&test.state, other, scheme_form("1", "X", None)).await.unwrap().schemes[0].id;
+    let theirs =
+        project_actions::create_scheme(&test.state, other, scheme_form("1", "X", None)).await.unwrap().schemes[0].id;
 
     let a = add_tile(&test.state, mine[0], tile("requirement", "A")).await.unwrap().tiles[0].id;
     let b = add_tile(&test.state, theirs, tile("requirement", "B")).await.unwrap().tiles[0].id;

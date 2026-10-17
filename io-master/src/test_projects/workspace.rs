@@ -73,10 +73,7 @@ impl OpenProject {
     /// dropped: nothing was changed (the CRUD functions change memory
     /// only after the database has stored the change).
     pub fn change<T, E>(&mut self, work: impl FnOnce(&mut OpenProject) -> Result<T, E>) -> Result<T, E> {
-        let before = Version {
-            tiles: self.data.tiles.clone(),
-            links: self.data.links.clone(),
-        };
+        let before = Version { tiles: self.data.tiles.clone(), links: self.data.links.clone() };
 
         let result = work(self)?;
 
@@ -96,10 +93,7 @@ impl OpenProject {
     /// many steps (the analysis of chapters by the AI, which waits for
     /// the model between them): one "Undo" takes the whole work back.
     pub fn remember(&mut self) {
-        self.versions.push(Version {
-            tiles: self.data.tiles.clone(),
-            links: self.data.links.clone(),
-        });
+        self.versions.push(Version { tiles: self.data.tiles.clone(), links: self.data.links.clone() });
 
         if self.versions.len() > VERSIONS {
             self.versions.remove(0);
@@ -159,10 +153,7 @@ impl Workspace {
             Entry::Vacant(place) => {
                 let data = read::data(db, id)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))?;
 
-                Ok(place.insert(OpenProject {
-                    data,
-                    versions: Vec::new(),
-                }))
+                Ok(place.insert(OpenProject { data, versions: Vec::new() }))
             }
         }
     }

@@ -8,8 +8,8 @@
 use crate::test_projects::model::{
     External, Link, OutputSection, PageSpan, ProposalState, Source, Tile, TileFields, TileKind,
 };
-use crate::test_projects::test_support::single::create_project;
 use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::test_projects::test_support::single::create_project;
 use crate::test_projects::test_support::single::*;
 use crate::test_projects::test_support::{TestDb, database, load, project_fields, project_with_scheme, scheme_fields};
 
@@ -24,12 +24,7 @@ fn ready() -> (TestDb, i64, i64, i64) {
 }
 
 fn source(document: i64, page: u32, quote: &str) -> Source {
-    Source {
-        document_id: document,
-        page,
-        quote: quote.to_owned(),
-        found: false,
-    }
+    Source { document_id: document, page, quote: quote.to_owned(), found: false }
 }
 
 #[test]
@@ -38,11 +33,7 @@ fn schemes_are_made_in_order_changed_accepted_and_deleted() {
 
     let mut proposed = scheme_fields("6", "ATE");
     proposed.state = ProposalState::Proposed;
-    proposed.pages = Some(PageSpan {
-        document_id: document,
-        first_page: 2,
-        last_page: 3,
-    });
+    proposed.pages = Some(PageSpan { document_id: document, first_page: 2, last_page: 3 });
     let second = create(&test.db, project, &proposed).unwrap();
 
     let listed = of_project(&test.db, project).unwrap();
@@ -74,19 +65,11 @@ fn a_scheme_keeps_its_number_unique_and_its_pages_in_the_project() {
     create(&test.db, project, &scheme_fields("", "Annex B")).unwrap();
 
     let mut past = scheme_fields("7", "Past the end");
-    past.pages = Some(PageSpan {
-        document_id: document,
-        first_page: 2,
-        last_page: 9,
-    });
+    past.pages = Some(PageSpan { document_id: document, first_page: 2, last_page: 9 });
     assert!(matches!(create(&test.db, project, &past), Err(StoreError::Scheme(SchemeError::Invalid("pages", _)))));
 
     let other = load(&test.db, b"%PDF other");
-    past.pages = Some(PageSpan {
-        document_id: other,
-        first_page: 1,
-        last_page: 1,
-    });
+    past.pages = Some(PageSpan { document_id: other, first_page: 1, last_page: 1 });
     assert!(matches!(create(&test.db, project, &past), Err(StoreError::Scheme(SchemeError::Invalid("pages", _)))));
 }
 
@@ -133,10 +116,7 @@ fn inputs_outputs_and_external_inputs_are_stored() {
     let (test, _, scheme, _) = ready();
 
     let mut external = TileFields::new(TileKind::Input, "Flaw remediation procedures");
-    external.external = Some(External {
-        document: "CC Part 3".to_owned(),
-        place: "ALC_FLR.2".to_owned(),
-    });
+    external.external = Some(External { document: "CC Part 3".to_owned(), place: "ALC_FLR.2".to_owned() });
     external.state = ProposalState::Proposed;
 
     let mut output = TileFields::new(TileKind::Output, "Report of ADV");
@@ -170,10 +150,7 @@ fn links_follow_the_rules_and_go_with_their_tiles() {
     // A linked tile keeps its kind.
     let mut changed = TileFields::new(TileKind::Output, "Functional specification");
     changed.state = ProposalState::Accepted;
-    assert!(matches!(
-        update_tile(&test.db, input, &changed),
-        Err(StoreError::Scheme(SchemeError::Invalid("kind", _)))
-    ));
+    assert!(matches!(update_tile(&test.db, input, &changed), Err(StoreError::Scheme(SchemeError::Invalid("kind", _)))));
 
     assert!(delete_link(&test.db, needed).unwrap());
     assert_eq!(links(&test.db, project).unwrap().len(), 1);
@@ -272,16 +249,8 @@ fn the_content_is_replaced_by_an_earlier_one() {
 #[test]
 fn a_content_that_breaks_the_rules_is_not_written() {
     let (test, project, scheme, _) = ready();
-    let input = Tile {
-        id: 1,
-        scheme,
-        fields: TileFields::new(TileKind::Input, "A"),
-    };
-    let output = Tile {
-        id: 2,
-        scheme,
-        fields: TileFields::new(TileKind::Output, "B"),
-    };
+    let input = Tile { id: 1, scheme, fields: TileFields::new(TileKind::Input, "A") };
+    let output = Tile { id: 2, scheme, fields: TileFields::new(TileKind::Output, "B") };
 
     let result = replace_content(&test.db, project, &[input.clone(), output], &[Link { id: 1, from: 1, to: 2 }]);
     assert!(matches!(result, Err(StoreError::Scheme(SchemeError::LinkNotAllowed(..)))));

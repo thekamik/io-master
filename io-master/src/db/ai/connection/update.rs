@@ -75,10 +75,8 @@ pub fn api_key(db: &UserDb, id: i64, key: &ApiKey) -> Result<bool, DbError> {
     };
 
     db.set_secret(&key_name(id), key.expose())?;
-    db.connection().execute(
-        "UPDATE ai_connections SET key_origin = ?1 WHERE id = ?2",
-        params![stored.connection.origin(), id],
-    )?;
+    db.connection()
+        .execute("UPDATE ai_connections SET key_origin = ?1 WHERE id = ?2", params![stored.connection.origin(), id])?;
 
     Ok(true)
 }

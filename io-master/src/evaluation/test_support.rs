@@ -27,7 +27,9 @@ pub fn ready_project(db: &UserDb) -> ReadyProject {
     let (project, scheme) = standard::project_with_scheme(db, document);
 
     let mut open = opened(db, project);
-    let input = tiles::create::tile(db, &mut open, scheme, &TileFields::new(TileKind::Input, "Functional specification")).unwrap();
+    let input =
+        tiles::create::tile(db, &mut open, scheme, &TileFields::new(TileKind::Input, "Functional specification"))
+            .unwrap();
 
     let mut fields = TileFields::new(TileKind::Requirement, "Complete functional specification");
     fields.identifier = "ADV_FSP.4.1E".to_owned();
@@ -47,14 +49,7 @@ pub fn ready_project(db: &UserDb) -> ReadyProject {
 
     assert!(PAGES[1].contains("ADV_FSP.4.1E"));
 
-    ReadyProject {
-        document,
-        project,
-        scheme,
-        input,
-        requirement,
-        output,
-    }
+    ReadyProject { document, project, scheme, input, requirement, output }
 }
 
 /// The fields of an evaluation named `name`.
@@ -136,7 +131,13 @@ pub mod single {
         on_or(db, of_tile(db, tile), "tile", |open| Ok(results::read::proposals(open, tile)))
     }
 
-    pub fn propose(db: &UserDb, tile: i64, field: ResultField, text: &str, model: &str) -> Result<i64, EvaluationError> {
+    pub fn propose(
+        db: &UserDb,
+        tile: i64,
+        field: ResultField,
+        text: &str,
+        model: &str,
+    ) -> Result<i64, EvaluationError> {
         on_or(db, of_tile(db, tile), "tile", |open| results::create::propose(db, open, tile, field, text, model))
     }
 

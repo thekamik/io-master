@@ -62,8 +62,8 @@ pub async fn set_up(
 
     let (running, (account, key)) = blocking(move || {
         let (running, _) = lifecycle::install(&data_dir, role, &name, &password)?;
-        let login = accounts::log_in(&running.system_db, None, &data_dir, &name, &password)
-            .map_err(LifecycleError::Account)?;
+        let login =
+            accounts::log_in(&running.system_db, None, &data_dir, &name, &password).map_err(LifecycleError::Account)?;
 
         Ok((running, login))
     })

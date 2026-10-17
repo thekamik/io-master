@@ -20,9 +20,6 @@ pub fn turns(messages: &[ChatMessage]) -> Vec<Turn> {
     messages
         .iter()
         .filter(|message| message.ending != Ending::Refused && !message.text.is_empty())
-        .map(|message| Turn {
-            speaker: message.speaker,
-            text: message.text.clone(),
-        })
+        .map(|message| Turn { speaker: message.speaker, text: message.text.clone() })
         .collect()
 }

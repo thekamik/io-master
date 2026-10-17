@@ -2,10 +2,10 @@
 
 use super::*;
 
-use crate::standards::model::DocumentFields;
-use crate::test_projects::test_support::{database, project_fields, scheme_fields};
 use crate::db::user::database::UserDb;
+use crate::standards::model::DocumentFields;
 use crate::test_projects::test_support::single::{self as schemes, create_project, on};
+use crate::test_projects::test_support::{database, project_fields, scheme_fields};
 
 /// A standard of six pages: the table of contents on page 1, a
 /// foreword on page 2, so that the printed page numbers are the real
@@ -22,24 +22,15 @@ const PAGES: [&str; 6] = [
 
 fn document(db: &UserDb) -> Document {
     let pages: Vec<String> = PAGES.iter().map(|page| (*page).to_owned()).collect();
-    let fields = DocumentFields {
-        title: "EN 18031-1".to_owned(),
-        part: String::new(),
-        version: "2024".to_owned(),
-    };
+    let fields = DocumentFields { title: "EN 18031-1".to_owned(), part: String::new(), version: "2024".to_owned() };
     let id = standards::create::add(db, &fields, "en18031.pdf", b"%PDF contents", &pages).unwrap();
 
     standards::read::get(db, id).unwrap().unwrap()
 }
 
 fn chapter(number: &str, title: &str, printed_page: Option<u32>) -> Chapter {
-    Chapter {
-        number: number.to_owned(),
-        title: title.to_owned(),
-        printed_page,
-    }
+    Chapter { number: number.to_owned(), title: title.to_owned(), printed_page }
 }
-
 
 /// Applies the chapters to `project`, opened from the database.
 fn apply(
@@ -114,14 +105,7 @@ fn the_chapters_become_proposed_schemes_and_known_numbers_are_left_out() {
     schemes::create(&test.db, project, &scheme_fields("5.1", "Access control")).unwrap();
 
     let chapters = [chapter("5.1", "Access control", Some(2)), chapter("5.2", "Secure update", Some(3))];
-    let spans = [
-        Some(PageSpan {
-            document_id: document.id,
-            first_page: 4,
-            last_page: 5,
-        }),
-        None,
-    ];
+    let spans = [Some(PageSpan { document_id: document.id, first_page: 4, last_page: 5 }), None];
 
     let applied = apply(&test.db, project, &chapters, &spans).unwrap();
 
@@ -138,12 +122,8 @@ fn the_chapters_become_proposed_schemes_and_known_numbers_are_left_out() {
 fn the_prompt_holds_the_instructions_and_the_table() {
     let test = database();
     let document = document(&test.db);
-    let part = Part {
-        document_id: document.id,
-        first_page: 1,
-        last_page: 1,
-        text: "=== Page 1 ===\nContents".to_owned(),
-    };
+    let part =
+        Part { document_id: document.id, first_page: 1, last_page: 1, text: "=== Page 1 ===\nContents".to_owned() };
 
     let text = prompt(DEFAULT_INSTRUCTIONS, &document, &part);
 

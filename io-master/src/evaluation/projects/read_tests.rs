@@ -3,16 +3,16 @@
 
 use super::*;
 
-use crate::standards;
-use crate::standards::model::DocumentError;
-use crate::test_projects::model::TileKind;
-use crate::test_projects::test_support::database;
 use crate::evaluation::journal;
 use crate::evaluation::model::{EvaluationError, ResultField};
 use crate::evaluation::projects::{create as import, delete as remove};
 use crate::evaluation::test_support::single as results;
 use crate::evaluation::test_support::{fields, ready_project};
 use crate::evaluation::workspace::Workspace;
+use crate::standards;
+use crate::standards::model::DocumentError;
+use crate::test_projects::model::TileKind;
+use crate::test_projects::test_support::database;
 
 #[test]
 fn an_evaluation_is_listed_read_and_deleted_with_everything_in_it() {

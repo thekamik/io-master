@@ -49,11 +49,9 @@ pub(super) fn scheme_from_row(row: &Row<'_>) -> rusqlite::Result<Scheme> {
             number: row.get(2)?,
             name: row.get(3)?,
             pages: match (document, first, last) {
-                (Some(document_id), Some(first_page), Some(last_page)) => Some(PageSpan {
-                    document_id,
-                    first_page,
-                    last_page,
-                }),
+                (Some(document_id), Some(first_page), Some(last_page)) => {
+                    Some(PageSpan { document_id, first_page, last_page })
+                }
                 _ => None,
             },
             state: ProposalState::from_name(&state).unwrap_or(ProposalState::Proposed),
@@ -106,10 +104,8 @@ pub(super) fn tile_from_row(row: &Row<'_>) -> rusqlite::Result<Tile> {
             place: row.get(6)?,
             sources: Vec::new(),
             state: ProposalState::from_name(&state).unwrap_or(ProposalState::Proposed),
-            external: external_document.map(|document| External {
-                document,
-                place: external_place.unwrap_or_default(),
-            }),
+            external: external_document
+                .map(|document| External { document, place: external_place.unwrap_or_default() }),
             sections: sections.split(',').filter_map(OutputSection::from_name).collect(),
             instructions: row.get(11)?,
             x: row.get(12)?,
@@ -168,9 +164,5 @@ pub(super) fn write_sources(connection: &Connection, tile: i64, sources: &[Sourc
 
 /// A link from a row of `id, from_tile, to_tile`.
 pub(super) fn link_from_row(row: &Row<'_>) -> rusqlite::Result<Link> {
-    Ok(Link {
-        id: row.get(0)?,
-        from: row.get(1)?,
-        to: row.get(2)?,
-    })
+    Ok(Link { id: row.get(0)?, from: row.get(1)?, to: row.get(2)? })
 }

@@ -39,10 +39,7 @@ fn a_damaged_envelope_is_refused() {
         assert!(matches!(SealedEnvelope::from_bytes(bytes), Err(TpmError::DamagedEnvelope)));
     }
 
-    let envelope = SealedEnvelope {
-        public: vec![1, 2, 3],
-        private: vec![4, 5],
-    };
+    let envelope = SealedEnvelope { public: vec![1, 2, 3], private: vec![4, 5] };
 
     assert_eq!(SealedEnvelope::from_bytes(&envelope.to_bytes()).unwrap(), envelope);
 }

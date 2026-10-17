@@ -25,8 +25,8 @@
 //! certificate is left out as well (long, and of no use here).
 
 use crate::ai::api::connection::{
-    API_KEY, AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, Field, MESSAGES, MODEL, RESERVED_HEADERS, ROLE,
-    SYSTEM, TEXT,
+    API_KEY, AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, Field, MESSAGES, MODEL, RESERVED_HEADERS, ROLE, SYSTEM,
+    TEXT,
 };
 
 /// Headers whose values never hold a secret, so they are shown.
@@ -195,8 +195,7 @@ fn explanation(field: Field) -> Explanation {
         ),
         Field::RefusedReasons => (
             "Reasons for \"declined\"",
-            "The stop reasons that mean the model or the safety checks of the service declined to answer."
-                .to_owned(),
+            "The stop reasons that mean the model or the safety checks of the service declined to answer.".to_owned(),
             "A comma-separated list of the exact values the service uses. Any other reason counts as a \
              complete reply."
                 .to_owned(),
@@ -237,12 +236,7 @@ fn explanation(field: Field) -> Explanation {
         ),
     };
 
-    Explanation {
-        title,
-        meaning,
-        rules,
-        example,
-    }
+    Explanation { title, meaning, rules, example }
 }
 
 /// The headers as they may be shown: the names, and in the values
@@ -259,7 +253,8 @@ fn headers_shown(headers: &str) -> String {
                 return format!("{}: {}", name.trim(), value.trim());
             }
 
-            let placeholders: Vec<&str> = [API_KEY, MODEL].into_iter().filter(|placeholder| value.contains(placeholder)).collect();
+            let placeholders: Vec<&str> =
+                [API_KEY, MODEL].into_iter().filter(|placeholder| value.contains(placeholder)).collect();
 
             if placeholders.is_empty() {
                 format!("{}: (value not shown)", name.trim())
@@ -295,13 +290,21 @@ fn context(field: Field, connection: &Connection) -> Vec<(&'static str, String)>
     // The field itself is shown as "this field now", not here.
     let mut lines: Vec<(&'static str, String)> = lines
         .into_iter()
-        .filter(|(name, _)| !matches!((field, *name), (Field::Url, "Endpoint") | (Field::Model, "Model") | (Field::Answer, "Answer")))
+        .filter(|(name, _)| {
+            !matches!((field, *name), (Field::Url, "Endpoint") | (Field::Model, "Model") | (Field::Answer, "Answer"))
+        })
         .collect();
 
     let request = matches!(
         field,
-        Field::Url | Field::Model | Field::Headers | Field::Body | Field::MessageTemplate
-            | Field::UserRole | Field::ModelRole | Field::SystemRole
+        Field::Url
+            | Field::Model
+            | Field::Headers
+            | Field::Body
+            | Field::MessageTemplate
+            | Field::UserRole
+            | Field::ModelRole
+            | Field::SystemRole
     );
 
     if request {

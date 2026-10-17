@@ -186,10 +186,7 @@ pub fn locate(db: &UserDb, document: &Document, after: u32, chapters: &[Chapter]
         .collect();
     offsets.sort_unstable();
 
-    let offset = offsets
-        .chunk_by(|a, b| a == b)
-        .max_by_key(|run| run.len())
-        .and_then(|run| run.first().copied());
+    let offset = offsets.chunk_by(|a, b| a == b).max_by_key(|run| run.len()).and_then(|run| run.first().copied());
 
     Ok(chapters
         .iter()
@@ -233,8 +230,7 @@ pub fn apply(
     spans: &[Option<PageSpan>],
 ) -> Result<AppliedChapters, StoreError> {
     let mut applied = AppliedChapters::default();
-    let numbers: Vec<String> =
-        open.data().schemes.iter().map(|scheme| normalize(&scheme.fields.number)).collect();
+    let numbers: Vec<String> = open.data().schemes.iter().map(|scheme| normalize(&scheme.fields.number)).collect();
 
     for (chapter, span) in chapters.iter().zip(spans) {
         if !chapter.number.is_empty() && numbers.contains(&normalize(&chapter.number)) {
@@ -298,11 +294,7 @@ pub fn question(
         .ok_or_else(|| SchemeError::Invalid("pages", "the pages of the table of contents hold no text".to_owned()))?;
     let turns = completions::single(prompt(instructions, &stored, &part));
 
-    Ok(Question {
-        document: stored,
-        part,
-        turns,
-    })
+    Ok(Question { document: stored, part, turns })
 }
 
 /// What the answer about a table of contents came to.

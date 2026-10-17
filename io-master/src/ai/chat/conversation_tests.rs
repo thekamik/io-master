@@ -3,9 +3,9 @@
 use super::*;
 
 use crate::ai::api::api_key::ApiKey;
+use crate::ai::api::completions::Speaker;
 use crate::ai::api::connection::Connection;
 use crate::db::ai::connection::{create as connections_create, update as connections_update};
-use crate::ai::api::completions::Speaker;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
 use crate::random::random::fill_random;
@@ -45,13 +45,7 @@ fn a_first_message_starts_a_chat() {
     assert_eq!(prepared.title, "What is ADV_FSP?");
     assert_eq!(prepared.model.connection.model, "llama");
     assert_eq!(prepared.model.api_key.unwrap().expose(), "sk-test");
-    assert_eq!(
-        prepared.turns,
-        [Turn {
-            speaker: Speaker::Evaluator,
-            text: "What is ADV_FSP?".to_owned()
-        }]
-    );
+    assert_eq!(prepared.turns, [Turn { speaker: Speaker::Evaluator, text: "What is ADV_FSP?".to_owned() }]);
     assert_eq!(chats::list(&db).unwrap().len(), 1);
 }
 
@@ -74,10 +68,7 @@ fn a_connection_without_a_key_header_needs_no_key() {
     let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
     let db = user_db::create(directory.path(), 1, &key).unwrap();
 
-    let without = Connection {
-        headers: String::new(),
-        ..with_key_header()
-    };
+    let without = Connection { headers: String::new(), ..with_key_header() };
     connections_create::connection(&db, &without).unwrap();
 
     assert!(prepare(&db, None, "Hello").unwrap().model.api_key.is_none());
@@ -107,9 +98,7 @@ fn a_connection_changed_by_hand_is_not_used() {
     let directory = TempDir::new();
     let db = database(&directory, true);
 
-    db.connection_for_tests()
-        .execute("UPDATE ai_connections SET url = 'http://192.168.1.10/x'", [])
-        .unwrap();
+    db.connection_for_tests().execute("UPDATE ai_connections SET url = 'http://192.168.1.10/x'", []).unwrap();
 
     assert!(matches!(prepare(&db, None, "Hello"), Err(SendError::BrokenConnection(..))));
     assert!(chats::list(&db).unwrap().is_empty());

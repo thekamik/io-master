@@ -15,13 +15,7 @@ fn database(directory: &TempDir) -> UserDb {
 }
 
 fn reply(text: &str, end: ReplyEnd) -> Reply {
-    Reply {
-        text: text.to_owned(),
-        model: Some("local-model".to_owned()),
-        input_tokens: 10,
-        output_tokens: 5,
-        end,
-    }
+    Reply { text: text.to_owned(), model: Some("local-model".to_owned()), input_tokens: 10, output_tokens: 5, end }
 }
 
 #[test]
@@ -78,7 +72,8 @@ fn unfinished_replies_are_kept_with_their_ending() {
 
     add_reply(&db, id, &reply("half", ReplyEnd::Cancelled)).unwrap();
     add_reply(&db, id, &reply("long", ReplyEnd::Finished(StopReason::Cut))).unwrap();
-    add_reply(&db, id, &reply("partial", ReplyEnd::Failed(AiError::ServiceFailed(503, "overloaded".to_owned())))).unwrap();
+    add_reply(&db, id, &reply("partial", ReplyEnd::Failed(AiError::ServiceFailed(503, "overloaded".to_owned()))))
+        .unwrap();
     add_reply(&db, id, &reply("dropped", ReplyEnd::Finished(StopReason::Refused))).unwrap();
 
     let messages = messages(&db, id).unwrap();
@@ -86,7 +81,10 @@ fn unfinished_replies_are_kept_with_their_ending() {
 
     assert_eq!(endings, [&Ending::Stopped, &Ending::Cut, &Ending::Failed, &Ending::Refused]);
     assert_eq!(messages[3].text, "partial");
-    assert_eq!(messages[3].note.as_deref(), Some(AiError::ServiceFailed(503, "overloaded".to_owned()).to_string().as_str()));
+    assert_eq!(
+        messages[3].note.as_deref(),
+        Some(AiError::ServiceFailed(503, "overloaded".to_owned()).to_string().as_str())
+    );
 
     // The text of a refused reply is not kept, and not sent again.
     assert_eq!(messages[4].text, "");

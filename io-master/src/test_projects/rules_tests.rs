@@ -34,10 +34,7 @@ fn other_links_are_refused() {
     let tiles = tiles();
 
     for (from, to) in [(1, 3), (1, 4), (3, 2), (3, 1)] {
-        assert!(
-            matches!(check_link(&tiles, &[], from, to), Err(SchemeError::LinkNotAllowed(..))),
-            "{from} -> {to}"
-        );
+        assert!(matches!(check_link(&tiles, &[], from, to), Err(SchemeError::LinkNotAllowed(..))), "{from} -> {to}");
     }
 
     assert_eq!(check_link(&tiles, &[], 1, 99), Err(SchemeError::NotFound("tile")));
@@ -67,10 +64,7 @@ fn a_tile_needs_a_title_and_keeps_to_its_kind() {
     tile.title = "Protect stored passwords".to_owned();
     assert_eq!(tile.check(), Ok(()));
 
-    tile.external = Some(External {
-        document: "CC Part 3".to_owned(),
-        place: "ALC_FLR.2".to_owned(),
-    });
+    tile.external = Some(External { document: "CC Part 3".to_owned(), place: "ALC_FLR.2".to_owned() });
     assert!(matches!(tile.check(), Err(SchemeError::Invalid("external", _))));
 
     let mut input = TileFields::new(TileKind::Input, "Flaw remediation procedures");
@@ -94,12 +88,7 @@ fn an_output_has_sections() {
 #[test]
 fn sources_are_checked() {
     let mut tile = TileFields::new(TileKind::Requirement, "R");
-    let source = Source {
-        document_id: 1,
-        page: 3,
-        quote: "The TOE shall".to_owned(),
-        found: false,
-    };
+    let source = Source { document_id: 1, page: 3, quote: "The TOE shall".to_owned(), found: false };
 
     tile.sources = vec![Source { page: 0, ..source.clone() }];
     assert!(matches!(tile.check(), Err(SchemeError::Invalid("sources", _))));
@@ -144,12 +133,8 @@ fn a_project_needs_a_name() {
 
 #[test]
 fn a_scheme_needs_a_name_and_pages_in_order() {
-    let mut scheme = SchemeFields {
-        number: "9.1".to_owned(),
-        name: String::new(),
-        pages: None,
-        state: ProposalState::Accepted,
-    };
+    let mut scheme =
+        SchemeFields { number: "9.1".to_owned(), name: String::new(), pages: None, state: ProposalState::Accepted };
 
     assert!(matches!(scheme.check(), Err(SchemeError::Invalid("name", _))));
 
@@ -157,18 +142,10 @@ fn a_scheme_needs_a_name_and_pages_in_order() {
     assert_eq!(scheme.check(), Ok(()));
 
     for (first_page, last_page) in [(0, 3), (5, 4)] {
-        scheme.pages = Some(PageSpan {
-            document_id: 1,
-            first_page,
-            last_page,
-        });
+        scheme.pages = Some(PageSpan { document_id: 1, first_page, last_page });
         assert!(matches!(scheme.check(), Err(SchemeError::Invalid("pages", _))), "{first_page}-{last_page}");
     }
 
-    scheme.pages = Some(PageSpan {
-        document_id: 1,
-        first_page: 4,
-        last_page: 4,
-    });
+    scheme.pages = Some(PageSpan { document_id: 1, first_page: 4, last_page: 4 });
     assert_eq!(scheme.check(), Ok(()));
 }

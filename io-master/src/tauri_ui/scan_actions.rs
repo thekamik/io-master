@@ -32,11 +32,7 @@ pub async fn save_scan_settings(
     types: Vec<String>,
     columns: Vec<String>,
 ) -> Result<ScanView, UiError> {
-    let types = types
-        .iter()
-        .filter(|name| !name.is_empty())
-        .map(|name| PortType::from_base_name(name))
-        .collect();
+    let types = types.iter().filter(|name| !name.is_empty()).map(|name| PortType::from_base_name(name)).collect();
     let columns = columns.iter().filter_map(|key| PortProperty::from_key(key)).collect();
     let settings = ScanSettings::new(all_types, types, columns);
 

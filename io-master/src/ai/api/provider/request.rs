@@ -73,10 +73,7 @@ fn build(connection: &Checked, turns: &[Turn], key: &str) -> Request {
         .headers
         .iter()
         .map(|(name, value)| {
-            (
-                name.clone(),
-                Zeroizing::new(value.replace(API_KEY, key).replace(MODEL, &connection.model)),
-            )
+            (name.clone(), Zeroizing::new(value.replace(API_KEY, key).replace(MODEL, &connection.model)))
         })
         .collect();
 
@@ -98,10 +95,7 @@ fn fill(template: &Value, connection: &Checked, messages: &Value) -> Value {
         },
         Value::Array(items) => Value::Array(items.iter().map(|item| fill(item, connection, messages)).collect()),
         Value::Object(fields) => Value::Object(
-            fields
-                .iter()
-                .map(|(name, value)| (name.clone(), fill(value, connection, messages)))
-                .collect(),
+            fields.iter().map(|(name, value)| (name.clone(), fill(value, connection, messages))).collect(),
         ),
         other => other.clone(),
     }
@@ -159,12 +153,9 @@ fn message(template: &Value, role: &str, text: &str) -> Value {
         Value::String(placeholder) if placeholder == ROLE => Value::String(role.to_owned()),
         Value::String(placeholder) if placeholder == TEXT => Value::String(text.to_owned()),
         Value::Array(items) => Value::Array(items.iter().map(|item| message(item, role, text)).collect()),
-        Value::Object(fields) => Value::Object(
-            fields
-                .iter()
-                .map(|(name, value)| (name.clone(), message(value, role, text)))
-                .collect(),
-        ),
+        Value::Object(fields) => {
+            Value::Object(fields.iter().map(|(name, value)| (name.clone(), message(value, role, text))).collect())
+        }
         other => other.clone(),
     }
 }

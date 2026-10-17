@@ -106,11 +106,8 @@ pub fn export(db: &UserDb, project: i64, with_pdfs: bool) -> Result<Option<Vec<u
         })
         .collect();
 
-    let links: Vec<Value> = data
-        .links
-        .iter()
-        .map(|link| json!({"from": key_of_tile(link.from), "to": key_of_tile(link.to)}))
-        .collect();
+    let links: Vec<Value> =
+        data.links.iter().map(|link| json!({"from": key_of_tile(link.from), "to": key_of_tile(link.to)})).collect();
 
     let file = json!({
         "format": FORMAT,

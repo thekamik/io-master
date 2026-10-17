@@ -42,7 +42,9 @@ pub(super) fn check(db: &UserDb, open: &OpenProject, id: Option<i64>, fields: &S
             .iter()
             .any(|other| Some(other.id) != id && other.fields.number.trim().eq_ignore_ascii_case(number))
     {
-        return Err(SchemeError::Invalid("number", format!("another scheme of the project has the number {number}")).into());
+        return Err(
+            SchemeError::Invalid("number", format!("another scheme of the project has the number {number}")).into()
+        );
     }
 
     Ok(())
@@ -50,11 +52,7 @@ pub(super) fn check(db: &UserDb, open: &OpenProject, id: Option<i64>, fields: &S
 
 /// The fields as the database keeps them (the names trimmed).
 pub(super) fn stored(fields: &SchemeFields) -> SchemeFields {
-    SchemeFields {
-        number: fields.number.trim().to_owned(),
-        name: fields.name.trim().to_owned(),
-        ..fields.clone()
-    }
+    SchemeFields { number: fields.number.trim().to_owned(), name: fields.name.trim().to_owned(), ..fields.clone() }
 }
 
 /// Adds a scheme at the end of the list of the open project; returns
@@ -65,11 +63,7 @@ pub fn scheme(db: &UserDb, open: &mut OpenProject, fields: &SchemeFields) -> Res
     let project = open.data().project.id;
     let id = store::scheme(db, project, fields)?;
 
-    open.data_mut().schemes.push(Scheme {
-        id,
-        project,
-        fields: stored(fields),
-    });
+    open.data_mut().schemes.push(Scheme { id, project, fields: stored(fields) });
 
     Ok(id)
 }

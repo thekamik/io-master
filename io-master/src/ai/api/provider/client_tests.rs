@@ -20,10 +20,7 @@ fn key() -> ApiKey {
 }
 
 fn evaluator(text: &str) -> Turn {
-    Turn {
-        speaker: Speaker::Evaluator,
-        text: text.to_owned(),
-    }
+    Turn { speaker: Speaker::Evaluator, text: text.to_owned() }
 }
 
 /// Asks for a reply and collects the pieces sent meanwhile.
@@ -182,19 +179,13 @@ async fn only_the_ca_certificate_of_the_connection_is_trusted() {
     let other = FakeService::start(FakeAnswer::Json(200, "{}".to_owned())).await;
 
     // The authority of another service.
-    let foreign = Connection {
-        ca_certificate: other.ca_pem.clone(),
-        ..completions(&service)
-    };
+    let foreign = Connection { ca_certificate: other.ca_pem.clone(), ..completions(&service) };
     let (reply, _) = reply_of(&checked(foreign), &[evaluator("Hi")]).await;
     assert!(matches!(reply.end, ReplyEnd::Failed(AiError::NoConnection(_))));
 
     // Without a certificate of its own, the system's are used, and
     // they do not know the test authority.
-    let system = Connection {
-        ca_certificate: String::new(),
-        ..completions(&service)
-    };
+    let system = Connection { ca_certificate: String::new(), ..completions(&service) };
     let (reply, _) = reply_of(&checked(system), &[evaluator("Hi")]).await;
     assert!(matches!(reply.end, ReplyEnd::Failed(AiError::NoConnection(_))));
 
@@ -280,10 +271,7 @@ async fn a_failed_check_shows_what_the_service_said() {
 
 #[tokio::test]
 async fn without_a_model_named_by_the_service_the_connection_names_it() {
-    let events = vec![
-        data(&json!({"choices": [{"delta": {"content": "x"}}]}).to_string()),
-        data("[DONE]"),
-    ];
+    let events = vec![data(&json!({"choices": [{"delta": {"content": "x"}}]}).to_string()), data("[DONE]")];
     let service = FakeService::start(FakeAnswer::Stream(events)).await;
 
     let (reply, _) = reply_of(&checked(completions(&service)), &[evaluator("Hi")]).await;

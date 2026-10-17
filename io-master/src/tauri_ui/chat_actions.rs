@@ -31,11 +31,7 @@ pub async fn open_chat(state: &UiState, chat_id: i64) -> Result<ChatView, UiErro
         let title = chats::title(db, chat_id)?.ok_or_else(|| UiError::Invalid("the chat does not exist".to_owned()))?;
         let messages = chats::messages(db, chat_id)?;
 
-        Ok(ChatView {
-            id: chat_id,
-            title,
-            messages: messages.into_iter().map(MessageView::from).collect(),
-        })
+        Ok(ChatView { id: chat_id, title, messages: messages.into_iter().map(MessageView::from).collect() })
     })
     .await
 }
@@ -57,12 +53,8 @@ pub async fn send_message(
     text: String,
     events: impl Fn(ReplyEvent) -> bool + Send,
 ) -> Result<(), UiError> {
-    let Prepared {
-        chat_id,
-        title,
-        model,
-        turns,
-    } = with_user_db(state, move |db| Ok(conversation::prepare(db, chat_id, &text)?)).await?;
+    let Prepared { chat_id, title, model, turns } =
+        with_user_db(state, move |db| Ok(conversation::prepare(db, chat_id, &text)?)).await?;
 
     events(ReplyEvent::Chat { id: chat_id, title });
 
@@ -87,10 +79,7 @@ pub async fn send_message(
         notice = Some(notice.map(|before| format!("{before} {text}")).unwrap_or(text));
     }
 
-    events(ReplyEvent::End {
-        ending: ending.name(),
-        notice,
-    });
+    events(ReplyEvent::End { ending: ending.name(), notice });
 
     Ok(())
 }

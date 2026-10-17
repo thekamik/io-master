@@ -129,10 +129,7 @@ pub fn outcome(reply: &Reply, stop: &watch::Receiver<bool>) -> Outcome {
 /// One message of the evaluator, as the whole conversation of a
 /// question of a long work.
 pub fn single(message: String) -> Vec<Turn> {
-    vec![Turn {
-        speaker: Speaker::Evaluator,
-        text: message,
-    }]
+    vec![Turn { speaker: Speaker::Evaluator, text: message }]
 }
 
 /// How a reply ended, as the journal keeps it: complete, cut, refused,

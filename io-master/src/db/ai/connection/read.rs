@@ -22,15 +22,7 @@ pub fn list(db: &UserDb) -> Result<Vec<Stored>, DbError> {
         .prepare(&format!("SELECT {CONNECTION_COLUMNS} FROM ai_connections ORDER BY name COLLATE NOCASE, id"))?;
     let rows = statement.query_map([], connection_from_row)?.collect::<Result<Vec<_>, _>>()?;
 
-    rows.into_iter()
-        .map(|(id, connection)| {
-            Ok(Stored {
-                id,
-                connection,
-                has_key: has_key(db, id)?,
-            })
-        })
-        .collect()
+    rows.into_iter().map(|(id, connection)| Ok(Stored { id, connection, has_key: has_key(db, id)? })).collect()
 }
 
 /// One connection, or `None` when there is no such.
@@ -41,11 +33,7 @@ pub fn get(db: &UserDb, id: i64) -> Result<Option<Stored>, DbError> {
         .optional()?;
 
     match row {
-        Some((id, connection)) => Ok(Some(Stored {
-            id,
-            connection,
-            has_key: has_key(db, id)?,
-        })),
+        Some((id, connection)) => Ok(Some(Stored { id, connection, has_key: has_key(db, id)? })),
         None => Ok(None),
     }
 }
@@ -82,7 +70,5 @@ pub fn active(db: &UserDb) -> Result<Option<i64>, DbError> {
 /// A stored text that is no longer a valid key (impossible unless
 /// the database was changed by hand) counts as no key.
 pub fn api_key(db: &UserDb, id: i64) -> Result<Option<ApiKey>, DbError> {
-    Ok(db
-        .secret(&key_name(id))?
-        .and_then(|text| ApiKey::new(text.as_str().to_owned()).ok()))
+    Ok(db.secret(&key_name(id))?.and_then(|text| ApiKey::new(text.as_str().to_owned()).ok()))
 }

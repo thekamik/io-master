@@ -18,8 +18,8 @@
 use serde_json::Value;
 
 use super::ai_error::{AiError, shorten};
-use crate::ai::api::connection::Checked;
 use super::sse::SseEvent;
+use crate::ai::api::connection::Checked;
 
 /// Why the model stopped writing, as the stop reasons of the
 /// connection sort the reason the service gave.
@@ -80,9 +80,8 @@ impl<'a> AnswerReader<'a> {
             return Ok(None);
         }
 
-        let value: Value = serde_json::from_str(data).map_err(|_| {
-            AiError::UnexpectedAnswer(format!("an event of the stream is not JSON: {}", shorten(data)))
-        })?;
+        let value: Value = serde_json::from_str(data)
+            .map_err(|_| AiError::UnexpectedAnswer(format!("an event of the stream is not JSON: {}", shorten(data))))?;
 
         self.value(&value)
     }

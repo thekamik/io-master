@@ -312,10 +312,7 @@ impl std::error::Error for ConnectionError {}
 
 /// A connection error of `field`.
 fn refuse<T>(field: Field, reason: impl Into<String>) -> Result<T, ConnectionError> {
-    Err(ConnectionError {
-        field,
-        reason: reason.into(),
-    })
+    Err(ConnectionError { field, reason: reason.into() })
 }
 
 /// A checked connection: everything a request is made from.
@@ -434,10 +431,7 @@ impl Connection {
 
 /// A connection error, as a value.
 fn error(field: Field, reason: &str) -> ConnectionError {
-    ConnectionError {
-        field,
-        reason: reason.to_owned(),
-    }
+    ConnectionError { field, reason: reason.to_owned() }
 }
 
 /// The text without spaces around it; `None` when nothing is left.
@@ -456,9 +450,7 @@ fn list(text: &str) -> Vec<String> {
 /// An optional path.
 fn path(field: Field, text: &str) -> Result<Option<JsonPath>, ConnectionError> {
     match optional(text) {
-        Some(text) => JsonPath::parse(&text)
-            .map(Some)
-            .map_err(|problem| error(field, &format!("{problem}"))),
+        Some(text) => JsonPath::parse(&text).map(Some).map_err(|problem| error(field, &format!("{problem}"))),
         None => Ok(None),
     }
 }
@@ -647,8 +639,8 @@ fn check_body(text: &str) -> Result<Value, ConnectionError> {
         return refuse(Field::Body, "the body is longer than 64 KiB");
     }
 
-    let body: Value =
-        serde_json::from_str(text).map_err(|problem| error(Field::Body, &format!("the body is not valid JSON: {problem}")))?;
+    let body: Value = serde_json::from_str(text)
+        .map_err(|problem| error(Field::Body, &format!("the body is not valid JSON: {problem}")))?;
 
     check_placeholders(&body)?;
 
@@ -695,10 +687,7 @@ fn check_whole(value: &Value, field: Field, allowed: &[&str], named: &str) -> Re
             } else if text.contains(API_KEY) {
                 refuse(field, "the API key may be used only in a header, never in the body")
             } else {
-                refuse(
-                    field,
-                    format!("\"{text}\": here a placeholder must be the whole text, one of {named}"),
-                )
+                refuse(field, format!("\"{text}\": here a placeholder must be the whole text, one of {named}"))
             }
         }
         Value::Array(items) => items.iter().try_for_each(|item| check_whole(item, field, allowed, named)),

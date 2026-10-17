@@ -27,12 +27,12 @@ use super::account_actions;
 use super::ai_config_actions;
 use super::chat_actions;
 use super::error::UiError;
+use super::project_actions;
 use super::scan_actions;
+use super::scheme_actions;
 use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
 use super::serializer::app_view::AppView;
 use super::serializer::chat_view::{ChatSummaryView, ChatView, ReplyEvent};
-use super::project_actions;
-use super::scheme_actions;
 use super::serializer::project_view::{ProjectDataView, ProjectForm, ProjectView, SchemeForm};
 use super::serializer::scan_view::ScanView;
 use super::serializer::scheme_view::{AnalysisEvent, PageRange, SchemeDataView, TileForm};
@@ -126,7 +126,11 @@ pub async fn delete_ai_key(state: State<'_, UiState>, id: i64) -> Result<AiConfi
 /// The instruction for a chatbot that helps to fill one field of the
 /// form (`connection`, as it is now).
 #[tauri::command]
-pub fn ai_field_instruction(state: State<'_, UiState>, field: String, connection: ConnectionForm) -> Result<String, UiError> {
+pub fn ai_field_instruction(
+    state: State<'_, UiState>,
+    field: String,
+    connection: ConnectionForm,
+) -> Result<String, UiError> {
     ai_config_actions::field_instruction(&state, &field, connection)
 }
 
@@ -223,11 +227,8 @@ pub async fn load_documents(
     .await
     .map_err(|error| UiError::Failed(format!("the dialog failed: {error}")))?;
 
-    let paths: Vec<std::path::PathBuf> = chosen
-        .unwrap_or_default()
-        .into_iter()
-        .filter_map(|file| file.into_path().ok())
-        .collect();
+    let paths: Vec<std::path::PathBuf> =
+        chosen.unwrap_or_default().into_iter().filter_map(|file| file.into_path().ok()).collect();
 
     if paths.is_empty() {
         return Ok(());
@@ -243,7 +244,11 @@ pub fn stop_work(state: State<'_, UiState>) {
 }
 
 #[tauri::command]
-pub async fn update_document(state: State<'_, UiState>, id: i64, document: DocumentForm) -> Result<DocumentView, UiError> {
+pub async fn update_document(
+    state: State<'_, UiState>,
+    id: i64,
+    document: DocumentForm,
+) -> Result<DocumentView, UiError> {
     standard_actions::update(&state, id, document).await
 }
 
@@ -286,7 +291,11 @@ pub async fn open_project(state: State<'_, UiState>, id: i64) -> Result<ProjectD
 }
 
 #[tauri::command]
-pub async fn update_project(state: State<'_, UiState>, id: i64, project: ProjectForm) -> Result<ProjectDataView, UiError> {
+pub async fn update_project(
+    state: State<'_, UiState>,
+    id: i64,
+    project: ProjectForm,
+) -> Result<ProjectDataView, UiError> {
     project_actions::update(&state, id, project).await
 }
 
@@ -301,7 +310,11 @@ pub async fn delete_project(state: State<'_, UiState>, id: i64) -> Result<(), Ui
 }
 
 #[tauri::command]
-pub async fn create_scheme(state: State<'_, UiState>, project: i64, scheme: SchemeForm) -> Result<ProjectDataView, UiError> {
+pub async fn create_scheme(
+    state: State<'_, UiState>,
+    project: i64,
+    scheme: SchemeForm,
+) -> Result<ProjectDataView, UiError> {
     project_actions::create_scheme(&state, project, scheme).await
 }
 
@@ -311,12 +324,20 @@ pub async fn update_scheme(state: State<'_, UiState>, id: i64, scheme: SchemeFor
 }
 
 #[tauri::command]
-pub async fn accept_schemes(state: State<'_, UiState>, project: i64, ids: Vec<i64>) -> Result<ProjectDataView, UiError> {
+pub async fn accept_schemes(
+    state: State<'_, UiState>,
+    project: i64,
+    ids: Vec<i64>,
+) -> Result<ProjectDataView, UiError> {
     project_actions::accept_schemes(&state, project, ids).await
 }
 
 #[tauri::command]
-pub async fn delete_schemes(state: State<'_, UiState>, project: i64, ids: Vec<i64>) -> Result<ProjectDataView, UiError> {
+pub async fn delete_schemes(
+    state: State<'_, UiState>,
+    project: i64,
+    ids: Vec<i64>,
+) -> Result<ProjectDataView, UiError> {
     project_actions::delete_schemes(&state, project, ids).await
 }
 
@@ -336,7 +357,12 @@ pub async fn propose_schemes(
 /// Asks where to save the file of a project, and writes it; `false`
 /// when the user closed the dialog.
 #[tauri::command]
-pub async fn export_project(app: AppHandle, state: State<'_, UiState>, id: i64, with_pdfs: bool) -> Result<bool, UiError> {
+pub async fn export_project(
+    app: AppHandle,
+    state: State<'_, UiState>,
+    id: i64,
+    with_pdfs: bool,
+) -> Result<bool, UiError> {
     let name = project_actions::open(&state, id).await?.project.name;
     let file_name: String = name
         .chars()
@@ -418,7 +444,12 @@ pub async fn move_tile(state: State<'_, UiState>, id: i64, x: f64, y: f64) -> Re
 /// Moves tiles to the scheme `to`; gives back the scheme `scheme`
 /// shown.
 #[tauri::command]
-pub async fn move_tiles(state: State<'_, UiState>, scheme: i64, ids: Vec<i64>, to: i64) -> Result<SchemeDataView, UiError> {
+pub async fn move_tiles(
+    state: State<'_, UiState>,
+    scheme: i64,
+    ids: Vec<i64>,
+    to: i64,
+) -> Result<SchemeDataView, UiError> {
     scheme_actions::move_tiles(&state, scheme, ids, to).await
 }
 
@@ -455,7 +486,11 @@ pub async fn analysis_instructions(state: State<'_, UiState>, which: String) -> 
 
 /// Stores the instructions `which`; empty text: the default.
 #[tauri::command]
-pub async fn save_analysis_instructions(state: State<'_, UiState>, which: String, text: String) -> Result<String, UiError> {
+pub async fn save_analysis_instructions(
+    state: State<'_, UiState>,
+    which: String,
+    text: String,
+) -> Result<String, UiError> {
     scheme_actions::save_instructions(&state, which, text).await
 }
 

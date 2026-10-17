@@ -25,13 +25,13 @@
 
 use std::fmt;
 use std::fs;
-use std::os::unix::fs::DirBuilderExt;
 use std::io;
+use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
 
 use crate::accounts::accounts::{self, Account, AccountError};
-use crate::db::error::DbError;
 use crate::db::encryption::keys;
+use crate::db::error::DbError;
 use crate::db::system::database::{self as system_db, SystemDb};
 use crate::db::user::database as user_db;
 use crate::random::random::fill_random;
@@ -111,15 +111,9 @@ pub fn open(data_dir: &Path) -> Result<Opened, LifecycleError> {
     }
 
     let system_db = SystemDb::open(data_dir)?;
-    let installation = system_db
-        .installation()
-        .map_err(|error| LifecycleError::Damaged(error.to_string()))?;
+    let installation = system_db.installation().map_err(|error| LifecycleError::Damaged(error.to_string()))?;
 
-    Ok(Opened::Installed(Running {
-        installation,
-        system_db,
-        device_secret: None,
-    }))
+    Ok(Opened::Installed(Running { installation, system_db, device_secret: None }))
 }
 
 /// Makes the installation at the first start: the system database
@@ -141,17 +135,11 @@ pub fn install(
         .recursive(true)
         .mode(0o700)
         .create(data_dir)
-        .map_err(|source| DbError::Io {
-            path: data_dir.to_owned(),
-            source,
-        })?;
+        .map_err(|source| DbError::Io { path: data_dir.to_owned(), source })?;
 
     let mut id: InstallationId = [0; installation::ID_LENGTH];
 
-    fill_random(&mut id).map_err(|source| DbError::Io {
-        path: data_dir.to_owned(),
-        source,
-    })?;
+    fill_random(&mut id).map_err(|source| DbError::Io { path: data_dir.to_owned(), source })?;
 
     let installation = Installation { id, role };
     let system_db = SystemDb::create(data_dir, &installation)?;
@@ -169,14 +157,7 @@ pub fn install(
         }
     };
 
-    Ok((
-        Running {
-            installation,
-            system_db,
-            device_secret: None,
-        },
-        account,
-    ))
+    Ok((Running { installation, system_db, device_secret: None }, account))
 }
 
 /// Removes the installation: the system database and the databases
@@ -200,10 +181,9 @@ pub fn uninstall(data_dir: &Path) -> Result<(), LifecycleError> {
     let emulator_state = data_dir.join(EMULATOR_DIRECTORY);
 
     match fs::remove_dir_all(&emulator_state) {
-        Err(source) if source.kind() != io::ErrorKind::NotFound => Err(LifecycleError::Db(DbError::Io {
-            path: emulator_state,
-            source,
-        })),
+        Err(source) if source.kind() != io::ErrorKind::NotFound => {
+            Err(LifecycleError::Db(DbError::Io { path: emulator_state, source }))
+        }
         _ => Ok(()),
     }
 }

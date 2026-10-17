@@ -99,11 +99,7 @@ impl Emulator {
                 _ => TpmError::Emulator(format!("cannot start swtpm: {error}")),
             })?;
 
-        let mut emulator = Emulator {
-            process,
-            port,
-            state_directory,
-        };
+        let mut emulator = Emulator { process, port, state_directory };
 
         emulator.wait_until_ready()?;
 
@@ -179,10 +175,8 @@ fn free_port_pair() -> io::Result<u16> {
 fn stop_leftover(state_directory: &Path) {
     let pid_file = state_directory.join(PID_FILE);
 
-    let Some(pid) = fs::read_to_string(&pid_file)
-        .ok()
-        .and_then(|text| text.trim().parse::<i32>().ok())
-        .and_then(Pid::from_raw)
+    let Some(pid) =
+        fs::read_to_string(&pid_file).ok().and_then(|text| text.trim().parse::<i32>().ok()).and_then(Pid::from_raw)
     else {
         return;
     };
@@ -192,8 +186,7 @@ fn stop_leftover(state_directory: &Path) {
     let command_line = fs::read(format!("/proc/{}/cmdline", pid.as_raw_nonzero())).unwrap_or_default();
     let command_line = String::from_utf8_lossy(&command_line);
 
-    let is_ours = command_line.starts_with("swtpm")
-        && command_line.contains(&state_directory.display().to_string());
+    let is_ours = command_line.starts_with("swtpm") && command_line.contains(&state_directory.display().to_string());
 
     if is_ours {
         let _ = kill_process(pid, Signal::TERM);

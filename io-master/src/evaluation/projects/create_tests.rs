@@ -2,14 +2,14 @@
 
 use super::*;
 
+use crate::evaluation::journal;
+use crate::evaluation::model::JournalAction;
+use crate::evaluation::projects::read as projects;
+use crate::evaluation::test_support::{fields, ready_project};
 use crate::test_projects::exchange::{export, import as exchange};
 use crate::test_projects::model::{TileFields, TileKind};
 use crate::test_projects::test_support::single as schemes;
 use crate::test_projects::test_support::{database, scheme_fields};
-use crate::evaluation::journal;
-use crate::evaluation::projects::read as projects;
-use crate::evaluation::model::JournalAction;
-use crate::evaluation::test_support::{fields, ready_project};
 
 #[test]
 fn a_ready_project_becomes_a_frozen_copy() {
@@ -78,14 +78,7 @@ fn proposals_never_accepted_are_left_out() {
     schemes::add_tile(&test.db, chapter, &TileFields::new(TileKind::Requirement, "Independent testing")).unwrap();
 
     let imported = from_project(&test.db, ready.project, &fields("Meter X")).unwrap();
-    assert_eq!(
-        imported.skipped,
-        Skipped {
-            schemes: 1,
-            tiles: 2,
-            links: 1
-        }
-    );
+    assert_eq!(imported.skipped, Skipped { schemes: 1, tiles: 2, links: 1 });
 
     let data = projects::data(&test.db, imported.id).unwrap().unwrap();
     assert_eq!((data.schemes.len(), data.tiles.len(), data.links.len()), (1, 3, 2));

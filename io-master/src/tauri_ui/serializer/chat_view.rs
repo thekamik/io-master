@@ -26,11 +26,7 @@ pub struct ChatSummaryView {
 
 impl From<ChatSummary> for ChatSummaryView {
     fn from(chat: ChatSummary) -> ChatSummaryView {
-        ChatSummaryView {
-            id: chat.id,
-            title: chat.title,
-            created: chat.created,
-        }
+        ChatSummaryView { id: chat.id, title: chat.title, created: chat.created }
     }
 }
 

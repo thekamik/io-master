@@ -23,8 +23,7 @@ pub fn connection(db: &UserDb, id: i64) -> Result<bool, DbError> {
 /// Removes the API key of a connection (overwritten in the file).
 pub fn api_key(db: &UserDb, id: i64) -> Result<(), DbError> {
     db.remove_secret(&key_name(id))?;
-    db.connection()
-        .execute("UPDATE ai_connections SET key_origin = NULL WHERE id = ?1", [id])?;
+    db.connection().execute("UPDATE ai_connections SET key_origin = NULL WHERE id = ?1", [id])?;
 
     Ok(())
 }

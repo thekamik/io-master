@@ -447,4 +447,3 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         }
     }
 }
-

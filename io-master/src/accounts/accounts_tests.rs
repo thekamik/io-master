@@ -42,10 +42,7 @@ fn a_wrong_password_and_an_unknown_name_look_the_same() {
         log_in(&db, device, directory.path(), "anna", "wrong horse battery"),
         Err(AccountError::WrongCredentials)
     ));
-    assert!(matches!(
-        log_in(&db, device, directory.path(), "nobody", PASSWORD),
-        Err(AccountError::WrongCredentials)
-    ));
+    assert!(matches!(log_in(&db, device, directory.path(), "nobody", PASSWORD), Err(AccountError::WrongCredentials)));
 }
 
 #[test]
@@ -71,10 +68,7 @@ fn a_master_keeps_its_one_user() {
 
     create_first(&db, device, directory.path(), "admin", PASSWORD).unwrap();
 
-    assert!(matches!(
-        add(&db, device, directory.path(), "mallory", PASSWORD),
-        Err(AccountError::NotAllowed)
-    ));
+    assert!(matches!(add(&db, device, directory.path(), "mallory", PASSWORD), Err(AccountError::NotAllowed)));
 }
 
 #[test]
@@ -115,10 +109,7 @@ fn a_password_is_changed_only_with_the_current_one() {
         change_password(&db, device, "anna", "not the password", "a brand new password"),
         Err(AccountError::WrongCredentials)
     ));
-    assert!(matches!(
-        change_password(&db, device, "anna", PASSWORD, "short"),
-        Err(AccountError::WeakPassword(_))
-    ));
+    assert!(matches!(change_password(&db, device, "anna", PASSWORD, "short"), Err(AccountError::WeakPassword(_))));
     assert!(log_in(&db, device, directory.path(), "anna", PASSWORD).is_ok());
 }
 

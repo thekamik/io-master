@@ -26,12 +26,7 @@ fn tiles_of(test: &TestDb, scheme: i64) -> Vec<Tile> {
 
 /// The part of pages 2 to 3.
 fn part(document: i64) -> Part {
-    Part {
-        document_id: document,
-        first_page: 2,
-        last_page: 3,
-        text: String::new(),
-    }
+    Part { document_id: document, first_page: 2, last_page: 3, text: String::new() }
 }
 
 const ANSWER: &str = r#"Here is the scheme:
@@ -49,7 +44,6 @@ const ANSWER: &str = r#"Here is the scheme:
  ],
  "links": [{"from": "t2", "to": "t1"}, {"from": "t1", "to": "t4"}, {"from": "t2", "to": "t4"}, {"from": "t9", "to": "t1"}]}
 ```"#;
-
 
 /// Applies `proposal` to `scheme`, on its project opened from the
 /// database.
@@ -91,16 +85,10 @@ fn the_prompt_holds_the_instructions_the_chapter_the_known_tiles_and_the_text() 
     let text = prompt(
         DEFAULT_INSTRUCTIONS,
         &document,
-        &Part {
-            text: "=== Page 2 ===\nTEXT".to_owned(),
-            ..part(document.id)
-        },
+        &Part { text: "=== Page 2 ===\nTEXT".to_owned(), ..part(document.id) },
         &scheme,
         &[Tile { id: 1, scheme: scheme.id, fields: known }],
-        &[
-            Tile { id: 2, scheme: 99, fields: elsewhere },
-            Tile { id: 3, scheme: 99, fields: other_input },
-        ],
+        &[Tile { id: 2, scheme: 99, fields: elsewhere }, Tile { id: 3, scheme: 99, fields: other_input }],
     );
 
     assert!(text.starts_with("You help to build an evaluation scheme"));
@@ -130,7 +118,8 @@ fn an_answer_is_read_and_its_bad_parts_dropped() {
 
 #[test]
 fn a_quote_outside_the_part_is_dropped() {
-    let answer = r#"{"tiles": [{"key": "a", "kind": "requirement", "title": "R", "quotes": [{"page": 1, "text": "Scope"}]}]}"#;
+    let answer =
+        r#"{"tiles": [{"key": "a", "kind": "requirement", "title": "R", "quotes": [{"page": 1, "text": "Scope"}]}]}"#;
     let proposal = read(answer, &part(7)).unwrap();
 
     assert!(proposal.tiles[0].fields.sources.is_empty());

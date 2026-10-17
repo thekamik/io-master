@@ -285,8 +285,10 @@ pub async fn export(state: &UiState, id: i64, with_pdfs: bool, path: &Path) -> R
 
     let path = path.to_owned();
 
-    blocking(move || std::fs::write(&path, file).map_err(|error| UiError::Failed(format!("the file was not written: {error}"))))
-        .await
+    blocking(move || {
+        std::fs::write(&path, file).map_err(|error| UiError::Failed(format!("the file was not written: {error}")))
+    })
+    .await
 }
 
 /// Imports the file of a project at `path`. Its documents are found
@@ -332,11 +334,7 @@ pub async fn import(
             continue;
         };
 
-        events(LoadEvent::File {
-            name: document.file_name.clone(),
-            index: index + 1,
-            count,
-        });
+        events(LoadEvent::File { name: document.file_name.clone(), index: index + 1, count });
 
         let reading = {
             let events = events.clone();
@@ -362,7 +360,8 @@ pub async fn import(
         };
         let file_name = document.file_name.clone();
 
-        let id = with_user_db(state, move |db| Ok(standards::create::add(db, &fields, &file_name, &pdf, &pages)?)).await?;
+        let id =
+            with_user_db(state, move |db| Ok(standards::create::add(db, &fields, &file_name, &pdf, &pages)?)).await?;
         loaded.push(id);
     }
 

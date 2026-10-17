@@ -3,9 +3,9 @@
 
 use super::*;
 
+use crate::standards;
 use crate::standards::model::DocumentError;
 use crate::test_projects::model::{PageSpan, Source, TileFields, TileKind};
-use crate::standards;
 use crate::test_projects::test_support::single::{
     self as schemes, create_project as create, delete_project as delete, set_ready, update_project as update,
 };
@@ -75,12 +75,7 @@ fn a_used_document_stays() {
     let (project, scheme) = project_with_scheme(&test.db, document);
 
     let mut tile = TileFields::new(TileKind::Requirement, "R");
-    tile.sources = vec![Source {
-        document_id: document,
-        page: 1,
-        quote: "Scope".to_owned(),
-        found: false,
-    }];
+    tile.sources = vec![Source { document_id: document, page: 1, quote: "Scope".to_owned(), found: false }];
     let id = schemes::add_tile(&test.db, scheme, &tile).unwrap();
 
     // Not taken from the project while a tile quotes it ...
@@ -92,11 +87,7 @@ fn a_used_document_stays() {
     // ... nor while a scheme covers its pages ...
     schemes::delete_tile(&test.db, id).unwrap();
     let mut fields = scheme_fields("5", "ADV");
-    fields.pages = Some(PageSpan {
-        document_id: document,
-        first_page: 1,
-        last_page: 2,
-    });
+    fields.pages = Some(PageSpan { document_id: document, first_page: 1, last_page: 2 });
     schemes::update(&test.db, scheme, &fields).unwrap();
     assert!(update(&test.db, project, &project_fields("P", vec![])).is_err());
 

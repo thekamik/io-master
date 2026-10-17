@@ -3,10 +3,7 @@
 use super::*;
 
 fn event(name: &str, data: &str) -> SseEvent {
-    SseEvent {
-        name: name.to_owned(),
-        data: data.to_owned(),
-    }
+    SseEvent { name: name.to_owned(), data: data.to_owned() }
 }
 
 #[test]

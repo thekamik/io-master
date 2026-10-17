@@ -8,13 +8,7 @@ use crate::db::evaluations::read;
 use crate::test_projects::test_support::database;
 
 fn step<'a>(actor: &'a Actor, action: JournalAction, detail: &'a str) -> Step<'a> {
-    Step {
-        actor,
-        action,
-        tile: Some(7),
-        field: Some(ResultField::Analysis),
-        detail,
-    }
+    Step { actor, action, tile: Some(7), field: Some(ResultField::Analysis), detail }
 }
 
 /// An evaluation row the journal can belong to, without a structure.

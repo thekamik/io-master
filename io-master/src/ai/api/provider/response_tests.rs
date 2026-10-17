@@ -9,13 +9,7 @@ use crate::ai::api::connection::{AnswerMode, Connection};
 
 /// The paths of the chat API of local servers (the template).
 fn completions() -> Checked {
-    Connection {
-        name: "Completions".to_owned(),
-        model: "m".to_owned(),
-        ..Connection::template()
-    }
-    .check()
-    .unwrap()
+    Connection { name: "Completions".to_owned(), model: "m".to_owned(), ..Connection::template() }.check().unwrap()
 }
 
 /// The paths of a format with named events and blocks of content.
@@ -39,10 +33,7 @@ fn messages_format() -> Checked {
 }
 
 fn event(data: &serde_json::Value) -> SseEvent {
-    SseEvent {
-        name: String::new(),
-        data: data.to_string(),
-    }
+    SseEvent { name: String::new(), data: data.to_string() }
 }
 
 #[test]
@@ -59,12 +50,7 @@ fn a_completions_stream_is_read() {
     assert_eq!(reader.event(&event(&last)).unwrap(), None);
     assert!(!reader.done);
 
-    reader
-        .event(&SseEvent {
-            name: String::new(),
-            data: "[DONE]".to_owned(),
-        })
-        .unwrap();
+    reader.event(&SseEvent { name: String::new(), data: "[DONE]".to_owned() }).unwrap();
 
     assert!(reader.done && reader.complete());
     assert_eq!(reader.text, "Hello");
@@ -102,7 +88,9 @@ fn a_stream_of_another_format_is_read_with_its_paths() {
 fn stop_reasons_are_sorted_by_the_connection() {
     let connection = messages_format();
 
-    for (reason, expected) in [("refusal", StopReason::Refused), ("max_tokens", StopReason::Cut), ("end_turn", StopReason::Complete)] {
+    for (reason, expected) in
+        [("refusal", StopReason::Refused), ("max_tokens", StopReason::Cut), ("end_turn", StopReason::Complete)]
+    {
         let mut reader = AnswerReader::new(&connection);
         reader.event(&event(&json!({"delta": {"stop_reason": reason}}))).unwrap();
 
@@ -125,10 +113,7 @@ fn an_event_that_is_not_json_is_an_error() {
     let connection = completions();
     let mut reader = AnswerReader::new(&connection);
 
-    let result = reader.event(&SseEvent {
-        name: String::new(),
-        data: "hello".to_owned(),
-    });
+    let result = reader.event(&SseEvent { name: String::new(), data: "hello".to_owned() });
 
     assert!(matches!(result, Err(AiError::UnexpectedAnswer(_))));
 }

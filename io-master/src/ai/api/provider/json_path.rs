@@ -124,10 +124,7 @@ impl JsonPath {
             }
         }
 
-        Ok(JsonPath {
-            text: text.to_owned(),
-            steps,
-        })
+        Ok(JsonPath { text: text.to_owned(), steps })
     }
 
     /// The path as it was written.

@@ -19,9 +19,8 @@ use super::rows::{
 
 /// The documents a project uses, in the order the user gave them.
 pub fn project_documents(db: &UserDb, id: i64) -> Result<Vec<i64>, DbError> {
-    let mut statement = db
-        .connection()
-        .prepare("SELECT document_id FROM project_documents WHERE project_id = ?1 ORDER BY position")?;
+    let mut statement =
+        db.connection().prepare("SELECT document_id FROM project_documents WHERE project_id = ?1 ORDER BY position")?;
     let ids = statement.query_map([id], |row| row.get(0))?.collect::<Result<Vec<_>, _>>()?;
 
     Ok(ids)
@@ -33,22 +32,15 @@ fn project(db: &UserDb, row: ProjectRow) -> Result<Project, DbError> {
 
     Ok(Project {
         id,
-        fields: ProjectFields {
-            name,
-            version,
-            description,
-            author,
-            documents: project_documents(db, id)?,
-        },
+        fields: ProjectFields { name, version, description, author, documents: project_documents(db, id)? },
         ready,
     })
 }
 
 /// Every project, by name.
 pub fn projects(db: &UserDb) -> Result<Vec<Project>, DbError> {
-    let mut statement = db
-        .connection()
-        .prepare(&format!("SELECT {PROJECT_COLUMNS} FROM projects ORDER BY name COLLATE NOCASE, id"))?;
+    let mut statement =
+        db.connection().prepare(&format!("SELECT {PROJECT_COLUMNS} FROM projects ORDER BY name COLLATE NOCASE, id"))?;
     let rows = statement.query_map([], project_from_row)?.collect::<Result<Vec<_>, _>>()?;
 
     rows.into_iter().map(|row| project(db, row)).collect()
@@ -90,9 +82,9 @@ pub fn documents_in_use(db: &UserDb, id: i64) -> Result<Vec<i64>, DbError> {
 
 /// The schemes of a project, in the order of its list.
 pub fn schemes(db: &UserDb, project: i64) -> Result<Vec<Scheme>, DbError> {
-    let mut statement = db.connection().prepare(&format!(
-        "SELECT {SCHEME_COLUMNS} FROM schemes WHERE project_id = ?1 ORDER BY position, id"
-    ))?;
+    let mut statement = db
+        .connection()
+        .prepare(&format!("SELECT {SCHEME_COLUMNS} FROM schemes WHERE project_id = ?1 ORDER BY position, id"))?;
 
     Ok(statement.query_map([project], scheme_from_row)?.collect::<Result<Vec<_>, _>>()?)
 }
@@ -121,12 +113,7 @@ fn read_tiles(db: &UserDb, tiles_sql: &str, sources_sql: &str, key: i64) -> Resu
     let rows = statement.query_map([key], |row| {
         Ok((
             row.get::<_, i64>(0)?,
-            Source {
-                document_id: row.get(1)?,
-                page: row.get(2)?,
-                quote: row.get(3)?,
-                found: row.get(4)?,
-            },
+            Source { document_id: row.get(1)?, page: row.get(2)?, quote: row.get(3)?, found: row.get(4)? },
         ))
     })?;
 
@@ -188,9 +175,8 @@ pub fn project_of_tile(db: &UserDb, id: i64) -> Result<Option<i64>, DbError> {
 
 /// The links of a project.
 pub fn links(db: &UserDb, project: i64) -> Result<Vec<Link>, DbError> {
-    let mut statement = db
-        .connection()
-        .prepare("SELECT id, from_tile, to_tile FROM links WHERE project_id = ?1 ORDER BY id")?;
+    let mut statement =
+        db.connection().prepare("SELECT id, from_tile, to_tile FROM links WHERE project_id = ?1 ORDER BY id")?;
 
     Ok(statement.query_map([project], link_from_row)?.collect::<Result<Vec<_>, _>>()?)
 }

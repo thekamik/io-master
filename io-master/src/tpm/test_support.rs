@@ -59,10 +59,7 @@ impl TestTpm {
 
         let emulator = Emulator::start(&directory).expect("swtpm must be installed for this test");
 
-        TestTpm {
-            directory,
-            emulator: Some(emulator),
-        }
+        TestTpm { directory, emulator: Some(emulator) }
     }
 
     /// The data directory.
@@ -72,9 +69,7 @@ impl TestTpm {
 
     /// Where the emulator is reached.
     pub fn access(&self) -> TpmAccess {
-        TpmAccess {
-            port: self.emulator.as_ref().map_or(0, Emulator::port),
-        }
+        TpmAccess { port: self.emulator.as_ref().map_or(0, Emulator::port) }
     }
 
     /// A new connection to the emulator.

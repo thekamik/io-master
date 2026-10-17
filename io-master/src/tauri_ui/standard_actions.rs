@@ -44,7 +44,11 @@ fn file_name(path: &std::path::Path) -> String {
 /// Loads the PDFs at `paths`, one after the other, reporting to
 /// `events` (`false`: the page is gone, the work stops). A file that
 /// fails is reported and the next one goes on.
-pub async fn load(state: &UiState, paths: Vec<PathBuf>, events: impl Fn(LoadEvent) -> bool + Send + Sync + Clone + 'static) -> Result<(), UiError> {
+pub async fn load(
+    state: &UiState,
+    paths: Vec<PathBuf>,
+    events: impl Fn(LoadEvent) -> bool + Send + Sync + Clone + 'static,
+) -> Result<(), UiError> {
     // Nobody logged in: nothing starts.
     state.session()?;
 
@@ -55,11 +59,7 @@ pub async fn load(state: &UiState, paths: Vec<PathBuf>, events: impl Fn(LoadEven
     for (index, path) in paths.into_iter().enumerate() {
         let name = file_name(&path);
 
-        if *stop.borrow() || !events(LoadEvent::File {
-            name: name.clone(),
-            index: index + 1,
-            count,
-        }) {
+        if *stop.borrow() || !events(LoadEvent::File { name: name.clone(), index: index + 1, count }) {
             stopped = true;
             break;
         }
@@ -99,10 +99,7 @@ pub async fn load(state: &UiState, paths: Vec<PathBuf>, events: impl Fn(LoadEven
                 break;
             }
             Err(error) => {
-                events(LoadEvent::Failed {
-                    name,
-                    message: error.to_string(),
-                });
+                events(LoadEvent::Failed { name, message: error.to_string() });
                 continue;
             }
         };
@@ -123,7 +120,8 @@ pub async fn load(state: &UiState, paths: Vec<PathBuf>, events: impl Fn(LoadEven
                 Ok(id) => id,
                 // Which document it is already, so that the user finds it.
                 Err(DocumentError::Duplicate(existing)) => {
-                    let title = standards::read::get(db, existing)?.map(|document| document.fields.title).unwrap_or_default();
+                    let title =
+                        standards::read::get(db, existing)?.map(|document| document.fields.title).unwrap_or_default();
                     return Err(UiError::Invalid(format!("this file is loaded already, as the document {title}")));
                 }
                 Err(error) => return Err(error.into()),
@@ -135,16 +133,11 @@ pub async fn load(state: &UiState, paths: Vec<PathBuf>, events: impl Fn(LoadEven
 
         match stored {
             Ok(Some(document)) => {
-                events(LoadEvent::Loaded {
-                    document: document.into(),
-                });
+                events(LoadEvent::Loaded { document: document.into() });
             }
             Ok(None) => {}
             Err(error) => {
-                events(LoadEvent::Failed {
-                    name,
-                    message: error.to_string(),
-                });
+                events(LoadEvent::Failed { name, message: error.to_string() });
             }
         }
     }

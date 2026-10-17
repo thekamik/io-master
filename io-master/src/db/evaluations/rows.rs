@@ -3,11 +3,9 @@
 
 use rusqlite::Row;
 
+use crate::evaluation::model::{Actor, Evaluation, EvaluationFields, JournalAction, JournalEntry, Origin, ResultField};
 use crate::test_projects::model::{
     External, OutputSection, PageSpan, ProposalState, Scheme, SchemeFields, Tile, TileFields, TileKind,
-};
-use crate::evaluation::model::{
-    Actor, Evaluation, EvaluationFields, JournalAction, JournalEntry, Origin, ResultField,
 };
 
 /// The columns of an evaluation, in the order of [`evaluation_from_row`].
@@ -24,12 +22,7 @@ pub(super) fn evaluation_from_row(row: &Row<'_>) -> rusqlite::Result<Evaluation>
             manufacturer: row.get(4)?,
             evaluator: row.get(5)?,
         },
-        origin: Origin {
-            name: row.get(6)?,
-            version: row.get(7)?,
-            author: row.get(8)?,
-            description: row.get(9)?,
-        },
+        origin: Origin { name: row.get(6)?, version: row.get(7)?, author: row.get(8)?, description: row.get(9)? },
         imported: row.get(10)?,
     })
 }
@@ -48,11 +41,9 @@ pub(super) fn scheme_from_row(row: &Row<'_>) -> rusqlite::Result<Scheme> {
             number: row.get(2)?,
             name: row.get(3)?,
             pages: match (document, first, last) {
-                (Some(document_id), Some(first_page), Some(last_page)) => Some(PageSpan {
-                    document_id,
-                    first_page,
-                    last_page,
-                }),
+                (Some(document_id), Some(first_page), Some(last_page)) => {
+                    Some(PageSpan { document_id, first_page, last_page })
+                }
                 _ => None,
             },
             // Only accepted schemes are copied.
@@ -85,10 +76,8 @@ pub(super) fn tile_from_row(row: &Row<'_>) -> rusqlite::Result<Tile> {
             sources: Vec::new(),
             // Only accepted tiles are copied.
             state: ProposalState::Accepted,
-            external: external_document.map(|document| External {
-                document,
-                place: external_place.unwrap_or_default(),
-            }),
+            external: external_document
+                .map(|document| External { document, place: external_place.unwrap_or_default() }),
             sections: sections.split(',').filter_map(OutputSection::from_name).collect(),
             instructions: row.get(10)?,
             x: row.get(11)?,

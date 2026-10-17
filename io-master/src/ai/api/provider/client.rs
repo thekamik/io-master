@@ -30,11 +30,11 @@ use reqwest::{Client, Response};
 use tokio::sync::mpsc;
 
 use super::ai_error::AiError;
-use crate::ai::api::api_key::ApiKey;
-use crate::ai::api::connection::{AnswerMode, Checked};
 use super::request::{self, MASK, Request, Speaker, Turn};
 use super::response::{AnswerReader, StopReason};
 use super::sse::SseDecoder;
+use crate::ai::api::api_key::ApiKey;
+use crate::ai::api::connection::{AnswerMode, Checked};
 
 /// How long a connection may take to open.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -114,10 +114,7 @@ pub async fn reply(connection: &Checked, key: Option<&ApiKey>, turns: &[Turn], p
 /// Checks a connection with one short message, and reports what was
 /// sent, what came back and what the paths found in it.
 pub async fn check(connection: &Checked, key: Option<&ApiKey>) -> CheckReport {
-    let turns = [Turn {
-        speaker: Speaker::Evaluator,
-        text: CHECK_MESSAGE.to_owned(),
-    }];
+    let turns = [Turn { speaker: Speaker::Evaluator, text: CHECK_MESSAGE.to_owned() }];
 
     let (pieces, mut receiver) = mpsc::channel::<String>(64);
     let mut raw = Some(Raw::default());
@@ -372,27 +369,15 @@ async fn send(http: &Client, request: Request) -> Result<Response, AiError> {
         builder = builder.header("content-type", "application/json");
     }
 
-    builder
-        .body(request.body.to_string())
-        .send()
-        .await
-        .map_err(|error| AiError::NoConnection(explain(&error)))
+    builder.body(request.body.to_string()).send().await.map_err(|error| AiError::NoConnection(explain(&error)))
 }
 
 /// The reply from what was read and how it ended. Without a model
 /// named by the service, the model of the connection wrote it.
 fn finish(connection: &Checked, reader: AnswerReader<'_>, end: ReplyEnd) -> Reply {
-    let model = reader
-        .model
-        .or_else(|| (!connection.model.is_empty()).then(|| connection.model.clone()));
+    let model = reader.model.or_else(|| (!connection.model.is_empty()).then(|| connection.model.clone()));
 
-    Reply {
-        text: reader.text,
-        model,
-        input_tokens: reader.input_tokens,
-        output_tokens: reader.output_tokens,
-        end,
-    }
+    Reply { text: reader.text, model, input_tokens: reader.input_tokens, output_tokens: reader.output_tokens, end }
 }
 
 /// The text with every occurrence of the key replaced by [`MASK`].

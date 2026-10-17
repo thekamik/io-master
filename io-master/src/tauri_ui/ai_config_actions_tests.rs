@@ -91,11 +91,7 @@ async fn the_key_is_stored_and_never_given_back() {
 #[tokio::test]
 async fn a_key_no_header_uses_is_reported() {
     let test = logged_in().await;
-    let connection = Connection {
-        name: "Local".to_owned(),
-        model: "m".to_owned(),
-        ..Connection::template()
-    };
+    let connection = Connection { name: "Local".to_owned(), model: "m".to_owned(), ..Connection::template() };
     let id = save_connection(&test.state, None, form(connection)).await.unwrap().id;
 
     let view = store_key(&test.state, id, API_KEY.to_owned()).await.unwrap();
@@ -135,11 +131,7 @@ async fn a_check_without_the_needed_key_explains_it() {
 #[tokio::test]
 async fn the_active_connection_is_chosen_and_deleted() {
     let test = logged_in().await;
-    let template = |name: &str| Connection {
-        name: name.to_owned(),
-        model: "m".to_owned(),
-        ..Connection::template()
-    };
+    let template = |name: &str| Connection { name: name.to_owned(), model: "m".to_owned(), ..Connection::template() };
 
     let first = save_connection(&test.state, None, form(template("A"))).await.unwrap().id;
     let second = save_connection(&test.state, None, form(template("B"))).await.unwrap().id;
@@ -156,11 +148,7 @@ async fn the_active_connection_is_chosen_and_deleted() {
 #[tokio::test]
 async fn an_unknown_answer_mode_is_refused() {
     let test = logged_in().await;
-    let mut sent = form(Connection {
-        name: "X".to_owned(),
-        model: "m".to_owned(),
-        ..Connection::template()
-    });
+    let mut sent = form(Connection { name: "X".to_owned(), model: "m".to_owned(), ..Connection::template() });
     sent.answer = "other".to_owned();
 
     assert!(matches!(save_connection(&test.state, None, sent).await, Err(UiError::Invalid(_))));
@@ -177,10 +165,7 @@ async fn nothing_works_without_a_login() {
 #[tokio::test]
 async fn an_instruction_is_given_for_a_field_of_the_form() {
     let test = logged_in().await;
-    let template = || Connection {
-        name: "X".to_owned(),
-        ..Connection::template()
-    };
+    let template = || Connection { name: "X".to_owned(), ..Connection::template() };
 
     let text = field_instruction(&test.state, "text_path", form(template())).unwrap();
     assert!(text.contains("The field: Path to the text"));

@@ -70,18 +70,14 @@ impl SystemDb {
         connection.execute_batch(schema::SCHEMA)?;
         create::installation(&connection, installation)?;
 
-        Ok(SystemDb {
-            connection: Mutex::new(connection),
-        })
+        Ok(SystemDb { connection: Mutex::new(connection) })
     }
 
     /// Opens the system database of a data directory.
     pub fn open(data_dir: &Path) -> Result<SystemDb, DbError> {
         let connection = sqlcipher::open_plain(&path(data_dir))?;
 
-        Ok(SystemDb {
-            connection: Mutex::new(connection),
-        })
+        Ok(SystemDb { connection: Mutex::new(connection) })
     }
 
     /// Removes the system database; used when the program is

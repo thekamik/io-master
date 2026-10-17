@@ -7,11 +7,11 @@ use crate::db::user::database::{self as user_db, UserDb};
 use crate::random::random::fill_random;
 use crate::tpm::test_support::TempDir;
 
-use crate::standards;
-use crate::standards::model::DocumentFields;
 use super::model::{ProjectFields, ProposalState, SchemeFields};
 use super::workspace::{OpenProject, Workspace};
 use super::{projects, schemes};
+use crate::standards;
+use crate::standards::model::DocumentFields;
 
 /// The pages of the small standard of the tests.
 pub const PAGES: [&str; 3] = [
@@ -41,11 +41,7 @@ pub fn database() -> TestDb {
 
 /// The fields of the small standard.
 pub fn fields() -> DocumentFields {
-    DocumentFields {
-        title: "Common Criteria".to_owned(),
-        part: "Part 3".to_owned(),
-        version: "CC:2022 R1".to_owned(),
-    }
+    DocumentFields { title: "Common Criteria".to_owned(), part: "Part 3".to_owned(), version: "CC:2022 R1".to_owned() }
 }
 
 /// Loads the small standard (with `content` as its file, so that
@@ -118,12 +114,7 @@ pub fn project_fields(name: &str, documents: Vec<i64>) -> ProjectFields {
 
 /// The fields of an accepted scheme without pages.
 pub fn scheme_fields(number: &str, name: &str) -> SchemeFields {
-    SchemeFields {
-        number: number.to_owned(),
-        name: name.to_owned(),
-        pages: None,
-        state: ProposalState::Accepted,
-    }
+    SchemeFields { number: number.to_owned(), name: name.to_owned(), pages: None, state: ProposalState::Accepted }
 }
 
 /// A project "P" that uses `document`, with one scheme "5 ADV";

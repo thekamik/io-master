@@ -30,14 +30,10 @@ pub(super) fn checked_sources(db: &UserDb, open: &OpenProject, fields: &TileFiel
             .into());
         }
 
-        let text = standards::read::page(db, source.document_id, source.page)?.ok_or_else(|| {
-            SchemeError::Invalid("sources", format!("the document has no page {}", source.page))
-        })?;
+        let text = standards::read::page(db, source.document_id, source.page)?
+            .ok_or_else(|| SchemeError::Invalid("sources", format!("the document has no page {}", source.page)))?;
 
-        checked.push(Source {
-            found: is_on_page(&source.quote, &text),
-            ..source.clone()
-        });
+        checked.push(Source { found: is_on_page(&source.quote, &text), ..source.clone() });
     }
 
     Ok(checked)
@@ -68,11 +64,7 @@ pub fn tile(db: &UserDb, open: &mut OpenProject, scheme: i64, fields: &TileField
 
     let id = store::tile(db, scheme, fields, &sources)?;
 
-    open.data_mut().tiles.push(Tile {
-        id,
-        scheme,
-        fields: stored(fields, sources),
-    });
+    open.data_mut().tiles.push(Tile { id, scheme, fields: stored(fields, sources) });
 
     Ok(id)
 }

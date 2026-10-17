@@ -4,9 +4,7 @@
 
 use crate::db::evaluations::create::{self as store, Step};
 use crate::db::user::database::UserDb;
-use crate::evaluation::model::{
-    Actor, EvaluationError, JournalAction, MAX_SHORT, Proposal, ResultField, check_text,
-};
+use crate::evaluation::model::{Actor, EvaluationError, JournalAction, MAX_SHORT, Proposal, ResultField, check_text};
 use crate::evaluation::workspace::OpenEvaluation;
 
 use super::read::{check_result, requirement};
@@ -33,13 +31,8 @@ pub fn propose(
 
     let evaluation = open.data().evaluation.id;
     let actor = Actor::Model(model.to_owned());
-    let step = Step {
-        actor: &actor,
-        action: JournalAction::Proposed,
-        tile: Some(tile),
-        field: Some(field),
-        detail: text,
-    };
+    let step =
+        Step { actor: &actor, action: JournalAction::Proposed, tile: Some(tile), field: Some(field), detail: text };
 
     let id = store::proposal(db, evaluation, tile, field, text, model, &step)?;
 

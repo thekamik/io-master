@@ -66,5 +66,6 @@ fn main() {
         "document_pdf",
     ]);
 
-    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands)).expect("the desktop interface is prepared");
+    tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))
+        .expect("the desktop interface is prepared");
 }

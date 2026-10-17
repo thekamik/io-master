@@ -55,10 +55,7 @@ fn broken_paths_are_refused() {
     assert_eq!(JsonPath::parse(&"a".repeat(MAX_LENGTH + 1)), Err(InvalidPath::TooLong));
 
     for broken in ["a..b", ".a", "a.", "a[", "a[x]", "a[1", "a]", "a[1]b", "a b", "a.[0]", "a\"b"] {
-        assert!(
-            matches!(JsonPath::parse(broken), Err(InvalidPath::Malformed(_))),
-            "{broken} should be refused"
-        );
+        assert!(matches!(JsonPath::parse(broken), Err(InvalidPath::Malformed(_))), "{broken} should be refused");
     }
 }
 

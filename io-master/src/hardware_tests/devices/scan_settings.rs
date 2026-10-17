@@ -42,10 +42,7 @@ pub struct ScanSettings {
 impl Default for ScanSettings {
     /// Every port, with the default columns.
     fn default() -> ScanSettings {
-        ScanSettings {
-            filter: PortFilter::All,
-            columns: PortProperty::DEFAULT.to_vec(),
-        }
+        ScanSettings { filter: PortFilter::All, columns: PortProperty::DEFAULT.to_vec() }
     }
 }
 
@@ -55,20 +52,13 @@ impl ScanSettings {
     /// port, and the default columns: an empty table is never what
     /// was meant.
     pub fn new(all_types: bool, types: Vec<PortType>, columns: Vec<PortProperty>) -> ScanSettings {
-        let filter = if all_types || types.is_empty() {
-            PortFilter::All
-        } else {
-            PortFilter::Types(types)
-        };
+        let filter = if all_types || types.is_empty() { PortFilter::All } else { PortFilter::Types(types) };
 
         let columns = if columns.is_empty() {
             PortProperty::DEFAULT.to_vec()
         } else {
             // In the order of the table, whatever order they came in.
-            PortProperty::ALL
-                .into_iter()
-                .filter(|property| columns.contains(property))
-                .collect()
+            PortProperty::ALL.into_iter().filter(|property| columns.contains(property)).collect()
         };
 
         ScanSettings { filter, columns }
@@ -83,11 +73,8 @@ impl ScanSettings {
             None => defaults.filter,
             Some(text) if text == ALL => PortFilter::All,
             Some(text) => {
-                let types: Vec<PortType> = text
-                    .split(',')
-                    .filter(|name| !name.is_empty())
-                    .map(PortType::from_base_name)
-                    .collect();
+                let types: Vec<PortType> =
+                    text.split(',').filter(|name| !name.is_empty()).map(PortType::from_base_name).collect();
 
                 if types.is_empty() { PortFilter::All } else { PortFilter::Types(types) }
             }

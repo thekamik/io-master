@@ -7,17 +7,11 @@ use serde_json::json;
 use crate::ai::api::connection::Connection;
 
 fn evaluator(text: &str) -> Turn {
-    Turn {
-        speaker: Speaker::Evaluator,
-        text: text.to_owned(),
-    }
+    Turn { speaker: Speaker::Evaluator, text: text.to_owned() }
 }
 
 fn model(text: &str) -> Turn {
-    Turn {
-        speaker: Speaker::Model,
-        text: text.to_owned(),
-    }
+    Turn { speaker: Speaker::Model, text: text.to_owned() }
 }
 
 fn key() -> ApiKey {
@@ -44,7 +38,8 @@ fn system_field() -> Checked {
         name: "Test".to_owned(),
         model: "test-model".to_owned(),
         headers: String::new(),
-        body: r#"{"model": "{{model}}", "system": "{{system}}", "max_tokens": 100, "messages": "{{messages}}"}"#.to_owned(),
+        body: r#"{"model": "{{model}}", "system": "{{system}}", "max_tokens": 100, "messages": "{{messages}}"}"#
+            .to_owned(),
         system_role: String::new(),
         system_prompt: "Be brief.".to_owned(),
         ..Connection::template()
@@ -83,7 +78,8 @@ fn the_instructions_go_first_when_they_have_a_role() {
 fn the_key_goes_only_into_its_header() {
     let request = request(&connection(), &[evaluator("Hi")], Some(&key())).unwrap();
 
-    let headers: Vec<(&str, &str)> = request.headers.iter().map(|(name, value)| (name.as_str(), value.as_str())).collect();
+    let headers: Vec<(&str, &str)> =
+        request.headers.iter().map(|(name, value)| (name.as_str(), value.as_str())).collect();
     assert_eq!(headers, [("authorization", "Bearer sk-test-secret"), ("x-model", "test-model")]);
     assert!(!request.body.to_string().contains("sk-test-secret"));
     assert!(!request.url.contains("sk-test-secret"));
@@ -156,10 +152,7 @@ fn the_roles_come_from_the_connection() {
 
     let request = request(&connection, &[evaluator("a"), model("b")], None).unwrap();
 
-    assert_eq!(
-        request.body["messages"],
-        json!([{"role": "human", "content": "a"}, {"role": "bot", "content": "b"}])
-    );
+    assert_eq!(request.body["messages"], json!([{"role": "human", "content": "a"}, {"role": "bot", "content": "b"}]));
 }
 
 #[test]

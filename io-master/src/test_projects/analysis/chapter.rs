@@ -37,9 +37,7 @@ use crate::db::user::database::UserDb;
 use crate::standards;
 use crate::standards::model::Document;
 use crate::standards::quote::{MAX_QUOTE, is_on_page, normalize};
-use crate::test_projects::model::{
-    External, OutputSection, ProposalState, Scheme, Source, Tile, TileFields, TileKind,
-};
+use crate::test_projects::model::{External, OutputSection, ProposalState, Scheme, Source, Tile, TileFields, TileKind};
 use crate::test_projects::rules::{SchemeError, StoreError};
 use crate::test_projects::schemes::read::existing;
 use crate::test_projects::workspace::OpenProject;
@@ -110,10 +108,7 @@ pub fn prompt(
     text.push_str("\n\n");
 
     let chapter = format!("{} {}", scheme.fields.number, scheme.fields.name);
-    text.push_str(&format!(
-        "The chapter analysed: {}. Propose the tiles of this chapter.\n\n",
-        chapter.trim()
-    ));
+    text.push_str(&format!("The chapter analysed: {}. Propose the tiles of this chapter.\n\n", chapter.trim()));
 
     if !own.is_empty() {
         text.push_str("Tiles of this chapter already known (do not repeat them; link to them by identifier):\n");
@@ -201,11 +196,7 @@ fn text_of(value: &Value, name: &str) -> String {
 pub fn read(answer: &str, part: &Part) -> Result<Proposal, String> {
     let value = json_object(answer).ok_or("the answer holds no JSON object")?;
 
-    let mut proposal = Proposal {
-        tiles: Vec::new(),
-        links: Vec::new(),
-        dropped: Vec::new(),
-    };
+    let mut proposal = Proposal { tiles: Vec::new(), links: Vec::new(), dropped: Vec::new() };
 
     for (index, item) in value.get("tiles").and_then(Value::as_array).into_iter().flatten().enumerate() {
         let key = Some(text_of(item, "key")).filter(|key| !key.is_empty()).unwrap_or(format!("tile {}", index + 1));
@@ -231,10 +222,7 @@ pub fn read(answer: &str, part: &Part) -> Result<Proposal, String> {
             let document = text_of(external, "document");
 
             if !document.is_empty() {
-                fields.external = Some(External {
-                    document,
-                    place: text_of(external, "place"),
-                });
+                fields.external = Some(External { document, place: text_of(external, "place") });
             }
         }
 
@@ -251,12 +239,7 @@ pub fn read(answer: &str, part: &Part) -> Result<Proposal, String> {
                 continue;
             }
 
-            fields.sources.push(Source {
-                document_id: part.document_id,
-                page,
-                quote: text,
-                found: false,
-            });
+            fields.sources.push(Source { document_id: part.document_id, page, quote: text, found: false });
         }
 
         match fields.check() {
@@ -316,10 +299,7 @@ const ROW: f64 = 140.0;
 /// it (its new quotes added while that tile is still proposed); then
 /// the links, also to tiles of other schemes of the project.
 pub fn apply(db: &UserDb, open: &mut OpenProject, scheme: i64, proposal: &Proposal) -> Result<Applied, StoreError> {
-    let mut applied = Applied {
-        dropped: proposal.dropped.clone(),
-        ..Applied::default()
-    };
+    let mut applied = Applied { dropped: proposal.dropped.clone(), ..Applied::default() };
 
     existing(open, scheme)?;
     // Every tile of the project: the tiles of this scheme, and the
@@ -442,8 +422,8 @@ pub fn question(
     instructions: &str,
 ) -> Result<Vec<Turn>, StoreError> {
     let stored = existing(open, scheme)?;
-    let document = standards::read::get(db, part.document_id)?
-        .ok_or(StoreError::Scheme(SchemeError::NotFound("document")))?;
+    let document =
+        standards::read::get(db, part.document_id)?.ok_or(StoreError::Scheme(SchemeError::NotFound("document")))?;
     let (own, others): (Vec<Tile>, Vec<Tile>) =
         open.data().tiles.iter().cloned().partition(|tile| tile.scheme == scheme);
 

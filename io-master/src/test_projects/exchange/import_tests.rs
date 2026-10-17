@@ -27,11 +27,7 @@ fn with_project() -> (TestDb, i64, i64) {
         &SchemeFields {
             number: "5.1".to_owned(),
             name: "Functional specification".to_owned(),
-            pages: Some(PageSpan {
-                document_id: document,
-                first_page: 2,
-                last_page: 2,
-            }),
+            pages: Some(PageSpan { document_id: document, first_page: 2, last_page: 2 }),
             state: ProposalState::Accepted,
         },
     )

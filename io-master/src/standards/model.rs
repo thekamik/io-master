@@ -84,12 +84,10 @@ impl fmt::Display for DocumentError {
         match self {
             DocumentError::Invalid(reason) => formatter.write_str(reason),
             DocumentError::Duplicate(_) => formatter.write_str("this file is loaded already"),
-            DocumentError::InUse => {
-                formatter.write_str(
-                    "a test project or an evaluation uses this document; remove it from the test project, \
+            DocumentError::InUse => formatter.write_str(
+                "a test project or an evaluation uses this document; remove it from the test project, \
                      or delete the evaluation, first",
-                )
-            },
+            ),
             DocumentError::Db(error) => write!(formatter, "{error}"),
         }
     }
