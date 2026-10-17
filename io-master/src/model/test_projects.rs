@@ -42,7 +42,7 @@
 //! model/test_projects.rs         the types (this file)
 //! model/model/test_projects/rules.rs   the rules of the fields and the links;
 //!                                the error when one is broken
-//! test_projects/                 the work on them: the projects open for
+//! business/test_projects/                 the work on them: the projects open for
 //!                                editing, their CRUD, checks, exchange,
 //!                                the analysis with the AI
 //! ```
@@ -202,7 +202,7 @@ impl OutputSection {
 /// A passage of a standard a tile comes from.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Source {
-    /// The document (`standards/`).
+    /// The document (`business/standards/`).
     pub document_id: i64,
     /// The page, counted from 1 as the viewer shows it.
     pub page: u32,

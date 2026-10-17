@@ -8,13 +8,13 @@
 
 use std::fmt;
 
-use crate::accounts::accounts::AccountError;
 use crate::ai::api::completions::AiError;
 use crate::ai::api::connections::ConnectionSaveError;
 use crate::ai::api::roles::ModelError;
-use crate::ai::chat::conversation::SendError;
+use crate::business::chats::conversation::SendError;
+use crate::business::installation::lifecycle::LifecycleError;
+use crate::business::session::accounts::AccountError;
 use crate::db::error::DbError;
-use crate::installation::lifecycle::LifecycleError;
 use crate::model::ai::{ConnectionError, Field};
 
 /// Why a command failed.

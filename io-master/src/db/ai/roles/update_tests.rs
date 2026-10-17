@@ -2,10 +2,10 @@
 
 use super::*;
 
+use crate::business::test_projects::test_support::database;
 use crate::db::ai::connection::create;
 use crate::db::ai::roles::read;
 use crate::model::ai::Connection;
-use crate::test_projects::test_support::database;
 
 #[test]
 fn a_role_gets_a_connection_and_loses_it() {

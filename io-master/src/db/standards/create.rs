@@ -1,6 +1,6 @@
 //! Storing a document of a standard: the file and the text of its
 //! pages. The rules (title, a file loaded once) are checked by
-//! `standards/`.
+//! `business/standards/`.
 
 use rusqlite::named_params;
 

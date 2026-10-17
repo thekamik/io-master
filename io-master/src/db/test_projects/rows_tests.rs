@@ -1,11 +1,11 @@
 //! Unit tests of `rows.rs`: a value the program never writes is an
 //! error, never replaced by one that looks right.
 
+use crate::business::test_projects::test_support::single::add_tile;
+use crate::business::test_projects::test_support::{database, load, project_with_scheme};
 use crate::db::error::DbError;
 use crate::db::test_projects::read;
 use crate::model::test_projects::{OutputSection, TileFields, TileKind};
-use crate::test_projects::test_support::single::add_tile;
-use crate::test_projects::test_support::{database, load, project_with_scheme};
 
 #[test]
 fn a_tile_changed_outside_the_program_is_an_error() {

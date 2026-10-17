@@ -3,7 +3,7 @@
 //! said to a model, and every reading of what it says, is here, in one
 //! place for the audit. A task works on plain data (`model/`) and gives
 //! back plain data: applying a proposal to a project is the work of
-//! the business (`test_projects/analysis/`).
+//! the business (`business/test_projects/analysis/`).
 //!
 //! ```text
 //! chapter.rs    the analysis of a chapter: tiles and links

@@ -14,10 +14,10 @@ use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
 use tokio::sync::watch;
 
-use crate::accounts::accounts::Account;
+use crate::business::installation::lifecycle::{Opened, Running};
+use crate::business::session::accounts::Account;
+use crate::business::test_projects::workspace::Workspace;
 use crate::db::encryption::database_key::DatabaseKey;
-use crate::installation::lifecycle::{Opened, Running};
-use crate::test_projects::workspace::Workspace;
 
 use super::error::UiError;
 
@@ -48,7 +48,7 @@ pub struct UiState {
     /// analysis), the same way.
     work_stop: Mutex<Option<watch::Sender<bool>>>,
     /// The test projects open for editing, with their versions for
-    /// "Undo" (`test_projects/workspace.rs`): the objects in memory of
+    /// "Undo" (`business/test_projects/workspace.rs`): the objects in memory of
     /// the session. Shared with the work on the database, which runs
     /// on a thread of its own (`user_data.rs`, `with_project`).
     workspace: Arc<Mutex<Workspace>>,

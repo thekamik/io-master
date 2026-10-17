@@ -2,8 +2,8 @@
 
 use super::*;
 
+use crate::business::test_projects::test_support::database;
 use crate::db::ai::journal::read;
-use crate::test_projects::test_support::database;
 
 fn sample(task: &str) -> Entry {
     Entry {

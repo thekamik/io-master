@@ -8,9 +8,9 @@
 
 use serde::Serialize;
 
+use crate::business::hardware::scan_settings::ScanSettings;
 use crate::hardware_tests::devices::devices::{PortFilter, PortType, SerialPortInfo};
 use crate::hardware_tests::devices::port_property::PortProperty;
-use crate::hardware_tests::devices::scan_settings::ScanSettings;
 
 /// A column that can be shown.
 #[derive(Debug, Serialize)]

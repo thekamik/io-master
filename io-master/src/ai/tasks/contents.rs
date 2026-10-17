@@ -2,7 +2,7 @@
 //! analysis*): the question with the table of contents of a standard,
 //! and the reading of the answer, the chapters (step 27 of
 //! `docs/todo.md`). Where the chapters are and which schemes they
-//! become is found by `test_projects/analysis/contents.rs`.
+//! become is found by `business/test_projects/analysis/contents.rs`.
 
 use serde_json::Value;
 

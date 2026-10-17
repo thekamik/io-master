@@ -4,7 +4,7 @@
 //!
 //! ```text
 //! model/standards.rs   the types, the rules of the fields (this file)
-//! standards/create.rs  load a document: its file and the text of its pages
+//! business/standards/create.rs  load a document: its file and the text of its pages
 //! read.rs       the list, one document, a page, the PDF, the search
 //! update.rs     what the user told about a document
 //! delete.rs     remove a document no project uses
@@ -33,7 +33,7 @@ pub const MAX_SHORT: usize = 200;
 pub const MAX_HITS: usize = 200;
 
 /// The longest quote that is accepted, in characters. A source is a
-/// passage, not a page (`standards/quote.rs`).
+/// passage, not a page (`business/standards/quote.rs`).
 pub const MAX_QUOTE: usize = 2000;
 
 /// What the user tells about a document.

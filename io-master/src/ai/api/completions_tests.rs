@@ -8,9 +8,9 @@ use tokio::sync::watch;
 use crate::ai::api::test_support::{
     FakeAnswer, FakeService, checked, completions as completions_format, completions_events, data,
 };
+use crate::business::test_projects::test_support::database;
 use crate::db::ai::journal::read as journal_read;
 use crate::model::api_key::ApiKey;
-use crate::test_projects::test_support::database;
 
 /// The first piece of a reply that never ends: the service then stays
 /// silent until the client gives up.

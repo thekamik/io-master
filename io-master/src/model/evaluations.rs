@@ -3,7 +3,7 @@
 //! requirements and its journal.
 //!
 //! ```text
-//! test project (evaluation/)  ──import──►  evaluation project
+//! test project (business/evaluations/)  ──import──►  evaluation project
 //!                                           fields     name, product, its version, manufacturer, evaluator
 //!                                           origin     the test project it was made from (as text)
 //!                                           structure  schemes, tiles, links: a frozen copy

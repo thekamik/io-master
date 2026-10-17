@@ -10,8 +10,8 @@
 
 use std::sync::PoisonError;
 
+use crate::business::test_projects::workspace::{OpenProject, Workspace};
 use crate::db::user::database::{self as user_db, UserDb};
-use crate::test_projects::workspace::{OpenProject, Workspace};
 
 use super::blocking::blocking;
 use super::error::UiError;

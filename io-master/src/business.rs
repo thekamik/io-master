@@ -1,0 +1,23 @@
+//! The business logic of the program (step 40 of docs/todo.md): what
+//! the evaluator does, as resources and operations, reached by the
+//! window (`tauri_ui/`) and by nothing else. It uses `ai/` to ask the
+//! AI, `hardware_tests/` to reach devices and `db/` to store; it never
+//! presents anything itself.
+//!
+//! ```text
+//! session/         the logged-in evaluator: accounts, login, password
+//! business/installation/    the first start, the state of the installation
+//! business/standards/       the documents of standards
+//! business/test_projects/   the test projects: schemes, tiles, links, analysis
+//! evaluations/     the evaluation projects: results, proposals, journal
+//! chats/           the chats with the AI
+//! hardware/        the scan of the ports and its settings
+//! ```
+
+pub mod chats;
+pub mod evaluations;
+pub mod hardware;
+pub mod installation;
+pub mod session;
+pub mod standards;
+pub mod test_projects;

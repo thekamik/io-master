@@ -1,7 +1,7 @@
 //! The first start, the login, the logout and the password.
 //!
-//! The work itself is done by `installation/lifecycle.rs` and
-//! `accounts/accounts.rs`; these functions check what the page sent
+//! The work itself is done by `business/installation/lifecycle.rs` and
+//! `business/session/accounts.rs`; these functions check what the page sent
 //! and keep the session in [`UiState`].
 //!
 //! There is no one-time setup code, unlike in the web interface:
@@ -11,8 +11,8 @@
 
 use zeroize::Zeroizing;
 
-use crate::accounts::accounts;
-use crate::installation::lifecycle::{self, LifecycleError};
+use crate::business::installation::lifecycle::{self, LifecycleError};
+use crate::business::session::accounts;
 use crate::model::installation::Role;
 
 use super::blocking::blocking;

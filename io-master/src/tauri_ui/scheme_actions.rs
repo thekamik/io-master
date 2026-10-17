@@ -4,7 +4,7 @@
 //! the analysis of chapters with AI.
 //!
 //! The project of the scheme is open for editing in memory
-//! (`test_projects/workspace.rs`, through `with_project`). Every action
+//! (`business/test_projects/workspace.rs`, through `with_project`). Every action
 //! of the user is one change of it ([`change`]): it keeps one version
 //! for "Undo" (one per project, since a change may touch two schemes),
 //! makes the change in memory after the database has stored it, and the
@@ -19,14 +19,14 @@ use std::sync::Arc;
 use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::{self};
 use crate::ai::api::tasks::{self};
+use crate::business::test_projects::analysis::chapter::{self, Answered};
+use crate::business::test_projects::analysis::parts;
+use crate::business::test_projects::checks;
+use crate::business::test_projects::workspace::OpenProject;
+use crate::business::test_projects::{links, schemes, tiles};
 use crate::db::user::database::UserDb;
 use crate::model::ai::Role;
 use crate::model::ai::Task;
-use crate::test_projects::analysis::chapter::{self, Answered};
-use crate::test_projects::analysis::parts;
-use crate::test_projects::checks;
-use crate::test_projects::workspace::OpenProject;
-use crate::test_projects::{links, schemes, tiles};
 
 use super::error::UiError;
 use super::project_actions::{documents_of, project_of_scheme};
@@ -297,7 +297,7 @@ pub async fn analyse_schemes(
 
 /// The common work of [`analyse`] and [`analyse_schemes`]: every job
 /// part by part; one "Undo" for all of it. Each part is the pipeline
-/// of `test_projects/analysis/chapter.rs`: the question from the open
+/// of `business/test_projects/analysis/chapter.rs`: the question from the open
 /// project, the reply of the model over `ai/api/`, written into the
 /// journal of the AI, and the answer applied to the open project.
 async fn run(
@@ -360,7 +360,7 @@ async fn run(
                 let (part, instructions) = (part.clone(), instructions.clone());
 
                 with_project(state, project, move |db, open| {
-                    let title = crate::standards::read::get(db, part.document_id)?
+                    let title = crate::business::standards::read::get(db, part.document_id)?
                         .map(|document| document.fields.title)
                         .unwrap_or_default();
 

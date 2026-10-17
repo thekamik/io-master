@@ -73,7 +73,7 @@ pub const SCHEMA: &str = "
 
     CREATE INDEX IF NOT EXISTS tiles_of_scheme ON tiles (scheme_id);
 
-    -- found: whether the quote was found on its page (standards/quote.rs).
+    -- found: whether the quote was found on its page (business/standards/quote.rs).
     CREATE TABLE IF NOT EXISTS tile_sources (
         id          INTEGER PRIMARY KEY,
         tile_id     INTEGER NOT NULL REFERENCES tiles (id),

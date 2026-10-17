@@ -4,7 +4,7 @@ use super::*;
 
 use crate::model::ai::Role;
 
-use crate::test_projects::test_support::database;
+use crate::business::test_projects::test_support::database;
 
 #[test]
 fn every_task_has_its_role() {

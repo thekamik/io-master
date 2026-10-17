@@ -10,7 +10,7 @@
 //! owns it:
 //!
 //! 1. checks the installation of this Linux account
-//!    (`installation/verify.rs`); a damaged installation is a
+//!    (`business/installation/verify.rs`); a damaged installation is a
 //!    critical error and the program does not start;
 //! 2. opens the window ([`tauri_startup`] below) and runs until it
 //!    is closed.
@@ -27,25 +27,21 @@
 // file of the same name next to it (`db.rs` next to `db/`), so that
 // a new file never changes this one; the whole tree is described in
 // docs/code_structure.md.
-mod accounts;
 mod ai;
+mod business;
 mod db;
-mod evaluation;
 mod hardware_tests;
-mod installation;
 mod model;
 mod security;
-mod standards;
 mod tauri_ui;
-mod test_projects;
 #[cfg(test)]
 mod test_support;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use installation::lifecycle::Opened;
-use installation::verify::{InstallationState, verify_installation};
+use business::installation::lifecycle::Opened;
+use business::installation::verify::{InstallationState, verify_installation};
 use tauri_ui::commands;
 use tauri_ui::state::UiState;
 
@@ -56,7 +52,7 @@ use tauri_ui::state::UiState;
 // at every start and never written into the program.
 //
 // TODO (step 13 of docs/todo.md): move both to
-// installation/verify.rs, where the keyring will be read; unused
+// business/installation/verify.rs, where the keyring will be read; unused
 // until then.
 
 /// Name of the keyring entry with the location of the installation
@@ -81,7 +77,7 @@ fn main() -> ExitCode {
     }
 
     // The state of the installation decides how the window starts
-    // (installation/verify.rs). A damaged installation is a
+    // (business/installation/verify.rs). A damaged installation is a
     // critical error: the program does not start
     // (docs/architecture.md, section 3.2).
     let (data_dir, opened) = match verify_installation() {

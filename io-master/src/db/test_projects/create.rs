@@ -1,6 +1,6 @@
 //! Creating test projects, schemes, tiles and links. The rules of
 //! `model/test_projects/rules.rs` are checked by the callers
-//! (`test_projects/`) before, on the normal form of the fields; this
+//! (`business/test_projects/`) before, on the normal form of the fields; this
 //! file writes what it gets.
 
 use rusqlite::{Connection, named_params};

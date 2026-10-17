@@ -1,5 +1,5 @@
 //! The rows of the documents of standards and the Rust type they
-//! become (`standards/`).
+//! become (`business/standards/`).
 
 use rusqlite::Row;
 

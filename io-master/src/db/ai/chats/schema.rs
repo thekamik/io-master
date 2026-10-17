@@ -4,7 +4,7 @@
 //! of the evaluator (`db/encryption/`).
 //!
 //! ```text
-//! chats      the conversations (ai/chat/chats.rs)
+//! chats      the conversations (business/chats/history.rs)
 //! messages   the messages of the conversations, with their time and
 //!            model
 //! ```
@@ -20,7 +20,7 @@ pub const SCHEMA: &str = "
     );
 
     -- speaker: 'evaluator' or 'model'. For a reply of the model:
-    -- the model that wrote it, how the reply ended (ai/chat/chats.rs),
+    -- the model that wrote it, how the reply ended (business/chats/history.rs),
     -- an explanation when it failed, and its token counts.
     CREATE TABLE IF NOT EXISTS messages (
         id              INTEGER PRIMARY KEY,

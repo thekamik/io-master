@@ -4,7 +4,7 @@
 //! the table of contents read by the AI as proposed schemes.
 //!
 //! A project the page shows is open for editing in memory
-//! (`test_projects/workspace.rs`, through `with_project`): every change
+//! (`business/test_projects/workspace.rs`, through `with_project`): every change
 //! is made on it and written through to the database at once. The page
 //! gets the project back as it is in memory after every change.
 //!
@@ -16,21 +16,21 @@ use std::sync::Arc;
 use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::{self};
 use crate::ai::api::tasks::{self};
+use crate::business::standards;
+use crate::business::standards::pdf_text;
+use crate::business::test_projects::analysis::contents::{self, Answered};
+use crate::business::test_projects::checks;
+use crate::business::test_projects::error::StoreError;
+use crate::business::test_projects::exchange::format::{self, ExchangeError};
+use crate::business::test_projects::exchange::{export, import};
+use crate::business::test_projects::workspace::OpenProject;
+use crate::business::test_projects::{projects, schemes};
 use crate::db::user::database::UserDb;
 use crate::model::ai::Role;
 use crate::model::ai::Task;
 use crate::model::standards::DocumentFields;
 use crate::model::test_projects::rules::SchemeError;
 use crate::model::test_projects::{ProjectData, ProjectFields};
-use crate::standards;
-use crate::standards::pdf_text;
-use crate::test_projects::analysis::contents::{self, Answered};
-use crate::test_projects::checks;
-use crate::test_projects::error::StoreError;
-use crate::test_projects::exchange::format::{self, ExchangeError};
-use crate::test_projects::exchange::{export, import};
-use crate::test_projects::workspace::OpenProject;
-use crate::test_projects::{projects, schemes};
 
 use super::blocking::blocking;
 use super::error::UiError;

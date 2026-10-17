@@ -2,7 +2,7 @@
 //! 27 of `docs/todo.md`): a part of the pages sent in one question,
 //! and what the model proposed, read from its answer (`ai/tasks/`).
 //! Nothing proposed is taken on trust: the proposals are checked and
-//! applied by `test_projects/analysis/`.
+//! applied by `business/test_projects/analysis/`.
 
 use crate::model::test_projects::TileFields;
 

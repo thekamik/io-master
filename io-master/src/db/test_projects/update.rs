@@ -1,6 +1,6 @@
 //! Changing test projects, schemes and tiles. The rules of
 //! `model/test_projects/rules.rs` are checked by the callers
-//! (`test_projects/`) before. A change of a row that does not exist is
+//! (`business/test_projects/`) before. A change of a row that does not exist is
 //! the error `DbError::NoRow`; the functions that return `bool` say
 //! whether the row existed instead.
 
@@ -182,7 +182,7 @@ pub fn replace_content(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]
 }
 
 /// Brings the tiles and links of `project` back to `tiles` and `links`
-/// (a version kept for "Undo", `test_projects/workspace.rs`), in one
+/// (a version kept for "Undo", `business/test_projects/workspace.rs`), in one
 /// transaction, **with the numbers they had**, so that the project in
 /// memory and in the database stay the same. Every tile names a scheme
 /// of the project.

@@ -3,17 +3,17 @@
 //! search, and the PDF itself for the viewer.
 //!
 //! Loading is a long work: the text is read in parts
-//! (`standards/pdf_text.rs`), every part is reported to the page, and
+//! (`business/standards/pdf_text.rs`), every part is reported to the page, and
 //! "Stop" ([`UiState::stop_work`]) ends it after the part being read.
 //! The files are chosen in a dialog of the system by the command
 //! (`commands.rs`); this file gets only their paths.
 
 use std::path::PathBuf;
 
+use crate::business::standards;
+use crate::business::standards::error::DocumentError;
+use crate::business::standards::pdf_text::{self, PdfError};
 use crate::model::standards::DocumentFields;
-use crate::standards;
-use crate::standards::error::DocumentError;
-use crate::standards::pdf_text::{self, PdfError};
 
 use super::blocking::blocking;
 use super::error::UiError;

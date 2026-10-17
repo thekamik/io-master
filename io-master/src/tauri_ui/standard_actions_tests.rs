@@ -5,8 +5,8 @@ use super::*;
 
 use std::sync::{Arc, Mutex};
 
+use crate::business::test_projects::test_support::pdf as make_pdf;
 use crate::tauri_ui::test_support::{installed, logged_in};
-use crate::test_projects::test_support::pdf as make_pdf;
 use crate::test_support::TempDir;
 
 /// Collects the events of loading.

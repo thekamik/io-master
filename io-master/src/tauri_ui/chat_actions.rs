@@ -5,12 +5,12 @@
 //! pieces go to the page through `events` as they arrive. "Stop"
 //! (the command `stop_reply`, through [`UiState::stop_reply`]) stops
 //! the reply (`ai/api/completions.rs`); what was written up to then is
-//! stored, like every reply, with how it ended (`ai/chat/chats.rs`),
+//! stored, like every reply, with how it ended (`business/chats/history.rs`),
 //! and the question goes into the journal of the AI.
 
 use crate::ai::api::completions;
-use crate::ai::chat::chats;
-use crate::ai::chat::conversation::{self, Prepared};
+use crate::business::chats::conversation::{self, Prepared};
+use crate::business::chats::history as chats;
 use crate::model::ai::Task;
 
 use super::error::UiError;

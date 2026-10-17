@@ -4,10 +4,10 @@
 
 use super::*;
 
+use crate::business::test_projects::test_support::database;
 use crate::db::error::DbError;
 use crate::db::evaluations::journal::read;
 use crate::db::user::database::UserDb;
-use crate::test_projects::test_support::database;
 
 fn step<'a>(actor: &'a Actor, action: JournalAction, detail: &'a str) -> JournalStep<'a> {
     JournalStep { actor, action, tile: Some(7), field: Some(ResultField::Analysis), detail }

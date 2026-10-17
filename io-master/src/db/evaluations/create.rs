@@ -1,6 +1,6 @@
 //! Creating evaluation projects and proposals of the AI, each with its
 //! entry of the journal (`journal/create.rs`) in one transaction. The
-//! rules are checked by `evaluation/` before, on the normal form of the
+//! rules are checked by `business/evaluations/` before, on the normal form of the
 //! fields; this file writes what it gets.
 
 use std::collections::HashMap;

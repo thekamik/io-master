@@ -2,7 +2,7 @@
 //! analysis*): the question for one part of the pages of a chapter,
 //! and the reading of the answer, one JSON object with "tiles" and
 //! "links" (step 20 of `docs/todo.md`). The proposals read here are
-//! checked and applied by `test_projects/analysis/chapter.rs`.
+//! checked and applied by `business/test_projects/analysis/chapter.rs`.
 
 use serde_json::Value;
 
