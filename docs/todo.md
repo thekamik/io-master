@@ -33,7 +33,8 @@ The number of a step is its name and never changes, so that references in the co
 | 21 | 10: Before release of the workstation | |
 | 22 | 4: The TLS server of the reset service (changed 2026-10-16) | before the master |
 | 23 | 11: Master and password reset | last |
-| now | **39: The domain folders: CRUD of the objects in memory, `db/` for the lasting write** | concept being agreed (2026-10-17) |
+| next | **40: The cleanup of the architecture** (`docs/architecture_cleanup.md`) | approved 2026-10-17; on the branch `v0.5`; before step 31 |
+| now | **39: The domain folders: CRUD of the objects in memory, `db/` for the lasting write** | built 2026-10-17; waiting for the user's review |
 | now | **38: The AI layer: `ai/api/` in the form of REST, `ai/chat/`, roles of the AI** | built 2026-10-17; decisions approved by the user; the code waits for the user's review |
 | now | **37: The database layer by areas and CRUD** | built 2026-10-17 (user: critical, before step 31); waiting for the user's review |
 | next | 23: Evaluation with AI: carrying out a scheme, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built, waiting for the user's review |
@@ -737,6 +738,15 @@ test_projects/   model.rs, rules.rs, workspace.rs (the open projects and their v
                  checks.rs, exchange/, analysis/ (one file per task of the AI)
 evaluation/      the same pattern: the open evaluation in memory, results/, journal/
 ```
+
+**As built (2026-10-17)**
+- `standards/`: `model.rs` (types, rules of the fields), `create.rs` (`add`), `read.rs` (`list`, `get`, `by_sha256`, `page`, `pdf`, `search`), `update.rs`, `delete.rs`, `pdf_text.rs`, `quote.rs`. No object in memory: a document is loaded and read.
+- `test_projects/`: `model.rs` (types and `ProjectData`), `rules.rs` (`SchemeError`, `StoreError`, `check_link`, the checks of the fields), `workspace.rs` (`Workspace`, `OpenProject`: `data`, `change` = one version per action of the user, `remember` = one version before a long work, `undo` with the numbers kept, `VERSIONS` = 50), `projects/`, `schemes/`, `tiles/`, `links/` (CRUD on the open project: the rules on memory, the write through `db/test_projects/`, then memory), `content.rs` (the content of an imported project), `checks.rs`, `exchange/` (`format.rs`, `export.rs`, `import.rs`), `analysis/` (`parts.rs`; `chapter.rs` and `contents.rs`, each with `question` from the open project and the instructions, and `answer` applied to it; asked over `ai/api/` in the role of the task).
+- `evaluation/` (was `product_evaluation/`): `model.rs`, `workspace.rs` (`OpenEvaluation`: the frozen structure, the results, the proposals; no "Undo", every step is in the journal), `projects/` (`create.rs`: the import and the copy; `read.rs`; `delete.rs`), `results/` (`create.rs` propose, `read.rs`, `update.rs` accept/correct/write, `delete.rs` reject), `journal/read.rs`.
+- `db/test_projects/update.rs`: `restore_content` writes a version back with the numbers it had; when a number was given to another project meanwhile, `undo` writes it with new numbers, reads the project back and forgets the older versions (memory and the database always agree).
+- Window layer: `UiState` holds the `Workspace` of the test projects (its undo stacks removed); `user_data.rs` has `with_workspace` and `with_project`; `project_actions.rs` and `scheme_actions.rs` work on the open project; the analysis is the pipeline question → `ai/api/completions.rs` → journal of the AI → answer. The window of an evaluation (and its `Workspace` in `UiState`) comes with step 31.
+- Tests: `test_support::single` in `test_projects/` and `evaluation/` run the CRUD as single calls and check after every call that memory and the database agree; `workspace_tests.rs` covers the versions and "Undo". 331 tests pass; clippy only the known dead-code warnings. Not tried in the window.
+- Not committed.
 
 ## Step 28: Reports in the LaTeX template of the laboratory (later)
 
