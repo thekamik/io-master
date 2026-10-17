@@ -1,6 +1,6 @@
-# IO Master v0.3: architecture
+# IO Master: architecture
 
-This document records the concept of the new version, as agreed on 2026-10-14 and changed on 2026-10-15 (one user per installation, the keyring, the secret of the application; sections 3, 5.1, 5.6, 9). It describes *what* the program is and *why* it is built this way. Implementation details belong in the code; the functions of v0.2 that are being re-created are listed in `v0.2_functionality.md`.
+This document records the concept of the program, as agreed from 2026-10-14 on (one user per installation, the keyring and the secret of the application on 2026-10-15; the desktop window on 2026-10-16; the layers of the code on 2026-10-17). It describes *what* the program is and *why* it is built this way. *Where* everything is in the code is in `code_structure.md`; the functions of v0.2 that are being re-created are listed in `v0.2_functionality.md`.
 
 Status markers: **agreed** is decided; **open** still needs a decision; **TODO** is known work that must not be forgotten.
 
@@ -32,13 +32,13 @@ There is one program. Its **role is chosen once, at the first start, in the wind
 
 | Role | Where | What it can do | What is blocked |
 |---|---|---|---|
-| **Workstation** | the Linux account of an evaluator | everything: web UI, AI, chats, device scan and tests, evaluations. **One user only**: the evaluator who installed it | the master panel; adding users |
+| **Workstation** | the Linux account of an evaluator | everything: the window, AI, chats, device scan and tests, evaluations. **One user only**: the evaluator who installed it | the master panel; adding users |
 | **Master** | a separate, dedicated machine | only the password reset service: an API for workstations and a panel where its administrator approves requests. **One user only**: the one who installed it | everything else; adding users |
 
 ```text
  workstation of evaluator A          workstation of evaluator B
 ┌──────────────────────────┐        ┌──────────────────────────┐
-│ browser ── web UI        │        │ browser ── web UI        │
+│ the window (Tauri)       │        │ the window (Tauri)       │
 │ io-master (workstation)  │        │ io-master (workstation)  │
 │  data, AI, devices       │        │  data, AI, devices       │
 └────────────┬─────────────┘        └────────────┬─────────────┘
@@ -58,7 +58,7 @@ A master and a workstation **never run on the same computer**, not even for deve
 
 ### 3.2 The first start (agreed, changed 2026-10-15)
 
-The first start is the real moment of installation. **It is told by the keyring of the Linux account** (section 5.6): two entries, the location of the installation and the secret of the application, are written there by the installation. The checks run in `startup/` before the server starts; `main` only calls them.
+The first start is the real moment of installation. **It is told by the keyring of the Linux account** (section 5.6): two entries, the location of the installation and the secret of the application, are written there by the installation. The checks run in `business/installation/verify.rs` before the window opens; `main` only calls them.
 
 | Entries in the keyring | Installation at the recorded location | State | What the program does |
 |---|---|---|---|
@@ -70,13 +70,12 @@ The first start is the real moment of installation. **It is told by the keyring 
 - **A new installation** is made only in an empty or new folder, so it can never overwrite an existing installation. The location is chosen by the user; how it is chosen in the window is decided when the interface is reviewed.
 - **Restoring an installation** asks for its location and its recovery code (the secret of the application, section 5.6). The program checks both against the system database and writes them back into the keyring. This is the way back after a lost keyring: a reset of the Linux password by an administrator, keyring entries removed by hand, a new system.
 - With the optional TPM factor (section 5.1) the marker in the TPM is compared as well; a marker without an installation, or an installation without its marker, is a damaged installation and stops the program.
-- At the first start the program prints a **one-time setup code** in the terminal. The setup page asks for it, so only the person who started the program can install it, not another user or program of the computer.
-- The setup is possible only in the local interface (without `--address`).
+- The setup is made in the window, by the person in front of it: the window opens no network port, so no other user or program of the computer can reach the setup (the one-time setup code of the web interface of v0.3 is no longer needed).
 - The person who installs the program is its **only user**.
 - **Only the role is final.** The connection to a master is set, changed or removed later in Settings; a workstation works fully without a master (section 5.4).
 - The data of an installation lives in its folder (the system database and the encrypted database of the user). All settings are in the databases; only the two entries of section 5.6 are kept in the keyring.
 - A build without the master code is possible later as a separate build variant.
-- **Removing the installation** is done in the window, after a login and a confirmation; it removes the databases, the keyring entries and, with the TPM factor, the marker in the TPM. There is no console command for it: whoever can type in a terminal of the account must not be able to remove the work of the evaluator. TODO (step 12): `installation/uninstall.rs` is a console function marked "do not use" until it is reworked.
+- **Removing the installation** is done in the window, after a login and a confirmation; it removes the databases, the keyring entries and, with the TPM factor, the marker in the TPM. There is no console command for it: whoever can type in a terminal of the account must not be able to remove the work of the evaluator. TODO (step 12): `business/installation/uninstall.rs` is a console function marked "do not use" (not compiled) until it is reworked.
 
 ## 4. User interface (agreed, changed 2026-10-16)
 
@@ -88,7 +87,7 @@ The first start is the real moment of installation. **It is told by the keyring 
   - `https://` with TLS 1.3 and a verified certificate (the system's, or only the CA certificate of the connection); **plain `http://` only to the loopback** (`127.0.0.0/8`, `::1`, written as an IP address), because that traffic does not leave the computer; no redirects, no proxy of the environment.
   - The API key only where `{{api_key}}` stands in a header, never in the URL or the body; never shown back; masked in the report of a check; bound to the scheme, host and port it was entered for (a changed address removes it).
   - Placeholders of the body are whole JSON values, replaced as values: a message can never change the structure of the request.
-  - **The AI layer (step 38, 2026-10-17):** the rest of the program asks the AI only through `ai/api/`, in the form of REST (roles, tasks, completions, checks); the communication with the provider (`ai/api/provider/`) is reachable only from there. Every question is asked in a task and a role (analysis of a text and its fragments, summary, consultation, formal analysis) and written into the journal of the AI, which is never changed. The connections, the roles, the instructions, the memory of the chat and the journal are stored by `db/ai/`.
+  - **The AI layer (steps 38 and 40, 2026-10-17):** the rest of the program asks the AI only through `ai/api/`, in the form of REST (connections, roles, tasks, completions, checks); the communication with the provider (`ai/api/provider/`) is reachable only from there, and the text of every question and the reading of every answer are in `ai/tasks/`. Every question is asked in a task and a role (analysis of a text and its fragments, summary, consultation, formal analysis) and written into the journal of the AI by `ai/api/` itself (`completions::ask`), which is never changed. The connections, the roles, the instructions, the chats and the journal are stored by `db/ai/`.
 - Minimal layout: **navigation on the left**, the selected page on the right.
 - Pages of the workstation, in this order of work:
   1. **Chat**: the AI assistant, over the active AI connection.
@@ -128,7 +127,7 @@ secret of the application (keyring) ──────┼─► HKDF ──► u
 [secret of the device (TPM), optional] ───┘
 ```
 
-- The key of the database is random (`db/generate_key.rs`) and is never stored in plain form; it is stored encrypted with the unlocking key. Each stored key records which factors it needs.
+- The key of the database is random (`db/encryption/generate_key.rs`) and is never stored in plain form; it is stored encrypted with the unlocking key. Each stored key records which factors it needs.
 - Opening the database needs the password and the secret of the application, and with the TPM factor also the device.
 - Changing the password re-encrypts only the 32-byte key of the database, not the database.
 - Limit: while an evaluator is logged in, the key is in the memory of the program. The scheme protects the data when the program is closed or logged out.
@@ -144,7 +143,7 @@ The system database is opened before anyone gives a password, so without the TPM
 
 **Open (step 4):** the private key of the TLS server is needed at program start, before any login. With the TPM factor it is protected by the TPM; without it, how it is protected is still to be decided.
 
-**The code (step 37 of `todo.md`, 2026-10-17):** all SQL is in `src/db/`, one folder per area (`system/`, `user/`, `ai/`, `standards/`, `test_projects/`, `evaluations/`), each with its tables and its files of create, read, update and delete; all code of encryption is in `src/db/encryption/`, and `sqlcipher.rs` is the only place where a database file is opened or created. The connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile. **Objects in memory (step 39):** a test project open for editing (and an evaluation open for work) is an object in memory in the core (`test_projects/workspace.rs`, `evaluation/workspace.rs`), changed by the CRUD of its domain and written through to the database at once; the versions of a test project for "Undo" are only in memory.
+**The code (steps 37 and 40 of `todo.md`, 2026-10-17):** all SQL is in `src/db/`, one folder per area of data, each with its tables and its files of create, read, update and delete; all code of encryption is in `src/db/encryption/`, and `sqlcipher.rs` is the only place where a database file is opened or created. The connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile. The database of an evaluator is opened once at the login and kept in the session of the evaluator (`business/session.rs`) until the logout; the key that opened it is wiped. A test project open for editing (and an evaluation open for work) is an object in memory of the session, changed by the business and written through to the database at once; the versions of a test project for "Undo" are only in memory. Details: `code_structure.md`.
 
 Both databases are **SQLite files** (agreed, implemented in step 3), the database of the evaluator encrypted with SQLCipher: no separate database service, one file per database in the folder of the installation (section 3.2), transactions that survive an interrupted write, and a built-in way to copy a running database.
 
@@ -182,7 +181,7 @@ The keyring of the Linux account (through the Secret Service interface; GNOME Ke
 
 - **Every damage is critical.** A missing, damaged or contradictory entry, or an installation that does not match them, stops the program (section 3.2), except when both entries are missing: then the start page offers a new installation or the restoring of an existing one.
 - **The secret is also the recovery code.** It is shown as text that can be copied by hand: the alphabet without 0, O, 1 and I, groups of five characters, with a check sum against typing errors (about 52 characters). The evaluator keeps it outside the computer, for example in the safe of the laboratory.
-- **It can be shown again** in Settings, only after the password is entered again, so that an open, logged-in browser tab is not enough to read it.
+- **It can be shown again** in Settings, only after the password is entered again, so that an open, logged-in window is not enough to read it.
 - **It can be replaced** when it may have been stolen: a new secret is made, the key of the database is encrypted again with the password and the new secret, and the keyring entry is replaced. Limit, stated in the page: a copy of the files taken *together with* the old secret still opens with the old secret and the password; the replacement protects the files on the computer, not copies already taken.
 - **What the keyring does not prove.** It needs a desktop session, which makes work over SSH or without a desktop impossible: wanted, because the evaluator is to work at the computer. It is not a proof of presence: while the session is unlocked (also behind a locked screen) the keyring is open to every program of the account. A proof of presence is the passkey with user verification (section 5.1, optional, step 9).
 
@@ -195,11 +194,11 @@ The program does not share data between evaluators itself. The laboratory uses i
 - The program answers for its own security and for the transport. What happens on the git server (for example disk encryption) is the responsibility of the laboratory.
 - Credentials for git are secrets, protected like all others (section 5.1).
 - **What goes to git (agreed): only the filled-in report template of the laboratory.** The laboratory writes its own report template in LaTeX with markers; the program fills the markers with parts of the evaluation and the result is committed. Everything else (API keys, chats, working results) stays in the encrypted database of the workstation. This comes in a later stage (see section 8).
-- Planned later as well: a small git panel in the web UI.
+- Planned later as well: a small git panel in the window.
 
 ## 7. Work on devices
 
-Devices are reached from the workstation only. The first function is the scan of serial ports (`hardware_tests/devices/devices.rs`); it reads only the description of the ports and never opens one. Sending to a device follows P2: proposed by the program, executed by an action of the evaluator.
+Devices are reached from the workstation only. The first function is the scan of serial ports (`hardware_tests/devices/serial_ports.rs`); it reads only the description of the ports and never opens one. Sending to a device follows P2: proposed by the program, executed by an action of the evaluator.
 
 ### 7.1 Test projects and evaluation schemes (agreed and built 2026-10-16, steps 16 to 22 and 24 to 27 of `todo.md`)
 

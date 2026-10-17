@@ -1,40 +1,32 @@
-# Handover for a new session (2026-10-16)
+# Handover for a new session
 
-Read this file, `CLAUDE.md`, `review.md`, `docs/architecture.md` and the order table of `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English.
+Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md` and the order table of `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English.
 
-## Where the project is
+## Where the project is (2026-10-17)
 
-- Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, system rustc 1.95), branch **`v0.4`**. Branches `v0.2`/`V0.2` must never be changed. `v0.3` keeps the old web interface.
-- **Nothing since commit `acedc8b` is committed.** A commit is made only after the user approves it, ending with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- Built in this phase (all tested; 289 Rust tests pass, `npm run check` clean, clippy only known dead-code warnings):
-  - the desktop window (Tauri 2.12 + Svelte 5, `src/tauri_ui/`, `ui/`), the old `web_ui` removed;
-  - step 15: AI connections without any provider code (`src/ai/`: connection, connections, request, response, json_path, client, presets, field_help); Settings has tabs User / AI / Program;
-  - a new look of the window (`ui/src/style.css`, tokens, dark variant);
-  - steps 16–22: evaluation schemes (`src/evaluation/`, `tauri_ui/standard_actions.rs`, `tauri_ui/scheme_actions.rs`, `ui/src/pages/Schemes.svelte`, `SchemeEditor.svelte`, `PdfViewer.svelte`, `AnalysisPanel.svelte` …). Details: `docs/todo.md`, section "Evaluation schemes", "State (2026-10-16)".
-- The logo of v0.3 may not be used; it was removed from the git history of v0.3 and v0.4. Never bring back a picture from history.
+- Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branch **`v0.5`**. `v0.4` keeps the state before step 40 and is not changed; `v0.2`/`V0.2` are never changed; `v0.3` keeps the old web interface.
+- **Step 40 (the cleanup of the architecture) is built** on `v0.5`, one commit per part, all pushed: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`, their rules and the tests that check them. Everything is in `docs/code_structure.md`; the parts in `docs/todo.md`, step 40. It waits for the user's review.
+- Built before and carried into the new layout (details in `docs/history.md`): the window, the installation and login, AI connections and chat, the scan of serial ports, documents of standards with the viewer, test projects with schemes, tiles, links and the analysis with the AI, export and import, and the core of the evaluation project (step 29; no window yet).
+- **The review starts anew** on the code of v0.5 (`review.md`): no approval moved with the code.
 
 ## What comes next
 
-1. **Code review, step 12 of `docs/todo.md`, led by the user.** The user reads the code file by file, asks and edits by hand. Claude answers precisely (the user knows C, is new to Rust: explain Rust through C analogies), points out errors, and changes code **only on request**. Claude does not review on its own initiative and does not push for decisions.
-   - `// ok kk` above a function: approved; every line added or removed in it needs the user's approval first. Reading and suggesting is fine; its tests may be changed. Claude never adds or removes the marker.
-   - When the user says a whole file is reviewed, write it into `review.md` with the date; every function of it then counts as `// ok kk`.
-   - `review.md` already notes: `io-master/src/main.rs` approved 2026-10-16, then changed only in its module lists (new modules `ai`, `evaluation`, `tauri_ui`); the function `main` is unchanged. The commented-out block `mod web_ui` in it waits for a decision.
-2. Steps 24 to 27 of `docs/todo.md` were built on 2026-10-16 (a requirement as the condition of another; test projects holding one scheme per chapter; links between schemes and moving tiles; AI reading the table of contents and analysing chapters). Details: `docs/todo.md`, "State (2026-10-16): steps 24 to 27". **The user must delete the database of the old test installation before starting the program** (the tables changed; no migration). Next: the user tests them with a real standard and a real model. Step 28 (reports in the LaTeX template of the laboratory) and step 23 (evaluation with AI) come later.
-3. **Evaluation (step 23), planned 2026-10-17** as steps 29 to 36 of `docs/todo.md` (section "Step 23"): one requirement at a time; the documentation of the product in two phases (fragments = verified quote + separate AI note; only fragments accepted by the evaluator go into the assessment); the documentation of the manufacturer in a tool of its own (step 30, designed later; placeholder page `Documentation.svelte` in the sidebar). Step 29 (the evaluation project, the four results, the journal; `src/product_evaluation/`) was built on 2026-10-17 and waits for the user's review.
-4. **Step 37 (2026-10-17): the database layer by areas and CRUD**, raised by the user as critical and built the same day: all SQL in `src/db/<area>/{schema,rows,create,read,update,delete}.rs`, encryption in `src/db/encryption/` moved unchanged (the user audits it next and plans to redesign it). Rule in CLAUDE.md, "Database code". 312 Rust tests pass.
-5. **Step 38 (2026-10-17): the AI layer**: `ai/api/` (REST-like: roles, tasks, completions, checks; `provider/` private), `ai/chat/`, `db/ai/` subfolders (connection, memory, roles, instructions, journal, presets), the journal of every question to the AI. Rules in CLAUDE.md, "AI layer". 325 Rust tests pass; committed as e7711ee (steps 29, 37, 38).
-6. **Step 39 (2026-10-17): the domain folders**: `standards/`, `test_projects/` (open projects in memory with versions for "Undo", CRUD folders, write-through by `db/`), `evaluation/` (was `product_evaluation/`, open evaluation in memory). Rules in CLAUDE.md, "The pipeline of data". Next: the user's review of `db/`, `ai/` and the domain folders, then the concept of step 31 (the window of the evaluation). 331 Rust tests pass.
+1. **The user reviews the new layout** (step 40), then the code file by file (step 12), from the bottom of the layers up. Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.
+2. Then **step 31: the window of the evaluation** (concept first), on top of `business/evaluations/`.
+3. Later steps in the order table of `docs/todo.md` (13, 6, 8, 9, 10, 4, 11; 30 and 28 with step 23).
 
 ## Rules that are easy to forget
 
-- Concept first, approved by the user, then code; small steps, each with tests (`<module>_tests.rs`, attached with `#[cfg(test)] #[path = "..."] mod tests;`).
-- Core separate from the window; serialization only in `src/tauri_ui/serializer/`; core types carry no serde attributes (the scheme file `evaluation/exchange.rs` builds JSON by hand).
+- Concept first, approved by the user, then code; small steps, each with tests (`<file>_tests.rs`, attached with `#[cfg(test)] #[path = "..."] mod tests;`); `cargo fmt` before a commit.
+- The direction of the dependencies is checked by `src/architecture_tests.rs`; a new use against it is a finding, or an exception written there with its reason.
+- Every command of the window is listed in four places (`tauri_ui/commands.rs`, `main.rs`, `build.rs`, `capabilities/default.json`); a test checks them.
+- Serialization only in `src/tauri_ui/serializer/`; the core types carry no serde attributes.
 - Secrets only in the encrypted database of the evaluator; never shown back, never printed; the page holds no secret.
 - Every connection leaving the computer: TLS 1.3, verified certificate. Plain HTTP only to 127.0.0.1/::1 (AI connections).
-- Every command of the window is listed in four places: `commands.rs`, `main.rs` (generate_handler in `tauri_startup`), `build.rs` (AppManifest), `capabilities/default.json`.
 - `tauri.conf.json` keeps `freezePrototype: true`; `vite.config.ts` patches `d3-color` for it (the window does not start otherwise).
 - Never capture the user's screen. Window tests run only on a private Xvfb display, see below.
 - Before deleting or overwriting, look at the target. Dependencies: few, well known, versions pinned exactly, released at least two weeks before.
+- Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## How to build and test
 
@@ -43,11 +35,12 @@ cd io-master
 npm ci                      # once
 npm run check               # svelte-check, must be clean
 npm run build               # copies pdf.js data, builds ui/dist (needed before cargo build)
-cargo build && cargo test
+cargo fmt --check
+cargo build && cargo test   # also the test of the architecture and of the command lists
 T=$(rustup run stable rustc --print sysroot); RUSTC=$T/bin/rustc $T/bin/cargo clippy --all-targets --target-dir target/rustup; rm -rf target/rustup
 ```
 
-Window test on a private display (the scratchpad of the session holds the helpers; recreate them if missing):
+Window test on a private display (helpers in the scratchpad of the session; recreate them if missing):
 
 ```text
 Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp &
