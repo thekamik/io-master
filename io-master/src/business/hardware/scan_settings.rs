@@ -18,8 +18,8 @@ use crate::db::error::DbError;
 use crate::db::user;
 use crate::db::user::database::UserDb;
 
-use crate::hardware_tests::devices::devices::{PortFilter, PortType};
 use crate::hardware_tests::devices::port_property::PortProperty;
+use crate::hardware_tests::devices::serial_ports::{PortFilter, PortType};
 
 /// Name of the setting with the kinds of port.
 const PORT_TYPES: &str = "scan.port_types";

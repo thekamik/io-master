@@ -1,7 +1,7 @@
 //! The serial ports as a resource (step 5 of `docs/todo.md`, moved in
 //! step 40): the scan with the settings of the evaluator. The scan only
 //! reads the descriptions of the ports and never opens one
-//! (`hardware_tests/devices/devices.rs`).
+//! (`hardware_tests/devices/serial_ports.rs`).
 //!
 //! ```text
 //! scan()            GET   /ports            with the stored settings
@@ -10,8 +10,8 @@
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::hardware_tests::devices::devices::{self, PortType, SerialPortInfo};
 use crate::hardware_tests::devices::port_property::PortProperty;
+use crate::hardware_tests::devices::serial_ports::{self as devices, PortType, SerialPortInfo};
 
 use super::scan_settings::ScanSettings;
 

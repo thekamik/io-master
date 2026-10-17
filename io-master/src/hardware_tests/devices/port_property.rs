@@ -6,7 +6,7 @@
 //! the keys of [`PortProperty`] (`scan_settings.rs`), which never
 //! change, so a stored choice stays valid when titles are reworded.
 
-use super::devices::SerialPortInfo;
+use super::serial_ports::SerialPortInfo;
 
 /// Shown for a property that is not known.
 pub const UNKNOWN: &str = "-";

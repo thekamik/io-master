@@ -645,5 +645,5 @@ fn natural_key(name: &str) -> (&str, u64, &str) {
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "device_tests.rs"]
+#[path = "serial_ports_tests.rs"]
 mod tests;

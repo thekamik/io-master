@@ -50,11 +50,11 @@ const ALLOWED: [(&str, &[&str]); 7] = [
             "db::error",
             // The types of a port, shown in the page of the scan; the
             // scan itself goes through business/hardware/.
-            "hardware_tests::devices::devices::PortFilter",
-            "hardware_tests::devices::devices::PortType",
-            "hardware_tests::devices::devices::SerialPortInfo",
-            "hardware_tests::devices::devices::UsbInfo",
-            "hardware_tests::devices::devices::AccessInfo",
+            "hardware_tests::devices::serial_ports::PortFilter",
+            "hardware_tests::devices::serial_ports::PortType",
+            "hardware_tests::devices::serial_ports::SerialPortInfo",
+            "hardware_tests::devices::serial_ports::UsbInfo",
+            "hardware_tests::devices::serial_ports::AccessInfo",
             "hardware_tests::devices::port_property",
         ],
     ),
