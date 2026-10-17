@@ -1,7 +1,8 @@
 //! Reading the schemes of an open test project, from memory.
 
-use crate::test_projects::model::Scheme;
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::model::test_projects::Scheme;
+use crate::model::test_projects::rules::SchemeError;
+use crate::test_projects::error::StoreError;
 use crate::test_projects::workspace::OpenProject;
 
 /// Scheme `id` of the open project; `None` when it has no such.

@@ -99,7 +99,7 @@ pub const SCHEMA: &str = "
 
     -- The accepted text of one field of a requirement. field:
     -- findings, analysis, assessment, vulnerabilities; origin:
-    -- evaluator, ai, ai_corrected (evaluation/model.rs).
+    -- evaluator, ai, ai_corrected (model/evaluations.rs).
     CREATE TABLE IF NOT EXISTS evaluation_results (
         tile_id     INTEGER NOT NULL REFERENCES evaluation_tiles (id),
         field       TEXT NOT NULL,
@@ -121,7 +121,7 @@ pub const SCHEMA: &str = "
     CREATE INDEX IF NOT EXISTS evaluation_proposals_of ON evaluation_proposals (tile_id);
 
     -- The journal (P3 of architecture.md). actor: evaluator or model
-    -- (with model); action: evaluation/model.rs. evaluation_id
+    -- (with model); action: model/evaluations.rs. evaluation_id
     -- and tile_id carry no REFERENCES on purpose: the journal outlives
     -- the rows it names until the whole evaluation is deleted.
     CREATE TABLE IF NOT EXISTS evaluation_journal (

@@ -26,8 +26,9 @@ use std::collections::hash_map::Entry;
 use crate::db::evaluations::read as stored;
 use crate::db::user::database::UserDb;
 
-use super::model::{EvaluationData, EvaluationError, Proposal, RequirementResult, ResultField, ResultOrigin};
 use super::projects::read;
+use crate::evaluation::error::EvaluationError;
+use crate::model::evaluations::{EvaluationData, Proposal, RequirementResult, ResultField, ResultOrigin};
 
 /// An evaluation open for work.
 #[derive(Debug)]

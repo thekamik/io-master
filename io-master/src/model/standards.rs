@@ -3,8 +3,8 @@
 //! encrypted database of the evaluator (`db/standards/`).
 //!
 //! ```text
-//! model.rs      the types, the rules of the fields
-//! create.rs     load a document: its file and the text of its pages
+//! model/standards.rs   the types, the rules of the fields (this file)
+//! standards/create.rs  load a document: its file and the text of its pages
 //! read.rs       the list, one document, a page, the PDF, the search
 //! update.rs     what the user told about a document
 //! delete.rs     remove a document no project uses
@@ -22,17 +22,19 @@
 //! The files are licensed copies and the work on them is
 //! confidential, so they are kept only in the encrypted database.
 
-use std::fmt;
-
 use sha2::{Digest, Sha256};
 
-use crate::db::error::DbError;
+use crate::model::text::{Invalid, check_text};
 
 /// The longest title, part or version, in characters.
 pub const MAX_SHORT: usize = 200;
 
 /// The most hits a search gives.
 pub const MAX_HITS: usize = 200;
+
+/// The longest quote that is accepted, in characters. A source is a
+/// passage, not a page (`standards/quote.rs`).
+pub const MAX_QUOTE: usize = 2000;
 
 /// What the user tells about a document.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -66,41 +68,6 @@ pub struct Hit {
     pub snippet: String,
 }
 
-/// Why a document was not stored or removed.
-#[derive(Debug)]
-pub enum DocumentError {
-    /// A field breaks a rule; holds the reason.
-    Invalid(String),
-    /// The same file is loaded already, as this document.
-    Duplicate(i64),
-    /// A test project or an evaluation project uses the document.
-    InUse,
-    /// The database failed.
-    Db(DbError),
-}
-
-impl fmt::Display for DocumentError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DocumentError::Invalid(reason) => formatter.write_str(reason),
-            DocumentError::Duplicate(_) => formatter.write_str("this file is loaded already"),
-            DocumentError::InUse => formatter.write_str(
-                "a test project or an evaluation uses this document; remove it from the test project, \
-                     or delete the evaluation, first",
-            ),
-            DocumentError::Db(error) => write!(formatter, "{error}"),
-        }
-    }
-}
-
-impl std::error::Error for DocumentError {}
-
-impl From<DbError> for DocumentError {
-    fn from(error: DbError) -> DocumentError {
-        DocumentError::Db(error)
-    }
-}
-
 /// The SHA-256 of a file, in lowercase hex.
 pub fn sha256_hex(bytes: &[u8]) -> String {
     Sha256::digest(bytes).iter().map(|byte| format!("{byte:02x}")).collect()
@@ -108,21 +75,13 @@ pub fn sha256_hex(bytes: &[u8]) -> String {
 
 impl DocumentFields {
     /// Checks what the user told about a document.
-    pub fn check(&self) -> Result<(), DocumentError> {
+    pub fn check(&self) -> Result<(), Invalid> {
         if self.title.trim().is_empty() {
-            return Err(DocumentError::Invalid("the document needs a title".to_owned()));
+            return Err(Invalid::new("title", "the document needs a title"));
         }
 
-        for (name, text) in [("title", &self.title), ("part", &self.part), ("version", &self.version)] {
-            if text.chars().count() > MAX_SHORT {
-                return Err(DocumentError::Invalid(format!("the {name} is longer than {MAX_SHORT} characters")));
-            }
-
-            if text.chars().any(char::is_control) {
-                return Err(DocumentError::Invalid(format!("the {name} holds a control character")));
-            }
-        }
-
-        Ok(())
+        check_text("title", &self.title, MAX_SHORT, false)?;
+        check_text("part", &self.part, MAX_SHORT, false)?;
+        check_text("version", &self.version, MAX_SHORT, false)
     }
 }

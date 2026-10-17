@@ -1,7 +1,7 @@
 //! The checks of a scheme: the gaps that keep it from being a
 //! complete plan of an evaluation (step 21 of `docs/todo.md`).
 //!
-//! The rules of `test_projects/rules.rs` refuse what can never be right (a link of
+//! The rules of `model/test_projects/rules.rs` refuse what can never be right (a link of
 //! the wrong kinds, a circle). The checks here find what is not done
 //! yet; a scheme with findings can still be stored, and the user marks
 //! it ready only when they accept what is left.
@@ -18,8 +18,8 @@
 //! requirement without a source   not traced to the standard
 //! ```
 
-use super::model::{Link, ProposalState, Tile, TileKind};
-use super::rules::LinkMeaning;
+use crate::model::test_projects::rules::LinkMeaning;
+use crate::model::test_projects::{Link, ProposalState, Tile, TileKind};
 
 /// The kind of a finding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

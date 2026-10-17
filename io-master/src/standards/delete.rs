@@ -3,7 +3,7 @@
 use crate::db::standards::{delete as remove, read};
 use crate::db::user::database::UserDb;
 
-use super::model::DocumentError;
+use crate::standards::error::DocumentError;
 
 /// Removes a document; refused while a test project or an
 /// evaluation project uses it.

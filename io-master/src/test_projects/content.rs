@@ -6,9 +6,10 @@
 use crate::db::test_projects::{read as stored, update as store};
 use crate::db::user::database::UserDb;
 
-use super::model::{Link, Tile, TileKind};
 use super::projects::read::existing;
-use super::rules::{SchemeError, StoreError, check_link};
+use crate::model::test_projects::rules::{SchemeError, check_link};
+use crate::model::test_projects::{Link, Tile, TileKind};
+use crate::test_projects::error::StoreError;
 
 /// Replaces the tiles and links of `project` by `tiles` and `links`.
 /// Every tile names its scheme, which must be a scheme of the project.

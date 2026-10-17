@@ -30,9 +30,10 @@ use std::collections::hash_map::Entry;
 use crate::db::test_projects::update as change;
 use crate::db::user::database::UserDb;
 
-use super::model::{Link, ProjectData, Tile};
 use super::projects::read;
-use super::rules::{SchemeError, StoreError};
+use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::{Link, ProjectData, Tile};
+use crate::test_projects::error::StoreError;
 
 /// How many changes of one test project can be undone.
 pub const VERSIONS: usize = 50;

@@ -2,7 +2,7 @@
 
 use super::*;
 
-use crate::test_projects::model::{External, Source, TileFields};
+use crate::model::test_projects::{External, Source, TileFields};
 
 fn tile(id: i64, kind: TileKind) -> Tile {
     let mut fields = TileFields::new(kind, "T");

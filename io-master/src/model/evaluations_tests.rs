@@ -1,4 +1,4 @@
-//! Unit tests of `model.rs`.
+//! Unit tests of `evaluations.rs`.
 
 use super::*;
 
@@ -46,16 +46,16 @@ fn an_evaluation_needs_a_name_and_a_product() {
     assert!(fields.check().is_ok());
 
     let nameless = EvaluationFields { name: "  ".to_owned(), ..fields.clone() };
-    assert!(matches!(nameless.check(), Err(EvaluationError::Invalid("name", _))));
+    assert!(matches!(nameless.check(), Err(Invalid { field: "name", .. })));
 
     let without_product = EvaluationFields { product: String::new(), ..fields.clone() };
-    assert!(matches!(without_product.check(), Err(EvaluationError::Invalid("product", _))));
+    assert!(matches!(without_product.check(), Err(Invalid { field: "product", .. })));
 
     let broken = EvaluationFields { manufacturer: "ACME\u{0}".to_owned(), ..fields.clone() };
-    assert!(matches!(broken.check(), Err(EvaluationError::Invalid("manufacturer", _))));
+    assert!(matches!(broken.check(), Err(Invalid { field: "manufacturer", .. })));
 
     let long = EvaluationFields { name: "x".repeat(MAX_NAME + 1), ..fields };
-    assert!(matches!(long.check(), Err(EvaluationError::Invalid("name", _))));
+    assert!(matches!(long.check(), Err(Invalid { field: "name", .. })));
 }
 
 #[test]

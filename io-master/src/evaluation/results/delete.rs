@@ -4,8 +4,9 @@
 use crate::db::evaluations::create::Step;
 use crate::db::evaluations::delete as store;
 use crate::db::user::database::UserDb;
-use crate::evaluation::model::{Actor, EvaluationError, JournalAction};
+use crate::evaluation::error::EvaluationError;
 use crate::evaluation::workspace::OpenEvaluation;
+use crate::model::evaluations::{Actor, JournalAction};
 
 use super::read::proposal;
 

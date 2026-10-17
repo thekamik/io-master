@@ -7,7 +7,7 @@ use rusqlite::params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::model::{Proposal, ResultOrigin};
+use crate::model::evaluations::{Proposal, ResultOrigin};
 
 use super::create::{Step, journal};
 

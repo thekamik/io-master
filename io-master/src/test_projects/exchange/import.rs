@@ -9,15 +9,16 @@ use serde_json::{Map, Value};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::standards;
-use crate::standards::model::sha256_hex;
-use crate::standards::quote::is_on_page;
-use crate::test_projects::content;
-use crate::test_projects::model::{
+use crate::model::standards::sha256_hex;
+use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::{
     External, Link, OutputSection, PageSpan, ProjectFields, ProposalState, Scheme, SchemeFields, Source, Tile,
     TileFields, TileKind,
 };
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::standards;
+use crate::standards::quote::is_on_page;
+use crate::test_projects::content;
+use crate::test_projects::error::StoreError;
 use crate::test_projects::workspace::Workspace;
 use crate::test_projects::{projects, schemes};
 

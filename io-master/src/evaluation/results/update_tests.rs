@@ -2,14 +2,13 @@
 //! whole folder), through `test_support::single`.
 
 use crate::db::user::database::UserDb;
+use crate::evaluation::error::EvaluationError;
 use crate::evaluation::journal;
-use crate::evaluation::model::{
-    Actor, EvaluationData, EvaluationError, JournalAction, JournalEntry, ResultField, ResultOrigin,
-};
 use crate::evaluation::projects::{create as import, read as projects};
 use crate::evaluation::test_support::single::{accept, correct, of, proposals, propose, reject, write};
 use crate::evaluation::test_support::{fields, ready_project};
-use crate::test_projects::model::TileKind;
+use crate::model::evaluations::{Actor, EvaluationData, JournalAction, JournalEntry, ResultField, ResultOrigin};
+use crate::model::test_projects::TileKind;
 use crate::test_projects::test_support::database;
 
 /// A database with one imported evaluation; returns it and the

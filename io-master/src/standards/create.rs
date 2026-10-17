@@ -4,8 +4,9 @@
 use crate::db::standards::create;
 use crate::db::user::database::UserDb;
 
-use super::model::{DocumentError, DocumentFields, sha256_hex};
 use super::read::by_sha256;
+use crate::model::standards::{DocumentFields, sha256_hex};
+use crate::standards::error::DocumentError;
 
 /// Stores a document: the file and the text of its pages (one text
 /// per page, in order). Refused when the same file is loaded already.

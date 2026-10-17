@@ -14,7 +14,7 @@
 //! copy()           only the accepted part: proposed schemes (with all
 //!                  their tiles) and proposed tiles are left out, and
 //!                  the links that touch them; counted in Skipped
-//!                  the rules of test_projects/rules.rs checked again
+//!                  the rules of model/test_projects/rules.rs checked again
 //! create()         the frozen copy and the first entry of the journal,
 //!                  in one transaction (db/evaluations/)
 //! ```
@@ -25,13 +25,14 @@
 use crate::db::evaluations::create::{self as store, Copy, Step};
 use crate::db::evaluations::read as stored;
 use crate::db::user::database::UserDb;
-use crate::evaluation::model::{Actor, EvaluationError, EvaluationFields, JournalAction, Origin, Skipped};
+use crate::evaluation::error::EvaluationError;
+use crate::model::evaluations::{Actor, EvaluationFields, JournalAction, Origin, Skipped};
+use crate::model::test_projects::rules::{SchemeError, check_link};
+use crate::model::test_projects::{Link, Project, ProjectData, ProposalState, TileKind};
 use crate::standards;
 use crate::standards::quote::is_on_page;
 use crate::test_projects::exchange::format::Exchange;
-use crate::test_projects::model::{Link, Project, ProjectData, ProposalState, TileKind};
 use crate::test_projects::projects as test_projects;
-use crate::test_projects::rules::{SchemeError, check_link};
 
 /// The result of an import.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

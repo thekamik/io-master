@@ -3,7 +3,7 @@
 
 use rusqlite::Row;
 
-use crate::standards::model::{Document, DocumentFields};
+use crate::model::standards::{Document, DocumentFields};
 
 /// The columns of a document, in the order of [`document_from_row`].
 /// The PDF and the pages are read on their own (`read.rs`).

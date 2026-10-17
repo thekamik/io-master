@@ -33,6 +33,7 @@ mod db;
 mod evaluation;
 mod hardware_tests;
 mod installation;
+mod model;
 mod random;
 mod standards;
 mod tauri_ui;

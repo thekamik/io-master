@@ -3,11 +3,11 @@
 use super::*;
 
 use crate::evaluation::journal;
-use crate::evaluation::model::JournalAction;
 use crate::evaluation::projects::read as projects;
 use crate::evaluation::test_support::{fields, ready_project};
+use crate::model::evaluations::JournalAction;
+use crate::model::test_projects::{TileFields, TileKind};
 use crate::test_projects::exchange::{export, import as exchange};
-use crate::test_projects::model::{TileFields, TileKind};
 use crate::test_projects::test_support::single as schemes;
 use crate::test_projects::test_support::{database, scheme_fields};
 
@@ -101,7 +101,7 @@ fn the_file_of_a_project_is_imported_the_same_way() {
         .unwrap()
         .unwrap();
 
-    let content = |data: &crate::evaluation::model::EvaluationData| {
+    let content = |data: &crate::model::evaluations::EvaluationData| {
         data.tiles.iter().map(|tile| tile.fields.clone()).collect::<Vec<_>>()
     };
     assert_eq!(content(&from_file), content(&direct));

@@ -7,8 +7,9 @@ use crate::db::error::DbError;
 use crate::db::test_projects::read as stored;
 use crate::db::user::database::UserDb;
 
-use crate::test_projects::model::{Project, ProjectData};
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::{Project, ProjectData};
+use crate::test_projects::error::StoreError;
 
 /// Every project, by name.
 pub fn list(db: &UserDb) -> Result<Vec<Project>, DbError> {

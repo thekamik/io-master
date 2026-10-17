@@ -2,7 +2,7 @@
 
 use super::*;
 
-use crate::test_projects::model::{External, OutputSection, PageSpan, ProposalState, Source};
+use crate::model::test_projects::{External, OutputSection, PageSpan, ProposalState, Source};
 
 fn link(id: i64, from: i64, to: i64) -> Link {
     Link { id, from, to }

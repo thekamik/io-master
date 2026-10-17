@@ -7,8 +7,8 @@ use rusqlite::{OptionalExtension, params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::model::{Evaluation, JournalEntry, Proposal, ResultField};
-use crate::test_projects::model::{Link, Scheme, Source, Tile};
+use crate::model::evaluations::{Evaluation, JournalEntry, Proposal, ResultField};
+use crate::model::test_projects::{Link, Scheme, Source, Tile};
 
 use super::rows::{
     EVALUATION_COLUMNS, TILE_COLUMNS, entry_from_row, evaluation_from_row, scheme_from_row, tile_from_row,

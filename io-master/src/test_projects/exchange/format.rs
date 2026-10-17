@@ -40,7 +40,7 @@
 
 use std::fmt;
 
-use crate::test_projects::model::{Link, ProjectFields, Scheme, Tile};
+use crate::model::test_projects::{Link, ProjectFields, Scheme, Tile};
 
 /// The name of the format, in every file.
 pub const FORMAT: &str = "io-master-project";

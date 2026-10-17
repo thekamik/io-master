@@ -5,10 +5,11 @@
 //! opens the project from the database, makes the change on it and
 //! checks that memory and the database are still the same.
 
-use crate::test_projects::model::{
+use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::{
     External, Link, OutputSection, PageSpan, ProposalState, Source, Tile, TileFields, TileKind,
 };
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::test_projects::error::StoreError;
 use crate::test_projects::test_support::single::create_project;
 use crate::test_projects::test_support::single::*;
 use crate::test_projects::test_support::{TestDb, database, load, project_fields, project_with_scheme, scheme_fields};

@@ -1,12 +1,12 @@
 //! Changing test projects, schemes and tiles. The rules of
-//! `test_projects/model.rs` are checked by the callers before. A
+//! `model/test_projects.rs` are checked by the callers before. A
 //! function that changes a row that does not exist returns `false`.
 
 use rusqlite::params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::test_projects::model::{Link, ProjectFields, ProposalState, SchemeFields, Source, Tile, TileFields};
+use crate::model::test_projects::{Link, ProjectFields, ProposalState, SchemeFields, Source, Tile, TileFields};
 
 use super::rows::{INSERT_TILE, write_documents, write_scheme, write_sources, write_tile};
 

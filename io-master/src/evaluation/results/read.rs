@@ -2,7 +2,7 @@
 //! evaluation, from memory; and the checks the other files share.
 //!
 //! The results of the requirements: four text fields per requirement
-//! (`model.rs`, `ResultField`), and the texts the AI proposes for them:
+//! (`model/evaluations.rs`, `ResultField`), and the texts the AI proposes for them:
 //!
 //! ```text
 //! create.rs   propose()   the AI writes a proposal: kept apart, marked AI
@@ -19,9 +19,11 @@
 //! with its entry of the journal, in one transaction
 //! (`db/evaluations/`), and only then made in memory.
 
-use crate::evaluation::model::{EvaluationError, MAX_RESULT, Proposal, RequirementResult, ResultField, check_text};
+use crate::evaluation::error::EvaluationError;
 use crate::evaluation::workspace::OpenEvaluation;
-use crate::test_projects::model::TileKind;
+use crate::model::evaluations::{MAX_RESULT, Proposal, RequirementResult, ResultField};
+use crate::model::test_projects::TileKind;
+use crate::model::text::check_text;
 
 /// Checks that `tile` is a requirement of the open evaluation.
 pub(super) fn requirement(open: &OpenEvaluation, tile: i64) -> Result<(), EvaluationError> {
@@ -36,7 +38,7 @@ pub(super) fn requirement(open: &OpenEvaluation, tile: i64) -> Result<(), Evalua
 
 /// Checks the text of a result or a proposal.
 pub(super) fn check_result(text: &str) -> Result<(), EvaluationError> {
-    check_text("text", text, MAX_RESULT, true)
+    Ok(check_text("text", text, MAX_RESULT, true)?)
 }
 
 /// The accepted results of requirement `tile`, in the order of

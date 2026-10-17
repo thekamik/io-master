@@ -7,11 +7,11 @@ use crate::db::user::database::{self as user_db, UserDb};
 use crate::random::random::fill_random;
 use crate::tpm::test_support::TempDir;
 
-use super::model::{ProjectFields, ProposalState, SchemeFields};
 use super::workspace::{OpenProject, Workspace};
 use super::{projects, schemes};
+use crate::model::standards::DocumentFields;
+use crate::model::test_projects::{ProjectFields, ProposalState, SchemeFields};
 use crate::standards;
-use crate::standards::model::DocumentFields;
 
 /// The pages of the small standard of the tests.
 pub const PAGES: [&str; 3] = [
@@ -144,10 +144,11 @@ pub mod single {
     use crate::db::error::DbError;
     use crate::db::test_projects::read as stored;
     use crate::db::user::database::UserDb;
+    use crate::model::test_projects::rules::SchemeError;
+    use crate::model::test_projects::{Link, ProjectFields, Scheme, SchemeFields, Tile, TileFields};
     use crate::test_projects::content;
-    use crate::test_projects::model::{Link, ProjectFields, Scheme, SchemeFields, Tile, TileFields};
+    use crate::test_projects::error::StoreError;
     use crate::test_projects::projects;
-    use crate::test_projects::rules::{SchemeError, StoreError};
     use crate::test_projects::workspace::{OpenProject, Workspace};
     use crate::test_projects::{links as link_crud, schemes, tiles};
 

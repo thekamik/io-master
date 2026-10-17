@@ -2,11 +2,11 @@
 
 use super::*;
 
-use crate::evaluation::model::ResultField;
 use crate::evaluation::projects::{create as import, read as projects};
 use crate::evaluation::test_support::single as results;
 use crate::evaluation::test_support::{fields, ready_project};
-use crate::test_projects::model::TileKind;
+use crate::model::evaluations::ResultField;
+use crate::model::test_projects::TileKind;
 use crate::test_projects::test_support::database;
 
 /// The rows of `table`.

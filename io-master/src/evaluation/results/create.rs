@@ -4,8 +4,11 @@
 
 use crate::db::evaluations::create::{self as store, Step};
 use crate::db::user::database::UserDb;
-use crate::evaluation::model::{Actor, EvaluationError, JournalAction, MAX_SHORT, Proposal, ResultField, check_text};
+use crate::evaluation::error::EvaluationError;
 use crate::evaluation::workspace::OpenEvaluation;
+use crate::model::evaluations::{Actor, JournalAction, MAX_SHORT, Proposal, ResultField};
+use crate::model::text::check_text;
+use crate::model::time::now;
 
 use super::read::{check_result, requirement};
 
@@ -46,12 +49,4 @@ pub fn propose(
     });
 
     Ok(id)
-}
-
-/// Seconds since 1970, as the database keeps the time of a proposal;
-/// what memory holds until the evaluation is read again.
-fn now() -> i64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |time| i64::try_from(time.as_secs()).unwrap_or(i64::MAX))
 }

@@ -1,6 +1,6 @@
 //! Reading the links of an open test project, from memory.
 
-use crate::test_projects::model::Link;
+use crate::model::test_projects::Link;
 use crate::test_projects::workspace::OpenProject;
 
 /// Link `id` of the open project; `None` when it has no such.

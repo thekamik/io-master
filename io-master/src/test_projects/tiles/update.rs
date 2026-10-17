@@ -5,8 +5,9 @@
 use crate::db::test_projects::update as store;
 use crate::db::user::database::UserDb;
 
-use crate::test_projects::model::{ProposalState, TileFields};
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::{ProposalState, TileFields};
+use crate::test_projects::error::StoreError;
 use crate::test_projects::schemes::read::existing as existing_scheme;
 use crate::test_projects::workspace::OpenProject;
 

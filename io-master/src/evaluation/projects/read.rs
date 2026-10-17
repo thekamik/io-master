@@ -5,7 +5,7 @@ use crate::db::error::DbError;
 use crate::db::evaluations::read;
 use crate::db::user::database::UserDb;
 
-use crate::evaluation::model::{Evaluation, EvaluationData};
+use crate::model::evaluations::{Evaluation, EvaluationData};
 
 /// Every evaluation, by name.
 pub fn list(db: &UserDb) -> Result<Vec<Evaluation>, DbError> {

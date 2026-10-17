@@ -1,20 +1,14 @@
 //! Creating rows of the system database: the record of the
 //! installation (once, with the database) and the accounts.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use rusqlite::{Connection, params};
 
 use crate::db::encryption::keys::WrappedKey;
 use crate::db::error::DbError;
 use crate::installation::installation::Installation;
+use crate::model::time::now;
 
 use super::database::SystemDb;
-
-/// Seconds since 1970, the time stamps of the database.
-fn now() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |time| i64::try_from(time.as_secs()).unwrap_or(i64::MAX))
-}
 
 /// Writes the record of the installation into a new database
 /// (`SystemDb::create`).

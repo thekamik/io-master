@@ -3,9 +3,9 @@
 
 use super::*;
 
+use crate::model::test_projects::{PageSpan, Source, TileFields, TileKind};
 use crate::standards;
-use crate::standards::model::DocumentError;
-use crate::test_projects::model::{PageSpan, Source, TileFields, TileKind};
+use crate::standards::error::DocumentError;
 use crate::test_projects::test_support::single::{
     self as schemes, create_project as create, delete_project as delete, set_ready, update_project as update,
 };

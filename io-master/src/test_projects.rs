@@ -3,11 +3,10 @@
 pub mod analysis;
 pub mod checks;
 pub mod content;
+pub mod error;
 pub mod exchange;
 pub mod links;
-pub mod model;
 pub mod projects;
-pub mod rules;
 pub mod schemes;
 #[cfg(test)]
 pub mod test_support;

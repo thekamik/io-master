@@ -2,7 +2,7 @@
 
 pub mod create;
 pub mod delete;
-pub mod model;
+pub mod error;
 pub mod pdf_text;
 pub mod quote;
 pub mod read;

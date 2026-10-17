@@ -6,10 +6,9 @@
 use crate::db::evaluations::create::Step;
 use crate::db::evaluations::update as store;
 use crate::db::user::database::UserDb;
-use crate::evaluation::model::{
-    Actor, EvaluationError, JournalAction, Proposal, RequirementResult, ResultField, ResultOrigin,
-};
+use crate::evaluation::error::EvaluationError;
 use crate::evaluation::workspace::OpenEvaluation;
+use crate::model::evaluations::{Actor, JournalAction, Proposal, RequirementResult, ResultField, ResultOrigin};
 
 use super::read::{check_result, proposal, requirement, text_of};
 

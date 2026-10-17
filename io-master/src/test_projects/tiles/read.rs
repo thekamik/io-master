@@ -1,7 +1,8 @@
 //! Reading the tiles of an open test project, from memory.
 
-use crate::test_projects::model::Tile;
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::model::test_projects::Tile;
+use crate::model::test_projects::rules::SchemeError;
+use crate::test_projects::error::StoreError;
 use crate::test_projects::workspace::OpenProject;
 
 /// Tile `id` of the open project; `None` when it has no such.

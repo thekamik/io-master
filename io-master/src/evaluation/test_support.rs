@@ -3,11 +3,11 @@
 //! fields of an evaluation.
 
 use crate::db::user::database::UserDb;
-use crate::test_projects::model::{Source, TileFields, TileKind};
+use crate::model::test_projects::{Source, TileFields, TileKind};
 use crate::test_projects::test_support::{self as standard, PAGES, opened};
 use crate::test_projects::{links, projects as test_projects, tiles};
 
-use super::model::EvaluationFields;
+use crate::model::evaluations::EvaluationFields;
 
 /// The tiles of [`ready_project`].
 pub struct ReadyProject {
@@ -70,9 +70,10 @@ pub fn fields(name: &str) -> EvaluationFields {
 pub mod single {
     use crate::db::evaluations::read as stored;
     use crate::db::user::database::UserDb;
-    use crate::evaluation::model::{EvaluationError, Proposal, RequirementResult, ResultField};
+    use crate::evaluation::error::EvaluationError;
     use crate::evaluation::results;
     use crate::evaluation::workspace::OpenEvaluation;
+    use crate::model::evaluations::{Proposal, RequirementResult, ResultField};
 
     /// The results and the proposals of `open`, in one order, the times
     /// of the proposals left out (memory keeps the time of the

@@ -33,16 +33,16 @@ use serde_json::Value;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
+use crate::model::standards::Document;
+use crate::model::test_projects::{PageSpan, ProposalState, SchemeFields};
 use crate::standards;
-use crate::standards::model::Document;
 use crate::standards::quote::normalize;
-use crate::test_projects::model::{PageSpan, ProposalState, SchemeFields};
-use crate::test_projects::rules::StoreError;
+use crate::test_projects::error::StoreError;
 use crate::test_projects::schemes;
 use crate::test_projects::workspace::OpenProject;
 
 use crate::ai::api::completions::{self, Turn};
-use crate::test_projects::rules::SchemeError;
+use crate::model::test_projects::rules::SchemeError;
 
 use super::parts::{PART_RANGE, Part, parts};
 

@@ -5,12 +5,10 @@
 
 use std::fmt;
 
-use crate::db::error::DbError;
-use crate::standards::quote::MAX_QUOTE;
+use crate::model::standards::MAX_QUOTE;
+use crate::model::text::{Invalid, check_text};
 
-use super::model::{
-    Link, MAX_SHORT, MAX_SOURCES, MAX_TEXT, MAX_TITLE, ProjectFields, SchemeFields, TileFields, TileKind,
-};
+use super::{Link, MAX_SHORT, MAX_SOURCES, MAX_TEXT, MAX_TITLE, ProjectFields, SchemeFields, TileFields, TileKind};
 
 /// What a link means, from the kinds it joins.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -83,20 +81,10 @@ impl fmt::Display for SchemeError {
 
 impl std::error::Error for SchemeError {}
 
-/// A text field: at most `max` characters, no control characters
-/// other than line breaks and tabs where `lines` allows them.
-fn check_text(field: &'static str, text: &str, max: usize, lines: bool) -> Result<(), SchemeError> {
-    if text.chars().count() > max {
-        return Err(SchemeError::Invalid(field, format!("the {field} is longer than {max} characters")));
+impl From<Invalid> for SchemeError {
+    fn from(error: Invalid) -> SchemeError {
+        SchemeError::Invalid(error.field, error.reason)
     }
-
-    let bad = |character: char| character.is_control() && !(lines && (character == '\n' || character == '\t'));
-
-    if text.chars().any(bad) {
-        return Err(SchemeError::Invalid(field, format!("the {field} holds a control character")));
-    }
-
-    Ok(())
 }
 
 impl ProjectFields {
@@ -109,7 +97,7 @@ impl ProjectFields {
         check_text("name", &self.name, MAX_TITLE, false)?;
         check_text("version", &self.version, MAX_SHORT, false)?;
         check_text("author", &self.author, MAX_SHORT, false)?;
-        check_text("description", &self.description, MAX_TEXT, true)
+        Ok(check_text("description", &self.description, MAX_TEXT, true)?)
     }
 }
 
@@ -244,38 +232,6 @@ fn reaches(links: &[Link], start: i64, target: i64) -> bool {
     }
 
     false
-}
-
-/// Why a change of a project was not made.
-#[derive(Debug)]
-pub enum StoreError {
-    /// It breaks a rule of a project.
-    Scheme(SchemeError),
-    /// The database failed.
-    Db(DbError),
-}
-
-impl fmt::Display for StoreError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            StoreError::Scheme(error) => write!(formatter, "{error}"),
-            StoreError::Db(error) => write!(formatter, "{error}"),
-        }
-    }
-}
-
-impl std::error::Error for StoreError {}
-
-impl From<SchemeError> for StoreError {
-    fn from(error: SchemeError) -> StoreError {
-        StoreError::Scheme(error)
-    }
-}
-
-impl From<DbError> for StoreError {
-    fn from(error: DbError) -> StoreError {
-        StoreError::Db(error)
-    }
 }
 
 // Unit tests, in their own file to keep this one readable. They

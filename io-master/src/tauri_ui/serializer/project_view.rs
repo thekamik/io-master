@@ -3,9 +3,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::model::test_projects::ProjectData;
+use crate::model::test_projects::{PageSpan, Project, ProjectFields, ProposalState, Scheme, SchemeFields, TileKind};
 use crate::test_projects::checks::Finding;
-use crate::test_projects::model::ProjectData;
-use crate::test_projects::model::{PageSpan, Project, ProjectFields, ProposalState, Scheme, SchemeFields, TileKind};
 
 use super::super::error::UiError;
 use super::standard_view::DocumentView;

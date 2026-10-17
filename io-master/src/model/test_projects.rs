@@ -39,15 +39,12 @@
 //! (a requirement that would, through other tiles, need itself).
 //!
 //! ```text
-//! model.rs      the types (this file)
-//! rules.rs      the rules of the fields and the links; the errors
-//! workspace.rs  the projects open for editing, in memory, with their
-//!               versions for "Undo"
-//! projects/ schemes/ tiles/ links/   CRUD of the objects in memory;
-//!               every change written through by db/test_projects/
-//! checks.rs     the gaps of a scheme
-//! exchange/     the file of a project: export and import
-//! analysis/     the tasks of the AI: a chapter, the table of contents
+//! model/test_projects.rs         the types (this file)
+//! model/model/test_projects/rules.rs   the rules of the fields and the links;
+//!                                the error when one is broken
+//! test_projects/                 the work on them: the projects open for
+//!                                editing, their CRUD, checks, exchange,
+//!                                the analysis with the AI
 //! ```
 
 /// The longest title of a tile or name of a scheme, in characters.
@@ -350,3 +347,5 @@ pub struct ProjectData {
     pub tiles: Vec<Tile>,
     pub links: Vec<Link>,
 }
+
+pub mod rules;

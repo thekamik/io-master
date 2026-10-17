@@ -17,7 +17,7 @@
 //! ```
 //!
 //! **Nothing the model says is taken on trust.** Every tile is checked
-//! by the rules of `test_projects/rules.rs`, every quote is looked for on its page
+//! by the rules of `model/test_projects/rules.rs`, every quote is looked for on its page
 //! (`quote.rs`) and kept with `found` set accordingly, links of the
 //! wrong kinds or that close a circle are dropped, and everything
 //! enters the scheme as *proposed*: the user accepts, corrects or
@@ -34,11 +34,13 @@
 use serde_json::Value;
 
 use crate::db::user::database::UserDb;
+use crate::model::standards::Document;
+use crate::model::standards::MAX_QUOTE;
+use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::{External, OutputSection, ProposalState, Scheme, Source, Tile, TileFields, TileKind};
 use crate::standards;
-use crate::standards::model::Document;
-use crate::standards::quote::{MAX_QUOTE, is_on_page, normalize};
-use crate::test_projects::model::{External, OutputSection, ProposalState, Scheme, Source, Tile, TileFields, TileKind};
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::standards::quote::{is_on_page, normalize};
+use crate::test_projects::error::StoreError;
 use crate::test_projects::schemes::read::existing;
 use crate::test_projects::workspace::OpenProject;
 use crate::test_projects::{links, tiles as tile_crud};

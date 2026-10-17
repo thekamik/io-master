@@ -3,7 +3,7 @@
 
 use super::*;
 
-use crate::test_projects::model::{TileFields, TileKind};
+use crate::model::test_projects::{TileFields, TileKind};
 use crate::test_projects::test_support::{database, load, opened, project_fields, project_with_scheme};
 use crate::test_projects::{links, projects, schemes, tiles};
 

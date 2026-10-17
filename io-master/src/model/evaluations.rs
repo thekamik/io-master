@@ -15,7 +15,7 @@
 //! **The structure is frozen.** The schemes, tiles and links are a copy
 //! of the accepted part of the test project; later changes of the test
 //! project do not touch the evaluation, and the evaluation never
-//! changes them. They use the types of `test_projects/model.rs`; in a
+//! changes them. They use the types of `model/test_projects.rs`; in a
 //! copy, `Scheme::project` is the number of the evaluation and
 //! `Tile::scheme` the number of a scheme of the evaluation.
 //!
@@ -29,11 +29,8 @@
 //! standards, so the verdict is text in the field *Assessment and
 //! verdict proposition*, written according to the standard.
 
-use std::fmt;
-
-use crate::db::error::DbError;
-use crate::test_projects::model::{Link, Scheme, Tile};
-use crate::test_projects::rules::SchemeError;
+use crate::model::test_projects::{Link, Scheme, Tile};
+use crate::model::text::{Invalid, check_text};
 
 /// The longest name of an evaluation, in characters.
 pub const MAX_NAME: usize = 300;
@@ -282,79 +279,16 @@ pub struct JournalEntry {
     pub detail: String,
 }
 
-/// Why an operation on an evaluation was refused.
-#[derive(Debug)]
-pub enum EvaluationError {
-    /// A field is wrong: the field and the reason.
-    Invalid(&'static str, String),
-    /// Another evaluation has this name.
-    NameTaken,
-    /// The evaluation, test project, tile or proposal does not exist.
-    NotFound(&'static str),
-    /// Results belong to requirements only.
-    NotARequirement,
-    /// The test project breaks a rule of its own (a broken file).
-    Scheme(SchemeError),
-    /// The database failed.
-    Db(DbError),
-}
-
-impl fmt::Display for EvaluationError {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            EvaluationError::Invalid(_, reason) => formatter.write_str(reason),
-            EvaluationError::NameTaken => formatter.write_str("another evaluation has this name"),
-            EvaluationError::NotFound(what) => write!(formatter, "the {what} does not exist"),
-            EvaluationError::NotARequirement => formatter.write_str("results belong to requirements only"),
-            EvaluationError::Scheme(error) => write!(formatter, "{error}"),
-            EvaluationError::Db(error) => write!(formatter, "{error}"),
-        }
-    }
-}
-
-impl std::error::Error for EvaluationError {}
-
-impl From<DbError> for EvaluationError {
-    fn from(error: DbError) -> EvaluationError {
-        EvaluationError::Db(error)
-    }
-}
-
-impl From<SchemeError> for EvaluationError {
-    fn from(error: SchemeError) -> EvaluationError {
-        EvaluationError::Scheme(error)
-    }
-}
-
-/// A text field: at most `max` characters; no control characters
-/// other than line breaks and tabs where `lines` allows them.
-pub fn check_text(field: &'static str, text: &str, max: usize, lines: bool) -> Result<(), EvaluationError> {
-    if text.chars().count() > max {
-        return Err(EvaluationError::Invalid(field, format!("the {field} is longer than {max} characters")));
-    }
-
-    let bad = |character: char| character.is_control() && !(lines && (character == '\n' || character == '\t'));
-
-    if text.chars().any(bad) {
-        return Err(EvaluationError::Invalid(field, format!("the {field} holds a control character")));
-    }
-
-    Ok(())
-}
-
 impl EvaluationFields {
     /// Checks the fields; the name against the other evaluations is
     /// checked by the storage.
-    pub fn check(&self) -> Result<(), EvaluationError> {
+    pub fn check(&self) -> Result<(), Invalid> {
         if self.name.trim().is_empty() {
-            return Err(EvaluationError::Invalid("name", "the evaluation needs a name".to_owned()));
+            return Err(Invalid::new("name", "the evaluation needs a name"));
         }
 
         if self.product.trim().is_empty() {
-            return Err(EvaluationError::Invalid(
-                "product",
-                "the evaluation needs the product it evaluates".to_owned(),
-            ));
+            return Err(Invalid::new("product", "the evaluation needs the product it evaluates"));
         }
 
         check_text("name", &self.name, MAX_NAME, false)?;
@@ -368,5 +302,5 @@ impl EvaluationFields {
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "model_tests.rs"]
+#[path = "evaluations_tests.rs"]
 mod tests;

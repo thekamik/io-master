@@ -1,7 +1,7 @@
 //! Finding a quote in the text of a page of a standard.
 //!
 //! Every tile of a scheme keeps the passages of the standard it comes
-//! from (`test_projects/rules.rs`). A passage is a quote: text copied from a page,
+//! from (`model/test_projects/rules.rs`). A passage is a quote: text copied from a page,
 //! by hand or by the AI (step 20 of `docs/todo.md`). The program checks
 //! that the quote really is on that page, so that a passage the AI
 //! made up is never taken for a part of the standard.
@@ -23,10 +23,6 @@
 //!
 //! Nothing else is changed: a quote with another word, or a word
 //! left out, is not found.
-
-/// The longest quote that is accepted, in characters. A source is a
-/// passage, not a page.
-pub const MAX_QUOTE: usize = 2000;
 
 /// The text in the one form of the top of this file.
 pub fn normalize(text: &str) -> String {

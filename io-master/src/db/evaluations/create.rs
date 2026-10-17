@@ -13,8 +13,8 @@ use rusqlite::{Connection, params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::evaluation::model::{Actor, EvaluationFields, JournalAction, Origin, ResultField};
-use crate::test_projects::model::{Link, Scheme, Tile};
+use crate::model::evaluations::{Actor, EvaluationFields, JournalAction, Origin, ResultField};
+use crate::model::test_projects::{Link, Scheme, Tile};
 
 use super::rows::actor_columns;
 

@@ -13,7 +13,7 @@ use crate::db::error::DbError;
 use crate::db::evaluations::read;
 use crate::db::user::database::UserDb;
 
-use crate::evaluation::model::JournalEntry;
+use crate::model::evaluations::JournalEntry;
 
 /// The journal of an evaluation, the oldest entry first.
 pub fn of(db: &UserDb, evaluation: i64) -> Result<Vec<JournalEntry>, DbError> {

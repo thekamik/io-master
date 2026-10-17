@@ -7,8 +7,9 @@ use crate::db::user::database::UserDb;
 use crate::standards;
 use crate::standards::quote::is_on_page;
 
-use crate::test_projects::model::{External, Source, Tile, TileFields};
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::{External, Source, Tile, TileFields};
+use crate::test_projects::error::StoreError;
 use crate::test_projects::schemes::read::existing;
 use crate::test_projects::workspace::OpenProject;
 

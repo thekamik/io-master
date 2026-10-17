@@ -1,10 +1,10 @@
 //! The rows of the test projects and the Rust types they become
-//! (`test_projects/model.rs`), in both directions: reading a row into a
+//! (`model/test_projects.rs`), in both directions: reading a row into a
 //! type, and the values a type writes into a row.
 
 use rusqlite::{Connection, Row, params};
 
-use crate::test_projects::model::{
+use crate::model::test_projects::{
     External, Link, OutputSection, PageSpan, ProposalState, Scheme, SchemeFields, Source, Tile, TileFields, TileKind,
 };
 

@@ -3,7 +3,7 @@
 use super::*;
 
 use crate::db::user::database::UserDb;
-use crate::standards::model::DocumentFields;
+use crate::model::standards::DocumentFields;
 use crate::test_projects::test_support::single::{self as schemes, create_project, on};
 use crate::test_projects::test_support::{database, project_fields, scheme_fields};
 

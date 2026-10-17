@@ -5,8 +5,8 @@ use crate::db::error::DbError;
 use crate::db::standards::read;
 use crate::db::user::database::UserDb;
 
-use super::model::{Document, Hit, MAX_HITS};
 use super::quote::{normalize, normalize_with_places};
+use crate::model::standards::{Document, Hit, MAX_HITS};
 
 /// The characters of text around a hit of a search, on each side.
 const SNIPPET: usize = 80;

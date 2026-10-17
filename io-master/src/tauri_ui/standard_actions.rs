@@ -10,8 +10,9 @@
 
 use std::path::PathBuf;
 
+use crate::model::standards::DocumentFields;
 use crate::standards;
-use crate::standards::model::{DocumentError, DocumentFields};
+use crate::standards::error::DocumentError;
 use crate::standards::pdf_text::{self, PdfError};
 
 use super::blocking::blocking;

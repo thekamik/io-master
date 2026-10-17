@@ -6,8 +6,9 @@ use crate::db::test_projects::create as store;
 use crate::db::user::database::UserDb;
 use crate::standards;
 
-use crate::test_projects::model::{Scheme, SchemeFields};
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::model::test_projects::rules::SchemeError;
+use crate::model::test_projects::{Scheme, SchemeFields};
+use crate::test_projects::error::StoreError;
 use crate::test_projects::workspace::OpenProject;
 
 /// Checks the fields of a scheme of the open project: its pages in a

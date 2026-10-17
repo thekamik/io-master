@@ -5,8 +5,9 @@ use crate::db::test_projects::{create as store, read as stored};
 use crate::db::user::database::UserDb;
 use crate::standards;
 
-use crate::test_projects::model::ProjectFields;
-use crate::test_projects::rules::{SchemeError, StoreError};
+use crate::model::test_projects::ProjectFields;
+use crate::model::test_projects::rules::SchemeError;
+use crate::test_projects::error::StoreError;
 
 /// Checks the fields and the documents of a project, and its name
 /// against the other projects (`id`: the project itself, when it is

@@ -1,12 +1,13 @@
 //! Linking two tiles of an open test project, also of two of its
-//! schemes, by the rules of `rules.rs` (checked against all the links
+//! schemes, by the rules of `model/test_projects/rules.rs` (checked against all the links
 //! of the project in memory); written through, then added in memory.
 
 use crate::db::test_projects::create as store;
 use crate::db::user::database::UserDb;
 
-use crate::test_projects::model::{Link, TileKind};
-use crate::test_projects::rules::{SchemeError, StoreError, check_link};
+use crate::model::test_projects::rules::{SchemeError, check_link};
+use crate::model::test_projects::{Link, TileKind};
+use crate::test_projects::error::StoreError;
 use crate::test_projects::workspace::OpenProject;
 
 /// Links tile `from` to tile `to`; returns the number of the link.
