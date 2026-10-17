@@ -11,24 +11,18 @@
 //! The drawing of one scheme is in `scheme_actions.rs`.
 
 use std::path::Path;
-use std::sync::Arc;
 
-use crate::ai::api::completions::{self, Outcome};
-use crate::ai::api::roles::{self};
-use crate::ai::api::tasks::{self};
 use crate::business::standards;
-use crate::business::standards::pdf_text;
-use crate::business::test_projects::analysis::contents::{self, Answered};
+use crate::business::standards::load::LoadProgress;
+use crate::business::test_projects::analysis::run::{self, Progress};
 use crate::business::test_projects::checks;
 use crate::business::test_projects::error::StoreError;
-use crate::business::test_projects::exchange::format::{self, ExchangeError};
+use crate::business::test_projects::exchange::format::ExchangeError;
 use crate::business::test_projects::exchange::{export, import};
 use crate::business::test_projects::workspace::OpenProject;
 use crate::business::test_projects::{projects, schemes};
+use crate::business::work::Cancel;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Role;
-use crate::model::ai::Task;
-use crate::model::standards::DocumentFields;
 use crate::model::test_projects::rules::SchemeError;
 use crate::model::test_projects::{ProjectData, ProjectFields};
 
@@ -200,76 +194,21 @@ pub async fn project_of_scheme(state: &UiState, scheme: i64) -> Result<i64, UiEr
  * ------------------------------------------------------------- */
 
 /// Reads the table of contents on the pages `range` with the AI (the
-/// task `contents`, in the role of its connection), and stores the
-/// chapters it finds as proposed schemes of `project`, each with the
-/// pages where it was found. Reports to `events`; "Stop" ends it.
+/// task `contents`), and stores the chapters it finds as proposed
+/// schemes of `project` (`business/test_projects/analysis/run.rs`).
+/// Reports to `events`; "Stop" ends it.
 pub async fn propose_schemes(
     state: &UiState,
     project: i64,
     range: PageRange,
     events: impl Fn(AnalysisEvent) -> bool + Send + Sync + Clone + 'static,
 ) -> Result<ProjectDataView, UiError> {
-    let (question, model) = with_project(state, project, move |db, open| {
-        let instructions = tasks::instructions(db, Task::Contents)?.unwrap_or_default();
-        let question =
-            contents::question(db, open, range.document_id, range.first_page, range.last_page, &instructions)?;
-        let model = roles::model(db, Task::Contents.role().unwrap_or(Role::TextAnalysis))?;
+    let session = state.session()?;
+    let cancel = Cancel::new(state.start_work());
+    let progress = move |progress: Progress| events(progress.into());
 
-        Ok((question, model))
-    })
-    .await?;
-
-    let stop = state.start_work();
-
-    events(AnalysisEvent::Part {
-        index: 1,
-        count: 1,
-        document: question.document.fields.title.clone(),
-        first_page: question.part.first_page,
-        last_page: question.part.last_page,
-    });
-
-    let writing = {
-        let events = events.clone();
-        move |characters| {
-            events(AnalysisEvent::Writing { characters });
-        }
-    };
-
-    let model = Arc::new(model);
-    let reply = completions::create(&model, &question.turns, &stop, completions::counting(400, writing)).await;
-    let outcome = completions::outcome(&reply, &stop);
-    super::scheme_actions::record(state, &model, Task::Contents, question.turns.clone(), reply, &events).await;
-
-    match outcome {
-        Outcome::Answer(text) => {
-            let answered =
-                with_project(state, project, move |db, open| Ok(contents::answer(db, open, &question, &text)?)).await?;
-
-            match answered {
-                Answered::Applied(applied) => {
-                    events(AnalysisEvent::Chapters {
-                        added: applied.added,
-                        known: applied.known,
-                        without_pages: applied.without_pages,
-                        dropped: applied.dropped,
-                    });
-                }
-                Answered::Unreadable(reason) => {
-                    events(AnalysisEvent::Failed { message: reason });
-                }
-            }
-
-            events(AnalysisEvent::End { stopped: false });
-        }
-        Outcome::Stopped => {
-            events(AnalysisEvent::End { stopped: true });
-        }
-        Outcome::Failed(message) => {
-            events(AnalysisEvent::Failed { message });
-            events(AnalysisEvent::End { stopped: false });
-        }
-    }
+    run::propose_schemes(&session, project, range.document_id, range.first_page, range.last_page, cancel, progress)
+        .await?;
 
     open(state, project).await
 }
@@ -294,90 +233,20 @@ pub async fn export(state: &UiState, id: i64, with_pdfs: bool, path: &Path) -> R
     .await
 }
 
-/// Imports the file of a project at `path`. Its documents are found
-/// among the loaded ones by their SHA-256, or loaded from the PDFs the
-/// file carries (reported to `events` like any loading); a document
-/// that is neither is named in the error, to be loaded first.
+/// Imports the file of a project at `path`
+/// (`business/test_projects/exchange/import.rs`); its documents are
+/// found among the loaded ones or loaded from the file, reported to
+/// `events` like any loading.
 pub async fn import(
     state: &UiState,
     path: &Path,
     events: impl Fn(LoadEvent) -> bool + Send + Sync + Clone + 'static,
 ) -> Result<ProjectDataView, UiError> {
-    state.session()?;
+    let session = state.session()?;
+    let cancel = Cancel::new(state.start_work());
+    let progress = move |progress: LoadProgress| events(progress.into());
 
-    let path = path.to_owned();
-    let exchange = blocking(move || {
-        let size = std::fs::metadata(&path).map_err(|error| UiError::Invalid(error.to_string()))?.len();
-
-        if size as usize > format::MAX_FILE {
-            return Err(UiError::Invalid("the file is larger than 512 MiB".to_owned()));
-        }
-
-        let file = std::fs::read(&path).map_err(|error| UiError::Invalid(error.to_string()))?;
-
-        Ok(import::read(&file)?)
-    })
-    .await?;
-
-    let stop = state.start_work();
-    let count = exchange.documents.len();
-    let mut loaded = Vec::with_capacity(count);
-    let mut missing = Vec::new();
-
-    for (index, document) in exchange.documents.iter().enumerate() {
-        let sha256 = document.sha256.clone();
-
-        if let Some(found) = with_user_db(state, move |db| Ok(standards::read::by_sha256(db, &sha256)?)).await? {
-            loaded.push(found.id);
-            continue;
-        }
-
-        let Some(pdf) = document.pdf.clone() else {
-            missing.push(format!("{} {} ({})", document.title, document.part, document.file_name).trim().to_owned());
-            continue;
-        };
-
-        events(LoadEvent::File { name: document.file_name.clone(), index: index + 1, count });
-
-        let reading = {
-            let events = events.clone();
-            let stop = stop.clone();
-
-            blocking(move || {
-                let info = pdf_text::info(&pdf).map_err(|error| UiError::Invalid(error.to_string()))?;
-                let pages = pdf_text::pages(&pdf, info.pages, |done, total| {
-                    !*stop.borrow() && events(LoadEvent::Pages { done, total })
-                })
-                .map_err(|error| UiError::Invalid(error.to_string()))?;
-
-                Ok((pdf, pages))
-            })
-            .await
-        };
-
-        let (pdf, pages) = reading?;
-        let fields = DocumentFields {
-            title: document.title.clone(),
-            part: document.part.clone(),
-            version: document.version.clone(),
-        };
-        let file_name = document.file_name.clone();
-
-        let id =
-            with_user_db(state, move |db| Ok(standards::create::add(db, &fields, &file_name, &pdf, &pages)?)).await?;
-        loaded.push(id);
-    }
-
-    events(LoadEvent::End { stopped: false });
-
-    if !missing.is_empty() {
-        return Err(UiError::Invalid(format!(
-            "load these documents of the standard first, then import again: {}",
-            missing.join("; ")
-        )));
-    }
-
-    let id = with_user_db(state, move |db| Ok(import::store(db, &exchange, &loaded)?)).await?;
+    let id = import::from_file(&session, path.to_owned(), cancel, progress).await?;
 
     open(state, id).await
 }

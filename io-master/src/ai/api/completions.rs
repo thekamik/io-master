@@ -4,19 +4,26 @@
 //! answer of the service (`provider/` is private to this folder).
 //!
 //! ```text
-//! create()   POST /completions   one question in a task, the reply
-//!                                piece by piece, stopped on request
-//! record()   the question and its reply into the journal of the AI
-//!            (db/ai/journal/); every caller records every question
+//! ask()      POST /completions   one question in a task, the reply
+//!                                piece by piece, stopped on request,
+//!                                and its entry in the journal of the AI
 //! counting(), outcome(), single()   help for the long works (the
 //!            analysis of a standard): progress, result, one message
 //! ```
+//!
+//! **Every question is in the journal** (`db/ai/journal/`): [`ask`] is
+//! the only way out of the program to a model, and it writes the entry
+//! itself, also when the reply was stopped or failed. A caller cannot
+//! forget it; it learns only whether the entry could be written
+//! ([`Asked::journal`]), to tell the evaluator when it could not.
 //!
 //! A question is asked with the [`Model`] of its role
 //! (`roles::model`): the connection, checked, and its key. The rules of
 //! the connection protect the key and the conversation
 //! (`provider/client.rs`): TLS 1.3, plain HTTP only on the loopback, the
 //! key only in a header, no redirect, no proxy.
+
+use std::sync::{Arc, Mutex, PoisonError};
 
 use tokio::sync::{mpsc, watch};
 
@@ -38,12 +45,48 @@ pub use crate::model::ai::{Speaker, Turn};
 /// How many pieces of a reply may wait for the caller.
 const PIECE_QUEUE: usize = 256;
 
-/// Asks `model` the next reply of the conversation `turns`. Every piece
+/// A question asked, and its entry in the journal of the AI.
+#[derive(Debug)]
+pub struct Asked {
+    pub reply: Reply,
+    /// The number of the entry, or why it could not be written (the
+    /// reply is kept and shown anyway).
+    pub journal: Result<i64, DbError>,
+}
+
+/// Asks `model` the next reply of the conversation `turns` in `task`
+/// (see [`create`]), and writes the question with its reply into the
+/// journal of the AI in the database `db`, on a thread for blocking
+/// work.
+pub async fn ask(
+    db: &Arc<Mutex<UserDb>>,
+    model: &Arc<Model>,
+    task: Task,
+    turns: &[Turn],
+    stop: &watch::Receiver<bool>,
+    on_piece: impl FnMut(&str) -> bool,
+) -> Asked {
+    let reply = create(model, turns, stop, on_piece).await;
+
+    let (db, model, turns, written) = (db.clone(), model.clone(), turns.to_vec(), reply.clone());
+    let journal = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap_or_else(PoisonError::into_inner);
+
+        record(&db, &model, task, &turns, &written)
+    })
+    .await
+    .unwrap_or_else(|_| Err(DbError::Inconsistent("the entry of the journal was not written".to_owned())));
+
+    Asked { reply, journal }
+}
+
+/// Asks `model` the next reply of the conversation `turns`; used by
+/// [`ask`], which also writes the journal. Every piece
 /// of the reply goes to `on_piece` as it arrives; the reply stops when
 /// `on_piece` returns `false` (the page is gone) or when `stop` turns
 /// `true` ("Stop"). Never fails as a whole: how the reply ended is in
 /// [`Reply::end`], next to what was written until then.
-pub async fn create(
+pub(in crate::ai) async fn create(
     model: &Model,
     turns: &[Turn],
     stop: &watch::Receiver<bool>,
@@ -148,13 +191,13 @@ pub fn ending(reply: &Reply) -> (&'static str, Option<String>) {
 /// AI: the body of the request as it was sent (never a header, so
 /// never the key) and the reply as it came, also when it was stopped
 /// or failed.
-pub fn record(db: &UserDb, model: &Model, task: Task, turns: &[Turn], reply: &Reply) -> Result<i64, DbError> {
+fn record(db: &UserDb, model: &Model, task: Task, turns: &[Turn], reply: &Reply) -> Result<i64, DbError> {
     let request = request::preview(&model.connection, turns);
 
     write(db, model, task, &request.body.to_string(), reply)
 }
 
-/// Writes one entry; used by [`record`] and by `checks::record`.
+/// Writes one entry; used by [`record`] and by `checks.rs`.
 pub(super) fn write(db: &UserDb, model: &Model, task: Task, request: &str, reply: &Reply) -> Result<i64, DbError> {
     let (ending, note) = ending(reply);
 

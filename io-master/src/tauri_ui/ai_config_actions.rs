@@ -9,6 +9,8 @@
 //! AI). "AI help" ([`field_instruction`]) gives the instruction for a
 //! chatbot that helps to fill one field.
 
+use std::sync::Arc;
+
 use crate::ai::api::{checks, connections};
 use crate::ai::presets::{self, field_help};
 use crate::model::ai::Field;
@@ -102,19 +104,12 @@ pub async fn check_connection(state: &UiState, id: i64) -> Result<CheckView, UiE
     })
     .await?;
 
-    let report = checks::create(&model).await;
-
-    // The check is a question to the AI: it goes into the journal. A
-    // failure to write it does not hide the report.
-    let journal = with_user_db(state, {
-        let request = report.request.body.to_string();
-        let reply = report.reply.clone();
-        move |db| Ok(checks::record(db, &model, &request, &reply)?)
-    })
-    .await;
+    let session = state.session()?;
+    let (report, journal) = checks::create(&session.db_handle(), &Arc::new(model)).await;
 
     let mut view = CheckView::from(report);
 
+    // A failure to write the journal does not hide the report.
     if let Err(error) = journal {
         view.outcome = format!("{} The check was not written into the journal of the AI: {error}.", view.outcome);
     }

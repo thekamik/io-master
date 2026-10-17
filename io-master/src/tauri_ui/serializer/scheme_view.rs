@@ -17,6 +17,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::business::test_projects::analysis::run::Progress;
+
 use crate::business::test_projects::checks::Finding;
 use crate::model::test_projects::ProjectData;
 use crate::model::test_projects::rules::LinkMeaning;
@@ -342,4 +344,30 @@ pub enum AnalysisEvent {
     Failed { message: String },
     /// The analysis is over.
     End { stopped: bool },
+}
+
+impl From<Progress> for AnalysisEvent {
+    fn from(progress: Progress) -> AnalysisEvent {
+        match progress {
+            Progress::Scheme { index, count, number, name } => AnalysisEvent::Scheme { index, count, number, name },
+            Progress::Part { index, count, document, first_page, last_page } => {
+                AnalysisEvent::Part { index, count, document, first_page, last_page }
+            }
+            Progress::Writing { characters } => AnalysisEvent::Writing { characters },
+            Progress::Applied(applied) => AnalysisEvent::Applied {
+                added: applied.added,
+                joined: applied.joined,
+                links: applied.links,
+                dropped: applied.dropped,
+            },
+            Progress::Chapters(applied) => AnalysisEvent::Chapters {
+                added: applied.added,
+                known: applied.known,
+                without_pages: applied.without_pages,
+                dropped: applied.dropped,
+            },
+            Progress::Failed(message) => AnalysisEvent::Failed { message },
+            Progress::End { stopped } => AnalysisEvent::End { stopped },
+        }
+    }
 }

@@ -3,6 +3,13 @@
 //! quote is found is not taken from the file: it is checked again
 //! against the copy of the importer.
 
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use crate::business::session::Session;
+use crate::business::standards::load::{LoadProgress, read_pdf};
+use crate::business::work::{Cancel, WorkError, on_db};
+use crate::model::standards::DocumentFields;
 use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use serde_json::{Map, Value};
@@ -338,6 +345,81 @@ fn store_content(
     content::replace(db, project, &tiles, &exchange.links)?;
 
     Ok(())
+}
+
+/// Imports the file of a project at `path`: a long work. Its documents
+/// are found among the loaded ones by their SHA-256, or loaded from the
+/// PDFs the file carries (reported to `progress` like any loading,
+/// `business/standards/load.rs`); a document that is neither is named in
+/// the error, to be loaded first. Returns the number of the project.
+pub async fn from_file(
+    session: &Arc<Session>,
+    path: PathBuf,
+    cancel: Cancel,
+    progress: impl Fn(LoadProgress) -> bool + Send + Sync + Clone + 'static,
+) -> Result<i64, WorkError> {
+    let exchange = tokio::task::spawn_blocking(move || {
+        let size = std::fs::metadata(&path).map_err(|error| WorkError::Invalid(error.to_string()))?.len();
+
+        if size as usize > MAX_FILE {
+            return Err(WorkError::Invalid("the file is larger than 512 MiB".to_owned()));
+        }
+
+        let file = std::fs::read(&path).map_err(|error| WorkError::Invalid(error.to_string()))?;
+
+        read(&file).map_err(|error| WorkError::Invalid(error.to_string()))
+    })
+    .await
+    .unwrap_or(Err(WorkError::Interrupted))?;
+
+    let count = exchange.documents.len();
+    let mut loaded = Vec::with_capacity(count);
+    let mut missing = Vec::new();
+
+    for (index, document) in exchange.documents.iter().enumerate() {
+        let sha256 = document.sha256.clone();
+
+        if let Some(found) = on_db(session, move |db| Ok(standards::read::by_sha256(db, &sha256)?)).await? {
+            loaded.push(found.id);
+            continue;
+        }
+
+        let Some(pdf) = document.pdf.clone() else {
+            missing.push(format!("{} {} ({})", document.title, document.part, document.file_name).trim().to_owned());
+            continue;
+        };
+
+        progress(LoadProgress::File { name: document.file_name.clone(), index: index + 1, count });
+
+        let (pdf, _, pages) = match read_pdf(pdf, &cancel, &progress).await.map_err(WorkError::Invalid)? {
+            Some(read) => read,
+            None => {
+                progress(LoadProgress::End { stopped: true });
+                return Err(WorkError::Invalid("the import was stopped".to_owned()));
+            }
+        };
+
+        let fields = DocumentFields {
+            title: document.title.clone(),
+            part: document.part.clone(),
+            version: document.version.clone(),
+        };
+        let file_name = document.file_name.clone();
+
+        let id = on_db(session, move |db| Ok(standards::create::add(db, &fields, &file_name, &pdf, &pages)?)).await?;
+        loaded.push(id);
+    }
+
+    progress(LoadProgress::End { stopped: false });
+
+    if !missing.is_empty() {
+        return Err(WorkError::Invalid(format!(
+            "load these documents of the standard first, then import again: {}",
+            missing.join("; ")
+        )));
+    }
+
+    on_db(session, move |db| Ok(store(db, &exchange, &loaded)?)).await
 }
 
 // Unit tests, in their own file to keep this one readable. They

@@ -12,6 +12,7 @@
 //! evaluations/     the evaluation projects: results, proposals, journal
 //! chats/           the chats with the AI
 //! hardware/        the scan of the ports and its settings
+//! work.rs          what the long works share: stop, error, steps
 //! ```
 
 pub mod chats;
@@ -21,3 +22,4 @@ pub mod installation;
 pub mod session;
 pub mod standards;
 pub mod test_projects;
+pub mod work;

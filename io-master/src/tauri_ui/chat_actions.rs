@@ -5,13 +5,12 @@
 //! pieces go to the page through `events` as they arrive. "Stop"
 //! (the command `stop_reply`, through [`UiState::stop_reply`]) stops
 //! the reply (`ai/api/completions.rs`); what was written up to then is
-//! stored, like every reply, with how it ended (`business/chats/history.rs`),
-//! and the question goes into the journal of the AI.
+//! stored, like every reply, with how it ended, and the question goes
+//! into the journal of the AI (`business/chats/conversation.rs`).
 
-use crate::ai::api::completions;
-use crate::business::chats::conversation::{self, Prepared};
+use crate::business::chats::conversation::{self, ChatEvent};
 use crate::business::chats::history as chats;
-use crate::model::ai::Task;
+use crate::business::work::Cancel;
 
 use super::error::UiError;
 use super::serializer::chat_view::{self, ChatSummaryView, ChatView, MessageView, ReplyEvent};
@@ -44,42 +43,34 @@ pub async fn delete_chat(state: &UiState, chat_id: i64) -> Result<(), UiError> {
 }
 
 /// Sends a message (to a new chat when `chat_id` is `None`) and
-/// waits for the reply, passing its events to `events` while it is
-/// written. `events` returns `false` when the page can no longer be
-/// reached; the reply is then stopped as if "Stop" was pressed.
+/// waits for the reply (`business/chats/conversation.rs`), passing its
+/// events to `events` while it is written. `events` returns `false`
+/// when the page can no longer be reached; the reply is then stopped as
+/// if "Stop" was pressed.
 pub async fn send_message(
     state: &UiState,
     chat_id: Option<i64>,
     text: String,
-    events: impl Fn(ReplyEvent) -> bool + Send,
+    events: impl Fn(ReplyEvent) -> bool + Send + Sync,
 ) -> Result<(), UiError> {
-    let Prepared { chat_id, title, model, turns } =
-        with_user_db(state, move |db| Ok(conversation::prepare(db, chat_id, &text)?)).await?;
+    let session = state.session()?;
+    let cancel = Cancel::new(state.start_reply());
+    let on_event = |event: ChatEvent| {
+        events(match event {
+            ChatEvent::Started { chat_id, title } => ReplyEvent::Chat { id: chat_id, title },
+            ChatEvent::Text(text) => ReplyEvent::Text { text },
+        })
+    };
 
-    events(ReplyEvent::Chat { id: chat_id, title });
+    let sent = conversation::send(&session, chat_id, text, cancel, on_event).await?;
 
-    // The pieces go to the page as they arrive; a page that is gone
-    // stops the reply, as "Stop" does.
-    let stop = state.start_reply();
-    let on_piece = |text: &str| events(ReplyEvent::Text { text: text.to_owned() });
-    let reply = completions::create(&model, &turns, &stop, on_piece).await;
+    let mut notice = chat_view::ending_notice(&sent.ending, sent.note.as_deref());
 
-    let (ending, note) = chats::ending_of(&reply);
-    let stored = with_user_db(state, move |db| {
-        chats::add_reply(db, chat_id, &reply)?;
-        completions::record(db, &model, Task::Chat, &turns, &reply)?;
-        Ok(())
-    })
-    .await;
-
-    let mut notice = chat_view::ending_notice(&ending, note.as_deref());
-
-    if let Err(error) = stored {
-        let text = format!("The reply was not stored: {error}.");
-        notice = Some(notice.map(|before| format!("{before} {text}")).unwrap_or(text));
+    if let Some(problem) = sent.problem {
+        notice = Some(notice.map(|before| format!("{before} {problem}")).unwrap_or(problem));
     }
 
-    events(ReplyEvent::End { ending: ending.name(), notice });
+    events(ReplyEvent::End { ending: sent.ending.name(), notice });
 
     Ok(())
 }

@@ -1,29 +1,32 @@
-//! One turn of a chat, without any user interface: the message of
-//! the evaluator is checked and stored, and everything the reply
-//! needs is gathered.
-//!
-//! A front end then asks the model (`ai/api/completions.rs`), shows
-//! the pieces of the reply while they arrive, and stores the reply
-//! with `chats::add_reply` and in the journal of the AI:
+//! One turn of a chat, without any user interface ([`send`]): the
+//! message of the evaluator is checked and stored, the model answers
+//! piece by piece, and the reply is stored, also when it was stopped or
+//! failed:
 //!
 //! ```text
 //! prepare(db, chat, text)            check, store the message, read history
-//! completions::create(model, ...)    the reply, piece by piece
+//! completions::ask(...)              the reply, piece by piece, and the
+//!                                    question in the journal of the AI
 //! chats::add_reply(db, ...)          store it, also when stopped or failed
-//! completions::record(db, ...)       the journal of the AI
 //! ```
 //!
 //! The chat is asked in the role *consultation* (`ai/api/roles.rs`):
 //! the connection given to that role, else the active one.
 
 use std::fmt;
+use std::sync::Arc;
 
+use crate::ai::api::completions;
 use crate::ai::api::roles::{self, Model, ModelError};
+use crate::business::session::Session;
+use crate::business::work::{Cancel, WorkError, on_db};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::ai::ConnectionError;
 use crate::model::ai::Role;
+use crate::model::ai::Task;
 use crate::model::ai::Turn;
+use crate::model::chats::Ending;
 
 use super::history as chats;
 use crate::ai::tasks::chat as memory;
@@ -138,6 +141,64 @@ pub fn prepare(db: &UserDb, chat_id: Option<i64>, text: &str) -> Result<Prepared
         model,
         turns: memory::turns(&chats::messages(db, chat_id)?),
     })
+}
+
+/// What happens while a message is sent, for the evaluator.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChatEvent {
+    /// The message is stored in this chat (a new one when none was
+    /// given).
+    Started { chat_id: i64, title: String },
+    /// A piece of the reply.
+    Text(String),
+}
+
+/// How a reply ended, once it is stored.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Sent {
+    pub ending: Ending,
+    /// For a failed reply: the explanation.
+    pub note: Option<String>,
+    /// What could not be done afterwards (the reply not stored, the
+    /// question not written into the journal), for the evaluator.
+    pub problem: Option<String>,
+}
+
+/// Sends `text` to chat `chat_id` (a new chat when `None`) and waits for
+/// the reply, passing its pieces to `on_event` while it is written;
+/// `on_event` returns `false` when nobody listens any more, which stops
+/// the reply as "Stop" ([`Cancel`]) does.
+pub async fn send(
+    session: &Arc<Session>,
+    chat_id: Option<i64>,
+    text: String,
+    cancel: Cancel,
+    on_event: impl Fn(ChatEvent) -> bool + Send + Sync,
+) -> Result<Sent, WorkError> {
+    let Prepared { chat_id, title, model, turns } =
+        on_db(session, move |db| prepare(db, chat_id, &text).map_err(WorkError::from)).await?;
+
+    on_event(ChatEvent::Started { chat_id, title });
+
+    let model = Arc::new(model);
+    let on_piece = |piece: &str| on_event(ChatEvent::Text(piece.to_owned()));
+    let asked = completions::ask(&session.db_handle(), &model, Task::Chat, &turns, cancel.signal(), on_piece).await;
+
+    let (ending, note) = chats::ending_of(&asked.reply);
+    let reply = asked.reply;
+    let stored = on_db(session, move |db| Ok(chats::add_reply(db, chat_id, &reply)?)).await;
+
+    let mut problems = Vec::new();
+
+    if let Err(error) = stored {
+        problems.push(format!("The reply was not stored: {error}."));
+    }
+
+    if let Err(error) = asked.journal {
+        problems.push(format!("The question was not written into the journal of the AI: {error}."));
+    }
+
+    Ok(Sent { ending, note, problem: (!problems.is_empty()).then(|| problems.join(" ")) })
 }
 
 // Unit tests, in their own file to keep this one readable. They

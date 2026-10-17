@@ -32,7 +32,7 @@
 pub mod accounts;
 
 use std::path::Path;
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use crate::business::evaluations::workspace::EvaluationWorkspace;
 use crate::business::test_projects::workspace::ProjectWorkspace;
@@ -46,7 +46,7 @@ use accounts::Account;
 #[derive(Debug)]
 pub struct Session {
     pub account: Account,
-    db: Mutex<UserDb>,
+    db: Arc<Mutex<UserDb>>,
     projects: Mutex<ProjectWorkspace>,
     evaluations: Mutex<EvaluationWorkspace>,
 }
@@ -66,7 +66,7 @@ impl Session {
 
         Ok(Session {
             account,
-            db: Mutex::new(db),
+            db: Arc::new(Mutex::new(db)),
             projects: Mutex::new(ProjectWorkspace::default()),
             evaluations: Mutex::new(EvaluationWorkspace::default()),
         })
@@ -75,6 +75,12 @@ impl Session {
     /// The database of the evaluator, for one piece of work.
     pub fn db(&self) -> MutexGuard<'_, UserDb> {
         lock(&self.db)
+    }
+
+    /// The database as a shared handle, for `ai/api/`, which writes the
+    /// journal of the AI after a reply (`completions::ask`).
+    pub fn db_handle(&self) -> Arc<Mutex<UserDb>> {
+        self.db.clone()
     }
 
     /// The database and the test projects open for editing, for one

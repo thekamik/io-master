@@ -12,6 +12,7 @@
 //! {"event": "end", "stopped": false}                                     last
 //! ```
 
+use crate::business::standards::load::LoadProgress;
 use serde::{Deserialize, Serialize};
 
 use crate::model::standards::{Document, DocumentFields, Hit};
@@ -85,4 +86,16 @@ pub enum LoadEvent {
     Failed { name: String, message: String },
     /// The loading is over.
     End { stopped: bool },
+}
+
+impl From<LoadProgress> for LoadEvent {
+    fn from(progress: LoadProgress) -> LoadEvent {
+        match progress {
+            LoadProgress::File { name, index, count } => LoadEvent::File { name, index, count },
+            LoadProgress::Pages { done, total } => LoadEvent::Pages { done, total },
+            LoadProgress::Loaded(document) => LoadEvent::Loaded { document: document.into() },
+            LoadProgress::Failed { name, message } => LoadEvent::Failed { name, message },
+            LoadProgress::End { stopped } => LoadEvent::End { stopped },
+        }
+    }
 }

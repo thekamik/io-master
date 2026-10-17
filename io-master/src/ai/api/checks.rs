@@ -4,14 +4,16 @@
 //!
 //! ```text
 //! target()   the stored connection to check, with its key
-//! create()   POST /connections/{id}/check   the report
-//! record()   the check into the journal of the AI (task "check")
+//! create()   POST /connections/{id}/check   the report, and the check
+//!            in the journal of the AI (task "check")
 //! ```
+
+use std::sync::{Arc, Mutex, PoisonError};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
-use super::completions::{self, Reply};
+use super::completions;
 use super::provider::client;
 use super::roles::{self, Model, ModelError};
 use crate::model::ai::Task;
@@ -24,14 +26,22 @@ pub fn target(db: &UserDb, id: i64) -> Result<Model, ModelError> {
     roles::model_of(db, id, false)
 }
 
-/// Checks a connection with one short message.
-pub async fn create(model: &Model) -> CheckReport {
-    client::check(&model.connection, model.api_key.as_ref()).await
-}
+/// Checks a connection with one short message, and writes the check
+/// into the journal of the AI in `db` (the body of the request of the
+/// report, never a header, and its reply). Returns the report and the
+/// number of the entry, or why it could not be written.
+pub async fn create(db: &Arc<Mutex<UserDb>>, model: &Arc<Model>) -> (CheckReport, Result<i64, DbError>) {
+    let report = client::check(&model.connection, model.api_key.as_ref()).await;
 
-/// Writes a check into the journal of the AI: the body of the request
-/// of the report (`report.request.body`) and its reply. Given as parts,
-/// so that the report itself can go to the evaluator.
-pub fn record(db: &UserDb, model: &Model, request: &str, reply: &Reply) -> Result<i64, DbError> {
-    completions::write(db, model, Task::Check, request, reply)
+    let (db, model) = (db.clone(), model.clone());
+    let (request, reply) = (report.request.body.to_string(), report.reply.clone());
+    let journal = tokio::task::spawn_blocking(move || {
+        let db = db.lock().unwrap_or_else(PoisonError::into_inner);
+
+        completions::write(&db, &model, Task::Check, &request, &reply)
+    })
+    .await
+    .unwrap_or_else(|_| Err(DbError::Inconsistent("the entry of the journal was not written".to_owned())));
+
+    (report, journal)
 }

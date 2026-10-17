@@ -14,6 +14,7 @@ use crate::ai::api::roles::ModelError;
 use crate::business::chats::conversation::SendError;
 use crate::business::installation::lifecycle::LifecycleError;
 use crate::business::session::accounts::AccountError;
+use crate::business::work::WorkError;
 use crate::db::error::DbError;
 use crate::model::ai::{ConnectionError, Field};
 
@@ -121,6 +122,20 @@ impl From<ConnectionSaveError> for UiError {
             }
             ConnectionSaveError::NoSuchConnection => UiError::Invalid(error.to_string()),
             ConnectionSaveError::Db(error) => UiError::Failed(error.to_string()),
+        }
+    }
+}
+
+impl From<WorkError> for UiError {
+    fn from(error: WorkError) -> UiError {
+        match error {
+            WorkError::Invalid(reason) => UiError::Invalid(reason),
+            WorkError::Store(error) => error.into(),
+            WorkError::Document(error) => error.into(),
+            WorkError::Model(error) => error.into(),
+            WorkError::Message(error) => error.into(),
+            WorkError::Db(error) => error.into(),
+            WorkError::Interrupted => UiError::Failed(error.to_string()),
         }
     }
 }
