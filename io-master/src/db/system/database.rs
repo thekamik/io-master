@@ -43,6 +43,7 @@ use rusqlite::Connection;
 
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
+use crate::db::user::database::BUSY_TIMEOUT;
 use crate::model::installation::Installation;
 
 use super::{create, schema};
@@ -66,6 +67,7 @@ impl SystemDb {
     /// record of the installation. Fails when one exists.
     pub fn create(data_dir: &Path, installation: &Installation) -> Result<SystemDb, DbError> {
         let connection = sqlcipher::create_plain(&path(data_dir))?;
+        connection.busy_timeout(BUSY_TIMEOUT)?;
 
         connection.execute_batch(schema::SCHEMA)?;
         create::installation(&connection, installation)?;
@@ -76,6 +78,7 @@ impl SystemDb {
     /// Opens the system database of a data directory.
     pub fn open(data_dir: &Path) -> Result<SystemDb, DbError> {
         let connection = sqlcipher::open_plain(&path(data_dir))?;
+        connection.busy_timeout(BUSY_TIMEOUT)?;
 
         Ok(SystemDb { connection: Mutex::new(connection) })
     }

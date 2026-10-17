@@ -22,18 +22,21 @@
 //! schema.rs     settings, secrets
 //! read.rs       a setting, a secret
 //! update.rs     a setting, a secret stored (made or replaced)
-//! delete.rs     a setting, a secret; what earlier versions kept
+//! delete.rs     a setting, a secret
+//! migrations.rs the changes of the layout, by version
 //! ```
 //!
 //! Each step of `docs/todo.md` that keeps data of an evaluator adds
 //! its own tables. Tables are created with `IF NOT EXISTS` when the
 //! database is opened, so a database made by an earlier version
-//! gets the tables it lacks.
+//! gets the tables it lacks; other changes of the layout are the steps
+//! of `migrations.rs`.
 
 use std::fs::{self, DirBuilder};
 use std::io;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use rusqlite::Connection;
 
@@ -42,7 +45,10 @@ use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
 use crate::db::{ai, evaluations, standards, test_projects};
 
-use super::{delete, schema};
+use super::{migrations, schema};
+
+/// How long a command waits for another that holds the database.
+pub const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// Name of the folder of the databases of the evaluators.
 pub const DIRECTORY: &str = "users";
@@ -55,8 +61,12 @@ pub struct UserDb {
 
 impl UserDb {
     /// Prepares an open connection: the tables that are missing, in
-    /// every area.
+    /// every area, and the changes of the layout (`migrations.rs`).
     fn from(connection: Connection) -> Result<UserDb, DbError> {
+        // Two commands may use the database at the same time; the second
+        // waits for the first instead of failing at once.
+        connection.busy_timeout(BUSY_TIMEOUT)?;
+
         connection.execute_batch(schema::SCHEMA)?;
         connection.execute_batch(ai::connection::schema::SCHEMA)?;
         connection.execute_batch(ai::memory::schema::SCHEMA)?;
@@ -66,17 +76,7 @@ impl UserDb {
         connection.execute_batch(standards::schema::SCHEMA)?;
         connection.execute_batch(test_projects::schema::SCHEMA)?;
         connection.execute_batch(evaluations::schema::SCHEMA)?;
-        delete::remove_obsolete(&connection)?;
-
-        let has_template: bool = connection.query_row(
-            "SELECT COUNT(*) > 0 FROM pragma_table_info('ai_connections') WHERE name = 'message_template'",
-            [],
-            |row| row.get(0),
-        )?;
-
-        if !has_template {
-            connection.execute_batch(ai::connection::schema::MESSAGE_TEMPLATE_COLUMN)?;
-        }
+        migrations::run(&connection)?;
 
         Ok(UserDb { connection })
     }

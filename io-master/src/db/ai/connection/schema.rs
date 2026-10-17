@@ -42,11 +42,3 @@ pub const SCHEMA: &str = "
         message_template    TEXT NOT NULL DEFAULT '{\"role\": \"{{role}}\", \"content\": \"{{text}}\"}'
     );
 ";
-
-/// The column `message_template`, for a table `ai_connections` made
-/// before it existed (the same day, during step 15 of docs/todo.md).
-///
-/// TODO (step 10 of docs/todo.md): remove before the release, with
-/// `db/user/delete.rs`, `remove_obsolete`.
-pub const MESSAGE_TEMPLATE_COLUMN: &str = "ALTER TABLE ai_connections ADD COLUMN message_template TEXT NOT NULL \
-    DEFAULT '{\"role\": \"{{role}}\", \"content\": \"{{text}}\"}'";

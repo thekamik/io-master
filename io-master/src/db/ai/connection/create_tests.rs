@@ -198,36 +198,3 @@ fn the_key_cannot_be_read_from_the_file() {
     let bytes = fs::read(user_db::path(directory.path(), 1)).unwrap();
     assert!(!bytes.windows(SECRET_KEY.len()).any(|window| window == SECRET_KEY.as_bytes()));
 }
-
-#[test]
-fn the_settings_of_earlier_versions_are_removed() {
-    let directory = TempDir::new();
-    let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
-    let db = user_db::create(directory.path(), 1, &key).unwrap();
-
-    db.set_secret("anthropic.api_key", SECRET_KEY).unwrap();
-    db.set_setting("ai.model", "claude-opus-5-5").unwrap();
-    drop(db);
-
-    let db = user_db::open(directory.path(), 1, &key).unwrap();
-    assert!(db.secret("anthropic.api_key").unwrap().is_none());
-    assert!(db.setting("ai.model").unwrap().is_none());
-}
-
-#[test]
-fn a_table_made_before_the_message_template_gets_the_column() {
-    let directory = TempDir::new();
-    let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
-    let db = user_db::create(directory.path(), 1, &key).unwrap();
-
-    db.connection_for_tests().execute_batch("ALTER TABLE ai_connections DROP COLUMN message_template").unwrap();
-    drop(db);
-
-    let db = user_db::open(directory.path(), 1, &key).unwrap();
-    let id = connection(&db, &named("Local")).unwrap().id;
-
-    assert_eq!(
-        read::get(&db, id).unwrap().unwrap().connection.message_template,
-        crate::model::ai::DEFAULT_MESSAGE_TEMPLATE
-    );
-}
