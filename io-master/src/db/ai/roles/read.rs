@@ -2,9 +2,9 @@
 
 use rusqlite::OptionalExtension;
 
-use crate::ai::api::roles::Role;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::Role;
 
 /// The connection given to `role`; `None` when it has none (it uses
 /// the active connection).

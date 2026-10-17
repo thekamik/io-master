@@ -9,11 +9,11 @@
 //! AI). "AI help" ([`field_instruction`]) gives the instruction for a
 //! chatbot that helps to fill one field.
 
-use crate::ai::api::api_key::ApiKey;
 use crate::ai::api::checks;
-use crate::ai::api::connection::Field;
 use crate::db::ai::connection::{create, delete, read, update};
 use crate::db::ai::presets::field_help;
+use crate::model::ai::Field;
+use crate::model::api_key::ApiKey;
 
 use super::error::UiError;
 use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};

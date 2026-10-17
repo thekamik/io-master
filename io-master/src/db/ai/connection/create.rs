@@ -3,9 +3,9 @@
 //! answers is not needed: a local model may be switched off while it
 //! is set up, and the check is a separate step (`ai/api/checks.rs`).
 
-use crate::ai::api::connection::Connection;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::Connection;
 
 use super::read;
 use super::rows::{ACTIVE, SaveError, Saved, with_connection_values};

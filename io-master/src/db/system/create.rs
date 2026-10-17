@@ -5,7 +5,7 @@ use rusqlite::{Connection, params};
 
 use crate::db::encryption::keys::WrappedKey;
 use crate::db::error::DbError;
-use crate::installation::installation::Installation;
+use crate::model::installation::Installation;
 use crate::model::time::now;
 
 use super::database::SystemDb;

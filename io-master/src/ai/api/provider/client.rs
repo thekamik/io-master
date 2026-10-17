@@ -30,11 +30,13 @@ use reqwest::{Client, Response};
 use tokio::sync::mpsc;
 
 use super::ai_error::AiError;
-use super::request::{self, MASK, Request, Speaker, Turn};
+use super::request::{self, MASK, Request};
 use super::response::{AnswerReader, StopReason};
 use super::sse::SseDecoder;
-use crate::ai::api::api_key::ApiKey;
-use crate::ai::api::connection::{AnswerMode, Checked};
+use crate::ai::api::connection::Checked;
+use crate::model::ai::AnswerMode;
+use crate::model::ai::{Speaker, Turn};
+use crate::model::api_key::ApiKey;
 
 /// How long a connection may take to open.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);

@@ -8,10 +8,10 @@ use super::*;
 use serde_json::json;
 use tokio::sync::watch;
 
-use crate::ai::api::api_key::ApiKey;
 use crate::ai::api::completions::{self, Reply, ReplyEnd, StopReason};
 use crate::ai::api::roles::Model;
 use crate::ai::api::test_support::{FakeAnswer, FakeRequest, FakeService, completions_events, data, messages_events};
+use crate::model::api_key::ApiKey;
 
 fn preset(id: &str) -> Preset {
     all().into_iter().find(|preset| preset.id == id).unwrap()
@@ -147,10 +147,7 @@ async fn the_google_preset_reads_its_stream() {
     assert!(request.head.starts_with("POST /v1beta/models/gemini-4-argon:streamGenerateContent?alt=sse "));
     assert_eq!(request.header("x-goog-api-key"), Some("sk-test"));
     assert_eq!(request.body["contents"], json!([{"role": "user", "parts": [{"text": "Hi"}]}]));
-    assert_eq!(
-        request.body["systemInstruction"]["parts"][0]["text"],
-        crate::ai::api::connection::DEFAULT_SYSTEM_PROMPT
-    );
+    assert_eq!(request.body["systemInstruction"]["parts"][0]["text"], crate::model::ai::DEFAULT_SYSTEM_PROMPT);
 }
 
 #[tokio::test]

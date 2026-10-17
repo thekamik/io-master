@@ -6,6 +6,11 @@
 //! can be read and audited on their own.
 //!
 //! ```text
+//! ai.rs              a connection to an AI service, the tasks and roles of
+//!                    the AI, a conversation
+//! api_key.rs         an API key, wiped from memory, never shown
+//! chats.rs           the chats with the AI
+//! installation.rs    the installation: identifier, role; user names
 //! standards.rs       the documents of standards
 //! test_projects.rs   the test projects: schemes, tiles, links
 //!   model/test_projects/rules.rs   the rules of their fields and links
@@ -14,7 +19,11 @@
 //! time.rs            the time stamps
 //! ```
 
+pub mod ai;
+pub mod api_key;
+pub mod chats;
 pub mod evaluations;
+pub mod installation;
 pub mod standards;
 pub mod test_projects;
 pub mod text;

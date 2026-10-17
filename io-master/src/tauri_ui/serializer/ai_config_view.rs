@@ -16,9 +16,9 @@ use serde::{Deserialize, Serialize};
 use crate::ai::api::checks::CheckReport;
 use crate::ai::api::completions::ReplyEnd;
 use crate::ai::api::completions::StopReason;
-use crate::ai::api::connection::{API_KEY, AnswerMode, Connection};
 use crate::db::ai::connection::rows::Stored;
 use crate::db::ai::presets::read::Preset;
+use crate::model::ai::{API_KEY, AnswerMode, Connection};
 
 use super::super::error::UiError;
 

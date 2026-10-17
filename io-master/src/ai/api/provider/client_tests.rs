@@ -8,10 +8,10 @@ use std::time::Duration;
 
 use serde_json::json;
 
-use crate::ai::api::connection::Connection;
 use crate::ai::api::test_support::{
     FakeAnswer, FakeService, checked, completions, completions_events, data, messages_events, messages_format, sse,
 };
+use crate::model::ai::Connection;
 
 const KEY: &str = "sk-test-secret-key";
 
@@ -78,7 +78,7 @@ async fn a_reply_in_another_format_is_read_with_its_paths() {
     let request = &service.received()[0];
     assert_eq!(request.header("x-api-key"), Some(KEY));
     assert_eq!(request.header("x-version"), Some("1"));
-    assert_eq!(request.body["system"], crate::ai::api::connection::DEFAULT_SYSTEM_PROMPT);
+    assert_eq!(request.body["system"], crate::model::ai::DEFAULT_SYSTEM_PROMPT);
     assert_eq!(request.body["messages"], json!([{"role": "user", "content": "Hello"}]));
 }
 

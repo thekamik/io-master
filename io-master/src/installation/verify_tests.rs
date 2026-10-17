@@ -4,7 +4,7 @@ use super::*;
 
 use std::fs;
 
-use crate::installation::installation::Role;
+use crate::model::installation::Role;
 use crate::tpm::test_support::TempDir;
 
 const PASSWORD: &str = "correct horse battery";

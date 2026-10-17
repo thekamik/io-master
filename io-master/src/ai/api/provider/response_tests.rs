@@ -5,7 +5,7 @@ use super::*;
 
 use serde_json::json;
 
-use crate::ai::api::connection::{AnswerMode, Connection};
+use crate::model::ai::{AnswerMode, Connection};
 
 /// The paths of the chat API of local servers (the template).
 fn completions() -> Checked {

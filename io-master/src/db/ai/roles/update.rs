@@ -2,10 +2,10 @@
 
 use rusqlite::params;
 
-use crate::ai::api::roles::Role;
 use crate::db::ai::connection::read as connections;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::Role;
 
 /// Gives `role` the connection `id`, or none (`None`: the role uses the
 /// active connection). Returns `false` when the connection does not

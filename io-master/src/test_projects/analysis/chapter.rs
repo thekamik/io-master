@@ -45,7 +45,8 @@ use crate::test_projects::schemes::read::existing;
 use crate::test_projects::workspace::OpenProject;
 use crate::test_projects::{links, tiles as tile_crud};
 
-use crate::ai::api::completions::{self, Turn};
+use crate::ai::api::completions::{self};
+use crate::model::ai::Turn;
 
 use super::parts::Part;
 

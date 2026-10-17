@@ -20,62 +20,22 @@ use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::test_projects::analysis::{chapter as analysis, contents};
 
-use super::roles::Role;
+use crate::model::ai::Task;
 
-/// A task of the AI.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Task {
-    /// The analysis of a chapter of a standard: tiles and links.
-    Chapter,
-    /// Reading the table of contents of a standard: the schemes.
-    Contents,
-    /// A message of the chat.
-    Chat,
-    /// The check of a connection.
-    Check,
-}
-
-impl Task {
-    pub const ALL: [Task; 4] = [Task::Chapter, Task::Contents, Task::Chat, Task::Check];
-
-    /// The name kept in the database and in the journal.
-    pub fn name(self) -> &'static str {
-        match self {
-            Task::Chapter => "chapter",
-            Task::Contents => "contents",
-            Task::Chat => "chat",
-            Task::Check => "check",
-        }
-    }
-
-    pub fn from_name(name: &str) -> Option<Task> {
-        Task::ALL.into_iter().find(|task| task.name() == name)
-    }
-
-    /// The role it is asked in; `None` for the check of a connection.
-    pub fn role(self) -> Option<Role> {
-        match self {
-            Task::Chapter | Task::Contents => Some(Role::TextAnalysis),
-            Task::Chat => Some(Role::Consultation),
-            Task::Check => None,
-        }
-    }
-
-    /// The instructions when the evaluator has not changed them; `None`
-    /// for a task without instructions of its own.
-    pub fn default_instructions(self) -> Option<&'static str> {
-        match self {
-            Task::Chapter => Some(analysis::DEFAULT_INSTRUCTIONS),
-            Task::Contents => Some(contents::DEFAULT_INSTRUCTIONS),
-            Task::Chat | Task::Check => None,
-        }
+/// The instructions when the evaluator has not changed them; `None`
+/// for a task without instructions of its own.
+pub fn default_instructions(task: Task) -> Option<&'static str> {
+    match task {
+        Task::Chapter => Some(analysis::DEFAULT_INSTRUCTIONS),
+        Task::Contents => Some(contents::DEFAULT_INSTRUCTIONS),
+        Task::Chat | Task::Check => None,
     }
 }
 
 /// The instructions of `task`: those the evaluator wrote, else the
 /// default ones; `None` for a task without instructions.
 pub fn instructions(db: &UserDb, task: Task) -> Result<Option<String>, DbError> {
-    let Some(default) = task.default_instructions() else {
+    let Some(default) = default_instructions(task) else {
         return Ok(None);
     };
 
@@ -86,7 +46,7 @@ pub fn instructions(db: &UserDb, task: Task) -> Result<Option<String>, DbError> 
 /// ones back. Gives the instructions now in force; `None` for a task
 /// without instructions (nothing is stored).
 pub fn set_instructions(db: &UserDb, task: Task, text: &str) -> Result<Option<String>, DbError> {
-    let Some(default) = task.default_instructions() else {
+    let Some(default) = default_instructions(task) else {
         return Ok(None);
     };
 

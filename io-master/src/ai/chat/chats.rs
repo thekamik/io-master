@@ -23,74 +23,15 @@
 //! in `db/ai/memory/`; what of the history goes to the model is
 //! decided by `memory.rs`.
 
-use crate::ai::api::completions::{Reply, ReplyEnd, Speaker, StopReason};
+use crate::ai::api::completions::{Reply, ReplyEnd, StopReason};
 use crate::db::ai::memory::{create, delete as remove, read};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::chats::{ChatMessage, ChatSummary, Ending};
 
 /// The longest title of a chat, in characters; the title is the
 /// beginning of the first message.
 const TITLE_LENGTH: usize = 60;
-
-/// A chat in the list of chats.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ChatSummary {
-    pub id: i64,
-    pub title: String,
-    /// Local time it was started: "2026-10-14 15:04".
-    pub created: String,
-}
-
-/// How a reply of the model ended (see the top of this file).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Ending {
-    Complete,
-    Cut,
-    Stopped,
-    Refused,
-    Failed,
-}
-
-impl Ending {
-    /// The name kept in the database, also used by the chat page.
-    pub fn name(&self) -> &'static str {
-        match self {
-            Ending::Complete => "complete",
-            Ending::Cut => "cut",
-            Ending::Stopped => "stopped",
-            Ending::Refused => "refused",
-            Ending::Failed => "failed",
-        }
-    }
-
-    /// The ending from its name; an unknown name counts as a
-    /// complete reply.
-    pub(crate) fn from_name(name: &str) -> Ending {
-        match name {
-            "cut" => Ending::Cut,
-            "stopped" => Ending::Stopped,
-            "refused" => Ending::Refused,
-            "failed" => Ending::Failed,
-            _ => Ending::Complete,
-        }
-    }
-}
-
-/// A message of a chat.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ChatMessage {
-    pub speaker: Speaker,
-    pub text: String,
-    /// Local time it was written: "2026-10-14 15:04".
-    pub created: String,
-    /// For a reply: the model that wrote it.
-    pub model: Option<String>,
-    /// For a reply: how it ended. `Complete` for the messages of
-    /// the evaluator.
-    pub ending: Ending,
-    /// For a failed reply: the explanation.
-    pub note: Option<String>,
-}
 
 /// The title of a new chat: the beginning of its first message, on
 /// one line.

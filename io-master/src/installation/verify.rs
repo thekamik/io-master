@@ -24,7 +24,6 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use super::installation::default_data_dir;
 use super::lifecycle::{self, LifecycleError, Opened, Running};
 
 /// The states of the installation that a start can find. Every
@@ -84,6 +83,18 @@ fn verify_at(data_dir: Option<PathBuf>) -> InstallationState {
         Ok(Opened::Installed(running)) => InstallationState::Installed { data_dir, running },
         Err(error) => InstallationState::Damaged(Damage::Unreadable { data_dir, error }),
     }
+}
+
+/// The usual data directory: `$XDG_DATA_HOME/io-master`, or
+/// `~/.local/share/io-master` when that is not set. `None` when
+/// neither variable is set.
+pub fn default_data_dir() -> Option<PathBuf> {
+    let base = std::env::var_os("XDG_DATA_HOME")
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")))?;
+
+    Some(base.join("io-master"))
 }
 
 // Unit tests, in their own file to keep this one readable. They

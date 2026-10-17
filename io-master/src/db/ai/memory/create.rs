@@ -3,10 +3,10 @@
 
 use rusqlite::params;
 
-use crate::ai::api::completions::Speaker;
-use crate::ai::chat::chats::Ending;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::Speaker;
+use crate::model::chats::Ending;
 
 use super::rows::{NOW, speaker_name};
 

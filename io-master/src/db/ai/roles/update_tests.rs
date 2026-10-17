@@ -2,9 +2,9 @@
 
 use super::*;
 
-use crate::ai::api::connection::Connection;
 use crate::db::ai::connection::create;
 use crate::db::ai::roles::read;
+use crate::model::ai::Connection;
 use crate::test_projects::test_support::database;
 
 #[test]

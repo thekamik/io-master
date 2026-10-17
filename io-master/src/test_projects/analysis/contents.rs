@@ -41,7 +41,8 @@ use crate::test_projects::error::StoreError;
 use crate::test_projects::schemes;
 use crate::test_projects::workspace::OpenProject;
 
-use crate::ai::api::completions::{self, Turn};
+use crate::ai::api::completions::{self};
+use crate::model::ai::Turn;
 use crate::model::test_projects::rules::SchemeError;
 
 use super::parts::{PART_RANGE, Part, parts};

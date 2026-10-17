@@ -2,9 +2,9 @@
 
 use rusqlite::OptionalExtension;
 
-use crate::ai::api::tasks::Task;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::Task;
 
 /// The instructions the evaluator wrote for `task`; `None` when they
 /// use the default ones.

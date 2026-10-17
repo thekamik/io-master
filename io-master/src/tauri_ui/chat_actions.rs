@@ -9,9 +9,9 @@
 //! and the question goes into the journal of the AI.
 
 use crate::ai::api::completions;
-use crate::ai::api::tasks::Task;
 use crate::ai::chat::chats;
 use crate::ai::chat::conversation::{self, Prepared};
+use crate::model::ai::Task;
 
 use super::error::UiError;
 use super::serializer::chat_view::{self, ChatSummaryView, ChatView, MessageView, ReplyEvent};

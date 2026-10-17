@@ -10,9 +10,9 @@
 //! must stay word for word is never touched: the quotes of a standard,
 //! the fragments of a document (`ai/api/roles.rs`, `MemoryRule`).
 
-use crate::ai::api::completions::Turn;
+use crate::model::ai::Turn;
 
-use super::chats::{ChatMessage, Ending};
+use crate::model::chats::{ChatMessage, Ending};
 
 /// The conversation as it is sent to the model: every message with
 /// text, except refused replies, whose text is already dropped.

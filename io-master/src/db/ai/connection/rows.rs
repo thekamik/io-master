@@ -8,8 +8,8 @@ use std::fmt;
 use rusqlite::Row;
 use rusqlite::types::ToSql;
 
-use crate::ai::api::connection::{AnswerMode, Connection, ConnectionError};
 use crate::db::error::DbError;
+use crate::model::ai::{AnswerMode, Connection, ConnectionError};
 
 /// Name of the setting with the active connection (`db/user/`).
 pub(super) const ACTIVE: &str = "ai.active_connection";

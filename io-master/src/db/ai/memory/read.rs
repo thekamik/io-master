@@ -2,9 +2,9 @@
 
 use rusqlite::OptionalExtension;
 
-use crate::ai::chat::chats::{ChatMessage, ChatSummary};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::chats::{ChatMessage, ChatSummary};
 
 use super::rows::{local_time, message_from_row, summary_from_row};
 

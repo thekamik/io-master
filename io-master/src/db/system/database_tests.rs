@@ -3,7 +3,7 @@
 use super::*;
 
 use crate::db::encryption::keys::WrappedKey;
-use crate::installation::installation::{ID_LENGTH, Role};
+use crate::model::installation::{ID_LENGTH, Role};
 use crate::tpm::test_support::TempDir;
 
 fn installation() -> Installation {

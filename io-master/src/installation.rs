@@ -1,8 +1,6 @@
-//! The installation: its record, its life (first start, removal), its check.
+//! The installation: its life (first start, removal) and its check.
+//! What an installation is (its identifier and role) is in
+//! `model/installation.rs`.
 
-// The file is installation/installation.rs by choice of the
-// project layout; clippy would prefer a different name for it.
-#[allow(clippy::module_inception)]
-pub mod installation;
 pub mod lifecycle;
 pub mod verify;

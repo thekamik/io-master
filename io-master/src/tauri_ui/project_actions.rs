@@ -14,9 +14,11 @@ use std::path::Path;
 use std::sync::Arc;
 
 use crate::ai::api::completions::{self, Outcome};
-use crate::ai::api::roles::{self, Role};
-use crate::ai::api::tasks::{self, Task};
+use crate::ai::api::roles::{self};
+use crate::ai::api::tasks::{self};
 use crate::db::user::database::UserDb;
+use crate::model::ai::Role;
+use crate::model::ai::Task;
 use crate::model::standards::DocumentFields;
 use crate::model::test_projects::rules::SchemeError;
 use crate::model::test_projects::{ProjectData, ProjectFields};

@@ -14,7 +14,7 @@ use crate::db::user::database::UserDb;
 use super::completions::{self, Reply};
 use super::provider::client;
 use super::roles::{self, Model, ModelError};
-use super::tasks::Task;
+use crate::model::ai::Task;
 
 pub use super::provider::client::CheckReport;
 

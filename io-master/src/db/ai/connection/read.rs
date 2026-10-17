@@ -1,12 +1,12 @@
 //! Reading the AI connections, the active one, and the API key of a
 //! connection. The key is given out only as an [`ApiKey`], which is
-//! wiped from memory and never shown (`ai/api/api_key.rs`).
+//! wiped from memory and never shown (`model/api_key.rs`).
 
 use rusqlite::OptionalExtension;
 
-use crate::ai::api::api_key::ApiKey;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::api_key::ApiKey;
 
 use super::rows::{ACTIVE, CONNECTION_COLUMNS, Stored, connection_from_row, key_name};
 

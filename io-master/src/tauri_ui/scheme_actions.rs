@@ -17,9 +17,11 @@
 use std::sync::Arc;
 
 use crate::ai::api::completions::{self, Outcome};
-use crate::ai::api::roles::{self, Role};
-use crate::ai::api::tasks::{self, Task};
+use crate::ai::api::roles::{self};
+use crate::ai::api::tasks::{self};
 use crate::db::user::database::UserDb;
+use crate::model::ai::Role;
+use crate::model::ai::Task;
 use crate::test_projects::analysis::chapter::{self, Answered};
 use crate::test_projects::analysis::parts;
 use crate::test_projects::checks;

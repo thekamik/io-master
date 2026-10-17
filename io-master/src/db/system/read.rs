@@ -3,7 +3,7 @@
 use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
-use crate::installation::installation::{ID_LENGTH, Installation, InstallationId, Role};
+use crate::model::installation::{ID_LENGTH, Installation, InstallationId, Role};
 
 use super::database::SystemDb;
 use super::rows::{UserRecord, user_from_row};

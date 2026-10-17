@@ -18,11 +18,12 @@
 
 use std::fmt;
 
-use crate::ai::api::completions::Turn;
-use crate::ai::api::connection::ConnectionError;
-use crate::ai::api::roles::{self, Model, ModelError, Role};
+use crate::ai::api::roles::{self, Model, ModelError};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::ConnectionError;
+use crate::model::ai::Role;
+use crate::model::ai::Turn;
 
 use super::chats;
 use super::memory;

@@ -2,8 +2,10 @@
 
 use super::*;
 
-use crate::ai::api::connection::Connection;
+use crate::model::ai::MemoryRule;
+
 use crate::db::ai::connection::{create, delete, update};
+use crate::model::ai::Connection;
 use crate::test_projects::test_support::database;
 
 /// A connection named `name` that needs a key.

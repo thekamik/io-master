@@ -3,8 +3,8 @@
 
 use super::*;
 
-use crate::ai::api::connection::Connection;
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
+use crate::model::ai::Connection;
 use crate::tauri_ui::test_support::{installed, logged_in};
 
 const API_KEY: &str = "sk-secret-of-anna";

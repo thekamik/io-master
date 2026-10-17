@@ -2,6 +2,8 @@
 
 use super::*;
 
+use crate::model::ai::Speaker;
+
 use crate::ai::api::completions::AiError;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;

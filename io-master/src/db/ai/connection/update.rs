@@ -8,10 +8,10 @@
 use rusqlite::params;
 use rusqlite::types::ToSql;
 
-use crate::ai::api::api_key::ApiKey;
-use crate::ai::api::connection::Connection;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::Connection;
+use crate::model::api_key::ApiKey;
 
 use super::delete;
 use super::read;

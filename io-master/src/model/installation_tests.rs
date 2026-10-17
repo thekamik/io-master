@@ -1,4 +1,4 @@
-//! Unit tests of `installation.rs`.
+//! Unit tests of `model/installation.rs`.
 
 use super::*;
 

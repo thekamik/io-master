@@ -38,7 +38,7 @@ use crate::random::random::fill_random;
 use crate::tpm::device_secret::{self, DeviceSecret};
 use crate::tpm::emulator::EMULATOR_DIRECTORY;
 
-use super::installation::{self, Installation, InstallationId, Role};
+use crate::model::installation::{self, Installation, InstallationId, Role};
 
 /// An installed program, ready to work: its record and its open
 /// system database.

@@ -2,6 +2,8 @@
 
 use super::*;
 
+use crate::model::ai::Role;
+
 use crate::test_projects::test_support::database;
 
 #[test]

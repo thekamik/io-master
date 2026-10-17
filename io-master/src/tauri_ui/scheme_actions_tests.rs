@@ -5,8 +5,8 @@ use super::*;
 
 use std::sync::{Arc, Mutex};
 
-use crate::ai::api::api_key::ApiKey;
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
+use crate::model::api_key::ApiKey;
 use crate::tauri_ui::project_actions;
 use crate::tauri_ui::serializer::scheme_view::SourceView;
 use crate::tauri_ui::test_support::{TestState, logged_in, project_form, scheme_form, with_document};

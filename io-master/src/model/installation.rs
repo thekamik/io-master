@@ -3,10 +3,9 @@
 //!
 //! The record itself is kept in the system database
 //! (`db/system/`). Whether this is the first start, and the
-//! installing and uninstalling, are in `lifecycle.rs`.
+//! installing and uninstalling, are in `installation/lifecycle.rs`.
 
 use std::fmt;
-use std::path::PathBuf;
 
 /// The longest name of a user, in characters.
 pub const USER_NAME_MAX: usize = 64;
@@ -91,18 +90,6 @@ pub fn check_user_name(name: &str) -> Result<(), InvalidUserName> {
     }
 
     Ok(())
-}
-
-/// The usual data directory: `$XDG_DATA_HOME/io-master`, or
-/// `~/.local/share/io-master` when that is not set. `None` when
-/// neither variable is set.
-pub fn default_data_dir() -> Option<PathBuf> {
-    let base = std::env::var_os("XDG_DATA_HOME")
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/share")))?;
-
-    Some(base.join("io-master"))
 }
 
 // Unit tests, in their own file to keep this one readable. They

@@ -4,7 +4,7 @@ use super::*;
 
 use serde_json::json;
 
-use crate::ai::api::connection::Connection;
+use crate::model::ai::Connection;
 
 fn evaluator(text: &str) -> Turn {
     Turn { speaker: Speaker::Evaluator, text: text.to_owned() }

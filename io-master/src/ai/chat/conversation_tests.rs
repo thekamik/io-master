@@ -2,12 +2,12 @@
 
 use super::*;
 
-use crate::ai::api::api_key::ApiKey;
-use crate::ai::api::completions::Speaker;
-use crate::ai::api::connection::Connection;
 use crate::db::ai::connection::{create as connections_create, update as connections_update};
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
+use crate::model::ai::Connection;
+use crate::model::ai::Speaker;
+use crate::model::api_key::ApiKey;
 use crate::random::random::fill_random;
 use crate::tpm::test_support::TempDir;
 

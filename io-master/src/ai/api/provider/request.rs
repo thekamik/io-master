@@ -20,27 +20,13 @@ use serde_json::Value;
 use zeroize::Zeroizing;
 
 use super::ai_error::AiError;
-use crate::ai::api::api_key::ApiKey;
-use crate::ai::api::connection::{API_KEY, Checked, MESSAGES, MODEL, ROLE, SYSTEM, TEXT};
+use crate::ai::api::connection::Checked;
+use crate::model::ai::{API_KEY, MESSAGES, MODEL, ROLE, SYSTEM, TEXT};
+use crate::model::ai::{Speaker, Turn};
+use crate::model::api_key::ApiKey;
 
 /// What stands in place of the key where a request is shown.
 pub const MASK: &str = "••••••••";
-
-/// Who said something in a conversation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Speaker {
-    /// The evaluator (the "user role" of the connection).
-    Evaluator,
-    /// The model (the "model role" of the connection).
-    Model,
-}
-
-/// One message of a conversation, as it is sent to the model.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Turn {
-    pub speaker: Speaker,
-    pub text: String,
-}
 
 /// A request, ready to be sent.
 #[derive(Debug)]

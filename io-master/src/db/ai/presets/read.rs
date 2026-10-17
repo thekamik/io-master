@@ -13,7 +13,7 @@
 //! are in its stream. Names of models change often; the evaluator
 //! checks the model before saving.
 
-use crate::ai::api::connection::{AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, DEFAULT_SYSTEM_PROMPT};
+use crate::model::ai::{AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, DEFAULT_SYSTEM_PROMPT};
 
 /// A preset.
 #[derive(Debug, Clone)]

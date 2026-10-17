@@ -2,9 +2,9 @@
 
 use rusqlite::params;
 
-use crate::ai::api::tasks::Task;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::ai::Task;
 
 /// Stores the instructions of `task`, replacing earlier ones.
 pub fn text(db: &UserDb, task: Task, text: &str) -> Result<(), DbError> {

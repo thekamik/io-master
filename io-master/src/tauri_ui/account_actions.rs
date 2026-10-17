@@ -12,8 +12,8 @@
 use zeroize::Zeroizing;
 
 use crate::accounts::accounts;
-use crate::installation::installation::Role;
 use crate::installation::lifecycle::{self, LifecycleError};
+use crate::model::installation::Role;
 
 use super::blocking::blocking;
 use super::error::UiError;

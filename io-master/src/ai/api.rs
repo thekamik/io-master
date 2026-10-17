@@ -1,6 +1,5 @@
 //! The only way to the AI, in the form of REST: resources and operations.
 
-pub mod api_key;
 pub mod checks;
 pub mod completions;
 pub mod connection;

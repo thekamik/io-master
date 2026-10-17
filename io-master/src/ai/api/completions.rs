@@ -28,12 +28,12 @@ use crate::db::user::database::UserDb;
 use super::provider::client;
 use super::provider::request;
 use super::roles::Model;
-use super::tasks::Task;
+use crate::model::ai::Task;
 
 pub use super::provider::ai_error::AiError;
 pub use super::provider::client::{Reply, ReplyEnd};
-pub use super::provider::request::{Speaker, Turn};
 pub use super::provider::response::StopReason;
+pub use crate::model::ai::{Speaker, Turn};
 
 /// How many pieces of a reply may wait for the caller.
 const PIECE_QUEUE: usize = 256;

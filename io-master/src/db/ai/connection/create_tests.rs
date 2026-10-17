@@ -5,11 +5,11 @@ use super::*;
 
 use std::fs;
 
-use crate::ai::api::api_key::ApiKey;
-use crate::ai::api::connection::{AnswerMode, Field};
 use crate::db::ai::connection::{delete, update};
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
+use crate::model::ai::{AnswerMode, Field};
+use crate::model::api_key::ApiKey;
 use crate::random::random::fill_random;
 use crate::tpm::test_support::TempDir;
 
@@ -228,6 +228,6 @@ fn a_table_made_before_the_message_template_gets_the_column() {
 
     assert_eq!(
         read::get(&db, id).unwrap().unwrap().connection.message_template,
-        crate::ai::api::connection::DEFAULT_MESSAGE_TEMPLATE
+        crate::model::ai::DEFAULT_MESSAGE_TEMPLATE
     );
 }
