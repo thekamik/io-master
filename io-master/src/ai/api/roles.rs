@@ -26,8 +26,8 @@
 
 use std::fmt;
 
-use crate::db::ai::connection::read as connections;
-use crate::db::ai::roles::{read as roles_read, update as roles_update};
+use crate::db::ai::connection as db_connection;
+use crate::db::ai::roles as db_roles;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
@@ -95,21 +95,21 @@ pub fn list() -> Vec<Role> {
 
 /// The connection given to `role`; `None`: it uses the active one.
 pub fn connection(db: &UserDb, role: Role) -> Result<Option<i64>, DbError> {
-    roles_read::connection(db, role)
+    db_roles::read::connection(db, role)
 }
 
 /// Gives `role` the connection `id`, or none (the active one); returns
 /// `false` when the connection does not exist.
 pub fn set_connection(db: &UserDb, role: Role, id: Option<i64>) -> Result<bool, DbError> {
-    roles_update::connection(db, role, id)
+    db_roles::update::connection(db, role, id)
 }
 
 /// The connection `role` uses now (its own, else the active one),
 /// checked, with its key.
 pub fn model(db: &UserDb, role: Role) -> Result<Model, ModelError> {
-    let id = match roles_read::connection(db, role)? {
+    let id = match db_roles::read::connection(db, role)? {
         Some(id) => id,
-        None => connections::active(db)?.ok_or(ModelError::NoConnection)?,
+        None => db_connection::read::active(db)?.ok_or(ModelError::NoConnection)?,
     };
 
     model_of(db, id, true)
@@ -119,10 +119,10 @@ pub fn model(db: &UserDb, role: Role) -> Result<Model, ModelError> {
 /// connection that uses a key and has none is refused; a check of a
 /// connection (`checks.rs`) runs without, and reports it.
 pub(super) fn model_of(db: &UserDb, id: i64, needs_key: bool) -> Result<Model, ModelError> {
-    let stored = connections::get(db, id)?.ok_or(ModelError::NoConnection)?;
+    let stored = db_connection::read::get(db, id)?.ok_or(ModelError::NoConnection)?;
     let name = stored.connection.name.clone();
     let connection = stored.connection.check().map_err(|error| ModelError::BrokenConnection(name.clone(), error))?;
-    let api_key = connections::api_key(db, id)?;
+    let api_key = db_connection::read::api_key(db, id)?;
 
     if needs_key && connection.needs_key() && api_key.is_none() {
         return Err(ModelError::NoKey(name));

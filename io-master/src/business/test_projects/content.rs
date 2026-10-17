@@ -3,7 +3,7 @@
 //! checked by the rules and written in one transaction. (An open
 //! project brings back its own versions: `workspace.rs`.)
 
-use crate::db::test_projects::{read as stored, update as store};
+use crate::db::test_projects as db_test_projects;
 use crate::db::user::database::UserDb;
 
 use super::projects::existing;
@@ -21,7 +21,7 @@ pub fn replace(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Res
     let tiles: Vec<Tile> = tiles.iter().map(|tile| Tile { fields: tile.fields.normalized(), ..tile.clone() }).collect();
     let tiles = tiles.as_slice();
     let stored_project = existing(db, project)?;
-    let schemes: Vec<i64> = stored::schemes(db, project)?.iter().map(|scheme| scheme.id).collect();
+    let schemes: Vec<i64> = db_test_projects::read::schemes(db, project)?.iter().map(|scheme| scheme.id).collect();
 
     for tile in tiles {
         tile.fields.check()?;
@@ -54,5 +54,5 @@ pub fn replace(db: &UserDb, project: i64, tiles: &[Tile], links: &[Link]) -> Res
         checked.push(*link);
     }
 
-    Ok(store::replace_content(db, project, tiles, links)?)
+    Ok(db_test_projects::update::replace_content(db, project, tiles, links)?)
 }

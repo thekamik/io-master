@@ -27,7 +27,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use tokio::sync::{mpsc, watch};
 
-use crate::db::ai::journal::create as journal;
+use crate::db::ai::journal as db_journal;
 use crate::db::ai::journal::rows::Entry;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -201,7 +201,7 @@ fn record(db: &UserDb, model: &Model, task: Task, turns: &[Turn], reply: &Reply)
 pub(super) fn write(db: &UserDb, model: &Model, task: Task, request: &str, reply: &Reply) -> Result<i64, DbError> {
     let (ending, note) = ending(reply);
 
-    journal::entry(
+    db_journal::create::entry(
         db,
         &Entry {
             id: 0,

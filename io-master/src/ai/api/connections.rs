@@ -24,8 +24,8 @@
 
 use std::fmt;
 
+use crate::db::ai::connection as db_connection;
 use crate::db::ai::connection::rows::SaveError;
-use crate::db::ai::connection::{create as store, delete as remove, read, update as change};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::ai::{Connection, ConnectionError, SavedConnection, StoredConnection};
@@ -78,49 +78,49 @@ fn checked(connection: &Connection) -> Result<Connection, ConnectionSaveError> {
 
 /// Every connection, by name.
 pub fn list(db: &UserDb) -> Result<Vec<StoredConnection>, DbError> {
-    read::list(db)
+    db_connection::read::list(db)
 }
 
 /// One connection; `None` when there is no such.
 pub fn get(db: &UserDb, id: i64) -> Result<Option<StoredConnection>, DbError> {
-    read::get(db, id)
+    db_connection::read::get(db, id)
 }
 
 /// Stores a new connection; the first one becomes the active one.
 pub fn create(db: &UserDb, connection: &Connection) -> Result<SavedConnection, ConnectionSaveError> {
-    Ok(store::connection(db, &checked(connection)?)?)
+    Ok(db_connection::create::connection(db, &checked(connection)?)?)
 }
 
 /// Changes connection `id`; its key is removed when its address
 /// changed (`SavedConnection::key_removed`).
 pub fn update(db: &UserDb, id: i64, connection: &Connection) -> Result<SavedConnection, ConnectionSaveError> {
-    Ok(change::connection(db, id, &checked(connection)?)?)
+    Ok(db_connection::update::connection(db, id, &checked(connection)?)?)
 }
 
 /// Deletes a connection with its key; returns whether it existed.
 pub fn delete(db: &UserDb, id: i64) -> Result<bool, DbError> {
-    remove::connection(db, id)
+    db_connection::delete::connection(db, id)
 }
 
 /// The active connection, if one is chosen.
 pub fn active(db: &UserDb) -> Result<Option<i64>, DbError> {
-    read::active(db)
+    db_connection::read::active(db)
 }
 
 /// Makes a connection the active one; returns whether it exists.
 pub fn activate(db: &UserDb, id: i64) -> Result<bool, DbError> {
-    change::active(db, id)
+    db_connection::update::active(db, id)
 }
 
 /// Stores the API key of a connection, bound to its address; returns
 /// whether the connection exists.
 pub fn set_key(db: &UserDb, id: i64, key: &ApiKey) -> Result<bool, DbError> {
-    change::api_key(db, id, key)
+    db_connection::update::api_key(db, id, key)
 }
 
 /// Removes the API key of a connection.
 pub fn delete_key(db: &UserDb, id: i64) -> Result<(), DbError> {
-    remove::api_key(db, id)
+    db_connection::delete::api_key(db, id)
 }
 
 // Unit tests, in their own file to keep this one readable. They

@@ -27,7 +27,7 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
-use crate::db::test_projects::update as change;
+use crate::db::test_projects as db_test_projects;
 use crate::db::user::database::UserDb;
 
 use super::projects;
@@ -111,7 +111,7 @@ impl OpenProject {
 
         let project = self.data.project.id;
 
-        if change::restore_content(db, project, &version.tiles, &version.links).is_ok() {
+        if db_test_projects::update::restore_content(db, project, &version.tiles, &version.links).is_ok() {
             let version = self.versions.pop().expect("a version was there");
             self.data.tiles = version.tiles;
             self.data.links = version.links;
@@ -126,7 +126,7 @@ impl OpenProject {
         // read back, so that memory and the database stay the same.
         // The earlier versions name the old numbers, so they are
         // forgotten too.
-        change::replace_content(db, project, &version.tiles, &version.links)?;
+        db_test_projects::update::replace_content(db, project, &version.tiles, &version.links)?;
         self.versions.clear();
         self.data = projects::data(db, project)?.ok_or(StoreError::Scheme(SchemeError::NotFound("project")))?;
 

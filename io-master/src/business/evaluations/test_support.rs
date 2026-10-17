@@ -70,7 +70,7 @@ pub mod single {
     use crate::business::evaluations::error::EvaluationError;
     use crate::business::evaluations::results;
     use crate::business::evaluations::workspace::OpenEvaluation;
-    use crate::db::evaluations::read as stored;
+    use crate::db::evaluations as db_evaluations;
     use crate::db::user::database::UserDb;
     use crate::model::evaluations::{Proposal, RequirementResult, ResultField};
 
@@ -100,12 +100,12 @@ pub mod single {
 
     /// The evaluation of tile `tile`; 0 when there is no such tile.
     fn of_tile(db: &UserDb, tile: i64) -> i64 {
-        stored::tile(db, tile).unwrap().map_or(0, |(evaluation, _)| evaluation)
+        db_evaluations::read::tile(db, tile).unwrap().map_or(0, |(evaluation, _)| evaluation)
     }
 
     /// The evaluation of proposal `id`; 0 when there is no such.
     fn of_proposal(db: &UserDb, id: i64) -> i64 {
-        stored::proposal_tile(db, id).unwrap().map_or(0, |tile| of_tile(db, tile))
+        db_evaluations::read::proposal_tile(db, id).unwrap().map_or(0, |tile| of_tile(db, tile))
     }
 
     /// Runs `work` on the evaluation `evaluation`, or gives the error

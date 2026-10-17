@@ -16,7 +16,7 @@
 //! ```
 
 use crate::ai::tasks::{chapter, contents};
-use crate::db::ai::instructions::{delete as remove, read, update};
+use crate::db::ai::instructions as db_instructions;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
@@ -39,7 +39,7 @@ pub fn instructions(db: &UserDb, task: Task) -> Result<Option<String>, DbError> 
         return Ok(None);
     };
 
-    Ok(Some(read::text(db, task)?.unwrap_or_else(|| default.to_owned())))
+    Ok(Some(db_instructions::read::text(db, task)?.unwrap_or_else(|| default.to_owned())))
 }
 
 /// Stores the instructions of `task`; an empty text brings the default
@@ -51,10 +51,10 @@ pub fn set_instructions(db: &UserDb, task: Task, text: &str) -> Result<Option<St
     };
 
     if text.trim().is_empty() {
-        remove::text(db, task)?;
+        db_instructions::delete::text(db, task)?;
         Ok(Some(default.to_owned()))
     } else {
-        update::text(db, task, text)?;
+        db_instructions::update::text(db, task, text)?;
         Ok(Some(text.to_owned()))
     }
 }

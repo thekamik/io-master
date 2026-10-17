@@ -23,7 +23,7 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 
-use crate::db::evaluations::read as stored;
+use crate::db::evaluations as db_evaluations;
 use crate::db::user::database::UserDb;
 
 use super::projects;
@@ -46,9 +46,9 @@ impl OpenEvaluation {
             return Ok(None);
         };
 
-        let results = stored::results_of(db, id)?;
+        let results = db_evaluations::read::results_of(db, id)?;
 
-        Ok(Some(OpenEvaluation { data, results, proposals: stored::proposals_of(db, id)? }))
+        Ok(Some(OpenEvaluation { data, results, proposals: db_evaluations::read::proposals_of(db, id)? }))
     }
 
     /// The frozen structure of the evaluation.

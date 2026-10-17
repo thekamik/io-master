@@ -24,7 +24,7 @@
 //! decided by `memory.rs`.
 
 use crate::ai::api::completions::{Reply, ReplyEnd, StopReason};
-use crate::db::ai::chats::{create, delete as remove, read};
+use crate::db::ai::chats as db_chats;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::chats::{ChatMessage, ChatSummary, Ending};
@@ -50,7 +50,7 @@ fn title_of(text: &str) -> String {
 /// Starts a chat with the first message of the evaluator; returns
 /// the number of the chat.
 pub fn start(db: &UserDb, first_message: &str) -> Result<i64, DbError> {
-    let id = create::chat(db, &title_of(first_message))?;
+    let id = db_chats::create::chat(db, &title_of(first_message))?;
     add_message(db, id, first_message)?;
 
     Ok(id)
@@ -58,22 +58,22 @@ pub fn start(db: &UserDb, first_message: &str) -> Result<i64, DbError> {
 
 /// The chats, the newest first.
 pub fn list(db: &UserDb) -> Result<Vec<ChatSummary>, DbError> {
-    read::chats(db)
+    db_chats::read::chats(db)
 }
 
 /// The title of a chat, or `None` when there is no such chat.
 pub fn title(db: &UserDb, chat_id: i64) -> Result<Option<String>, DbError> {
-    read::chat_title(db, chat_id)
+    db_chats::read::chat_title(db, chat_id)
 }
 
 /// The messages of a chat, in order.
 pub fn messages(db: &UserDb, chat_id: i64) -> Result<Vec<ChatMessage>, DbError> {
-    read::messages(db, chat_id)
+    db_chats::read::messages(db, chat_id)
 }
 
 /// Adds a message of the evaluator to a chat.
 pub fn add_message(db: &UserDb, chat_id: i64, text: &str) -> Result<(), DbError> {
-    create::message(db, chat_id, text)
+    db_chats::create::message(db, chat_id, text)
 }
 
 /// How a reply ended, as it is kept: the ending, and for a failed
@@ -95,10 +95,10 @@ pub fn add_reply(db: &UserDb, chat_id: i64, reply: &Reply) -> Result<(), DbError
     // A refused reply is dropped (see the top of this file).
     let text = if ending == Ending::Refused { "" } else { reply.text.as_str() };
 
-    create::reply(
+    db_chats::create::reply(
         db,
         chat_id,
-        &create::Reply {
+        &db_chats::create::Reply {
             text,
             model: reply.model.as_deref(),
             ending: &ending,
@@ -112,7 +112,7 @@ pub fn add_reply(db: &UserDb, chat_id: i64, reply: &Reply) -> Result<(), DbError
 /// Deletes a chat with its messages; returns whether it existed.
 pub fn delete(db: &UserDb, chat_id: i64) -> Result<bool, DbError> {
     // The text of the chat is overwritten in the file (db/ai/delete.rs).
-    remove::chat(db, chat_id)
+    db_chats::delete::chat(db, chat_id)
 }
 
 // Unit tests, in their own file to keep this one readable. They

@@ -147,7 +147,7 @@ pub mod single {
     use crate::business::test_projects::workspace::{OpenProject, ProjectWorkspace};
     use crate::business::test_projects::{links as link_crud, schemes, tiles};
     use crate::db::error::DbError;
-    use crate::db::test_projects::read as stored;
+    use crate::db::test_projects as db_test_projects;
     use crate::db::user::database::UserDb;
     use crate::model::test_projects::rules::SchemeError;
     use crate::model::test_projects::{Link, ProjectFields, Scheme, SchemeFields, Tile, TileFields};
@@ -166,11 +166,11 @@ pub mod single {
     }
 
     pub fn project_of_scheme(db: &UserDb, scheme: i64) -> i64 {
-        stored::scheme(db, scheme).unwrap().map_or(0, |scheme| scheme.project)
+        db_test_projects::read::scheme(db, scheme).unwrap().map_or(0, |scheme| scheme.project)
     }
 
     pub fn project_of_tile(db: &UserDb, tile: i64) -> i64 {
-        stored::project_of_tile(db, tile).unwrap().unwrap_or(0)
+        db_test_projects::read::project_of_tile(db, tile).unwrap().unwrap_or(0)
     }
 
     pub fn create(db: &UserDb, project: i64, fields: &SchemeFields) -> Result<i64, StoreError> {
@@ -178,7 +178,7 @@ pub mod single {
     }
 
     pub fn of_project(db: &UserDb, project: i64) -> Result<Vec<Scheme>, DbError> {
-        stored::schemes(db, project)
+        db_test_projects::read::schemes(db, project)
     }
 
     pub fn existing(db: &UserDb, id: i64) -> Result<Scheme, StoreError> {
@@ -186,7 +186,7 @@ pub mod single {
     }
 
     pub fn get(db: &UserDb, id: i64) -> Result<Option<Scheme>, DbError> {
-        stored::scheme(db, id)
+        db_test_projects::read::scheme(db, id)
     }
 
     pub fn accept(db: &UserDb, id: i64) -> Result<(), StoreError> {
@@ -232,11 +232,11 @@ pub mod single {
     }
 
     pub fn tile(db: &UserDb, id: i64) -> Result<Option<Tile>, DbError> {
-        stored::tile(db, id)
+        db_test_projects::read::tile(db, id)
     }
 
     pub fn project_tiles(db: &UserDb, project: i64) -> Result<Vec<Tile>, DbError> {
-        stored::project_tiles(db, project)
+        db_test_projects::read::project_tiles(db, project)
     }
 
     pub fn add_link(db: &UserDb, from: i64, to: i64) -> Result<i64, StoreError> {
@@ -256,7 +256,7 @@ pub mod single {
     pub fn delete_link(db: &UserDb, id: i64) -> Result<bool, DbError> {
         let project = projects::list(db)?
             .into_iter()
-            .find(|project| stored::links(db, project.id).unwrap().iter().any(|link| link.id == id))
+            .find(|project| db_test_projects::read::links(db, project.id).unwrap().iter().any(|link| link.id == id))
             .map_or(0, |project| project.id);
 
         if project == 0 {
@@ -267,7 +267,7 @@ pub mod single {
     }
 
     pub fn links(db: &UserDb, project: i64) -> Result<Vec<Link>, DbError> {
-        stored::links(db, project)
+        db_test_projects::read::links(db, project)
     }
 
     pub fn replace_content(
