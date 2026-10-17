@@ -12,8 +12,8 @@
 
 use serde::Serialize;
 
-use crate::ai::request::Speaker;
-use crate::ai::chats::{ChatMessage, ChatSummary, Ending};
+use crate::ai::api::completions::Speaker;
+use crate::ai::chat::chats::{ChatMessage, ChatSummary, Ending};
 
 /// A chat in the list.
 #[derive(Debug, Serialize)]

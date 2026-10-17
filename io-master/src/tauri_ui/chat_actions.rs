@@ -3,24 +3,20 @@
 //!
 //! A reply runs while the command [`send_message`] waits for it; its
 //! pieces go to the page through `events` as they arrive. "Stop"
-//! (the command `stop_reply`, through [`UiState::stop_reply`]) ends
-//! the passing on of the pieces, which stops the reply
-//! (`ai/client.rs`); what was written up to then is stored, like
-//! every reply, with how it ended (`ai/chats.rs`).
+//! (the command `stop_reply`, through [`UiState::stop_reply`]) stops
+//! the reply (`ai/api/completions.rs`); what was written up to then is
+//! stored, like every reply, with how it ended (`ai/chat/chats.rs`),
+//! and the question goes into the journal of the AI.
 
-use tokio::sync::mpsc;
-
-use crate::ai::chats;
-use crate::ai::client;
-use crate::ai::conversation::{self, Prepared};
+use crate::ai::api::completions;
+use crate::ai::api::tasks::Task;
+use crate::ai::chat::chats;
+use crate::ai::chat::conversation::{self, Prepared};
 
 use super::error::UiError;
 use super::serializer::chat_view::{self, ChatSummaryView, ChatView, MessageView, ReplyEvent};
 use super::state::UiState;
 use super::user_data::with_user_db;
-
-/// How many pieces of a reply may wait for the page.
-const PIECE_QUEUE: usize = 64;
 
 /// The chats, the newest first.
 pub async fn list_chats(state: &UiState) -> Result<Vec<ChatSummaryView>, UiError> {
@@ -64,48 +60,25 @@ pub async fn send_message(
     let Prepared {
         chat_id,
         title,
-        connection,
-        api_key,
+        model,
         turns,
     } = with_user_db(state, move |db| Ok(conversation::prepare(db, chat_id, &text)?)).await?;
 
     events(ReplyEvent::Chat { id: chat_id, title });
 
-    let mut stop = state.start_reply();
-    let (pieces, mut piece_receiver) = mpsc::channel::<String>(PIECE_QUEUE);
-
-    // Asks the model; `pieces` is dropped when the reply is done,
-    // which ends the passing on below.
-    let asking = async move {
-        let reply = client::reply(&connection, api_key.as_ref(), &turns, &pieces).await;
-        drop(pieces);
-        reply
-    };
-
-    // Passes the pieces on. On "Stop", or when the page is gone, it
-    // ends, and dropping `piece_receiver` stops the reply.
-    let passing_on = async move {
-        loop {
-            tokio::select! {
-                piece = piece_receiver.recv() => match piece {
-                    Some(text) => {
-                        if !events(ReplyEvent::Text { text }) {
-                            break;
-                        }
-                    }
-                    None => break,
-                },
-                _ = stop.wait_for(|stopped| *stopped) => break,
-            }
-        }
-
-        events
-    };
-
-    let (reply, events) = tokio::join!(asking, passing_on);
+    // The pieces go to the page as they arrive; a page that is gone
+    // stops the reply, as "Stop" does.
+    let stop = state.start_reply();
+    let on_piece = |text: &str| events(ReplyEvent::Text { text: text.to_owned() });
+    let reply = completions::create(&model, &turns, &stop, on_piece).await;
 
     let (ending, note) = chats::ending_of(&reply);
-    let stored = with_user_db(state, move |db| Ok(chats::add_reply(db, chat_id, &reply)?)).await;
+    let stored = with_user_db(state, move |db| {
+        chats::add_reply(db, chat_id, &reply)?;
+        completions::record(db, &model, Task::Chat, &turns, &reply)?;
+        Ok(())
+    })
+    .await;
 
     let mut notice = chat_view::ending_notice(&ending, note.as_deref());
 

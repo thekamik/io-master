@@ -11,7 +11,7 @@
 //!
 //! Logging in means opening that key with the password, and with
 //! the secret of the device when the optional TPM factor is used
-//! (`db/keys.rs`). A wrong password, a wrong name, and an
+//! (`db/encryption/keys.rs`). A wrong password, a wrong name, and an
 //! account that does not exist all give the same answer, so the
 //! answer does not tell which names exist.
 //!
@@ -21,12 +21,12 @@
 use std::fmt;
 use std::path::Path;
 
-use crate::db::database_key::DatabaseKey;
-use crate::db::db::DbError;
-use crate::db::generate_key::generate_database_key;
-use crate::db::keys::{self, KeyError};
-use crate::db::system_db::SystemDb;
-use crate::db::user_db;
+use crate::db::encryption::database_key::DatabaseKey;
+use crate::db::error::DbError;
+use crate::db::encryption::generate_key::generate_database_key;
+use crate::db::encryption::keys::{self, KeyError};
+use crate::db::system::database::SystemDb;
+use crate::db::user::database as user_db;
 use crate::installation::installation::{self, InvalidUserName};
 use crate::tpm::device_secret::DeviceSecret;
 

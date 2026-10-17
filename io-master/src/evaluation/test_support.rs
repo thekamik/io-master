@@ -2,8 +2,8 @@
 //! evaluator in a temporary directory, a small standard of three pages
 //! loaded into it, and a project with schemes on it.
 
-use crate::db::database_key::DatabaseKey;
-use crate::db::user_db::{self, UserDb};
+use crate::db::encryption::database_key::DatabaseKey;
+use crate::db::user::database::{self as user_db, UserDb};
 use crate::random::random::fill_random;
 use crate::tpm::test_support::TempDir;
 

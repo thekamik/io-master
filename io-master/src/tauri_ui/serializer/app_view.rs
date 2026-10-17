@@ -53,6 +53,8 @@ fn pages(role: Role) -> Vec<PageView> {
             PageView { id: "chat", title: "Chat" },
             PageView { id: "evaluation", title: "Evaluation" },
             PageView { id: "schemes", title: "Create evaluation scheme" },
+            // A placeholder until step 30 of docs/todo.md is designed.
+            PageView { id: "documentation", title: "Manufacturer documentation" },
             PageView { id: "scan", title: "Scan and permissions" },
             PageView { id: "settings", title: "Settings" },
         ],

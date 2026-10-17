@@ -1,6 +1,6 @@
 //! The database of the logged-in evaluator, for the commands.
 
-use crate::db::user_db::{self, UserDb};
+use crate::db::user::database::{self as user_db, UserDb};
 
 use super::blocking::blocking;
 use super::error::UiError;

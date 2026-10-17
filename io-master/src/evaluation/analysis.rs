@@ -7,7 +7,7 @@
 //! prompt()     the instructions, the chapter, the tiles known so far
 //!              (of this scheme, and the requirements of the others),
 //!              the text of one part
-//!   (the model answers, over the connection of the user: ai/client.rs)
+//!   (the model answers, over the connection of the user: ai/api/completions.rs)
 //! read()       the answer: one JSON object with "tiles" and "links"
 //! apply()      every proposal checked and stored as a *proposed* tile
 //! ```
@@ -29,16 +29,13 @@
 
 use serde_json::Value;
 
-use crate::db::db::DbError;
-use crate::db::user_db::UserDb;
+use crate::db::error::DbError;
+use crate::db::user::database::UserDb;
 
 use super::documents::{self, Document};
 use super::quote::{MAX_QUOTE, is_on_page, normalize};
 use super::scheme::{External, OutputSection, ProposalState, Scheme, SchemeError, Source, Tile, TileFields, TileKind};
 use super::schemes::{self, StoreError};
-
-/// The name of the setting with the instructions the user changed.
-pub const INSTRUCTIONS_SETTING: &str = "evaluation.analysis_instructions";
 
 /// The size of a part when the user gives none, in characters: about
 /// 3000 tokens, which leaves room for the answer even in the context
@@ -48,7 +45,9 @@ pub const DEFAULT_PART: usize = 12_000;
 /// The smallest and largest size of a part the user may choose.
 pub const PART_RANGE: (usize, usize) = (2_000, 400_000);
 
-/// The instructions to the model when the user has not changed them.
+/// The instructions to the model when the user has not changed them
+/// (the task `chapter` of `ai/api/tasks.rs`; changed ones are kept in
+/// `db/ai/instructions/`).
 pub const DEFAULT_INSTRUCTIONS: &str = r#"You help to build an evaluation scheme from a standard. A scheme is the plan of an evaluation (the plan of the tests), drawn as tiles of three kinds:
 
 - "input": what the evaluation needs: documentation of the manufacturer, a sample of the product, access, the result of another requirement, or an element described in another document of the standard.

@@ -83,7 +83,7 @@ fn the_fields_are_changed_and_the_document_deleted() {
 fn the_text_cannot_be_read_from_the_file() {
     let test = database();
     load(&test.db, b"%PDF secret");
-    let path = crate::db::user_db::path(test.directory.path(), 1);
+    let path = crate::db::user::database::path(test.directory.path(), 1);
 
     let bytes = fs::read(path).unwrap();
     assert!(!bytes.windows(17).any(|window| window == b"ADV_FSP.4 Complet"));

@@ -11,7 +11,7 @@
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
-use crate::ai::ai_error::AiError;
+use crate::ai::api::completions::AiError;
 
 use super::super::error::UiError;
 

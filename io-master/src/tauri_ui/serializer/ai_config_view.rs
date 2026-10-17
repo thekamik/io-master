@@ -7,17 +7,18 @@
 //! the view says only whether one is stored (`has_key`); a key is
 //! sent alone, from a password field (`store_ai_key`).
 //!
-//! The presets (`ai/presets.rs`) come with the page as views of the
+//! The presets (`db/ai/presets/read.rs`) come with the page as views of the
 //! same shape: the page copies their fields into the form, as if the
 //! evaluator had typed them.
 
 use serde::{Deserialize, Serialize};
 
-use crate::ai::client::{CheckReport, ReplyEnd};
-use crate::ai::connection::{API_KEY, AnswerMode, Connection};
-use crate::ai::connections::Stored;
-use crate::ai::presets::Preset;
-use crate::ai::response::StopReason;
+use crate::ai::api::checks::CheckReport;
+use crate::ai::api::completions::ReplyEnd;
+use crate::ai::api::connection::{API_KEY, AnswerMode, Connection};
+use crate::db::ai::connection::rows::Stored;
+use crate::db::ai::presets::read::Preset;
+use crate::ai::api::completions::StopReason;
 
 use super::super::error::UiError;
 
@@ -134,7 +135,7 @@ impl AiConfigView {
             connections: connections.into_iter().map(ConnectionView::from).collect(),
             active,
             template: ConnectionView::new(None, Connection::template(), false),
-            presets: crate::ai::presets::all().into_iter().map(PresetView::from).collect(),
+            presets: crate::db::ai::presets::read::all().into_iter().map(PresetView::from).collect(),
         }
     }
 }

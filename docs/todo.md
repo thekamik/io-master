@@ -33,7 +33,11 @@ The number of a step is its name and never changes, so that references in the co
 | 21 | 10: Before release of the workstation | |
 | 22 | 4: The TLS server of the reset service (changed 2026-10-16) | before the master |
 | 23 | 11: Master and password reset | last |
-| later | 23: Evaluation with AI: carrying out a scheme | after the steps above; designed when they are done |
+| now | **39: The domain folders: CRUD of the objects in memory, `db/` for the lasting write** | concept being agreed (2026-10-17) |
+| now | **38: The AI layer: `ai/api/` in the form of REST, `ai/chat/`, roles of the AI** | built 2026-10-17; decisions approved by the user; the code waits for the user's review |
+| now | **37: The database layer by areas and CRUD** | built 2026-10-17 (user: critical, before step 31); waiting for the user's review |
+| next | 23: Evaluation with AI: carrying out a scheme, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built, waiting for the user's review |
+| later | 30: Tool "Manufacturer documentation" | designed later (user); a placeholder in the sidebar; needed by steps 32 to 34 |
 | later | 28: Reports in the LaTeX template of the laboratory | with or after step 23 |
 
 ## How every step is done
@@ -502,8 +506,9 @@ documents of a standard (PDF)  ──load──►  text by pages  ──AI prop
   4. *Evidence*: what, where it is kept, its checksum.
   5. *Findings*: observations, deviations, open points.
   6. *Verdict and rationale*: per requirement, given by the evaluator.
+  7. *Vulnerabilities and notes*: the vulnerabilities that may follow from the solution used (added by the user on 2026-10-17, one of the four results of a requirement in the evaluation).
 
-  The scheme gives each output its title, the sections that apply (all by default) and the instructions for the report (what the laboratory expects written there). Sections 2 to 6 are filled by the evaluation (step 23).
+  The scheme gives each output its title, the sections that apply (all by default) and the instructions for the report (what the laboratory expects written there). Sections 2 to 7 are filled by the evaluation (step 23).
 - [x] All steps 16 to 22 are to be built one after another (user, 2026-10-16); each is tested on its own before the next starts.
 
 **State (2026-10-16): steps 16 to 22 built and tested; waiting for the user's test.**
@@ -657,15 +662,172 @@ Test project            the documents of the standard, name, version, author, de
   - Page: `Schemes.svelte` (the list of projects), `ProjectEditor.svelte` (the list of schemes, hideable; settings, export, ready), `SchemeEditor.svelte` (one scheme), `ShadowNode.svelte`, `ContentsPanel.svelte`, `ChaptersPanel.svelte`, `TilePanel.svelte` (links to other schemes, moving), `AnalysisPanel.svelte` (the pages of the scheme by default).
 - Not committed.
 
+## Step 37: The database layer by areas and CRUD
+
+Raised by the user on 2026-10-17 during the review: the code of the database had spread over many files and escaped the overview of the user; as it carries the security of the data and must be audited, this is a critical error, fixed before further functions (CLAUDE.md, "Database code").
+
+**Decisions (user, 2026-10-17)**
+- [x] All SQL in `src/db/`, one subfolder per area of data; in each `schema.rs`, `rows.rs` and the files of CRUD (`create.rs`, `read.rs`, `update.rs`, `delete.rs`).
+- [x] The names of the areas: `system/`, `user/`, `ai/`, `standards/`, `test_projects/`, `evaluations/` (Claude's; the user preferred them to their own sketch).
+- [x] All code of encryption in `db/encryption/`, **moved as it is**: the user audits it and redesigns it later (a fault in the design is suspected). Only a test that pins the parameters of SQLCipher in effect is added; production code unchanged.
+- [ ] Later (user): the encryption reworked; in production the ciphers work on secrets.
+
+**As built (2026-10-17)**
+- `db/error.rs` (`DbError`); `db/encryption/`: `sqlcipher.rs` (the only place a database file is opened or created, encrypted or plain; its head lists the parameters in effect: SQLCipher 4.14 community, OpenSSL of the system, AES-256-CBC, HMAC-SHA512 per page, pages of 4096 bytes, the key as raw bytes, `cipher_memory_security` off), `keys.rs`, `database_key.rs`, `generate_key.rs`; test `the_parameters_of_the_encryption_are_those_described`.
+- `db/system/` (system.db, not encrypted: `database.rs` the file and the lock, `create/read/update/delete.rs` as methods of `SystemDb`), `db/user/` (`database.rs` opens the file and creates the tables of all areas; settings and secrets; new `remove_setting`), `db/ai/`, `db/standards/`, `db/test_projects/`, `db/evaluations/` (the journal: written only by `create.rs`, read by `read.rs`; its tests of the triggers in `create_tests.rs`).
+- The modules of the domain (`ai/`, `evaluation/`, `product_evaluation/`) keep their API and their rules and call `db/`; the callers (window, tests) are unchanged.
+- **The compiler keeps the rule:** `UserDb::connection` is `pub(in crate::db)`, `SystemDb::connection` `pub(super)`; SQL outside `db/` does not compile. Two tests that damage a database on purpose use `connection_for_tests` (compiled only in tests).
+- Changed in behaviour: none. `replace_content` checks the rules of the links before writing (on the old numbers, the same graph) instead of during the write; the text of the error `DocumentError::InUse` names evaluations too.
+- 312 tests pass; clippy only the known dead-code warnings.
+- Not committed.
+
+## Step 38: The AI layer: `ai/api/` in the form of REST, `ai/chat/`, roles of the AI
+
+Raised by the user on 2026-10-17, before their review: the code of `ai/` that talks to the AI service is mixed with other code and has no single entry; it is to be an intermediate layer between the provider and the rest of the program, with its functions in the form of REST, collected in one place so that it can be audited.
+
+**Decisions (user, 2026-10-17)**
+- [x] `ai/api/`: the communication with the provider and its mapping onto Rust functions, which the rest of the code calls; the functions in the form of REST (resources and operations named like the methods of REST). **Not a server:** no port is opened (`architecture.md`, section 4).
+- [x] `ai/chat/`: the functions of the chat, the conversations and their memory.
+- [x] **The configuration of the connections is stored in the database, so its management belongs to `db/`** (`db/ai/`), not to `ai/`.
+- [x] **Memory of a conversation** (shortening the history, summaries and other operations on text) may be extended, but **always controlled by parameters**: the quotes of a standard (and other text that must stay word for word) are never shortened.
+- [x] **The AI acts in several roles**, and the interface takes them into account: analysis of a text and pointing to fragments; summarising parts of a text; consultation (the chat); formal analysis.
+- [x] The list of todo.md is a heap, not a stack (user): this step is done now, before the review and step 31.
+
+**Decisions (user, 2026-10-17, second round)**
+- [x] **The rule: whatever happens in the database is in `db/`, in a subfolder of its own**, so that nothing is mixed. `db/ai/` gets subfolders as needed: `connection/` (the connections, the active one, the API key bound to the address: the management of `ai/connections.rs` with its rules of the stored data), `memory/` (the chats and their messages), `presets/` (the presets and the "AI help" of the fields; later the user may add and edit presets), and the others the roles and the journal need. The management of the connections and the memory of the chat are never mixed.
+- [x] The description of a connection and its rules of security (`connection.rs`, `api_key.rs`) go to `ai/api/`: every request is made from it.
+- [x] The instructions of the roles and the connections given to them are kept in the database (`db/ai/`); by default a role uses the active connection; a role may have a connection of its own.
+- [x] **A journal of every question to the AI, for every role, now** (in the database, `db/ai/`).
+
+**Concept (Claude, approved by the user 2026-10-17)**
+- [x] A **role** is fixed by the program (the form of its answer, whether its quotes are checked, what the memory may do with its text); a **task** has its role and its own instructions. Tasks now: `chapter`, `contents` (text analysis), `chat` (consultation), `check` (no role). Later: phase 1 (text analysis), phase 2 (formal analysis), AI notes and drafts of outputs (summary).
+- [x] The journal of the AI: one entry per question (time, task, role, connection, model, the body of the request, never a header, the answer, how it ended, tokens), never changed or removed (two triggers). How long entries are kept: later.
+- [x] The instructions move from `settings` to `ai_instructions` without migration (they go back to the default ones).
+- [x] **Approved by the user (2026-10-17):** the journal of the AI keeps the text of a chat after the chat is deleted, and the text of a reply the model refused (the chat drops it); everything stays traceable. How long entries are kept is decided later.
+- [ ] Later: the window for giving a role its own connection (the core and the database have it); the journal of the AI shown in the window; operations of the memory of the chat (by parameters).
+
+**As built (2026-10-17)**
+- `ai/api/`: `roles.rs` (`Role`, `AnswerForm`, `MemoryRule`, `Model`, `ModelError`; `list`, `connection`, `set_connection`, `model`), `tasks.rs` (`Task`; `instructions`, `set_instructions`), `completions.rs` (`create`: pieces to a handler, "Stop" by a `watch`; `record`; `counting`, `outcome`, `single` for the long works; re-exports `Reply`, `ReplyEnd`, `StopReason`, `Speaker`, `Turn`, `AiError`), `checks.rs` (`target`, `create`, `record`), `connection.rs`, `api_key.rs`, `test_support.rs`; `provider/` (`client`, `request`, `response`, `sse`, `json_path`, `ai_error`) declared `pub(in crate::ai::api)`.
+- `ai/chat/`: `chats.rs`, `conversation.rs` (the role *consultation*), `memory.rs` (`turns`: the whole history, as before).
+- `db/ai/`: `connection/` (the management of `ai/connections.rs`: `create::connection`, `update::connection`, `update::active`, `update::api_key`, `read::{list, get, active, api_key}`, `delete::{connection, api_key}`), `memory/` (chats, messages), `roles/` (`ai_roles`, `ON DELETE SET NULL`), `instructions/` (`ai_instructions`), `journal/` (`ai_journal`, triggers), `presets/` (`read.rs` the built-in presets, `field_help.rs`).
+- Window layer: `tauri_ui/model_run.rs` removed; the chat, the analysis of chapters, the table of contents and the check of a connection ask through `ai/api/` and write the journal (a failure to write it is told, not hidden).
+- Changed in behaviour: every question goes into the journal of the AI; the chat and the analysis use the connection of their role (by default the active one, as before).
+- 325 tests pass; clippy only the known dead-code warnings. Not tried in the window.
+- Not committed.
+
+## Step 39: The domain folders: CRUD of the objects in memory, `db/` for the lasting write
+
+Raised by the user on 2026-10-17: `evaluation/` is disordered; its functions are to be split into folders and follow CRUD.
+
+**Decisions (user, 2026-10-17)**
+- [x] **`db/` is the communication with the database: the lasting write.** The CRUD of a domain (`evaluation/` and the others) **manages the objects in memory (RAM)**: when the user has a project open for editing and changes it, the objects in memory are handled formally (create, read, update, delete), and the lasting write is done by `db/`.
+
+- [x] **Write-through** (variant A): every change of an object in memory is written to the database at once, in one transaction; the database gives the numbers of new objects. **The versions of an open project are kept in memory**, so that the user can undo changes.
+- [x] An evaluation writes at once in any case: a result never exists without its entry of the journal.
+- [x] Names: `standards/` (the documents of standards), `test_projects/` (the tool Create evaluation scheme), `evaluation/` (the tool Evaluation, today `product_evaluation/`); tiles and links in folders of their own.
+- [x] `analysis/`: one file per task of the AI. It takes from the object the data, the instructions and the role of the model, and carries the task out through the internal structure of communication with the AI (`ai/api/`).
+- [x] **The goal (user):** the functions and the responsibilities of the parts of the code are separated; the pipeline is very readable, and at every moment one can tell where the information the program works on is.
+
+**Layout (agreed 2026-10-17)**
+
+```text
+standards/       model.rs, create/read/update/delete.rs, pdf_text.rs, quote.rs (no object in memory: a document is loaded and read)
+test_projects/   model.rs, rules.rs, workspace.rs (the open projects and their versions for "Undo"),
+                 projects/ schemes/ tiles/ links/ (CRUD of the open project in memory, written through by db/),
+                 checks.rs, exchange/, analysis/ (one file per task of the AI)
+evaluation/      the same pattern: the open evaluation in memory, results/, journal/
+```
+
 ## Step 28: Reports in the LaTeX template of the laboratory (later)
 
-Designed with or after step 23. The laboratory provides a LaTeX template; the results of an evaluation (the outputs and their six sections) are written into it, automatically by default.
+Designed with or after step 23. The laboratory provides a LaTeX template; the results of an evaluation (the outputs and their seven sections) are written into it, automatically by default.
 
 ---
 
-## Step 23: Evaluation with AI: carrying out a scheme (later)
+## Step 23: Evaluation with AI: carrying out a scheme (steps 29 to 36)
 
-Designed when steps 16 to 22 are done (user). The tool **Evaluation** in the sidebar: an evaluation of one product on a frozen scheme; inputs provided (evidence kept encrypted), requirements met when all their inputs are, the outputs made in the standard form; AI helps at each step with its sources; verdicts and the final decisions are the evaluator's.
+Planned with the user on 2026-10-17. Step 23 is the name of the whole; it is built in the steps 29 to 36 below, each with its own concept, tests and approval. Decisions of the user are marked (user).
+
+**The idea.** An **evaluation** carries out one test project (marked ready) for one product (the TOE). The project says *what* has to be done (inputs, requirements, outputs, links); the evaluation records *how it was done*. The AI proposes, the evaluator decides (P1); every proposal carries verified quotes; everything is traceable (P3).
+
+```text
+ready test project ──copy──► evaluation of one product
+                               ├─ inputs:        provided by (a documentation project of step 30, an evidence file,
+                               │                 the result of another requirement), marked by the evaluator
+                               ├─ requirements:  phase 1: fragments of the documentation, accepted by the evaluator
+                               │                 phase 2: the AI proposes, on the accepted fragments only, the four results:
+                               │                 findings, analysis, assessment and verdict proposition,
+                               │                 vulnerabilities and notes; the evaluator accepts or writes them
+                               ├─ outputs:       the seven sections of the report, drafted by the AI, approved by the evaluator
+                               └─ journal:       every question to the AI, every acceptance and every change (P3)
+```
+
+**Decisions (user, 2026-10-17)**
+- [x] **One requirement at a time.** The window of the evaluation goes project → scheme (chapter) → one requirement, which the evaluator works on; not the whole graph of a chapter at once, so that the work stays readable.
+- [x] **The documentation of the product is analysed in two phases.** Phase 1 finds the fragments of the documentation that matter for the requirement; phase 2 assesses the requirement on those fragments only, not on the whole document.
+- [x] **A fragment = a verified quote + a separate AI note.** The quote is exact text of the document, checked on its page by the program (as `quote.rs` does for the standard). A summary of the context or any explanation of the model goes into a separate field, shown as *AI note*, never as a quote.
+- [x] **Only accepted fragments take part in the evaluation.** A methodological requirement (user): a fragment proposed by the AI is used in phase 2 only after the evaluator has accepted it; a workflow driven by the AI alone would not stand an audit. The evaluator may also add a fragment by hand (selected in the viewer).
+- [x] **The documentation of the manufacturer is analysed in a tool of its own** (step 30, designed later): an input tile of the evaluation (for example "Security Target") reads the projects of that tool.
+
+**Decisions (user, 2026-10-17, second round)**
+- [x] **An evaluation is a separate process that starts when a project is imported.** The test project is transformed into a new form, the **evaluation project** (a copy: later changes of the test project do not touch it), and the workflow of the evaluation starts on it.
+- [x] **No fixed verdicts.** The program supports many standards, so it imposes no list of verdicts. Every requirement gets four **results of the evaluation**, each a text field filled by the AI or the evaluator according to the standard:
+  1. *Findings*;
+  2. *Analysis*;
+  3. *Assessment and verdict proposition*;
+  4. *Vulnerabilities and notes*: the vulnerabilities that may follow from the solution used.
+- [x] **The AI writes text proposals, marked as AI; the evaluator must accept them.** No text of the AI becomes a result without that acceptance.
+- [x] **The AI service is the matter of the laboratory**, also for the documents of the manufacturer (often under NDA): the program imposes no provider and does not block (as for the standard).
+- [x] **The journal comes at once** (from step 29).
+- [x] The evaluation is built next (user, 2026-10-17).
+
+## Step 29: Evaluation: the evaluation project, the results and the journal
+
+Concept approved by the user on 2026-10-17: the import from both sources (a ready test project of the installation, and the file of an exported project); only the accepted part is copied; a seventh section of an output, *Vulnerabilities and notes*; the module `product_evaluation/`. The states of the inputs come with step 32, the fragments with step 33.
+
+- [x] The import: a test project → an evaluation project (a frozen copy of its accepted schemes, tiles, sources and links; the proposals left out and counted); the rules of `scheme.rs` checked again; the fields of the evaluation (name, product, version, manufacturer, evaluator) and its origin as text.
+- [x] The four results of every requirement (findings; analysis; assessment and verdict proposition; vulnerabilities and notes) as text; the proposals of the AI kept apart, marked AI, made results only by the evaluator (accept, correct, reject; or written alone); the origin of every result.
+- [x] The journal, append-only, kept so by the database (two triggers); every step written in the same transaction as its change.
+- [x] The seventh section of an output, *Vulnerabilities and notes* (`evaluation/scheme.rs`).
+- [ ] The user's review and approval.
+
+**As built (2026-10-17)**
+- `src/product_evaluation/`: `model.rs` (types, `ResultField`, `ResultOrigin`, `JournalAction`, `EvaluationError`, checks), `import.rs` (`from_project`: only a project marked ready; `from_exchange`: the documents found or loaded by the caller, the quotes checked again), `projects.rs` (`create` in one transaction with the first entry of the journal, `list`, `get`, `data`, `tile`, `delete` with `secure_delete`), `results.rs` (`propose`, `accept`, `correct`, `reject`, `write`, `of`, `proposals`), `journal.rs` (`append`, `of`), `test_support.rs`; 21 new tests (310 in all).
+- Database: tables `evaluations`, `evaluation_documents`, `evaluation_schemes`, `evaluation_tiles`, `evaluation_tile_sources`, `evaluation_links`, `evaluation_results`, `evaluation_proposals`, `evaluation_journal` with the triggers `evaluation_journal_unchanged` and `evaluation_journal_kept` (`db/user_db.rs`). A document of a standard used by an evaluation cannot be deleted (`evaluation/documents.rs`).
+- Not used by the window yet (step 31): the compiler warns of unused code until then.
+- Not committed.
+
+## Step 30: Tool "Manufacturer documentation" (later)
+
+Designed later (user, 2026-10-17); its place in the sidebar holds a placeholder (`ui/src/pages/Documentation.svelte`). The documents of the manufacturer (Security Target, guidance, design) are loaded and analysed in a way proper to them, as projects of this tool; the input tiles of an evaluation read those projects. Steps 32 to 34 need it.
+
+## Step 31: The window of the evaluation
+
+- [ ] The list of evaluations; a new evaluation from a ready project.
+- [ ] Project → scheme → one requirement: its inputs, fragments, assessments, verdict; the progress of the whole evaluation.
+
+## Step 32: Inputs provided
+
+- [ ] The evaluator marks an input provided, open or not applicable: by a project of step 30, an evidence file (with SHA-256), or a note. An input *provided by* a requirement is met when that requirement is.
+- [ ] A requirement is ready to be assessed when all its inputs are met.
+
+## Step 33: Phase 1: the AI finds the fragments of a requirement
+
+- [ ] For the chosen requirement the AI reads the documentation of its inputs part by part and proposes fragments: a quote and a separate AI note.
+- [ ] Every quote checked on its page; the fragment shown highlighted in the viewer; accepted, corrected or rejected by the evaluator; fragments added by hand.
+
+## Step 34: Phase 2: the assessment of a requirement
+
+- [ ] The requirement (its quotes from the standard, P5) and **only its accepted fragments** go to the model; it proposes the four results as text (findings; analysis; assessment and verdict proposition; vulnerabilities and notes) and names what is missing.
+- [ ] The proposals are marked AI and become results only when the evaluator accepts them (or writes their own); every run is recorded in the journal. Where something is missing, phase 1 can be repeated for this requirement.
+
+## Step 35: Activities, tests and findings
+
+- [ ] Sections 3 and 5 of an output: a test recorded (method, steps, tools and configuration, date, who); findings. The AI may propose a test plan as text; **no command reaches a device** (P2); guided execution on a device comes later.
+
+## Step 36: Outputs
+
+- [ ] The seven sections assembled from steps 32 to 35 (sections 5 *Findings*, 6 *Verdict and rationale* and 7 *Vulnerabilities and notes* from the accepted results of the requirements, user 2026-10-17); the AI drafts the text by the instructions of the output, the evaluator corrects and approves it. Shown in the window until step 28 (LaTeX).
 
 ---
 
@@ -727,4 +889,4 @@ Not planned in detail yet; to be designed once the steps above are done:
 - Git panel in the web UI.
 - The other functions of v0.2 (`v0.2_functionality.md`): UART read and write with the confirmation of every command (P2), Bluetooth.
 - A build variant without the code of the master (`architecture.md`, section 3.2).
-- Beyond the evaluation schemes (steps 16 to 23): the document library of the product, guided execution of functional tests on the device.
+- Beyond the evaluation (steps 16 to 36): guided execution of functional tests on the device. (The documentation of the product is now step 30.)

@@ -2,7 +2,7 @@
 //! a scan looks for, and which properties the table of ports shows.
 //!
 //! They are kept in the encrypted database of the evaluator
-//! (`db/user_db.rs`), as two settings of plain text:
+//! (`db/user/`), as two settings of plain text:
 //!
 //! ```text
 //! scan.port_types   "all", or base names: "ttyACM,ttyUSB"
@@ -14,8 +14,8 @@
 //! used at all fall back to the defaults, so a stored choice never
 //! stops the page from working.
 
-use crate::db::db::DbError;
-use crate::db::user_db::UserDb;
+use crate::db::error::DbError;
+use crate::db::user::database::UserDb;
 
 use super::devices::{PortFilter, PortType};
 use super::port_property::PortProperty;

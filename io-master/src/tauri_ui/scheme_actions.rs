@@ -13,17 +13,20 @@
 //! The projects and the list of their schemes are in
 //! `project_actions.rs`.
 
-use crate::db::user_db::UserDb;
-use crate::evaluation::analysis::{self, DEFAULT_INSTRUCTIONS, INSTRUCTIONS_SETTING};
+use std::sync::Arc;
+
+use crate::ai::api::completions::{self, Outcome};
+use crate::ai::api::roles::{self, Role};
+use crate::ai::api::tasks::{self, Task};
+use crate::db::user::database::UserDb;
+use crate::evaluation::analysis;
 use crate::evaluation::checks;
-use crate::evaluation::contents;
 use crate::evaluation::documents;
 use crate::evaluation::projects::ProjectData;
 use crate::evaluation::scheme::Tile;
 use crate::evaluation::schemes;
 
 use super::error::UiError;
-use super::model_run::{Asked, active_model, ask};
 use super::project_actions::{documents_of, project_data};
 use super::serializer::project_view::ProjectDataView;
 use super::serializer::scheme_view::{AnalysisEvent, PageRange, SchemeDataView, TileForm};
@@ -199,11 +202,11 @@ pub async fn undo(state: &UiState, scheme: i64) -> Result<SchemeDataView, UiErro
  * ------------------------------------------------------------- */
 
 /// Which instructions: those of the analysis of a chapter, or those
-/// of reading a table of contents.
-fn instruction_setting(which: &str) -> Result<(&'static str, &'static str), UiError> {
+/// of reading a table of contents (`ai/api/tasks.rs`).
+fn instruction_task(which: &str) -> Result<Task, UiError> {
     match which {
-        "chapter" => Ok((INSTRUCTIONS_SETTING, DEFAULT_INSTRUCTIONS)),
-        "contents" => Ok((contents::INSTRUCTIONS_SETTING, contents::DEFAULT_INSTRUCTIONS)),
+        "chapter" => Ok(Task::Chapter),
+        "contents" => Ok(Task::Contents),
         _ => Err(UiError::Invalid("there are no such instructions".to_owned())),
     }
 }
@@ -211,28 +214,17 @@ fn instruction_setting(which: &str) -> Result<(&'static str, &'static str), UiEr
 /// The instructions `which` ("chapter" or "contents"): those the user
 /// changed, or the default ones.
 pub async fn instructions(state: &UiState, which: String) -> Result<String, UiError> {
-    let (setting, default) = instruction_setting(&which)?;
+    let task = instruction_task(&which)?;
 
-    with_user_db(state, move |db| Ok(db.setting(setting)?.unwrap_or_else(|| default.to_owned()))).await
+    with_user_db(state, move |db| Ok(tasks::instructions(db, task)?.unwrap_or_default())).await
 }
 
 /// Stores the instructions `which`; empty text brings the default
 /// ones back. Gives the instructions now in force.
 pub async fn save_instructions(state: &UiState, which: String, text: String) -> Result<String, UiError> {
-    let (setting, default) = instruction_setting(&which)?;
+    let task = instruction_task(&which)?;
 
-    with_user_db(state, move |db| {
-        if text.trim().is_empty() {
-            db.connection()
-                .execute("DELETE FROM settings WHERE name = ?1", [setting])
-                .map_err(|error| UiError::Failed(error.to_string()))?;
-            Ok(default.to_owned())
-        } else {
-            db.set_setting(setting, &text)?;
-            Ok(text)
-        }
-    })
-    .await
+    with_user_db(state, move |db| Ok(tasks::set_instructions(db, task, &text)?.unwrap_or_default())).await
 }
 
 /// One scheme to analyse: its number, the pages to read.
@@ -343,14 +335,16 @@ async fn run(
     // Everything the work needs, read once: the instructions, the
     // connection and its key; and the project before it, for "Undo".
     let (model, instructions, before) = with_user_db(state, move |db| {
-        let model = active_model(db)?;
-        let instructions = db.setting(INSTRUCTIONS_SETTING)?.unwrap_or_else(|| DEFAULT_INSTRUCTIONS.to_owned());
+        let model = roles::model(db, Role::TextAnalysis)?;
+        let instructions = tasks::instructions(db, Task::Chapter)?.unwrap_or_default();
         let before: ProjectData = project_data(db, project_of(db, first)?)?;
 
         Ok((model, instructions, before))
     })
     .await?;
 
+    // Shared with the writes of the journal, one per question.
+    let model = Arc::new(model);
     let stop = state.start_work();
     state.remember(before);
 
@@ -404,7 +398,7 @@ async fn run(
                 break 'jobs;
             }
 
-            let message = analysis::prompt(&instructions, &document, &part, &stored, &own, &others);
+            let turns = completions::single(analysis::prompt(&instructions, &document, &part, &stored, &own, &others));
             let writing = {
                 let events = events.clone();
                 move |characters| {
@@ -412,13 +406,17 @@ async fn run(
                 }
             };
 
-            let answer = match ask(&model, message, &stop, writing).await {
-                Asked::Answer(answer) => answer,
-                Asked::Stopped => {
+            let reply = completions::create(&model, &turns, &stop, completions::counting(400, writing)).await;
+            let outcome = completions::outcome(&reply, &stop);
+            record(state, &model, Task::Chapter, turns, reply, &events).await;
+
+            let answer = match outcome {
+                Outcome::Answer(answer) => answer,
+                Outcome::Stopped => {
                     stopped = true;
                     break 'jobs;
                 }
-                Asked::Failed(error) => {
+                Outcome::Failed(error) => {
                     events(AnalysisEvent::Failed {
                         message: format!("pages {} to {}: {error}", part.first_page, part.last_page),
                     });
@@ -450,6 +448,26 @@ async fn run(
     events(AnalysisEvent::End { stopped });
 
     Ok(())
+}
+
+/// Writes a question of a long work into the journal of the AI; a
+/// failure is told to the page and does not end the work.
+pub(super) async fn record(
+    state: &UiState,
+    model: &Arc<roles::Model>,
+    task: Task,
+    turns: Vec<completions::Turn>,
+    reply: completions::Reply,
+    events: &(impl Fn(AnalysisEvent) -> bool + Send + Sync + Clone + 'static),
+) {
+    let model = model.clone();
+    let written = with_user_db(state, move |db| Ok(completions::record(db, &model, task, &turns, &reply)?)).await;
+
+    if let Err(error) = written {
+        events(AnalysisEvent::Failed {
+            message: format!("the question was not written into the journal of the AI: {error}"),
+        });
+    }
 }
 
 // Unit tests, in their own file to keep this one readable. They

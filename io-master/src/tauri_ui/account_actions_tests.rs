@@ -22,7 +22,7 @@ async fn the_setup_installs_and_logs_the_user_in() {
     assert!(view.installed);
     assert_eq!(view.role, Some("workstation"));
     assert_eq!(view.user.as_deref(), Some("anna"));
-    assert_eq!(view.pages.len(), 5);
+    assert_eq!(view.pages.len(), 6);
     assert!(!view.version.is_empty());
     assert_eq!(view.warnings.len(), 2);
 

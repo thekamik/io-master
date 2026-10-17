@@ -2,7 +2,7 @@
 //! the page: the installation, the logged-in evaluator with the key
 //! of their database, and the reply that is being written. (The AI
 //! connections are data of the evaluator, kept in their database:
-//! `ai/connections.rs`.)
+//! `db/ai/connection/`.)
 //!
 //! The page (`ui/`) holds no secret and no state that matters: it
 //! asks through the commands (`commands.rs`) and shows what it gets
@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 use tokio::sync::watch;
 
 use crate::accounts::accounts::Account;
-use crate::db::database_key::DatabaseKey;
+use crate::db::encryption::database_key::DatabaseKey;
 use crate::evaluation::projects::ProjectData;
 use crate::installation::lifecycle::{Opened, Running};
 

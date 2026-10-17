@@ -38,8 +38,8 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD as BASE64;
 use serde_json::{Map, Value, json};
 
-use crate::db::db::DbError;
-use crate::db::user_db::UserDb;
+use crate::db::error::DbError;
+use crate::db::user::database::UserDb;
 
 use super::documents::{self, sha256_hex};
 use super::quote::is_on_page;

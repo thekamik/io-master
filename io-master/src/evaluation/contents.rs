@@ -6,7 +6,7 @@
 //!
 //! ```text
 //! prompt()   the instructions and the text of the table of contents
-//!   (the model answers, over the connection of the user: ai/client.rs)
+//!   (the model answers, over the connection of the user: ai/api/completions.rs)
 //! read()     the answer: one JSON object with "chapters"
 //! locate()   the first page of every chapter, found in the document
 //! apply()    every chapter stored as a proposed scheme with its pages
@@ -25,8 +25,8 @@
 
 use serde_json::Value;
 
-use crate::db::db::DbError;
-use crate::db::user_db::UserDb;
+use crate::db::error::DbError;
+use crate::db::user::database::UserDb;
 
 use super::analysis::Part;
 use super::documents::{self, Document};
@@ -34,11 +34,9 @@ use super::quote::normalize;
 use super::scheme::{PageSpan, ProposalState, SchemeFields};
 use super::schemes::{self, StoreError};
 
-/// The setting that keeps the instructions of the table of contents
-/// the user changed (in the database of the evaluator).
-pub const INSTRUCTIONS_SETTING: &str = "evaluation.contents_instructions";
-
-/// The instructions to the model when the user has not changed them.
+/// The instructions to the model when the user has not changed them
+/// (the task `contents` of `ai/api/tasks.rs`; changed ones are kept in
+/// `db/ai/instructions/`).
 pub const DEFAULT_INSTRUCTIONS: &str = r#"You help to map a standard for an evaluation. The standard will be split into chapters; each chapter becomes a scheme of its own, in which its requirements, their inputs and outputs are drawn later.
 
 Below is the table of contents of the standard. Propose the chapters that hold requirements (criteria, activities, tests) of the product or of the evaluation. Rules:

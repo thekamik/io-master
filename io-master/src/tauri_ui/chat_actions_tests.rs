@@ -5,9 +5,9 @@ use super::*;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use crate::ai::api_key::ApiKey;
-use crate::ai::connections;
-use crate::ai::test_support::{FakeAnswer, FakeService, completions, completions_events};
+use crate::ai::api::api_key::ApiKey;
+use crate::db::ai::connection::{create as connections_create, update as connections_update};
+use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
 use crate::tauri_ui::test_support::{TestState, logged_in};
 use crate::tauri_ui::user_data::with_user_db;
 
@@ -19,8 +19,8 @@ async fn ready(answer: FakeAnswer) -> (TestState, FakeService) {
     let connection = completions(&service);
 
     with_user_db(&test.state, move |db| {
-        let id = connections::save(db, None, &connection)?.id;
-        connections::store_api_key(db, id, &ApiKey::new("sk-test".to_owned()).unwrap())?;
+        let id = connections_create::connection(db, &connection)?.id;
+        connections_update::api_key(db, id, &ApiKey::new("sk-test".to_owned()).unwrap())?;
         Ok(())
     })
     .await

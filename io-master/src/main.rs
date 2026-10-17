@@ -24,21 +24,31 @@
 //! user (docs/architecture.md, sections 3 and 5.6).
 
 mod ai {
-    pub mod ai_error;
-    pub mod api_key;
-    pub mod chats;
-    pub mod client;
-    pub mod connection;
-    pub mod connections;
-    pub mod conversation;
-    pub mod field_help;
-    pub mod json_path;
-    pub mod presets;
-    pub mod request;
-    pub mod response;
-    pub mod sse;
-    #[cfg(test)]
-    pub mod test_support;
+    pub mod api {
+        pub mod api_key;
+        pub mod checks;
+        pub mod completions;
+        pub mod connection;
+        // The communication with the provider: only `ai/api/` reaches
+        // it; the rest of the program asks through the files above.
+        pub(in crate::ai::api) mod provider {
+            pub mod ai_error;
+            pub mod client;
+            pub mod json_path;
+            pub mod request;
+            pub mod response;
+            pub mod sse;
+        }
+        pub mod roles;
+        pub mod tasks;
+        #[cfg(test)]
+        pub mod test_support;
+    }
+    pub mod chat {
+        pub mod chats;
+        pub mod conversation;
+        pub mod memory;
+    }
 }
 
 mod evaluation {
@@ -52,6 +62,16 @@ mod evaluation {
     pub mod quote;
     pub mod scheme;
     pub mod schemes;
+    #[cfg(test)]
+    pub mod test_support;
+}
+
+mod product_evaluation {
+    pub mod import;
+    pub mod journal;
+    pub mod model;
+    pub mod projects;
+    pub mod results;
     #[cfg(test)]
     pub mod test_support;
 }
@@ -90,14 +110,91 @@ mod tpm {
 }
 
 mod db {
-    pub mod database_key;
-    // Same layout as installation/installation.rs.
-    #[allow(clippy::module_inception)]
-    pub mod db;
-    pub mod generate_key;
-    pub mod keys;
-    pub mod system_db;
-    pub mod user_db;
+    pub mod encryption {
+        pub mod database_key;
+        pub mod generate_key;
+        pub mod keys;
+        pub mod sqlcipher;
+    }
+    pub mod error;
+    pub mod system {
+        pub mod create;
+        pub mod database;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    pub mod user {
+        pub mod database;
+        pub mod delete;
+        pub mod read;
+        pub mod schema;
+        pub mod update;
+    }
+    pub mod ai {
+        pub mod connection {
+            pub mod create;
+            pub mod delete;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+            pub mod update;
+        }
+        pub mod instructions {
+            pub mod delete;
+            pub mod read;
+            pub mod schema;
+            pub mod update;
+        }
+        pub mod journal {
+            pub mod create;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+        }
+        pub mod memory {
+            pub mod create;
+            pub mod delete;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+        }
+        pub mod presets {
+            pub mod field_help;
+            pub mod read;
+        }
+        pub mod roles {
+            pub mod read;
+            pub mod schema;
+            pub mod update;
+        }
+    }
+    pub mod standards {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    pub mod test_projects {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    pub mod evaluations {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
 }
 
 mod random {
@@ -113,7 +210,6 @@ mod tauri_ui {
     pub mod chat_actions;
     pub mod commands;
     pub mod error;
-    pub mod model_run;
     pub mod project_actions;
     pub mod scan_actions;
     pub mod scheme_actions;

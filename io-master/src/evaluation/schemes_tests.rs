@@ -2,6 +2,7 @@
 
 use super::*;
 
+use crate::evaluation::scheme::{External, OutputSection, PageSpan, ProposalState};
 use crate::evaluation::test_support::{TestDb, database, load, project_fields, project_with_scheme, scheme_fields};
 
 /// A database with the small standard and a project with one scheme;

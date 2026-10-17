@@ -2,7 +2,7 @@
 //! the first start, and where its data lives.
 //!
 //! The record itself is kept in the system database
-//! (`db/system_db.rs`). Whether this is the first start, and the
+//! (`db/system/`). Whether this is the first start, and the
 //! installing and uninstalling, are in `lifecycle.rs`.
 
 use std::fmt;

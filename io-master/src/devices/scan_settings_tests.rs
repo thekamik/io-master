@@ -2,8 +2,8 @@
 
 use super::*;
 
-use crate::db::database_key::DatabaseKey;
-use crate::db::user_db;
+use crate::db::encryption::database_key::DatabaseKey;
+use crate::db::user::database as user_db;
 use crate::random::random::fill_random;
 use crate::tpm::test_support::TempDir;
 

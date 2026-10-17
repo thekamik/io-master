@@ -30,10 +30,10 @@ use std::io;
 use std::path::Path;
 
 use crate::accounts::accounts::{self, Account, AccountError};
-use crate::db::db::DbError;
-use crate::db::keys;
-use crate::db::system_db::{self, SystemDb};
-use crate::db::user_db;
+use crate::db::error::DbError;
+use crate::db::encryption::keys;
+use crate::db::system::database::{self as system_db, SystemDb};
+use crate::db::user::database as user_db;
 use crate::random::random::fill_random;
 use crate::tpm::device_secret::{self, DeviceSecret};
 use crate::tpm::emulator::EMULATOR_DIRECTORY;

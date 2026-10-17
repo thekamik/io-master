@@ -10,6 +10,7 @@
 - **The agreed concept of v0.3 is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the window, one Linux account = one installation = one user (workstation and master alike), a desktop window (Tauri 2 + Svelte) as the only interface, the password plus the secret of the application in the keyring of the Linux account as the default factors (a desktop session with GNOME Keyring is required) with the TPM 2.0 as an optional further factor, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
 - The program must run without a TPM (virtual machines). TODO before release: the optional TPM factor uses a real TPM 2.0, not the emulator `swtpm`.
 - **The work follows `docs/todo.md`, one step at a time, in the order of its table "order of work"; step numbers are names and never change.** Every step: concept approved by the user, implementation with tests, check, approval, commit. When the list is done, further functionality is planned anew.
+- **The order of work is a guide, not an absolute rule** (user, 2026-10-17). Architecture, readability of the code and security come first, so that the program stays maintainable and auditable: when the user finds that a part of the code escapes their overview (as the database code did), it is a critical error and is fixed at once, before further functions.
 
 ## Main design rule: the desktop window is the only interface
 
@@ -36,6 +37,25 @@ Since v0.4 the whole workflow is controlled from a **desktop window** (Tauri 2 +
 - `// ok kk` above a function (or a fragment) means: approved by the user; every line added or removed in it needs the user's approval first. Reading it and suggesting changes is fine. Its tests may be changed. Claude never adds, moves or removes the marker.
 - `review.md` (repository root) records the state of the review. When the user says in the chat that a whole file is reviewed, Claude writes it there with the date; every function of such a file counts as marked `// ok kk`.
 - Decisions and rules the user gives in the chat that matter beyond the current task are written down at once (this file for working rules, `docs/` for the concept and the plan), so that they survive a reset of the context.
+
+## Database code (step 37 of docs/todo.md)
+
+- **SQL lives only in `io-master/src/db/`.** The modules of a domain (`evaluation/`, `product_evaluation/`, `ai/`, ...) keep their logic and call the functions of `db/`; they never write SQL.
+- `db/` has one subfolder per area of data; each holds `schema.rs` (its tables), `rows.rs` (row ↔ Rust type) and the files of CRUD: `create.rs`, `read.rs`, `update.rs`, `delete.rs` (a file that an area does not need is missing, which is visible in an audit).
+- `db/encryption/` holds all code of encryption; the head of every area states in which database its data lives and how it is protected.
+- The mechanism of encryption is moved as it is, unchanged; the user audits it and redesigns it later.
+- **Whatever happens in the database is in `db/`, in a subfolder of its own** (user, 2026-10-17), so that nothing is mixed: for example `db/ai/connection/`, `db/ai/memory/`, `db/ai/presets/`. Rules of the stored data (a name unique, a key bound to its address) live there with their CRUD.
+
+## AI layer (step 38 of docs/todo.md)
+
+- **`ai/api/` is the only way to the AI**, its functions in the form of REST (resources and operations: `roles`, `tasks`, `completions`, `checks`); not a server. `ai/api/provider/` (HTTP, TLS, request, answer, stream) is visible only inside `ai/api/`, so a request built elsewhere does not compile.
+- Every question is asked in a **task** with its **role** (text analysis, summary, consultation, formal analysis) and recorded in the journal of the AI (`completions::record`).
+- `ai/chat/` holds the chat and its memory; operations on text are controlled by parameters, and quotes of a standard are never shortened.
+
+## The pipeline of data (user, 2026-10-17)
+
+- The functions and the responsibilities of the parts of the code are separated, and the pipeline is very readable: **at every moment one can tell where the information the program works on is** (in the page, in an object in memory, in the database, on its way to the AI).
+- The CRUD of a domain manages the objects in memory (a project open for editing, with its versions for "Undo"); `db/` writes them lastingly, through at once (write-through); `ai/api/` is the only way to the AI.
 
 ## Way of working
 

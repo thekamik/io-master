@@ -18,8 +18,8 @@
 //!              access, the result of another requirement, a part of
 //!              another document of the standard)
 //! requirement  what the standard imposes; met when all its inputs are
-//! output       the result in the standard form of a report (the six
-//!              sections of OUTPUT_SECTIONS)
+//! output       the result in the standard form of a report (the seven
+//!              sections of OutputSection::ALL)
 //! ```
 //!
 //! A **link** joins two tiles of one scheme. Its meaning follows from
@@ -129,17 +129,22 @@ pub enum OutputSection {
     Findings,
     /// The verdict per requirement, with its rationale.
     Verdict,
+    /// The vulnerabilities that may follow from the solution used,
+    /// and notes (user, 2026-10-17: one of the four results of every
+    /// requirement in the evaluation, step 29 of `docs/todo.md`).
+    Vulnerabilities,
 }
 
 impl OutputSection {
     /// Every section, in the order of the report.
-    pub const ALL: [OutputSection; 6] = [
+    pub const ALL: [OutputSection; 7] = [
         OutputSection::Requirements,
         OutputSection::Inputs,
         OutputSection::Activities,
         OutputSection::Evidence,
         OutputSection::Findings,
         OutputSection::Verdict,
+        OutputSection::Vulnerabilities,
     ];
 
     pub fn name(self) -> &'static str {
@@ -150,6 +155,7 @@ impl OutputSection {
             OutputSection::Evidence => "evidence",
             OutputSection::Findings => "findings",
             OutputSection::Verdict => "verdict",
+            OutputSection::Vulnerabilities => "vulnerabilities",
         }
     }
 
@@ -166,6 +172,7 @@ impl OutputSection {
             OutputSection::Evidence => "Evidence",
             OutputSection::Findings => "Findings",
             OutputSection::Verdict => "Verdict and rationale",
+            OutputSection::Vulnerabilities => "Vulnerabilities and notes",
         }
     }
 
@@ -182,6 +189,9 @@ impl OutputSection {
             OutputSection::Evidence => "Each piece of evidence: what it is, where it is kept, its checksum.",
             OutputSection::Findings => "Observations, deviations from the requirement, and open points.",
             OutputSection::Verdict => "The verdict of each requirement and its rationale, given by the evaluator.",
+            OutputSection::Vulnerabilities => {
+                "The vulnerabilities that may follow from the solution used, and further notes."
+            }
         }
     }
 }

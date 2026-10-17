@@ -7,7 +7,12 @@
 
 use std::path::Path;
 
-use crate::db::user_db::UserDb;
+use std::sync::Arc;
+
+use crate::ai::api::completions::{self, Outcome};
+use crate::ai::api::roles::{self, Role};
+use crate::ai::api::tasks::{self, Task};
+use crate::db::user::database::UserDb;
 use crate::evaluation::analysis;
 use crate::evaluation::checks;
 use crate::evaluation::contents;
@@ -20,7 +25,6 @@ use crate::evaluation::schemes::{self, StoreError};
 
 use super::blocking::blocking;
 use super::error::UiError;
-use super::model_run::{Asked, active_model, ask};
 use super::serializer::project_view::{ProjectDataView, ProjectForm, ProjectView, SchemeForm};
 use super::serializer::scheme_view::{AnalysisEvent, PageRange};
 use super::serializer::standard_view::{DocumentView, LoadEvent};
@@ -219,16 +223,14 @@ pub async fn propose_schemes(
 
         let document = documents::get(db, range.document_id)?
             .ok_or_else(|| UiError::Invalid("the document does not exist".to_owned()))?;
-        let model = active_model(db)?;
+        let model = roles::model(db, Role::TextAnalysis)?;
 
         // The table of contents as one part, however long it is.
         let part = analysis::parts(db, &[(range.document_id, range.first_page, range.last_page)], analysis::PART_RANGE.1)?
             .into_iter()
             .next()
             .ok_or_else(|| UiError::Invalid("the pages of the table of contents hold no text".to_owned()))?;
-        let instructions = db
-            .setting(contents::INSTRUCTIONS_SETTING)?
-            .unwrap_or_else(|| contents::DEFAULT_INSTRUCTIONS.to_owned());
+        let instructions = tasks::instructions(db, Task::Contents)?.unwrap_or_default();
 
         Ok((document, part, instructions, model))
     })
@@ -244,7 +246,7 @@ pub async fn propose_schemes(
         last_page: part.last_page,
     });
 
-    let message = contents::prompt(&instructions, &document, &part);
+    let turns = completions::single(contents::prompt(&instructions, &document, &part));
     let writing = {
         let events = events.clone();
         move |characters| {
@@ -252,8 +254,13 @@ pub async fn propose_schemes(
         }
     };
 
-    match ask(&model, message, &stop, writing).await {
-        Asked::Answer(answer) => match contents::read(&answer) {
+    let model = Arc::new(model);
+    let reply = completions::create(&model, &turns, &stop, completions::counting(400, writing)).await;
+    let outcome = completions::outcome(&reply, &stop);
+    super::scheme_actions::record(state, &model, Task::Contents, turns, reply, &events).await;
+
+    match outcome {
+        Outcome::Answer(answer) => match contents::read(&answer) {
             Ok((chapters, dropped)) => {
                 let last = part.last_page;
 
@@ -279,10 +286,10 @@ pub async fn propose_schemes(
                 events(AnalysisEvent::End { stopped: false });
             }
         },
-        Asked::Stopped => {
+        Outcome::Stopped => {
             events(AnalysisEvent::End { stopped: true });
         }
-        Asked::Failed(message) => {
+        Outcome::Failed(message) => {
             events(AnalysisEvent::Failed { message });
             events(AnalysisEvent::End { stopped: false });
         }

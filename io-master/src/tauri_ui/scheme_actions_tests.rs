@@ -5,8 +5,10 @@ use super::*;
 
 use std::sync::{Arc, Mutex};
 
-use crate::ai::api_key::ApiKey;
-use crate::ai::test_support::{FakeAnswer, FakeService, completions, completions_events};
+use crate::ai::api::api_key::ApiKey;
+use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
+use crate::evaluation::analysis::DEFAULT_INSTRUCTIONS;
+use crate::evaluation::contents;
 use crate::tauri_ui::project_actions;
 use crate::tauri_ui::serializer::scheme_view::SourceView;
 use crate::tauri_ui::test_support::{TestState, logged_in, project_form, scheme_form, with_document};
@@ -53,8 +55,8 @@ async fn fake_model(state: &UiState, answer: &str) -> FakeService {
 
     let connection = completions(&service);
     with_user_db(state, move |db| {
-        let id = crate::ai::connections::save(db, None, &connection)?.id;
-        crate::ai::connections::store_api_key(db, id, &ApiKey::new("sk-test".to_owned()).unwrap())?;
+        let id = crate::db::ai::connection::create::connection(db, &connection)?.id;
+        crate::db::ai::connection::update::api_key(db, id, &ApiKey::new("sk-test".to_owned()).unwrap())?;
         Ok(())
     })
     .await

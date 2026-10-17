@@ -5,14 +5,15 @@
 //! whether one is stored. Saving a connection needs no answer of the
 //! service (a local model may be switched off while it is set up);
 //! "Check connection" ([`check_connection`]) asks the service and
-//! reports what happened. "AI help" ([`field_instruction`]) gives
-//! the instruction for a chatbot that helps to fill one field.
+//! reports what happened (and writes the check into the journal of the
+//! AI). "AI help" ([`field_instruction`]) gives the instruction for a
+//! chatbot that helps to fill one field.
 
-use crate::ai::api_key::ApiKey;
-use crate::ai::client;
-use crate::ai::connection::Field;
-use crate::ai::connections;
-use crate::ai::field_help;
+use crate::ai::api::api_key::ApiKey;
+use crate::ai::api::checks;
+use crate::ai::api::connection::Field;
+use crate::db::ai::connection::{create, delete, read, update};
+use crate::db::ai::presets::field_help;
 
 use super::error::UiError;
 use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
@@ -26,7 +27,7 @@ fn no_such_connection() -> UiError {
 
 /// The tab AI of Settings.
 pub async fn ai_config(state: &UiState) -> Result<AiConfigView, UiError> {
-    with_user_db(state, |db| Ok(AiConfigView::new(connections::list(db)?, connections::active(db)?))).await
+    with_user_db(state, |db| Ok(AiConfigView::new(read::list(db)?, read::active(db)?))).await
 }
 
 /// Saves a connection (a new one when `id` is `None`).
@@ -34,7 +35,10 @@ pub async fn save_connection(state: &UiState, id: Option<i64>, form: ConnectionF
     let connection = form.into_connection()?;
 
     with_user_db(state, move |db| {
-        let saved = connections::save(db, id, &connection)?;
+        let saved = match id {
+            None => create::connection(db, &connection)?,
+            Some(id) => update::connection(db, id, &connection)?,
+        };
 
         let notice = if saved.key_removed {
             "The connection was saved. Its API key was removed, because the address changed; enter the key again \
@@ -44,7 +48,7 @@ pub async fn save_connection(state: &UiState, id: Option<i64>, form: ConnectionF
         };
 
         Ok(SavedView {
-            config: AiConfigView::new(connections::list(db)?, connections::active(db)?),
+            config: AiConfigView::new(read::list(db)?, read::active(db)?),
             id: saved.id,
             notice: notice.to_owned(),
         })
@@ -54,7 +58,7 @@ pub async fn save_connection(state: &UiState, id: Option<i64>, form: ConnectionF
 
 /// Deletes a connection with its API key.
 pub async fn delete_connection(state: &UiState, id: i64) -> Result<AiConfigView, UiError> {
-    if !with_user_db(state, move |db| Ok(connections::delete(db, id)?)).await? {
+    if !with_user_db(state, move |db| Ok(delete::connection(db, id)?)).await? {
         return Err(no_such_connection());
     }
 
@@ -63,7 +67,7 @@ pub async fn delete_connection(state: &UiState, id: i64) -> Result<AiConfigView,
 
 /// Makes a connection the one the chat uses.
 pub async fn activate_connection(state: &UiState, id: i64) -> Result<AiConfigView, UiError> {
-    if !with_user_db(state, move |db| Ok(connections::set_active(db, id)?)).await? {
+    if !with_user_db(state, move |db| Ok(update::active(db, id)?)).await? {
         return Err(no_such_connection());
     }
 
@@ -75,7 +79,7 @@ pub async fn store_key(state: &UiState, id: i64, api_key: String) -> Result<AiCo
     // The text is wiped by ApiKey::new, whether it is a key or not.
     let api_key = ApiKey::new(api_key).map_err(|error| UiError::Invalid(format!("the key was not stored: {error}")))?;
 
-    if !with_user_db(state, move |db| Ok(connections::store_api_key(db, id, &api_key)?)).await? {
+    if !with_user_db(state, move |db| Ok(update::api_key(db, id, &api_key)?)).await? {
         return Err(no_such_connection());
     }
 
@@ -84,23 +88,38 @@ pub async fn store_key(state: &UiState, id: i64, api_key: String) -> Result<AiCo
 
 /// Deletes the API key of a connection.
 pub async fn delete_key(state: &UiState, id: i64) -> Result<AiConfigView, UiError> {
-    with_user_db(state, move |db| Ok(connections::remove_api_key(db, id)?)).await?;
+    with_user_db(state, move |db| Ok(delete::api_key(db, id)?)).await?;
 
     ai_config(state).await
 }
 
 /// Checks a stored connection with one short message.
 pub async fn check_connection(state: &UiState, id: i64) -> Result<CheckView, UiError> {
-    let (connection, api_key) = with_user_db(state, move |db| {
-        let stored = connections::get(db, id)?.ok_or_else(no_such_connection)?;
+    let model = with_user_db(state, move |db| {
+        read::get(db, id)?.ok_or_else(no_such_connection)?;
 
-        Ok((stored.connection, connections::api_key(db, id)?))
+        Ok(checks::target(db, id)?)
     })
     .await?;
 
-    let connection = connection.check().map_err(UiError::Connection)?;
+    let report = checks::create(&model).await;
 
-    Ok(CheckView::from(client::check(&connection, api_key.as_ref()).await))
+    // The check is a question to the AI: it goes into the journal. A
+    // failure to write it does not hide the report.
+    let journal = with_user_db(state, {
+        let request = report.request.body.to_string();
+        let reply = report.reply.clone();
+        move |db| Ok(checks::record(db, &model, &request, &reply)?)
+    })
+    .await;
+
+    let mut view = CheckView::from(report);
+
+    if let Err(error) = journal {
+        view.outcome = format!("{} The check was not written into the journal of the AI: {error}.", view.outcome);
+    }
+
+    Ok(view)
 }
 
 /// The instruction for a chatbot to help fill `field`, with the form

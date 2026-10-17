@@ -2,7 +2,7 @@
 
 use super::*;
 
-use crate::db::database_key::DatabaseKey;
+use crate::db::encryption::database_key::DatabaseKey;
 use crate::random::random::fill_random;
 
 fn state() -> UiState {

@@ -9,11 +9,12 @@
 use std::fmt;
 
 use crate::accounts::accounts::AccountError;
-use crate::ai::ai_error::AiError;
-use crate::ai::connection::{ConnectionError, Field};
-use crate::ai::connections::SaveError;
-use crate::ai::conversation::SendError;
-use crate::db::db::DbError;
+use crate::ai::api::completions::AiError;
+use crate::ai::api::connection::{ConnectionError, Field};
+use crate::ai::api::roles::ModelError;
+use crate::ai::chat::conversation::SendError;
+use crate::db::ai::connection::rows::SaveError;
+use crate::db::error::DbError;
 use crate::installation::lifecycle::LifecycleError;
 
 /// Why a command failed.
@@ -96,6 +97,17 @@ impl From<SendError> for UiError {
         match error {
             SendError::Db(error) => UiError::Failed(format!("the message was not stored: {error}")),
             other => UiError::Invalid(other.to_string()),
+        }
+    }
+}
+
+impl From<ModelError> for UiError {
+    fn from(error: ModelError) -> UiError {
+        match error {
+            ModelError::NoConnection => UiError::Invalid(error.to_string()),
+            ModelError::BrokenConnection(_, error) => UiError::Connection(error),
+            ModelError::NoKey(_) => UiError::Ai(AiError::NoKey),
+            ModelError::Db(error) => UiError::Failed(error.to_string()),
         }
     }
 }
