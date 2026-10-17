@@ -5,8 +5,8 @@ use crate::db::user;
 
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
-use crate::random::random::fill_random;
-use crate::tpm::test_support::TempDir;
+use crate::security::random::fill_random;
+use crate::test_support::TempDir;
 
 /// A new database of an evaluator in a temporary directory.
 fn database(directory: &TempDir) -> UserDb {

@@ -3,7 +3,7 @@
 use super::*;
 
 use crate::db::encryption::database_key::DatabaseKey;
-use crate::random::random::fill_random;
+use crate::security::random::fill_random;
 
 fn state() -> UiState {
     UiState::new(PathBuf::from("/nonexistent"), Opened::FirstRun)

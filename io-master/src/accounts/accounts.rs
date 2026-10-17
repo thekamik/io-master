@@ -29,7 +29,7 @@ use crate::db::error::DbError;
 use crate::db::system::database::SystemDb;
 use crate::db::user::database as user_db;
 use crate::model::installation::{self, InvalidUserName};
-use crate::tpm::device_secret::DeviceSecret;
+use crate::security::tpm::device_secret::DeviceSecret;
 
 /// A logged-in account.
 #[derive(Debug, Clone, PartialEq, Eq)]

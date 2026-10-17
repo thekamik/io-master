@@ -4,8 +4,8 @@ use super::*;
 
 use std::os::unix::fs::PermissionsExt;
 
-use crate::random::random::fill_random;
-use crate::tpm::test_support::TempDir;
+use crate::security::random::fill_random;
+use crate::test_support::TempDir;
 
 #[test]
 fn a_database_of_an_account_is_made_and_opened() {

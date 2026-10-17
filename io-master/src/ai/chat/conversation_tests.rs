@@ -8,8 +8,8 @@ use crate::db::user::database as user_db;
 use crate::model::ai::Connection;
 use crate::model::ai::Speaker;
 use crate::model::api_key::ApiKey;
-use crate::random::random::fill_random;
-use crate::tpm::test_support::TempDir;
+use crate::security::random::fill_random;
+use crate::test_support::TempDir;
 
 /// A connection whose header uses the API key.
 fn with_key_header() -> Connection {

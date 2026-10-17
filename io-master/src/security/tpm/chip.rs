@@ -354,5 +354,5 @@ impl Tpm {
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "tpm_tests.rs"]
+#[path = "chip_tests.rs"]
 mod tests;

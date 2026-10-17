@@ -1,7 +1,7 @@
 //! Generating the key that encrypts the database.
 //!
 //! The key is 32 random bytes from the random number generator of
-//! the kernel (see `random/random.rs` for why that source). The
+//! the kernel (see `security/random.rs` for why that source). The
 //! bytes are written straight into the memory of the
 //! [`DatabaseKey`], so no other copy of them is made.
 
@@ -12,7 +12,7 @@
 use std::io;
 
 use crate::db::encryption::database_key::DatabaseKey;
-use crate::random::random::fill_random;
+use crate::security::random::fill_random;
 
 /// Generates a new key for the database.
 ///

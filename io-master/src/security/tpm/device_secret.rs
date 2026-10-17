@@ -25,9 +25,9 @@ use std::path::{Path, PathBuf};
 
 use zeroize::Zeroizing;
 
-use crate::random::random::fill_random;
+use crate::security::random::fill_random;
 
-use super::tpm::{SealedEnvelope, Tpm, TpmError};
+use super::chip::{SealedEnvelope, Tpm, TpmError};
 
 /// Name of the file with the sealed secret.
 pub const FILE_NAME: &str = "device-secret.sealed";

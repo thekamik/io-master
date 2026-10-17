@@ -4,7 +4,7 @@ use super::*;
 
 use crate::db::encryption::keys::WrappedKey;
 use crate::model::installation::{ID_LENGTH, Role};
-use crate::tpm::test_support::TempDir;
+use crate::test_support::TempDir;
 
 fn installation() -> Installation {
     Installation { id: [5; ID_LENGTH], role: Role::Workstation }

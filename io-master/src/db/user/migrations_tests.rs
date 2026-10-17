@@ -4,8 +4,8 @@ use super::*;
 
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database::{self as user_db, UserDb};
-use crate::random::random::fill_random;
-use crate::tpm::test_support::TempDir;
+use crate::security::random::fill_random;
+use crate::test_support::TempDir;
 
 /// A new database, and the key that opens it again.
 fn database(directory: &TempDir) -> (UserDb, DatabaseKey) {

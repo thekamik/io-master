@@ -14,7 +14,7 @@
 //! - **Factors.** The password is the only factor that is always
 //!   needed. Every further factor is added to the unlocking key and
 //!   makes it stronger: today the optional secret of the device,
-//!   sealed by the TPM (`tpm/`). A [`WrappedKey`] records which
+//!   sealed by the TPM (`security/tpm/`). A [`WrappedKey`] records which
 //!   factors it needs.
 //! - Changing the password encrypts the same random key again; the
 //!   database itself is not touched.
@@ -32,8 +32,8 @@ use hkdf::Hkdf;
 use sha2::Sha256;
 use zeroize::Zeroizing;
 
-use crate::random::random::fill_random;
-use crate::tpm::device_secret::DeviceSecret;
+use crate::security::random::fill_random;
+use crate::security::tpm::device_secret::DeviceSecret;
 
 use super::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 

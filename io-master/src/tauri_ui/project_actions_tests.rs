@@ -10,7 +10,7 @@ use crate::model::api_key::ApiKey;
 use crate::tauri_ui::scheme_actions;
 use crate::tauri_ui::serializer::scheme_view::TileForm;
 use crate::tauri_ui::test_support::{logged_in, project_form, scheme_form, with_document};
-use crate::tpm::test_support::TempDir;
+use crate::test_support::TempDir;
 
 fn input(title: &str) -> TileForm {
     TileForm {

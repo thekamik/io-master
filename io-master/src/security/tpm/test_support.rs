@@ -1,49 +1,15 @@
-//! Help for the tests: temporary directories, and a fresh TPM
-//! emulator in its own temporary data directory. The real TPM is
+//! Help for the tests: a fresh TPM emulator in its own temporary
+//! data directory (`crate::test_support`). The real TPM is
 //! never touched.
 //!
 //! Needs the `swtpm` program (package swtpm).
 
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicUsize, Ordering};
 
+use super::chip::{Tpm, TpmAccess};
 use super::emulator::Emulator;
-use super::tpm::{Tpm, TpmAccess};
-
-/// A temporary directory, removed when it is dropped.
-pub struct TempDir(PathBuf);
-
-impl TempDir {
-    pub fn new() -> TempDir {
-        TempDir(new_directory("io-master-test"))
-    }
-
-    pub fn path(&self) -> &Path {
-        &self.0
-    }
-}
-
-impl Drop for TempDir {
-    fn drop(&mut self) {
-        let _ = fs::remove_dir_all(&self.0);
-    }
-}
-
-/// Creates a new, empty temporary directory with a unique name.
-fn new_directory(prefix: &str) -> PathBuf {
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-
-    let directory = std::env::temp_dir().join(format!(
-        "{prefix}-{}-{}",
-        std::process::id(),
-        COUNTER.fetch_add(1, Ordering::Relaxed)
-    ));
-
-    fs::create_dir_all(&directory).unwrap();
-
-    directory
-}
+use crate::test_support::new_directory;
 
 /// A temporary data directory with its own TPM emulator. Both are
 /// removed when it is dropped.

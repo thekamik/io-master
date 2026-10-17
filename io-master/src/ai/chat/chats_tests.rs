@@ -7,8 +7,8 @@ use crate::model::ai::Speaker;
 use crate::ai::api::completions::AiError;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
-use crate::random::random::fill_random;
-use crate::tpm::test_support::TempDir;
+use crate::security::random::fill_random;
+use crate::test_support::TempDir;
 
 fn database(directory: &TempDir) -> UserDb {
     let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();

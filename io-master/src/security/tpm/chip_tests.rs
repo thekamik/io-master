@@ -2,8 +2,8 @@
 
 use super::*;
 
-use crate::tpm::emulator::Emulator;
-use crate::tpm::test_support::TestTpm;
+use crate::security::tpm::emulator::Emulator;
+use crate::security::tpm::test_support::TestTpm;
 
 #[test]
 fn a_sealed_secret_opens_again() {

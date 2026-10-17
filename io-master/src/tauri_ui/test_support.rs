@@ -3,7 +3,7 @@
 
 use crate::installation::lifecycle::{self, Opened};
 use crate::model::installation::Role;
-use crate::tpm::test_support::TempDir;
+use crate::test_support::TempDir;
 
 use super::account_actions;
 use super::state::UiState;

@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::tauri_ui::test_support::{installed, logged_in};
 use crate::test_projects::test_support::pdf as make_pdf;
-use crate::tpm::test_support::TempDir;
+use crate::test_support::TempDir;
 
 /// Collects the events of loading.
 fn collector() -> (Arc<Mutex<Vec<LoadEvent>>>, impl Fn(LoadEvent) -> bool + Send + Sync + Clone + 'static) {

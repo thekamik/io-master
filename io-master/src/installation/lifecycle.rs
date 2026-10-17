@@ -13,7 +13,7 @@
 //! the system database**: without it the program offers the setup
 //! page, with it the login (`docs/architecture.md`, section 3.2).
 //!
-//! The TPM is an optional, further factor (`tpm/`) and is not used
+//! The TPM is an optional, further factor (`security/tpm/`) and is not used
 //! by default, so the program also runs on machines without a TPM,
 //! such as many virtual machines. TODO (step 8 of docs/todo.md):
 //! when the TPM factor is switched on, its secret is unsealed here
@@ -35,9 +35,9 @@ use crate::db::encryption::keys;
 use crate::db::error::DbError;
 use crate::db::system::database::{self as system_db, SystemDb};
 use crate::db::user::database as user_db;
-use crate::random::random::fill_random;
-use crate::tpm::device_secret::{self, DeviceSecret};
-use crate::tpm::emulator::EMULATOR_DIRECTORY;
+use crate::security::random::fill_random;
+use crate::security::tpm::device_secret::{self, DeviceSecret};
+use crate::security::tpm::emulator::EMULATOR_DIRECTORY;
 
 use crate::model::installation::{self, Installation, InstallationId, Role};
 

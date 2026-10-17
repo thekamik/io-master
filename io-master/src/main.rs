@@ -34,11 +34,12 @@ mod evaluation;
 mod hardware_tests;
 mod installation;
 mod model;
-mod random;
+mod security;
 mod standards;
 mod tauri_ui;
 mod test_projects;
-mod tpm;
+#[cfg(test)]
+mod test_support;
 
 use std::path::PathBuf;
 use std::process::ExitCode;

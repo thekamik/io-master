@@ -5,8 +5,8 @@ use super::*;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 
-use crate::random::random::fill_random;
-use crate::tpm::test_support::TempDir;
+use crate::security::random::fill_random;
+use crate::test_support::TempDir;
 
 /// A random key.
 fn key() -> DatabaseKey {

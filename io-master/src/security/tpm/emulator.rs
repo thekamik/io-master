@@ -38,7 +38,7 @@ use std::time::{Duration, Instant};
 
 use rustix::process::{Pid, Signal, kill_process};
 
-use super::tpm::TpmError;
+use super::chip::TpmError;
 
 /// Name of the folder of the emulator in the data directory.
 pub const EMULATOR_DIRECTORY: &str = "tpm-emulator";

@@ -5,7 +5,7 @@ use super::*;
 use crate::db::system;
 
 use crate::model::installation::{Installation, Role};
-use crate::tpm::test_support::TempDir;
+use crate::test_support::TempDir;
 
 const PASSWORD: &str = "correct horse battery";
 

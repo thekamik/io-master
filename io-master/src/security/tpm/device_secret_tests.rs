@@ -4,7 +4,7 @@ use super::*;
 
 use std::os::unix::fs::PermissionsExt;
 
-use crate::tpm::test_support::TestTpm;
+use crate::security::tpm::test_support::TestTpm;
 
 #[test]
 fn the_secret_is_kept_sealed_and_opens_again() {

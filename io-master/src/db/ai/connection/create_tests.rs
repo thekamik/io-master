@@ -10,8 +10,8 @@ use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
 use crate::model::ai::{AnswerMode, Field};
 use crate::model::api_key::ApiKey;
-use crate::random::random::fill_random;
-use crate::tpm::test_support::TempDir;
+use crate::security::random::fill_random;
+use crate::test_support::TempDir;
 
 const SECRET_KEY: &str = "sk-very-secret-key-of-anna";
 
