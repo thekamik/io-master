@@ -23,6 +23,7 @@ pub mod account;
 pub mod ai;
 pub mod chats;
 pub mod documents;
+pub mod oscal;
 pub mod scan;
 
 use tauri::ipc::{Channel, Response};
@@ -33,6 +34,7 @@ use super::error::UiError;
 use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
 use super::serializer::app_view::AppView;
 use super::serializer::chat_view::{ChatSummaryView, ChatView, ReplyEvent};
+use super::serializer::oscal_view::OscalDocumentView;
 use super::serializer::scan_view::ScanView;
 use super::serializer::standard_view::{DocumentForm, DocumentView, HitView, LoadEvent};
 use super::state::UiState;
@@ -266,6 +268,82 @@ pub async fn search_documents(
     document: Option<i64>,
 ) -> Result<Vec<HitView>, UiError> {
     documents::search(&state, text, document).await
+}
+
+/* ---------------------------------------------------------------
+ * The evaluation plan: the documents of OSCAL
+ * ------------------------------------------------------------- */
+
+#[tauri::command]
+pub async fn list_oscal_documents(state: State<'_, UiState>) -> Result<Vec<OscalDocumentView>, UiError> {
+    oscal::list(&state).await
+}
+
+/// Asks for a file of OSCAL (JSON) in a dialog of the system and
+/// imports it; `None` when no file was chosen.
+#[tauri::command]
+pub async fn import_oscal_document(
+    app: AppHandle,
+    state: State<'_, UiState>,
+) -> Result<Option<OscalDocumentView>, UiError> {
+    state.session()?;
+
+    let chosen = tokio::task::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .set_title("Import an OSCAL document")
+            .add_filter("OSCAL (JSON)", &["json"])
+            .blocking_pick_file()
+    })
+    .await
+    .map_err(|error| UiError::Failed(format!("the dialog failed: {error}")))?;
+
+    let Some(path) = chosen.and_then(|file| file.into_path().ok()) else {
+        return Ok(None);
+    };
+
+    Ok(Some(oscal::import(&state, path).await?))
+}
+
+/// Asks where to write document `uuid` in a dialog of the system and
+/// writes it; `false` when no place was chosen.
+#[tauri::command]
+pub async fn export_oscal_document(
+    app: AppHandle,
+    state: State<'_, UiState>,
+    uuid: String,
+    file_name: String,
+) -> Result<bool, UiError> {
+    state.session()?;
+
+    let file_name: String = file_name
+        .chars()
+        .map(|character| if character.is_alphanumeric() || "-_ .".contains(character) { character } else { '_' })
+        .collect();
+
+    let chosen = tokio::task::spawn_blocking(move || {
+        app.dialog()
+            .file()
+            .set_title("Export the OSCAL document")
+            .set_file_name(format!("{}.json", file_name.trim()))
+            .add_filter("OSCAL (JSON)", &["json"])
+            .blocking_save_file()
+    })
+    .await
+    .map_err(|error| UiError::Failed(format!("the dialog failed: {error}")))?;
+
+    let Some(path) = chosen.and_then(|file| file.into_path().ok()) else {
+        return Ok(false);
+    };
+
+    oscal::export(&state, uuid, &path).await?;
+
+    Ok(true)
+}
+
+#[tauri::command]
+pub async fn delete_oscal_document(state: State<'_, UiState>, uuid: String) -> Result<(), UiError> {
+    oscal::delete(&state, uuid).await
 }
 
 /// The PDF of a document, as raw bytes (an ArrayBuffer in the page),

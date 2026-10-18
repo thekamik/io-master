@@ -33,6 +33,10 @@
     "allow-delete-document",
     "allow-document-page",
     "allow-search-documents",
-    "allow-document-pdf"
+    "allow-document-pdf",
+    "allow-list-oscal-documents",
+    "allow-import-oscal-document",
+    "allow-export-oscal-document",
+    "allow-delete-oscal-document"
   ]
 }

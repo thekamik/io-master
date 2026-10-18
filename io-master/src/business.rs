@@ -6,8 +6,9 @@
 //!
 //! ```text
 //! session/         the logged-in evaluator: accounts, login, password
-//! business/installation/    the first start, the state of the installation
-//! business/standards/       the documents of standards
+//! installation/    the first start, the state of the installation
+//! standards/       the documents of standards (PDF): the sources
+//! oscal/           the documents of NIST OSCAL: the standards, the plans, the evaluations
 //! chats/           the chats with the AI
 //! hardware/        the scan of the ports and its settings
 //! work.rs          what the long works share: stop, error, steps
@@ -16,6 +17,7 @@
 pub mod chats;
 pub mod hardware;
 pub mod installation;
+pub mod oscal;
 pub mod session;
 pub mod standards;
 pub mod work;

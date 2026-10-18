@@ -3,19 +3,19 @@
 //! encrypted database of the evaluator (`db/standards/`).
 //!
 //! ```text
-//! model/standards.rs   the types, the rules of the fields (this file)
-//! business/standards/create.rs  load a document: its file and the text of its pages
-//! read.rs       the list, one document, a page, the PDF, the search
-//! update.rs     what the user told about a document
-//! delete.rs     remove a document no project uses
-//! pdf_text.rs   the text of a PDF page by page (Poppler)
-//! quote.rs      one normal form of text; is a quote on its page
+//! model/standards.rs                the types, the rules of the fields (this file)
+//! business/standards/documents.rs   the documents as a resource: load, list, page,
+//!                                   PDF, search, update, delete
+//! business/standards/load.rs        the loading of PDFs, a long work
+//! business/standards/pdf_text.rs    the text of a PDF page by page (Poppler)
+//! business/standards/quote.rs       one normal form of text; is a quote on its page
 //! ```
 //!
 //! A standard often comes in several documents (CC Part 1 to 5 and
 //! the CEM); each is loaded on its own, and the OSCAL documents of step 41 name the
-//! ones it uses. The same file is loaded once: its SHA-256 finds it
-//! again, also when a project is imported. A document is only loaded
+//! ones they come from (resources of their back matter, by the SHA-256
+//! of the file). The same file is loaded once: its SHA-256 finds it
+//! again. A document is only loaded
 //! and read, never edited as an object in memory: its functions go to
 //! the database directly.
 //!

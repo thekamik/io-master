@@ -14,11 +14,14 @@
 
   import { deleteDocument, listDocuments, loadDocuments, searchDocuments, stopWork, updateDocument, type DocumentView, type HitView, type LoadEvent } from "../lib/api/documents";
 import { sentence } from "../lib/api/errors";
+  import { deleteOscalDocument, exportOscalDocument, importOscalDocument, listOscalDocuments, type OscalDocumentView } from "../lib/api/oscal";
   import PdfViewer from "../components/PdfViewer.svelte";
 
   type Tab = "oscal" | "documents";
 
-  let tab: Tab = $state("documents");
+  let tab: Tab = $state("oscal");
+  let oscal: OscalDocumentView[] = $state([]);
+  let confirmDelete = $state<string | null>(null);
   let documents: DocumentView[] = $state([]);
   let problem = $state("");
   let notice = $state("");
@@ -37,7 +40,7 @@ import { sentence } from "../lib/api/errors";
 
   async function refresh() {
     try {
-      documents = await listDocuments();
+      [documents, oscal] = await Promise.all([listDocuments(), listOscalDocuments()]);
     } catch (error) {
       problem = sentence(error);
     }
@@ -84,6 +87,45 @@ import { sentence } from "../lib/api/errors";
     }
   }
 
+
+  async function importOscal() {
+    problem = "";
+    notice = "";
+
+    try {
+      const imported = await importOscalDocument();
+
+      if (imported) {
+        notice = `Imported: ${imported.model_title} "${imported.title}".`;
+        await refresh();
+      }
+    } catch (error) {
+      problem = `The OSCAL document was not imported: ${sentence(error)}`;
+    }
+  }
+
+  async function exportOscal(document: OscalDocumentView) {
+    problem = "";
+    notice = "";
+
+    try {
+      if (await exportOscalDocument(document.uuid, document.title)) {
+        notice = `Exported: ${document.title}.`;
+      }
+    } catch (error) {
+      problem = `The OSCAL document was not exported: ${sentence(error)}`;
+    }
+  }
+
+  async function removeOscal(uuid: string) {
+    try {
+      await deleteOscalDocument(uuid);
+      confirmDelete = null;
+      await refresh();
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
 
   async function saveDocument(event: SubmitEvent) {
     event.preventDefault();
@@ -144,14 +186,49 @@ import { sentence } from "../lib/api/errors";
   {/if}
 
   {#if tab === "oscal"}
-    <div class="card">
-      <h3>The standards in NIST OSCAL</h3>
-      <p class="note">
-        The evaluation plan is built on NIST OSCAL: the requirements of a standard as a catalog, the choice for one
-        evaluation as a profile, the plan as an assessment plan, shown as a graph. This tab comes with step 41.2;
-        until then, load the documents of the standards (tab Documents of standards).
-      </p>
+    <div class="buttons section-actions">
+      <button type="button" class="primary" onclick={importOscal}>Import an OSCAL document…</button>
     </div>
+
+    {#if oscal.length === 0}
+      <div class="card">
+        <h3>No OSCAL document yet</h3>
+        <p class="note">
+          The evaluation plan is built on NIST OSCAL: the requirements of a standard as a catalog, the relations
+          between documents as a mapping, the choice for one evaluation as a profile, the plan as an assessment plan.
+          Import a document of OSCAL (JSON, version 1.x; every file is checked against the schema of NIST); making
+          catalogs from the documents of a standard with the AI comes next.
+        </p>
+      </div>
+    {:else}
+      <div class="table-card">
+        <table class="ports documents">
+          <thead>
+            <tr><th>Model</th><th>Title</th><th>Version</th><th>OSCAL</th><th>Last modified</th><th></th></tr>
+          </thead>
+          <tbody>
+            {#each oscal as document (document.uuid)}
+              <tr>
+                <td>{document.model_title}</td>
+                <td>{document.title}</td>
+                <td>{document.version}</td>
+                <td class="note">{document.oscal_version}</td>
+                <td class="note">{document.last_modified}</td>
+                <td class="actions">
+                  <button type="button" class="small" onclick={() => exportOscal(document)}>Export</button>
+                  {#if confirmDelete === document.uuid}
+                    <button type="button" class="small danger" onclick={() => removeOscal(document.uuid)}>Delete</button>
+                    <button type="button" class="small" onclick={() => (confirmDelete = null)}>Keep</button>
+                  {:else}
+                    <button type="button" class="small danger" onclick={() => (confirmDelete = document.uuid)}>Delete</button>
+                  {/if}
+                </td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    {/if}
   {:else}
     <div class="buttons section-actions">
       <button type="button" class="primary" onclick={load} disabled={loading}>Load PDFs…</button>

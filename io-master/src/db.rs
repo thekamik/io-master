@@ -3,6 +3,7 @@
 pub mod ai;
 pub mod encryption;
 pub mod error;
+pub mod oscal;
 pub mod standards;
 pub mod system;
 pub mod user;

@@ -37,6 +37,10 @@ fn main() {
         "document_page",
         "search_documents",
         "document_pdf",
+        "list_oscal_documents",
+        "import_oscal_document",
+        "export_oscal_document",
+        "delete_oscal_document",
     ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))

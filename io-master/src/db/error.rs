@@ -7,6 +7,8 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 
+use crate::model::oscal::NotOscal;
+
 /// Why a database could not be used.
 #[derive(Debug)]
 pub enum DbError {
@@ -27,6 +29,9 @@ pub enum DbError {
     Corrupt(Corrupt),
     /// The row to change does not exist.
     NoRow { table: &'static str, id: i64 },
+    /// A document of OSCAL that breaks the schema of NIST: never
+    /// stored.
+    NotOscal(NotOscal),
     /// What was given to be stored does not hold together (a tile of a
     /// scheme that is not stored with it); a mistake of the caller.
     Inconsistent(String),
@@ -46,6 +51,7 @@ impl fmt::Display for DbError {
             DbError::Corrupt(corrupt) => write!(formatter, "{corrupt}"),
             DbError::NoRow { table, id } => write!(formatter, "database: no row {id} in {table}"),
             DbError::Inconsistent(reason) => write!(formatter, "database: {reason}"),
+            DbError::NotOscal(error) => write!(formatter, "{error}"),
             DbError::Io { path, source } => write!(formatter, "{}: {}", path.display(), source),
         }
     }

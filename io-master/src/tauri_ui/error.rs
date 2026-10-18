@@ -13,6 +13,7 @@ use crate::ai::api::connections::ConnectionSaveError;
 use crate::ai::api::roles::ModelError;
 use crate::business::chats::conversation::SendError;
 use crate::business::installation::lifecycle::LifecycleError;
+use crate::business::oscal::documents::OscalError;
 use crate::business::session::accounts::AccountError;
 use crate::business::standards::error::DocumentError;
 use crate::business::work::WorkError;
@@ -144,6 +145,15 @@ impl From<DocumentError> for UiError {
     fn from(error: DocumentError) -> UiError {
         match error {
             DocumentError::Db(error) => UiError::Failed(error.to_string()),
+            other => UiError::Invalid(other.to_string()),
+        }
+    }
+}
+
+impl From<OscalError> for UiError {
+    fn from(error: OscalError) -> UiError {
+        match error {
+            OscalError::Db(error) => UiError::Failed(error.to_string()),
             other => UiError::Invalid(other.to_string()),
         }
     }

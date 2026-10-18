@@ -13,6 +13,7 @@
 //! db/ai/              AI: connections, chats, roles,
 //!                     instructions, journal, presets
 //! db/standards/       documents of standards
+//! db/oscal/           documents of NIST OSCAL
 //! ```
 //!
 //! ```text
@@ -41,7 +42,7 @@ use rusqlite::Connection;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
-use crate::db::{ai, standards};
+use crate::db::{ai, oscal, standards};
 
 use super::{migrations, schema};
 
@@ -72,6 +73,7 @@ impl UserDb {
         connection.execute_batch(ai::instructions::schema::SCHEMA)?;
         connection.execute_batch(ai::journal::schema::SCHEMA)?;
         connection.execute_batch(standards::schema::SCHEMA)?;
+        connection.execute_batch(oscal::schema::SCHEMA)?;
         migrations::run(&connection)?;
 
         Ok(UserDb { connection })

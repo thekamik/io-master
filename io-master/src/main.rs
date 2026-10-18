@@ -162,6 +162,12 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             commands::document_page,
             commands::search_documents,
             commands::document_pdf,
+            // The evaluation plan: the documents of OSCAL
+            // (commands/oscal.rs).
+            commands::list_oscal_documents,
+            commands::import_oscal_document,
+            commands::export_oscal_document,
+            commands::delete_oscal_document,
         ])
         .run(tauri::generate_context!());
 
