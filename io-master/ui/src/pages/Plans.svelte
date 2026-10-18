@@ -3,8 +3,9 @@
   tabs:
 
   - OSCAL: the documents of the standards in NIST OSCAL (catalogs,
-    mappings, profiles, assessment plans), made or loaded, and the plan
-    shown as a graph (built in steps 41.2 to 41.4);
+    mappings, profiles, assessment plans), made or loaded; a catalog
+    made in the program is edited in components/CatalogEditor.svelte
+    (step 41.3), the plan is shown as a graph (step 41.4);
   - Documents: the documents of standards (PDF), loaded into the
     encrypted database, with their text page by page, searched and
     shown in the viewer; the sources the OSCAL documents quote.
@@ -13,8 +14,10 @@
   import { onMount } from "svelte";
 
   import { deleteDocument, listDocuments, loadDocuments, searchDocuments, stopWork, updateDocument, type DocumentView, type HitView, type LoadEvent } from "../lib/api/documents";
-import { sentence } from "../lib/api/errors";
+  import { createCatalog } from "../lib/api/catalogs";
+  import { sentence } from "../lib/api/errors";
   import { deleteOscalDocument, exportOscalDocument, importOscalDocument, listOscalDocuments, type OscalDocumentView } from "../lib/api/oscal";
+  import CatalogEditor from "../components/CatalogEditor.svelte";
   import PdfViewer from "../components/PdfViewer.svelte";
 
   type Tab = "oscal" | "documents";
@@ -26,6 +29,9 @@ import { sentence } from "../lib/api/errors";
   let problem = $state("");
   let notice = $state("");
 
+  // The catalog open in the editor, and a new catalog being made.
+  let catalog = $state<string | null>(null);
+  let making = $state<{ title: string; version: string; sources: number[] } | null>(null);
 
   // Loading documents and importing.
   let loading = $state(false);
@@ -127,6 +133,21 @@ import { sentence } from "../lib/api/errors";
     }
   }
 
+  async function makeCatalog(event: SubmitEvent) {
+    event.preventDefault();
+
+    if (making) {
+      try {
+        const made = await createCatalog(making.title, making.version, making.sources);
+        making = null;
+        await refresh();
+        catalog = made.uuid;
+      } catch (error) {
+        problem = `The catalog was not made: ${sentence(error)}`;
+      }
+    }
+  }
+
   async function saveDocument(event: SubmitEvent) {
     event.preventDefault();
 
@@ -185,9 +206,19 @@ import { sentence } from "../lib/api/errors";
     </div>
   {/if}
 
-  {#if tab === "oscal"}
+  {#if tab === "oscal" && catalog}
+    <CatalogEditor
+      uuid={catalog}
+      {documents}
+      onclose={() => {
+        catalog = null;
+        refresh();
+      }}
+    />
+  {:else if tab === "oscal"}
     <div class="buttons section-actions">
-      <button type="button" class="primary" onclick={importOscal}>Import an OSCAL document…</button>
+      <button type="button" class="primary" onclick={() => (making = { title: "", version: "", sources: [] })}>New catalog…</button>
+      <button type="button" onclick={importOscal}>Import an OSCAL document…</button>
     </div>
 
     {#if oscal.length === 0}
@@ -196,8 +227,8 @@ import { sentence } from "../lib/api/errors";
         <p class="note">
           The evaluation plan is built on NIST OSCAL: the requirements of a standard as a catalog, the relations
           between documents as a mapping, the choice for one evaluation as a profile, the plan as an assessment plan.
-          Import a document of OSCAL (JSON, version 1.x; every file is checked against the schema of NIST); making
-          catalogs from the documents of a standard with the AI comes next.
+          Make a catalog of a standard from its documents (PDF), with the help of the AI, or import a document of OSCAL
+          (JSON, version 1.x). Every document is checked against the schema of NIST.
         </p>
       </div>
     {:else}
@@ -215,6 +246,9 @@ import { sentence } from "../lib/api/errors";
                 <td class="note">{document.oscal_version}</td>
                 <td class="note">{document.last_modified}</td>
                 <td class="actions">
+                  {#if document.model === "catalog"}
+                    <button type="button" class="small" onclick={() => (catalog = document.uuid)}>Open</button>
+                  {/if}
                   <button type="button" class="small" onclick={() => exportOscal(document)}>Export</button>
                   {#if confirmDelete === document.uuid}
                     <button type="button" class="small danger" onclick={() => removeOscal(document.uuid)}>Delete</button>
@@ -303,6 +337,31 @@ import { sentence } from "../lib/api/errors";
       <div class="buttons">
         <button type="submit">Save</button>
         <button type="button" onclick={() => (editing = null)}>Cancel</button>
+      </div>
+    </form>
+  </div>
+{/if}
+
+{#if making}
+  <div class="overlay" role="presentation">
+    <form class="dialog" onsubmit={makeCatalog}>
+      <h2>A new catalog</h2>
+      <p class="note">
+        A standard, its methodology (the CEM), a Protection Profile or a test specification: each is a catalog of its own.
+      </p>
+      <label>Title <input bind:value={making.title} required placeholder="Common Criteria Part 2: Security functional components" /></label>
+      <label>Version <input bind:value={making.version} placeholder="CC:2022 Revision 1" /></label>
+      <fieldset>
+        <legend>Comes from the documents</legend>
+        {#each documents as document (document.id)}
+          <label class="choice"><input type="checkbox" value={document.id} bind:group={making.sources} /> {title(document)}</label>
+        {:else}
+          <p class="note">No PDF loaded yet (tab Documents of standards); the catalog can also be written by hand.</p>
+        {/each}
+      </fieldset>
+      <div class="buttons">
+        <button type="submit">Make</button>
+        <button type="button" onclick={() => (making = null)}>Cancel</button>
       </div>
     </form>
   </div>

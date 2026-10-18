@@ -21,6 +21,7 @@
 
 pub mod account;
 pub mod ai;
+pub mod catalogs;
 pub mod chats;
 pub mod documents;
 pub mod oscal;
@@ -33,6 +34,7 @@ use tauri_plugin_dialog::DialogExt;
 use super::error::UiError;
 use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
 use super::serializer::app_view::AppView;
+use super::serializer::catalog_view::{BuildEvent, CatalogView, PageRange, PlaceForm};
 use super::serializer::chat_view::{ChatSummaryView, ChatView, ReplyEvent};
 use super::serializer::oscal_view::OscalDocumentView;
 use super::serializer::scan_view::ScanView;
@@ -344,6 +346,151 @@ pub async fn export_oscal_document(
 #[tauri::command]
 pub async fn delete_oscal_document(state: State<'_, UiState>, uuid: String) -> Result<(), UiError> {
     oscal::delete(&state, uuid).await
+}
+
+/* ---------------------------------------------------------------
+ * The evaluation plan: the catalogs of OSCAL
+ * ------------------------------------------------------------- */
+
+/// Makes a new catalog from the documents `sources` of a standard.
+#[tauri::command]
+pub async fn create_catalog(
+    state: State<'_, UiState>,
+    title: String,
+    version: String,
+    sources: Vec<i64>,
+) -> Result<OscalDocumentView, UiError> {
+    catalogs::create(&state, title, version, sources).await
+}
+
+#[tauri::command]
+pub async fn open_catalog(state: State<'_, UiState>, uuid: String) -> Result<CatalogView, UiError> {
+    catalogs::open(&state, uuid).await
+}
+
+/// Adds a group (its JSON of OSCAL) at `place`.
+#[tauri::command]
+pub async fn add_catalog_group(
+    state: State<'_, UiState>,
+    uuid: String,
+    place: PlaceForm,
+    group: serde_json::Value,
+) -> Result<CatalogView, UiError> {
+    catalogs::add_group(&state, uuid, place.into_place()?, group).await
+}
+
+#[tauri::command]
+pub async fn update_catalog_group(
+    state: State<'_, UiState>,
+    uuid: String,
+    id: String,
+    group: serde_json::Value,
+) -> Result<CatalogView, UiError> {
+    catalogs::update_group(&state, uuid, id, group).await
+}
+
+/// Adds a control (its JSON of OSCAL) at `place`.
+#[tauri::command]
+pub async fn add_catalog_control(
+    state: State<'_, UiState>,
+    uuid: String,
+    place: PlaceForm,
+    control: serde_json::Value,
+) -> Result<CatalogView, UiError> {
+    catalogs::add_control(&state, uuid, place.into_place()?, control).await
+}
+
+#[tauri::command]
+pub async fn update_catalog_control(
+    state: State<'_, UiState>,
+    uuid: String,
+    id: String,
+    control: serde_json::Value,
+) -> Result<CatalogView, UiError> {
+    catalogs::update_control(&state, uuid, id, control).await
+}
+
+#[tauri::command]
+pub async fn delete_catalog_object(
+    state: State<'_, UiState>,
+    uuid: String,
+    id: String,
+) -> Result<CatalogView, UiError> {
+    catalogs::delete_object(&state, uuid, id).await
+}
+
+#[tauri::command]
+pub async fn add_catalog_quote(
+    state: State<'_, UiState>,
+    uuid: String,
+    object_id: String,
+    source: i64,
+    page: u32,
+    text: String,
+) -> Result<CatalogView, UiError> {
+    catalogs::add_quote(&state, uuid, object_id, source, page, text).await
+}
+
+#[tauri::command]
+pub async fn delete_catalog_quote(state: State<'_, UiState>, uuid: String, id: i64) -> Result<CatalogView, UiError> {
+    catalogs::delete_quote(&state, uuid, id).await
+}
+
+/// Accepts a proposal of the AI, as it is or `corrected`.
+#[tauri::command]
+pub async fn accept_catalog_proposal(
+    state: State<'_, UiState>,
+    uuid: String,
+    id: i64,
+    corrected: Option<serde_json::Value>,
+) -> Result<CatalogView, UiError> {
+    catalogs::accept_proposal(&state, uuid, id, corrected).await
+}
+
+#[tauri::command]
+pub async fn reject_catalog_proposal(state: State<'_, UiState>, uuid: String, id: i64) -> Result<CatalogView, UiError> {
+    catalogs::reject_proposal(&state, uuid, id).await
+}
+
+/// The instructions of a task of the catalogs ("catalog_outline",
+/// "catalog_section").
+#[tauri::command]
+pub async fn catalog_instructions(state: State<'_, UiState>, which: String) -> Result<String, UiError> {
+    catalogs::instructions(&state, which).await
+}
+
+#[tauri::command]
+pub async fn save_catalog_instructions(
+    state: State<'_, UiState>,
+    which: String,
+    text: String,
+) -> Result<String, UiError> {
+    catalogs::save_instructions(&state, which, text).await
+}
+
+/// The AI reads a table of contents and proposes the groups; the
+/// progress arrives through `on_event`.
+#[tauri::command]
+pub async fn propose_catalog_groups(
+    state: State<'_, UiState>,
+    uuid: String,
+    range: PageRange,
+    on_event: Channel<BuildEvent>,
+) -> Result<CatalogView, UiError> {
+    catalogs::propose_groups(&state, uuid, range, move |event| on_event.send(event).is_ok()).await
+}
+
+/// The AI reads pages of a group and proposes its controls.
+#[tauri::command]
+pub async fn propose_catalog_controls(
+    state: State<'_, UiState>,
+    uuid: String,
+    group: Option<String>,
+    ranges: Vec<PageRange>,
+    part_size: usize,
+    on_event: Channel<BuildEvent>,
+) -> Result<CatalogView, UiError> {
+    catalogs::propose_controls(&state, uuid, group, ranges, part_size, move |event| on_event.send(event).is_ok()).await
 }
 
 /// The PDF of a document, as raw bytes (an ArrayBuffer in the page),

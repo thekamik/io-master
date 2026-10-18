@@ -168,6 +168,23 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             commands::import_oscal_document,
             commands::export_oscal_document,
             commands::delete_oscal_document,
+            // The evaluation plan: the catalogs of OSCAL
+            // (commands/catalogs.rs).
+            commands::create_catalog,
+            commands::open_catalog,
+            commands::add_catalog_group,
+            commands::update_catalog_group,
+            commands::add_catalog_control,
+            commands::update_catalog_control,
+            commands::delete_catalog_object,
+            commands::add_catalog_quote,
+            commands::delete_catalog_quote,
+            commands::accept_catalog_proposal,
+            commands::reject_catalog_proposal,
+            commands::catalog_instructions,
+            commands::save_catalog_instructions,
+            commands::propose_catalog_groups,
+            commands::propose_catalog_controls,
         ])
         .run(tauri::generate_context!());
 

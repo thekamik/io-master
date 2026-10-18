@@ -37,6 +37,21 @@
     "allow-list-oscal-documents",
     "allow-import-oscal-document",
     "allow-export-oscal-document",
-    "allow-delete-oscal-document"
+    "allow-delete-oscal-document",
+    "allow-create-catalog",
+    "allow-open-catalog",
+    "allow-add-catalog-group",
+    "allow-update-catalog-group",
+    "allow-add-catalog-control",
+    "allow-update-catalog-control",
+    "allow-delete-catalog-object",
+    "allow-add-catalog-quote",
+    "allow-delete-catalog-quote",
+    "allow-accept-catalog-proposal",
+    "allow-reject-catalog-proposal",
+    "allow-catalog-instructions",
+    "allow-save-catalog-instructions",
+    "allow-propose-catalog-groups",
+    "allow-propose-catalog-controls"
   ]
 }

@@ -57,7 +57,7 @@ tauri_ui/commands/         the form becomes a type of model/; the session is tak
   │
   ▼
 business/                  the rules; the objects in memory of the session:
-  │                        Session (account, open database, open projects and evaluations)
+  │                        Session (account, open database)
   ├──► db/                 written through at once (write-through), in one transaction
   ├──► ai/api/             the only way to a model; every question in the journal of the AI
   └──► hardware_tests/     the only way to a device
@@ -78,7 +78,7 @@ Plain types of every area, their rules of validity (`check`) and their normal fo
 ### 2.2 `db/`: the databases
 
 - **SQL lives only here** (the connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile).
-- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `test_projects/`, `evaluations/`, `evaluations/journal/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
+- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `oscal/`, `evaluation_support/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
 - **Free functions everywhere:** `db::<area>::<operation>::<object>(db, ...)`. A caller imports the area as `db_<area>` and calls `db_<area>::<operation>::<object>`, so that every call shows which operation on which data it is.
 - **Columns are read by their names; statements with more than one parameter name them** (`:title`); every statement is in the function that runs it.
 - **A value the program never writes is an error**, `DbError::Corrupt { table, column, value }`, never replaced in silence. `DbError::Sql` is SQLite only; `NoRow` for a change of a row that does not exist; `Inconsistent` for input that does not hold together.
@@ -97,7 +97,7 @@ ai/presets/      the ready settings of known services, and the help for the fiel
 
 - **Every question is in the journal of the AI**: `completions::ask` asks and writes the entry itself, also when the reply was stopped or failed; the caller learns only whether the entry could be written. The check of a connection writes its entry the same way.
 - A key is given out only for the address it was entered for (`db/ai/connection/read.rs`, checked at every use).
-- A task works on plain data of `model/` and gives back plain data (`model/analysis.rs`); applying a proposal is the work of the business.
+- A task works on plain data of `model/` and gives back plain data (`ai/tasks/catalog_outline.rs`, `catalog_section.rs`: groups and controls of OSCAL); applying a proposal is the work of the business.
 
 ### 2.4 `hardware_tests/`: hardware
 
@@ -112,18 +112,17 @@ The scan of the serial ports (`devices/`); later the access rights (`permissions
 **The form of REST, without a server.** A resource is a module; its operations are functions named after REST verbs, listed with their REST form at the head of the file:
 
 ```text
-//! list()        GET     /projects
-//! get()         GET     /projects/{id}
-//! create()      POST    /projects
-//! update()      PUT     /projects/{id}
-//! set_ready()   PUT     /projects/{id}/ready
-//! delete()      DELETE  /projects/{id}
+//! create()           POST    /catalogs                         a new, empty catalog
+//! get()              GET     /catalogs/{uuid}
+//! add_group()        POST    /catalogs/{uuid}/groups           at the top or in a group
+//! update_group()     PUT     /catalogs/{uuid}/groups/{id}      its own fields; its content stays
+//! delete_object()    DELETE  /catalogs/{uuid}/objects/{id}     a group or a control, with its content
 ```
 
-- **The session** (`session.rs`): the account, the database opened once at the login, the test projects and the evaluations open in memory, each behind a lock taken always in one order (the database first).
-- **Objects in memory** (`test_projects/workspace.rs`, `evaluations/workspace.rs`): a change is checked on the object in memory, written through to the database at once, and only then made in memory; a change the database refuses is not made at all. The versions of a test project for "Undo" are only in memory.
-- **Long works** (`work.rs`): the loading of PDFs (`standards/load.rs`), the analysis with the AI (`test_projects/analysis/run.rs`), the import of a project file (`test_projects/exchange/import.rs`), a message of the chat (`chats/conversation.rs`). Each reports its progress as an enum of its own (`Progress`, `LoadProgress`, `ChatEvent`) to a function of the caller, stops on `Cancel`, and holds no lock of the session while it waits for files or for the model.
-- **Errors**: one enum per area (`StoreError`, `EvaluationError`, `DocumentError`, `WorkError`), with the error of the rules of `model/` inside.
+- **The session** (`session.rs`): the account and the database opened once at the login, behind a lock.
+- **Documents of OSCAL** (`oscal/`, step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction; the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
+- **Long works** (`work.rs`): the loading of PDFs (`standards/load.rs`), the building of a catalog with the AI (`oscal/building.rs`), a message of the chat (`chats/conversation.rs`). Each reports its progress as an enum of its own (`Progress`, `LoadProgress`, `ChatEvent`) to a function of the caller, stops on `Cancel`, and holds no lock of the session while it waits for files or for the model.
+- **Errors**: one enum per area (`OscalError`, `DocumentError`, `WorkError`, ...), with the error of the rules of `model/` inside.
 
 ### 2.7 `tauri_ui/`: the window
 
@@ -143,11 +142,11 @@ error.rs        every error of the business as an error of the page
 ### 2.8 `ui/`: the page
 
 ```text
-ui/src/pages/         the pages: the sidebar (Chat, Scan, Schemes, Documentation, Evaluation,
-                      Settings), the frame (Shell), Login, Setup
-ui/src/components/    their parts: the tab AI, the panels, the editors, the viewer, the nodes
+ui/src/pages/         the pages: the sidebar (Chat, Evaluation plan, Evaluation, Documentation,
+                      Scan, Settings), the frame (Shell), Login, Setup
+ui/src/components/    their parts: the tab AI, the editor of a catalog, the viewer of a standard
 ui/src/lib/api/       the commands as typed functions, one file per resource of the program
-                      (errors, app, ai, scan, chat, documents, projects); the types mirror
+                      (errors, app, ai, scan, chat, documents, oscal, catalogs); the types mirror
                       the views of tauri_ui/serializer/
 ui/src/lib/pdf.ts     the viewer of a standard (pdf.js)
 ui/src/styles/        the style, one sheet per part of the window, in the order of the cascade
@@ -166,7 +165,7 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 | Tests | `<file>_tests.rs` next to the file, attached with `#[cfg(test)] #[path = "<file>_tests.rs"] mod tests;`. A file of tests that covers a whole resource is named after the resource. Help for the tests in `test_support.rs` (of an area) and `src/test_support.rs` (temporary folders). |
 | Formatting | `rustfmt.toml` (120 characters); `cargo fmt --check` must be clean before a commit. |
 | Checks | `cargo test` (with the test of the architecture and the test of the command lists), `npm run check` (svelte-check, clean), clippy. |
-| Serialization | Only in `tauri_ui/serializer/`; the types of the core carry no serde attributes (the file format of a project, `business/test_projects/exchange/`, builds its JSON by hand). |
+| Serialization | Only in `tauri_ui/serializer/`; the types of the core carry no serde attributes. **The one exception** (user, 2026-10-18, `docs/oscal.md`): the types of `model/oscal/` *are* the published format of NIST and carry serde with the names of OSCAL. |
 | Secrets | Only in the encrypted database of the evaluator; never shown back, never printed, never in the page. |
 
 ---
@@ -179,14 +178,20 @@ Generated from the heads of the files (the tests left out):
 main.rs                      Entry point of IO Master.
 model.rs/                  The data of the program as plain Rust types, and the rules of
   ai.rs                        The data of the communication with AI services: a connection as
-  analysis.rs                  The data of the analysis of a standard with the AI (steps 20 and
   api_key.rs                   The API key of an AI connection of one evaluator
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the
-  evaluations.rs               The types of an evaluation project (step 29 of `docs/todo.md`):
+  evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier and its role, chosen at
+  oscal.rs/                    The documents of NIST OSCAL (Open Security Controls Assessment
+    assessment_plan.rs           An OSCAL assessment plan: the evaluation plan (function a of
+    assessment_results.rs        OSCAL assessment results: the evaluation (function b of
+    catalog.rs                   An OSCAL catalog: the requirements (controls) of a standard, in
+    common.rs                    The pieces every model of OSCAL shares: the metadata of a document,
+    mapping.rs                   An OSCAL mapping collection (new in OSCAL 1.2.0): relations between
+    profile.rs                   An OSCAL profile: a selection of the controls of catalogs (or of
+    schema.rs                    The check of an OSCAL document against the JSON schema of NIST, of
+    values.rs                    The values OSCAL defines by a pattern, made by the program: a UUID
   standards.rs                 The documents of standards an evaluator has loaded (steps 16 to 22
-  test_projects.rs/            A test project: the map of a standard, as schemes of tiles joined
-    rules.rs                     The rules of a test project: the fields of a project, a scheme and
   text.rs                      The rules every text field of the program follows, the error when
   time.rs                      The time stamps of the program: seconds since 1970 (UTC), as the
 db.rs/                     Every operation on a database (CLAUDE.md, "Database code").
@@ -224,17 +229,19 @@ db.rs/                     Every operation on a database (CLAUDE.md, "Database c
     keys.rs                      The keys of the databases of the evaluators
     sqlcipher.rs                 Opening and creating encrypted databases.
   error.rs                     The error of every function of the database layer (`db/`).
-  evaluations.rs/              The evaluation projects.
-    create.rs                    Creating evaluation projects and proposals of the AI, each with its
-    delete.rs                    Deleting evaluations and proposals of the AI.
-    journal.rs/                  The journal of an evaluation: every step, only ever added to
-      create.rs                    Adding an entry to the journal of an evaluation.
-      read.rs                      Reading the journal of an evaluation.
-      rows.rs                      The rows of the journal of an evaluation and the entries they
-    read.rs                      Reading evaluation projects, their frozen structure, the results and
-    rows.rs                      The rows of the evaluation projects and the Rust types they become
-    schema.rs                    The tables of the evaluation projects, in the database of an
-    update.rs                    Changing the results of the requirements of an evaluation. The
+  evaluation_support.rs/       The evaluation support (step 41): what the program adds to the
+    create.rs                    Storing quotes and proposals of the evaluation support.
+    delete.rs                    Deleting from the evaluation support.
+    read.rs                      Reading the evaluation support.
+    rows.rs                      The rows of the evaluation support and the types they become
+    schema.rs                    The tables of the evaluation support (`model/evaluation_support.rs`),
+  oscal.rs/                    The documents of NIST OSCAL (step 41): catalogs, mappings, profiles,
+    create.rs                    Storing a new document of OSCAL, checked against the schema of NIST.
+    delete.rs                    Deleting a document of OSCAL. Its text is overwritten in the file,
+    read.rs                      Reading the documents of OSCAL.
+    rows.rs                      The rows of the documents of OSCAL and the types they become
+    schema.rs                    The table of the documents of OSCAL, in the database of an
+    update.rs                    Replacing a document of OSCAL by its new version, checked against
   standards.rs/                The documents of standards.
     create.rs                    Storing a document of a standard: the file and the text of its
     delete.rs                    Removing a document of a standard. Whether a project still uses it
@@ -250,13 +257,6 @@ db.rs/                     Every operation on a database (CLAUDE.md, "Database c
     rows.rs                      The rows of the system database and the Rust types they become.
     schema.rs                    The tables of the system database (`database.rs`). They are made
     update.rs                    Changing rows of the system database: the key of an account.
-  test_projects.rs/            The test projects.
-    create.rs                    Creating test projects, schemes, tiles and links. The rules of
-    delete.rs                    Deleting test projects, schemes, tiles and links, each with what
-    read.rs                      Reading the test projects, their schemes, tiles and links.
-    rows.rs                      The rows of the test projects and the Rust types they become
-    schema.rs                    The tables of the test projects, in the database of an evaluator
-    update.rs                    Changing test projects, schemes and tiles. The rules of
   user.rs/                     The database of one evaluator (encrypted).
     database.rs                  The database of one evaluator: `users/<id>.db` in the data
     delete.rs                    Removing settings and secrets of an evaluator.
@@ -282,14 +282,14 @@ ai.rs/                     The communication with AI services (CLAUDE.md, "AI la
   presets.rs/                  Presets: ready settings of well-known AI services, to fill the
     field_help.rs                Instructions for a chatbot: help to fill one field of an AI
   tasks.rs/                    The tasks of the AI: for each, the question sent to the model and
-    chapter.rs                   The task `chapter` of the AI (`ai/api/tasks.rs`, role *text
+    catalog_outline.rs           The task `catalog_outline` of the AI (role *text analysis*): the
+    catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a
-    contents.rs                  The task `contents` of the AI (`ai/api/tasks.rs`, role *text
     json.rs                      The JSON object in an answer of a model, and its texts.
 hardware_tests.rs/         Everything that talks to hardware (step 40 of docs/todo.md).
   devices.rs/                  The scan of the serial ports.
-    serial_ports.rs              Discovery of serial ports.
     port_property.rs             The properties of a serial port that can be shown, one per
+    serial_ports.rs              Discovery of serial ports.
 security.rs/               The building blocks of protection: random numbers from the system,
   random.rs                    Random bytes from the kernel.
   tpm.rs/                      The TPM 2.0, the optional further factor (`docs/architecture.md`,
@@ -300,12 +300,6 @@ business.rs/               The business logic of the program (step 40 of docs/to
   chats.rs/                    The chats of the evaluator with the AI: the stored chats and one
     conversation.rs              One turn of a chat, without any user interface ([`send`]): the
     history.rs                   The chats of an evaluator with an AI model, kept in their
-  evaluations.rs/              The evaluation projects: the frozen structure, the results, the journal.
-    error.rs                     The error of an operation on an evaluation project.
-    journal.rs                   The journal of an evaluation (P3 of `architecture.md`: everything is
-    projects.rs                  The evaluation projects as a resource (step 29 of `docs/todo.md`,
-    results.rs                   The results of the requirements of an open evaluation and the
-    workspace.rs                 The evaluation projects open for work: the objects in memory (user,
   hardware.rs/                 The work on hardware as the evaluator sees it: the scan of the
     ports.rs                     The serial ports as a resource (step 5 of `docs/todo.md`, moved in
     scan_settings.rs             The settings of the scanner of an evaluator: which kinds of port
@@ -313,52 +307,42 @@ business.rs/               The business logic of the program (step 40 of docs/to
     lifecycle.rs                 The life of an installation: the first start, every later
     uninstall.rs                 (not compiled: "DO NOT USE: TO BE REWORKED", step 12)
     verify.rs                    The check of the installation at the start of the program.
+  oscal.rs/                    The documents of NIST OSCAL of the evaluator (step 41,
+    building.rs                  The long works that make a catalog of OSCAL from the documents of a
+    catalogs.rs                  The catalogs of the evaluator as a resource (step 41.3): a standard
+    documents.rs                 The documents of OSCAL as a resource (step 41.2): loaded from files
+    ids.rs                       New UUIDs and the time of a change, for the documents the program
+    proposals.rs                 The proposals of the AI for an OSCAL document (evaluation support,
+    quotes.rs                    The passages of the documents of a standard (PDF) the objects of an
   session.rs/                  The logged-in evaluator (step 40): their account, their database,
     accounts.rs                  The accounts of the evaluators: creating them, logging in, and
   standards.rs/                The documents of standards: loading, reading, searching, quotes.
     documents.rs                 The documents of standards as a resource (steps 16 to 22 of
     error.rs                     The error of an operation on a document of a standard.
     load.rs                      The loading of documents of standards from PDF files: a long work
+    parts.rs                     The pages of a standard cut into parts that fit the context of a
     pdf_text.rs                  Reading the text of a PDF, page by page, with the tools of
     quote.rs                     Finding a quote in the text of a page of a standard.
-  test_projects.rs/            The test projects: the map of a standard as schemes, tiles and links.
-    analysis.rs/                 The analysis of a standard with the AI: the table of contents, the chapters.
-      chapter.rs                   The analysis of a standard with AI: the model reads the pages of
-      contents.rs                  The table of contents of a standard as the list of schemes of a
-      parts.rs                     The pages of a standard cut into parts that fit the context of a
-      run.rs                       The long works of the analysis of a standard with the AI (steps 20
-    checks.rs                    The checks of a scheme: the gaps that keep it from being a
-    content.rs                   The whole content of a test project that is not open for editing:
-    error.rs                     The error of a change of a test project: a rule of the project
-    exchange.rs/                 The export and import of a test project as a file.
-      export.rs                    A test project as the file of its format (`format.rs`), read from
-      format.rs                    The format of the file of an exported test project, so that a head of the
-      import.rs                    Reading the file of a test project (`format.rs`) and storing a new
-    links.rs                     The links between the tiles of an open test project as a resource
-    projects.rs                  The test projects as a resource (steps 25 and 39 of `docs/todo.md`,
-    schemes.rs                   The schemes (chapters) of an open test project as a resource (step 25
-    tiles.rs                     The tiles of the schemes of an open test project as a resource (steps
-    workspace.rs                 The test projects open for editing: the objects in memory (user,
   work.rs                      What the long works of the business share (step 40): the stop
 tauri_ui.rs/               The desktop window (Tauri 2), the thin layer between the business
   blocking.rs                  Blocking work of the commands, kept off the threads that keep
   commands.rs/                 The commands the page can call: the whole surface between the
     account.rs                   The first start, the login, the logout and the password.
     ai.rs                        The tab AI of Settings: the AI connections of the evaluator, their
+    catalogs.rs                  The catalogs of OSCAL in the tool Evaluation plan (step 41.3): made
     chats.rs                     The chats: the list, an open chat, deleting, and a message with
-    documents.rs                 The documents of standards in the tool Create evaluation scheme:
-    projects.rs                  The test projects in the tool Create evaluation scheme (steps 25 and
+    documents.rs                 The documents of standards in the tool Evaluation plan:
+    oscal.rs                     The documents of OSCAL in the tool Evaluation plan (step 41.2): the
     scan.rs                      The scan of serial ports with the settings of the evaluator
-    schemes.rs                   The drawing of one scheme of a test project in the tool Create
   error.rs                     The errors the commands give back to the page, in kinds the page
   serializer.rs/               The views and forms of the page (serde): the only place of serialization.
     ai_config_view.rs            The AI connections as the tab AI of Settings shows and sends them,
     app_view.rs                  What the page needs to know to show itself: whether the program
+    catalog_view.rs              A catalog of OSCAL as the editor of the page shows it: the catalog
     chat_view.rs                 The chats as the page shows them, and the events of a reply
     error_view.rs                How an error of a command reaches the page:
-    project_view.rs              The test projects and the list of their schemes as the page shows
+    oscal_view.rs                The documents of OSCAL as the page shows them in a list.
     scan_view.rs                 The scan page as the page shows it: the settings of the scanner,
-    scheme_view.rs               A scheme of a test project as the drawing shows it (its tiles, the
     standard_view.rs             The documents of standards as the page shows them, and the events
   session.rs                   The session of the logged-in evaluator (`business/session.rs`), for
   state.rs                     The state of the desktop interface, kept in Rust and never in

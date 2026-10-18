@@ -1,0 +1,85 @@
+/* ---------------------------------------------------------------
+ * 13. The editor of a catalog of OSCAL (components/CatalogEditor.svelte)
+ * ------------------------------------------------------------- */
+
+/* The tree, the object chosen, the AI: three columns. */
+.catalog-body {
+    display: grid;
+    grid-template-columns: minmax(16rem, 1fr) minmax(22rem, 2fr) minmax(18rem, 1.2fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.catalog-body > .card {
+    margin: 0;
+    max-height: calc(100vh - 12rem);
+    overflow: auto;
+}
+
+ul.catalog-tree {
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 0.9rem;
+}
+
+.catalog-side > ul.catalog-tree {
+    padding-left: 0;
+}
+
+ul.catalog-tree button.link {
+    display: block;
+    padding: 0.2rem 0.4rem;
+    border-radius: var(--radius-sm);
+    white-space: normal;
+    text-align: left;
+}
+
+ul.catalog-tree button.link.group {
+    font-weight: 600;
+}
+
+ul.catalog-tree li.active > button.link {
+    background: var(--accent-soft);
+}
+
+.object-id {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    color: var(--text-muted);
+}
+
+.oscal-part {
+    margin: 0.3rem 0 0.3rem 0.6rem;
+    padding-left: 0.6rem;
+    border-left: 2px solid var(--border);
+}
+
+.oscal-part p {
+    margin: 0.15rem 0;
+}
+
+.catalog-ai form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.proposal {
+    margin: 0.6rem 0;
+    padding: 0.6rem;
+    border: 1px dashed var(--border-strong);
+    border-radius: var(--radius-sm);
+}
+
+.catalog-object .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.catalog-object .panel-head h3 {
+    margin: 0;
+}

@@ -41,6 +41,21 @@ fn main() {
         "import_oscal_document",
         "export_oscal_document",
         "delete_oscal_document",
+        "create_catalog",
+        "open_catalog",
+        "add_catalog_group",
+        "update_catalog_group",
+        "add_catalog_control",
+        "update_catalog_control",
+        "delete_catalog_object",
+        "add_catalog_quote",
+        "delete_catalog_quote",
+        "accept_catalog_proposal",
+        "reject_catalog_proposal",
+        "catalog_instructions",
+        "save_catalog_instructions",
+        "propose_catalog_groups",
+        "propose_catalog_controls",
     ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))

@@ -2,6 +2,7 @@
 
 pub mod ai_config_view;
 pub mod app_view;
+pub mod catalog_view;
 pub mod chat_view;
 pub mod error_view;
 pub mod oscal_view;

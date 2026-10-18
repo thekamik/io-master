@@ -2,18 +2,19 @@
 
 Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md` and the order table of `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English.
 
-## Where the project is (2026-10-17)
+## Where the project is (2026-10-18)
 
 - Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branch **`v0.5`**. `v0.4` keeps the state before step 40 and is not changed; `v0.2`/`V0.2` are never changed; `v0.3` keeps the old web interface.
-- **Step 40 (the cleanup of the architecture) is built** on `v0.5`, one commit per part, all pushed: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`, their rules and the tests that check them. Everything is in `docs/code_structure.md`; the parts in `docs/todo.md`, step 40. It waits for the user's review.
-- Built before and carried into the new layout (details in `docs/history.md`): the window, the installation and login, AI connections and chat, the scan of serial ports, documents of standards with the viewer, test projects with schemes, tiles, links and the analysis with the AI, export and import, and the core of the evaluation project (step 29; no window yet).
+- **Step 40 (the cleanup of the architecture) is built** on `v0.5`: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`, their rules and the tests that check them (`docs/code_structure.md`).
+- **Step 41 (NIST OSCAL, `docs/oscal.md`) is being built**, part by part (`docs/todo.md`, step 41): 41.1 to 41.3 are done. The evaluation plan works on documents of OSCAL 1.2.3 (import, export, deletion, every write checked against the schemas of NIST); catalogs are made in the program from the PDFs of a standard, with the AI proposing groups and controls and the evaluator accepting, correcting or rejecting them in the editor of a catalog (`ui/src/components/CatalogEditor.svelte`). The quotes and the proposals are the evaluation support (`db/evaluation_support/`), linked to OSCAL by UUID and id.
 - **The review starts anew** on the code of v0.5 (`review.md`): no approval moved with the code.
 
 ## What comes next
 
-1. **The user reviews the new layout** (step 40), then the code file by file (step 12), from the bottom of the layers up. Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.
-2. Then **step 31: the window of the evaluation** (concept first), on top of `business/evaluations/`.
-3. Later steps in the order table of `docs/todo.md` (13, 6, 8, 9, 10, 4, 11; 30 and 28 with step 23).
+1. **41.4: profile and assessment plan** (the evaluation plan proper), shown as a graph; the CEM and the Protection Profiles as documents of OSCAL that a plan can take. Concept details first where `docs/oscal.md` leaves them open (section 4: the import of an SSP).
+2. **41.5: assessment results** (the evaluation), then steps 31 to 36 on them.
+3. The user's review (step 12), file by file: Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.
+4. Later steps in the order table of `docs/todo.md`.
 
 ## Rules that are easy to forget
 
