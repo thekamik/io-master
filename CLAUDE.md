@@ -71,6 +71,12 @@ The user's guidelines, built in step 40 on the branch `v0.5` (the layout and its
 5. Everything that talks to hardware (devices, UART, Bluetooth, permissions of the ports, ...) is in `hardware_tests/`.
 6. The documentation is renewed, with a new README that states the aims of the project as they are now.
 
+## Standards and NIST OSCAL (user, 2026-10-18; step 41 of docs/todo.md)
+
+- The work with standards is two functions: the **evaluation plan** (was "test project": the OSCAL scheme of a standard, made or loaded, shown as a graph, handed over) and the **evaluation** (evidence and checks with the AI, the report); besides them the program integrates the tools of the functional tests.
+- **The data of the standards is stored in NIST OSCAL** (catalog, mapping, profile, assessment plan, assessment results; SSP and component definition later). What the program adds (AI instructions, prompts, quotes and their checks, proposals, the layout of the graph) is the **evaluation support**, our own model, kept apart and linked to OSCAL objects only by their UUIDs and ids; nothing of ours is written into an OSCAL document.
+- Schemes of our own are needed (Common Criteria, ETSI EN 303 645); the tests also run on files of NIST. Concept and open questions: `docs/oscal.md`.
+
 ## Way of working
 
 - Propose the concept first and get approval, then write code.
