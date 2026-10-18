@@ -20,6 +20,7 @@
 use super::quote::{normalize, normalize_with_places};
 use crate::business::standards::error::DocumentError;
 use crate::db::error::DbError;
+use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::model::standards::{Document, DocumentFields, Hit, MAX_HITS, sha256_hex};
@@ -157,11 +158,13 @@ pub fn update(db: &UserDb, id: i64, fields: &DocumentFields) -> Result<bool, Doc
  * Delete
  * ------------------------------------------------------------- */
 
-/// Removes a document (step 41.3: refused while an OSCAL document
-/// names it).
+/// Removes a document; refused while a quote of an OSCAL document names
+/// it (the evaluation support).
 pub fn delete(db: &UserDb, id: i64) -> Result<bool, DocumentError> {
-    // TODO (step 41.3): refused while an OSCAL document names it as a
-    // resource of its back matter (DocumentError::InUse).
+    // A document a quote of the evaluation support names stays.
+    if db_evaluation_support::read::quotes_source(db, id)? {
+        return Err(DocumentError::InUse);
+    }
 
     // The licensed text is overwritten in the file (db/standards/delete.rs).
     Ok(db_standards::delete::document(db, id)?)

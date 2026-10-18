@@ -11,6 +11,7 @@
 //! assessment_plan.rs     an assessment plan: the evaluation plan
 //! assessment_results.rs  assessment results: the evaluation
 //! schema.rs              the check of a document against the JSON schema of NIST
+//! values.rs              UUIDs, dates and tokens as OSCAL defines them
 //! ```
 //!
 //! **An exception to the rule "the core types carry no serialization
@@ -32,6 +33,7 @@ pub mod common;
 pub mod mapping;
 pub mod profile;
 pub mod schema;
+pub mod values;
 
 use std::fmt;
 

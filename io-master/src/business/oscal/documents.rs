@@ -15,6 +15,7 @@
 use std::fmt;
 
 use crate::db::error::DbError;
+use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
 use crate::model::oscal::{NotOscal, OscalDocument, OscalSummary};
@@ -28,6 +29,15 @@ pub enum OscalError {
     AlreadyStored(String),
     /// There is no document with this UUID.
     NotFound,
+    /// The document is not of the model the operation needs (a catalog,
+    /// ...).
+    WrongModel,
+    /// There is no group or control with this id in the document.
+    NoSuchObject(String),
+    /// Another group or control of the document has this id.
+    IdTaken(String),
+    /// What was given breaks a rule; the reason, for the evaluator.
+    Invalid(String),
     /// The database failed.
     Db(DbError),
 }
@@ -40,6 +50,10 @@ impl fmt::Display for OscalError {
                 write!(formatter, "this document is loaded already, as \"{title}\" (the same UUID)")
             }
             OscalError::NotFound => formatter.write_str("the OSCAL document does not exist"),
+            OscalError::WrongModel => formatter.write_str("the OSCAL document is not of the model this needs"),
+            OscalError::NoSuchObject(id) => write!(formatter, "the document has no group or control {id}"),
+            OscalError::IdTaken(id) => write!(formatter, "another group or control of the document has the id {id}"),
+            OscalError::Invalid(reason) => formatter.write_str(reason),
             OscalError::Db(error) => write!(formatter, "{error}"),
         }
     }
@@ -90,8 +104,10 @@ pub fn export(db: &UserDb, uuid: &str) -> Result<String, OscalError> {
     serde_json::to_string_pretty(&value).map_err(|error| OscalError::NotOscal(NotOscal::Types(error.to_string())))
 }
 
-/// Deletes document `uuid`; returns whether it existed.
+/// Deletes document `uuid` with its evaluation support; returns whether
+/// it existed.
 pub fn delete(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
+    db_evaluation_support::delete::of_document(db, uuid)?;
     db_oscal::delete::document(db, uuid)
 }
 

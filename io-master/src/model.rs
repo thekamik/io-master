@@ -11,6 +11,7 @@
 //! analysis.rs        a part of a standard sent to the AI, and what it proposed
 //! api_key.rs         an API key, wiped from memory, never shown
 //! chats.rs           the chats with the AI
+//! evaluation_support.rs  what the program adds to OSCAL: quotes, proposals of the AI
 //! installation.rs    the installation: identifier, role; user names
 //! oscal.rs           the documents of NIST OSCAL: catalog, mapping, profile,
 //!                    assessment plan, assessment results; their schema
@@ -22,6 +23,7 @@
 pub mod ai;
 pub mod api_key;
 pub mod chats;
+pub mod evaluation_support;
 pub mod installation;
 pub mod oscal;
 pub mod standards;
