@@ -38,8 +38,10 @@ npm run check               # svelte-check, must be clean
 npm run build               # copies pdf.js data, builds ui/dist (needed before cargo build)
 cargo fmt --check
 cargo build && cargo test   # also the test of the architecture and of the command lists
-T=$(rustup run stable rustc --print sysroot); RUSTC=$T/bin/rustc $T/bin/cargo clippy --all-targets --target-dir target/rustup; rm -rf target/rustup
+cargo clippy --all-targets  # only the known warnings of unused code
 ```
+
+Rust comes from rustup (stable, 1.99.1 on 2026-10-18). The system also has the rustc/cargo of the Debian packages (1.95), and `/etc/fish/config.fish` puts `/usr/bin` first in `PATH`; `~/.config/fish/config.fish` moves `~/.cargo/bin` back to the front (`fish_add_path --move --path`). If `rustc --version` shows 1.95, that line is missing, and clippy (rustup only) fails with E0514 on a build made by the other compiler; after a change of compiler, `cargo clean` once.
 
 Window test on a private display (helpers in the scratchpad of the session; recreate them if missing):
 
