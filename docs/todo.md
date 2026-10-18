@@ -248,6 +248,7 @@ A further factor next to the TPM, chosen by each user for their own account (`ar
 - [ ] Without the TPM factor the system database is not encrypted and the private key of the TLS server (step 4) has no key to protect it at program start: decide how it is protected without a TPM.
 - [ ] Final login: limits on failed attempts, session expiry, logout everywhere.
 - [ ] Security review of the whole program.
+- [x] **Paste on Wayland (found 2026-10-18; gone the same day after the user put the packages of the system in order, so a fault of the unstable system, not of the program):** on KDE Plasma (Wayland, Parrot OS, WebKitGTK 2.54.0) the program ended with SIGSEGV when the clipboard was emptied by a clipboard cleaner while it was being pasted. The fault is inside WebKitGTK (`request_targets_received_func` of GTK calls back into WebKit with an empty list of targets); not reproduced on X11, where the same refusals are handled. Should it come back, the concept proposed then: the page catches every paste (Ctrl+V, Shift+Insert, middle click, the context menu of the fields), the program reads the clipboard itself through GTK (`request_text`, an empty clipboard is `None`) and shows "Nothing was pasted: copy the text again" instead of ending.
 - [ ] Installation package: the program and its start as a service; the role is chosen at the first start (step 1).
 
 ---
