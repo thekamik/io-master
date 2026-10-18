@@ -13,8 +13,6 @@
 //! db/ai/              AI: connections, chats, roles,
 //!                     instructions, journal, presets
 //! db/standards/       documents of standards
-//! db/test_projects/   test projects, schemes, tiles, links
-//! db/evaluations/     evaluation projects, results, journal
 //! ```
 //!
 //! ```text
@@ -43,7 +41,7 @@ use rusqlite::Connection;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
-use crate::db::{ai, evaluations, standards, test_projects};
+use crate::db::{ai, standards};
 
 use super::{migrations, schema};
 
@@ -74,8 +72,6 @@ impl UserDb {
         connection.execute_batch(ai::instructions::schema::SCHEMA)?;
         connection.execute_batch(ai::journal::schema::SCHEMA)?;
         connection.execute_batch(standards::schema::SCHEMA)?;
-        connection.execute_batch(test_projects::schema::SCHEMA)?;
-        connection.execute_batch(evaluations::schema::SCHEMA)?;
         migrations::run(&connection)?;
 
         Ok(UserDb { connection })

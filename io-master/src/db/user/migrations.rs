@@ -12,6 +12,8 @@
 //! 1 → 2   the column message_template of ai_connections (step 15);
 //!         what earlier versions kept and this one no longer uses;
 //!         names unique whatever their letter case
+//! 2 → 3   the test projects and the evaluations of the model before
+//!         OSCAL removed (step 41; the user decided: no migration)
 //! ```
 //!
 //! TODO (step 10 of docs/todo.md): before the release, the steps that
@@ -23,7 +25,7 @@ use rusqlite::Connection;
 use crate::db::error::DbError;
 
 /// The version of the layout this program writes.
-pub const VERSION: i64 = 2;
+pub const VERSION: i64 = 3;
 
 /// Brings the database to [`VERSION`].
 pub(super) fn run(connection: &Connection) -> Result<(), DbError> {
@@ -37,6 +39,10 @@ pub(super) fn run(connection: &Connection) -> Result<(), DbError> {
 
     if version < 2 {
         to_2(&transaction)?;
+    }
+
+    if version < 3 {
+        to_3(&transaction)?;
     }
 
     transaction.execute_batch(&format!("PRAGMA user_version = {VERSION}"))?;
@@ -79,9 +85,36 @@ fn to_2(connection: &Connection) -> Result<(), DbError> {
     // them: kept by the database itself. (An index, because the
     // collation of an existing column cannot be changed.)
     connection.execute_batch(
-        "CREATE UNIQUE INDEX IF NOT EXISTS projects_name_nocase ON projects (name COLLATE NOCASE);
-         CREATE UNIQUE INDEX IF NOT EXISTS evaluations_name_nocase ON evaluations (name COLLATE NOCASE);
-         CREATE UNIQUE INDEX IF NOT EXISTS ai_connections_name_nocase ON ai_connections (name COLLATE NOCASE);",
+        "CREATE UNIQUE INDEX IF NOT EXISTS ai_connections_name_nocase ON ai_connections (name COLLATE NOCASE);",
+    )?;
+
+    Ok(())
+}
+
+/// Version 3: the tables of the test projects and of the evaluations,
+/// replaced by the documents of OSCAL (step 41). Their content is
+/// overwritten in the file: an evaluation may hold what a manufacturer
+/// gave under a non-disclosure agreement.
+fn to_3(connection: &Connection) -> Result<(), DbError> {
+    connection.execute_batch(
+        "PRAGMA secure_delete = ON;
+         DROP TRIGGER IF EXISTS evaluation_journal_unchanged;
+         DROP TRIGGER IF EXISTS evaluation_journal_kept;
+         DROP TABLE IF EXISTS evaluation_journal;
+         DROP TABLE IF EXISTS evaluation_proposals;
+         DROP TABLE IF EXISTS evaluation_results;
+         DROP TABLE IF EXISTS evaluation_links;
+         DROP TABLE IF EXISTS evaluation_tile_sources;
+         DROP TABLE IF EXISTS evaluation_tiles;
+         DROP TABLE IF EXISTS evaluation_schemes;
+         DROP TABLE IF EXISTS evaluation_documents;
+         DROP TABLE IF EXISTS evaluations;
+         DROP TABLE IF EXISTS links;
+         DROP TABLE IF EXISTS tile_sources;
+         DROP TABLE IF EXISTS tiles;
+         DROP TABLE IF EXISTS schemes;
+         DROP TABLE IF EXISTS project_documents;
+         DROP TABLE IF EXISTS projects;",
     )?;
 
     Ok(())

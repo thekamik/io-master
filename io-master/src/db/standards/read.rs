@@ -79,13 +79,3 @@ pub fn each_page(
 
     Ok(())
 }
-
-/// Whether a test project or an evaluation project uses a document.
-pub fn in_use(db: &UserDb, id: i64) -> Result<bool, DbError> {
-    Ok(db.connection().query_row(
-        "SELECT EXISTS (SELECT 1 FROM project_documents WHERE document_id = ?1) \
-         OR EXISTS (SELECT 1 FROM evaluation_documents WHERE document_id = ?1)",
-        [id],
-        |row| row.get(0),
-    )?)
-}

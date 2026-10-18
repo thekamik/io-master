@@ -157,12 +157,11 @@ pub fn update(db: &UserDb, id: i64, fields: &DocumentFields) -> Result<bool, Doc
  * Delete
  * ------------------------------------------------------------- */
 
-/// Removes a document; refused while a test project or an
-/// evaluation project uses it.
+/// Removes a document (step 41.3: refused while an OSCAL document
+/// names it).
 pub fn delete(db: &UserDb, id: i64) -> Result<bool, DocumentError> {
-    if db_standards::read::in_use(db, id)? {
-        return Err(DocumentError::InUse);
-    }
+    // TODO (step 41.3): refused while an OSCAL document names it as a
+    // resource of its back matter (DocumentError::InUse).
 
     // The licensed text is overwritten in the file (db/standards/delete.rs).
     Ok(db_standards::delete::document(db, id)?)

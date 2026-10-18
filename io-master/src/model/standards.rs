@@ -13,7 +13,7 @@
 //! ```
 //!
 //! A standard often comes in several documents (CC Part 1 to 5 and
-//! the CEM); each is loaded on its own, and a test project names the
+//! the CEM); each is loaded on its own, and the OSCAL documents of step 41 name the
 //! ones it uses. The same file is loaded once: its SHA-256 finds it
 //! again, also when a project is imported. A document is only loaded
 //! and read, never edited as an object in memory: its functions go to

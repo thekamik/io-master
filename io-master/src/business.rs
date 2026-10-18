@@ -8,18 +8,14 @@
 //! session/         the logged-in evaluator: accounts, login, password
 //! business/installation/    the first start, the state of the installation
 //! business/standards/       the documents of standards
-//! business/test_projects/   the test projects: schemes, tiles, links, analysis
-//! evaluations/     the evaluation projects: results, proposals, journal
 //! chats/           the chats with the AI
 //! hardware/        the scan of the ports and its settings
 //! work.rs          what the long works share: stop, error, steps
 //! ```
 
 pub mod chats;
-pub mod evaluations;
 pub mod hardware;
 pub mod installation;
 pub mod session;
 pub mod standards;
-pub mod test_projects;
 pub mod work;

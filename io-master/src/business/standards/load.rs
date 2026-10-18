@@ -38,8 +38,7 @@ fn file_name(path: &Path) -> String {
 
 /// Reads the text of `pdf` page by page, on a thread for blocking work,
 /// reporting the pages read. `Ok(None)`: the work was stopped. Also used
-/// for the PDFs a file of a test project carries
-/// (`test_projects/exchange/import.rs`).
+/// for the PDFs other files carry.
 pub async fn read_pdf(
     pdf: Vec<u8>,
     cancel: &Cancel,

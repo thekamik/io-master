@@ -10,7 +10,6 @@
 //! Cancel       the stop signal ("Stop" in the window, or the logout)
 //! WorkError    why a long work could not go on
 //! on_db()      one step on the database, on a thread for blocking work
-//! on_project() one step on a test project open for editing
 //! ```
 
 use std::fmt;
@@ -22,8 +21,6 @@ use crate::ai::api::roles::ModelError;
 use crate::business::chats::conversation::SendError;
 use crate::business::session::Session;
 use crate::business::standards::error::DocumentError;
-use crate::business::test_projects::error::StoreError;
-use crate::business::test_projects::workspace::OpenProject;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
@@ -52,8 +49,6 @@ impl Cancel {
 pub enum WorkError {
     /// What was asked is not possible; the reason, for the evaluator.
     Invalid(String),
-    /// A rule of a test project.
-    Store(StoreError),
     /// A document of a standard.
     Document(DocumentError),
     /// No AI connection can be used for the task.
@@ -70,7 +65,6 @@ impl fmt::Display for WorkError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             WorkError::Invalid(reason) => formatter.write_str(reason),
-            WorkError::Store(error) => write!(formatter, "{error}"),
             WorkError::Document(error) => write!(formatter, "{error}"),
             WorkError::Model(error) => write!(formatter, "{error}"),
             WorkError::Message(error) => write!(formatter, "{error}"),
@@ -81,12 +75,6 @@ impl fmt::Display for WorkError {
 }
 
 impl std::error::Error for WorkError {}
-
-impl From<StoreError> for WorkError {
-    fn from(error: StoreError) -> WorkError {
-        WorkError::Store(error)
-    }
-}
 
 impl From<DocumentError> for WorkError {
     fn from(error: DocumentError) -> WorkError {
@@ -121,23 +109,4 @@ pub async fn on_db<T: Send + 'static>(
     let session = session.clone();
 
     tokio::task::spawn_blocking(move || step(&session.db())).await.unwrap_or(Err(WorkError::Interrupted))
-}
-
-/// Runs one step on test project `project` of `session`, open for
-/// editing (opened from the database when it is not open yet).
-pub async fn on_project<T: Send + 'static>(
-    session: &Arc<Session>,
-    project: i64,
-    step: impl FnOnce(&UserDb, &mut OpenProject) -> Result<T, WorkError> + Send + 'static,
-) -> Result<T, WorkError> {
-    let session = session.clone();
-
-    tokio::task::spawn_blocking(move || {
-        let (db, mut projects) = session.projects();
-        let open = projects.open(&db, project)?;
-
-        step(&db, open)
-    })
-    .await
-    .unwrap_or(Err(WorkError::Interrupted))
 }

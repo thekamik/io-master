@@ -1,7 +1,7 @@
 //! The rules every text field of the program follows, the error when
 //! one is broken, and the names of the fields and of the objects the
 //! errors of the rules speak of (as enums, so that the window can tell
-//! them apart). The areas (`test_projects.rs`, `evaluations.rs`,
+//! them apart). The areas (`standards.rs`, and the documents of OSCAL of step 41,
 //! `standards.rs`) check their fields with [`check_text`] and turn
 //! [`Invalid`] into their own errors.
 

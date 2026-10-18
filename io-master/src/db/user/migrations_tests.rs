@@ -71,18 +71,39 @@ fn version_2_adds_the_message_template() {
 }
 
 #[test]
-fn names_are_unique_whatever_their_letter_case() {
+fn names_of_ai_connections_are_unique_whatever_their_letter_case() {
     let directory = TempDir::new();
     let (db, _) = database(&directory);
-    let insert = |name: &str| {
-        db.connection_for_tests().execute(
-            "INSERT INTO projects (name, version, description, author, ready) VALUES (?1, '', '', '', 0)",
-            [name],
+    let index: i64 = db
+        .connection_for_tests()
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'ai_connections_name_nocase'",
+            [],
+            |row| row.get(0),
         )
-    };
+        .unwrap();
 
-    insert("ADV and ATE").unwrap();
-    assert!(insert("adv AND ate").is_err());
+    assert_eq!(index, 1);
+}
+
+#[test]
+fn version_3_removes_the_tables_of_the_model_before_oscal() {
+    let directory = TempDir::new();
+    let (db, key) = database(&directory);
+
+    db.connection_for_tests()
+        .execute_batch("CREATE TABLE projects (id INTEGER PRIMARY KEY); PRAGMA user_version = 2;")
+        .unwrap();
+    drop(db);
+
+    let db = user_db::open(directory.path(), 1, &key).unwrap();
+    let left: i64 = db
+        .connection_for_tests()
+        .query_row("SELECT COUNT(*) FROM sqlite_master WHERE name = 'projects'", [], |row| row.get(0))
+        .unwrap();
+
+    assert_eq!(left, 0);
+    assert_eq!(version(&db), VERSION);
 }
 
 #[test]

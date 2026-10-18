@@ -23,9 +23,7 @@ pub mod account;
 pub mod ai;
 pub mod chats;
 pub mod documents;
-pub mod projects;
 pub mod scan;
-pub mod schemes;
 
 use tauri::ipc::{Channel, Response};
 use tauri::{AppHandle, State};
@@ -35,9 +33,7 @@ use super::error::UiError;
 use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
 use super::serializer::app_view::AppView;
 use super::serializer::chat_view::{ChatSummaryView, ChatView, ReplyEvent};
-use super::serializer::project_view::{ProjectDataView, ProjectForm, ProjectView, SchemeForm};
 use super::serializer::scan_view::ScanView;
-use super::serializer::scheme_view::{AnalysisEvent, PageRange, SchemeDataView, TileForm};
 use super::serializer::standard_view::{DocumentForm, DocumentView, HitView, LoadEvent};
 use super::state::UiState;
 
@@ -199,7 +195,7 @@ pub fn stop_reply(state: State<'_, UiState>) {
 }
 
 /* ---------------------------------------------------------------
- * Create evaluation scheme: the documents of standards
+ * The evaluation plan: the documents of standards
  * ------------------------------------------------------------- */
 
 #[tauri::command]
@@ -270,255 +266,6 @@ pub async fn search_documents(
     document: Option<i64>,
 ) -> Result<Vec<HitView>, UiError> {
     documents::search(&state, text, document).await
-}
-
-/* ---------------------------------------------------------------
- * Create evaluation scheme: the test projects
- * ------------------------------------------------------------- */
-
-#[tauri::command]
-pub async fn list_projects(state: State<'_, UiState>) -> Result<Vec<ProjectView>, UiError> {
-    projects::list(&state).await
-}
-
-#[tauri::command]
-pub async fn create_project(state: State<'_, UiState>, project: ProjectForm) -> Result<ProjectDataView, UiError> {
-    projects::create(&state, project).await
-}
-
-#[tauri::command]
-pub async fn open_project(state: State<'_, UiState>, id: i64) -> Result<ProjectDataView, UiError> {
-    projects::open(&state, id).await
-}
-
-#[tauri::command]
-pub async fn update_project(
-    state: State<'_, UiState>,
-    id: i64,
-    project: ProjectForm,
-) -> Result<ProjectDataView, UiError> {
-    projects::update(&state, id, project).await
-}
-
-#[tauri::command]
-pub async fn set_project_ready(state: State<'_, UiState>, id: i64, ready: bool) -> Result<ProjectDataView, UiError> {
-    projects::set_ready(&state, id, ready).await
-}
-
-#[tauri::command]
-pub async fn delete_project(state: State<'_, UiState>, id: i64) -> Result<(), UiError> {
-    projects::delete(&state, id).await
-}
-
-#[tauri::command]
-pub async fn create_scheme(
-    state: State<'_, UiState>,
-    project: i64,
-    scheme: SchemeForm,
-) -> Result<ProjectDataView, UiError> {
-    projects::create_scheme(&state, project, scheme).await
-}
-
-#[tauri::command]
-pub async fn update_scheme(state: State<'_, UiState>, id: i64, scheme: SchemeForm) -> Result<ProjectDataView, UiError> {
-    projects::update_scheme(&state, id, scheme).await
-}
-
-#[tauri::command]
-pub async fn accept_schemes(
-    state: State<'_, UiState>,
-    project: i64,
-    ids: Vec<i64>,
-) -> Result<ProjectDataView, UiError> {
-    projects::accept_schemes(&state, project, ids).await
-}
-
-#[tauri::command]
-pub async fn delete_schemes(
-    state: State<'_, UiState>,
-    project: i64,
-    ids: Vec<i64>,
-) -> Result<ProjectDataView, UiError> {
-    projects::delete_schemes(&state, project, ids).await
-}
-
-/// Reads the table of contents on `range` with AI and stores its
-/// chapters as proposed schemes; the progress arrives through
-/// `on_event`, "Stop" is `stop_work`.
-#[tauri::command]
-pub async fn propose_schemes(
-    state: State<'_, UiState>,
-    project: i64,
-    range: PageRange,
-    on_event: Channel<AnalysisEvent>,
-) -> Result<ProjectDataView, UiError> {
-    projects::propose_schemes(&state, project, range, move |event| on_event.send(event).is_ok()).await
-}
-
-/// Asks where to save the file of a project, and writes it; `false`
-/// when the user closed the dialog.
-#[tauri::command]
-pub async fn export_project(
-    app: AppHandle,
-    state: State<'_, UiState>,
-    id: i64,
-    with_pdfs: bool,
-) -> Result<bool, UiError> {
-    let name = projects::open(&state, id).await?.project.name;
-    let file_name: String = name
-        .chars()
-        .map(|character| if character.is_alphanumeric() || "-_ .".contains(character) { character } else { '_' })
-        .collect();
-
-    let chosen = tokio::task::spawn_blocking(move || {
-        app.dialog()
-            .file()
-            .set_title("Export the test project")
-            .set_file_name(format!("{}.project.json", file_name.trim()))
-            .add_filter("Test project", &["json"])
-            .blocking_save_file()
-    })
-    .await
-    .map_err(|error| UiError::Failed(format!("the dialog failed: {error}")))?;
-
-    let Some(path) = chosen.and_then(|file| file.into_path().ok()) else {
-        return Ok(false);
-    };
-
-    projects::export(&state, id, with_pdfs, &path).await?;
-
-    Ok(true)
-}
-
-/// Asks for the file of a project and imports it; `None` when the user
-/// closed the dialog. Documents loaded from the file are reported
-/// through `on_event`.
-#[tauri::command]
-pub async fn import_project(
-    app: AppHandle,
-    state: State<'_, UiState>,
-    on_event: Channel<LoadEvent>,
-) -> Result<Option<ProjectDataView>, UiError> {
-    state.session()?;
-
-    let chosen = tokio::task::spawn_blocking(move || {
-        app.dialog()
-            .file()
-            .set_title("Import a test project")
-            .add_filter("Test project", &["json"])
-            .blocking_pick_file()
-    })
-    .await
-    .map_err(|error| UiError::Failed(format!("the dialog failed: {error}")))?;
-
-    let Some(path) = chosen.and_then(|file| file.into_path().ok()) else {
-        return Ok(None);
-    };
-
-    Ok(Some(projects::import(&state, &path, move |event| on_event.send(event).is_ok()).await?))
-}
-
-/* ---------------------------------------------------------------
- * Create evaluation scheme: the drawing of a scheme
- * ------------------------------------------------------------- */
-
-#[tauri::command]
-pub async fn open_scheme(state: State<'_, UiState>, id: i64) -> Result<SchemeDataView, UiError> {
-    schemes::open(&state, id).await
-}
-
-#[tauri::command]
-pub async fn add_tile(state: State<'_, UiState>, scheme: i64, tile: TileForm) -> Result<SchemeDataView, UiError> {
-    schemes::add_tile(&state, scheme, tile).await
-}
-
-#[tauri::command]
-pub async fn update_tile(state: State<'_, UiState>, id: i64, tile: TileForm) -> Result<SchemeDataView, UiError> {
-    schemes::update_tile(&state, id, tile).await
-}
-
-#[tauri::command]
-pub async fn move_tile(state: State<'_, UiState>, id: i64, x: f64, y: f64) -> Result<(), UiError> {
-    schemes::move_tile(&state, id, x, y).await
-}
-
-/// Moves tiles to the scheme `to`; gives back the scheme `scheme`
-/// shown.
-#[tauri::command]
-pub async fn move_tiles(
-    state: State<'_, UiState>,
-    scheme: i64,
-    ids: Vec<i64>,
-    to: i64,
-) -> Result<SchemeDataView, UiError> {
-    schemes::move_tiles(&state, scheme, ids, to).await
-}
-
-#[tauri::command]
-pub async fn delete_tiles(state: State<'_, UiState>, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
-    schemes::delete_tiles(&state, scheme, ids).await
-}
-
-#[tauri::command]
-pub async fn accept_tiles(state: State<'_, UiState>, scheme: i64, ids: Vec<i64>) -> Result<SchemeDataView, UiError> {
-    schemes::accept_tiles(&state, scheme, ids).await
-}
-
-#[tauri::command]
-pub async fn add_link(state: State<'_, UiState>, scheme: i64, from: i64, to: i64) -> Result<SchemeDataView, UiError> {
-    schemes::add_link(&state, scheme, from, to).await
-}
-
-#[tauri::command]
-pub async fn delete_link(state: State<'_, UiState>, scheme: i64, id: i64) -> Result<SchemeDataView, UiError> {
-    schemes::delete_link(&state, scheme, id).await
-}
-
-#[tauri::command]
-pub async fn undo_scheme(state: State<'_, UiState>, scheme: i64) -> Result<SchemeDataView, UiError> {
-    schemes::undo(&state, scheme).await
-}
-
-/// The instructions `which` ("chapter" or "contents") of the AI.
-#[tauri::command]
-pub async fn analysis_instructions(state: State<'_, UiState>, which: String) -> Result<String, UiError> {
-    schemes::instructions(&state, which).await
-}
-
-/// Stores the instructions `which`; empty text: the default.
-#[tauri::command]
-pub async fn save_analysis_instructions(
-    state: State<'_, UiState>,
-    which: String,
-    text: String,
-) -> Result<String, UiError> {
-    schemes::save_instructions(&state, which, text).await
-}
-
-/// Analyses pages of the documents of the project for one scheme with
-/// AI (no ranges: the pages of the scheme); the progress arrives
-/// through `on_event`, "Stop" is `stop_work`.
-#[tauri::command]
-pub async fn analyse_scheme(
-    state: State<'_, UiState>,
-    scheme: i64,
-    ranges: Vec<PageRange>,
-    part_size: usize,
-    on_event: Channel<AnalysisEvent>,
-) -> Result<SchemeDataView, UiError> {
-    schemes::analyse(&state, scheme, ranges, part_size, move |event| on_event.send(event).is_ok()).await
-}
-
-/// Analyses several schemes of a project, each on its own pages.
-#[tauri::command]
-pub async fn analyse_schemes(
-    state: State<'_, UiState>,
-    project: i64,
-    ids: Vec<i64>,
-    part_size: usize,
-    on_event: Channel<AnalysisEvent>,
-) -> Result<ProjectDataView, UiError> {
-    schemes::analyse_schemes(&state, project, ids, part_size, move |event| on_event.send(event).is_ok()).await
 }
 
 /// The PDF of a document, as raw bytes (an ArrayBuffer in the page),

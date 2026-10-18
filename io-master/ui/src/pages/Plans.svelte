@@ -1,37 +1,28 @@
 <!--
-  The tool Create evaluation scheme (steps 16 to 27 of
-  docs/todo.md), in two tabs:
+  The evaluation plan (step 41 of docs/todo.md, docs/oscal.md), in two
+  tabs:
 
-  - Test projects: the maps of standards, made here or imported from a
-    file (a head of the laboratory gives them to the evaluators); a
-    project holds one scheme per chapter of the standard and is opened
-    in ProjectEditor.svelte;
+  - OSCAL: the documents of the standards in NIST OSCAL (catalogs,
+    mappings, profiles, assessment plans), made or loaded, and the plan
+    shown as a graph (built in steps 41.2 to 41.4);
   - Documents: the documents of standards (PDF), loaded into the
     encrypted database, with their text page by page, searched and
-    shown in the viewer.
+    shown in the viewer; the sources the OSCAL documents quote.
 -->
 <script lang="ts">
   import { onMount } from "svelte";
 
   import { deleteDocument, listDocuments, loadDocuments, searchDocuments, stopWork, updateDocument, type DocumentView, type HitView, type LoadEvent } from "../lib/api/documents";
 import { sentence } from "../lib/api/errors";
-import { createProject, deleteProject, importProject, listProjects, type ProjectView } from "../lib/api/projects";
   import PdfViewer from "../components/PdfViewer.svelte";
-  import ProjectEditor from "../components/ProjectEditor.svelte";
 
-  type Tab = "projects" | "documents";
+  type Tab = "oscal" | "documents";
 
-  let tab: Tab = $state("projects");
-  let projects: ProjectView[] = $state([]);
+  let tab: Tab = $state("documents");
   let documents: DocumentView[] = $state([]);
   let problem = $state("");
   let notice = $state("");
 
-  /** The project open. */
-  let open = $state<number | null>(null);
-
-  let creating = $state<{ name: string; author: string; documents: number[] } | null>(null);
-  let confirmDelete = $state<number | null>(null);
 
   // Loading documents and importing.
   let loading = $state(false);
@@ -46,7 +37,7 @@ import { createProject, deleteProject, importProject, listProjects, type Project
 
   async function refresh() {
     try {
-      [projects, documents] = await Promise.all([listProjects(), listDocuments()]);
+      documents = await listDocuments();
     } catch (error) {
       problem = sentence(error);
     }
@@ -93,54 +84,6 @@ import { createProject, deleteProject, importProject, listProjects, type Project
     }
   }
 
-  async function importFile() {
-    loading = true;
-    problem = "";
-    notice = "";
-    log = [];
-
-    try {
-      const imported = await importProject(loadEvent);
-
-      if (imported) {
-        await refresh();
-        notice = `The test project ${imported.project.name} was imported.`;
-        open = imported.project.id;
-      }
-    } catch (error) {
-      problem = `The test project was not imported: ${sentence(error)}`;
-    } finally {
-      loading = false;
-      progress = "";
-    }
-  }
-
-  async function create(event: SubmitEvent) {
-    event.preventDefault();
-
-    if (!creating) {
-      return;
-    }
-
-    try {
-      const made = await createProject({ name: creating.name, version: "1.0", description: "", author: creating.author, documents: creating.documents });
-      creating = null;
-      await refresh();
-      open = made.project.id;
-    } catch (error) {
-      problem = `The test project was not made: ${sentence(error)}`;
-    }
-  }
-
-  async function removeProject(id: number) {
-    try {
-      await deleteProject(id);
-      confirmDelete = null;
-      await refresh();
-    } catch (error) {
-      problem = sentence(error);
-    }
-  }
 
   async function saveDocument(event: SubmitEvent) {
     event.preventDefault();
@@ -176,18 +119,8 @@ import { createProject, deleteProject, importProject, listProjects, type Project
   }
 </script>
 
-{#if open !== null}
-  <ProjectEditor
-    projectId={open}
-    {documents}
-    onclose={() => {
-      open = null;
-      refresh();
-    }}
-  />
-{:else}
-  <div class="tabs">
-    <button type="button" class:active={tab === "projects"} onclick={() => (tab = "projects")}>Test projects</button>
+<div class="tabs">
+    <button type="button" class:active={tab === "oscal"} onclick={() => (tab = "oscal")}>OSCAL</button>
     <button type="button" class:active={tab === "documents"} onclick={() => (tab = "documents")}>
       Documents of standards
     </button>
@@ -210,51 +143,15 @@ import { createProject, deleteProject, importProject, listProjects, type Project
     </div>
   {/if}
 
-  {#if tab === "projects"}
-    <div class="buttons section-actions">
-      <button type="button" class="primary" onclick={() => (creating = { name: "", author: "", documents: documents.map((document) => document.id) })}>
-        New test project
-      </button>
-      <button type="button" onclick={importFile} disabled={loading}>Import a test project…</button>
+  {#if tab === "oscal"}
+    <div class="card">
+      <h3>The standards in NIST OSCAL</h3>
+      <p class="note">
+        The evaluation plan is built on NIST OSCAL: the requirements of a standard as a catalog, the choice for one
+        evaluation as a profile, the plan as an assessment plan, shown as a graph. This tab comes with step 41.2;
+        until then, load the documents of the standards (tab Documents of standards).
+      </p>
     </div>
-
-    {#if projects.length === 0}
-      <div class="card">
-        <h3>No test project yet</h3>
-        <p class="note">
-          A test project maps a standard for evaluations: one scheme per chapter, each with its inputs, requirements and
-          outputs, as tiles joined by links. Load the documents of the standard first (tab Documents of standards), then
-          make a project: the AI reads the table of contents and proposes the chapters, then proposes the tiles of each;
-          you correct and accept. A project made by the head of the laboratory is imported.
-        </p>
-      </div>
-    {:else}
-      <div class="scheme-list">
-        {#each projects as project (project.id)}
-          <div class="card scheme-card">
-            <div class="scheme-card-head">
-              <h3>{project.name}</h3>
-              <span class="badge {project.ready ? 'success' : ''}">{project.ready ? "ready" : "draft"}</span>
-            </div>
-            <p class="note">
-              {project.version ? `Version ${project.version}` : "No version"}{project.author ? ` · ${project.author}` : ""} ·
-              {project.documents.length} document{project.documents.length === 1 ? "" : "s"}
-            </p>
-            {#if project.description}<p>{project.description}</p>{/if}
-            <div class="buttons">
-              <button type="button" class="primary" onclick={() => (open = project.id)}>Open</button>
-              {#if confirmDelete === project.id}
-                <span class="note">Delete the project with its schemes?</span>
-                <button type="button" class="danger" onclick={() => removeProject(project.id)}>Delete</button>
-                <button type="button" onclick={() => (confirmDelete = null)}>Keep</button>
-              {:else}
-                <button type="button" class="danger" onclick={() => (confirmDelete = project.id)}>Delete</button>
-              {/if}
-            </div>
-          </div>
-        {/each}
-      </div>
-    {/if}
   {:else}
     <div class="buttons section-actions">
       <button type="button" class="primary" onclick={load} disabled={loading}>Load PDFs…</button>
@@ -315,32 +212,6 @@ import { createProject, deleteProject, importProject, listProjects, type Project
       </div>
     {/if}
   {/if}
-{/if}
-
-{#if creating}
-  <div class="overlay" role="presentation">
-    <form class="dialog" onsubmit={create}>
-      <h2>New test project</h2>
-      <label>Name <input bind:value={creating.name} required placeholder="EN 18031-1" /></label>
-      <label>Author <input bind:value={creating.author} placeholder="Head of the laboratory" /></label>
-      <fieldset class="flat">
-        <legend>Documents of the standard</legend>
-        {#each documents as document (document.id)}
-          <label class="choice">
-            <input type="checkbox" bind:group={creating.documents} value={document.id} />
-            {title(document)}
-          </label>
-        {:else}
-          <p class="note">No document is loaded yet; they can be added later in the settings of the project.</p>
-        {/each}
-      </fieldset>
-      <div class="buttons">
-        <button type="submit">Make the project</button>
-        <button type="button" onclick={() => (creating = null)}>Cancel</button>
-      </div>
-    </form>
-  </div>
-{/if}
 
 {#if editing}
   <div class="overlay" role="presentation">

@@ -55,7 +55,7 @@ pub async fn with_document() -> (TestState, i64) {
     let path = directory.path().join("cc-part3.pdf");
     std::fs::write(
         &path,
-        crate::business::test_projects::test_support::pdf(&[
+        crate::business::standards::test_support::pdf(&[
             "ADV_FSP.4 Complete functional specification",
             "The developer shall provide a functional specification.",
             "ATE_IND.2 The evaluator shall test a subset of the TSF.",
@@ -67,34 +67,4 @@ pub async fn with_document() -> (TestState, i64) {
     let id = super::commands::documents::list(&test.state).await.unwrap()[0].id;
 
     (test, id)
-}
-
-/// The form of a project that uses `documents`.
-pub fn project_form(name: &str, documents: Vec<i64>) -> super::serializer::project_view::ProjectForm {
-    super::serializer::project_view::ProjectForm {
-        name: name.into(),
-        version: "1".into(),
-        description: String::new(),
-        author: "Head".into(),
-        documents,
-    }
-}
-
-/// The form of an accepted scheme, with the pages `pages` of
-/// `document` when given.
-pub fn scheme_form(
-    number: &str,
-    name: &str,
-    pages: Option<(i64, u32, u32)>,
-) -> super::serializer::project_view::SchemeForm {
-    super::serializer::project_view::SchemeForm {
-        number: number.into(),
-        name: name.into(),
-        pages: pages.map(|(document_id, first_page, last_page)| super::serializer::project_view::PageSpanView {
-            document_id,
-            first_page,
-            last_page,
-        }),
-        state: "accepted".into(),
-    }
 }

@@ -4,12 +4,10 @@ use super::*;
 
 use crate::model::ai::Role;
 
-use crate::business::test_projects::test_support::database;
+use crate::business::standards::test_support::database;
 
 #[test]
 fn every_task_has_its_role() {
-    assert_eq!(Task::Chapter.role(), Some(Role::TextAnalysis));
-    assert_eq!(Task::Contents.role(), Some(Role::TextAnalysis));
     assert_eq!(Task::Chat.role(), Some(Role::Consultation));
     assert_eq!(Task::Check.role(), None);
 
@@ -19,22 +17,13 @@ fn every_task_has_its_role() {
 }
 
 #[test]
-fn instructions_are_changed_and_brought_back() {
+fn a_task_without_instructions_stores_none() {
+    // The tasks with instructions of their own come back with the
+    // catalogs of step 41; the chat and the check have none.
     let test = database();
 
-    assert_eq!(instructions(&test.db, Task::Chapter).unwrap().as_deref(), Some(chapter::DEFAULT_INSTRUCTIONS));
-
-    assert_eq!(set_instructions(&test.db, Task::Chapter, "Mine.").unwrap().as_deref(), Some("Mine."));
-    assert_eq!(instructions(&test.db, Task::Chapter).unwrap().as_deref(), Some("Mine."));
-    // The other task keeps its own.
-    assert_eq!(instructions(&test.db, Task::Contents).unwrap().as_deref(), Some(contents::DEFAULT_INSTRUCTIONS));
-
-    // Empty text: the default ones again.
-    let brought_back = set_instructions(&test.db, Task::Chapter, "  ").unwrap();
-    assert_eq!(brought_back.as_deref(), Some(chapter::DEFAULT_INSTRUCTIONS));
-    assert_eq!(instructions(&test.db, Task::Chapter).unwrap().as_deref(), Some(chapter::DEFAULT_INSTRUCTIONS));
-
-    // A task without instructions stores none.
-    assert_eq!(set_instructions(&test.db, Task::Chat, "x").unwrap(), None);
-    assert_eq!(instructions(&test.db, Task::Chat).unwrap(), None);
+    for task in Task::ALL {
+        assert_eq!(set_instructions(&test.db, task, "x").unwrap(), None);
+        assert_eq!(instructions(&test.db, task).unwrap(), None);
+    }
 }

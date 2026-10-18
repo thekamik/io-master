@@ -326,7 +326,7 @@ pub enum Role {
 /// The form of the answer a role expects.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AnswerForm {
-    /// One JSON object, read by the task (`business/test_projects/analysis/chapter.rs`).
+    /// One JSON object, read by the task (the tasks of the catalogs, step 41).
     Json,
     /// Free text.
     Text,
@@ -397,10 +397,6 @@ impl Role {
 /// A task of the AI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Task {
-    /// The analysis of a chapter of a standard: tiles and links.
-    Chapter,
-    /// Reading the table of contents of a standard: the schemes.
-    Contents,
     /// A message of the chat.
     Chat,
     /// The check of a connection.
@@ -408,13 +404,11 @@ pub enum Task {
 }
 
 impl Task {
-    pub const ALL: [Task; 4] = [Task::Chapter, Task::Contents, Task::Chat, Task::Check];
+    pub const ALL: [Task; 2] = [Task::Chat, Task::Check];
 
     /// The name kept in the database and in the journal.
     pub fn name(self) -> &'static str {
         match self {
-            Task::Chapter => "chapter",
-            Task::Contents => "contents",
             Task::Chat => "chat",
             Task::Check => "check",
         }
@@ -427,7 +421,6 @@ impl Task {
     /// The role it is asked in; `None` for the check of a connection.
     pub fn role(self) -> Option<Role> {
         match self {
-            Task::Chapter | Task::Contents => Some(Role::TextAnalysis),
             Task::Chat => Some(Role::Consultation),
             Task::Check => None,
         }

@@ -35,7 +35,7 @@
 //!                              NOT encrypted (see create_plain())
 //! db/user/     users/<id>.db   the data of one evaluator; encrypted
 //!                              (and the areas db/ai/, db/standards/,
-//!                              db/test_projects/, db/evaluations/,
+//!                              and the further areas of db/,
 //!                              whose tables live in it)
 //! ```
 //!

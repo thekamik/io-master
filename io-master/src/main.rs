@@ -127,14 +127,14 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         // listed in build.rs and capabilities/default.json, or the
         // page is refused when it calls it.
         .invoke_handler(tauri::generate_handler![
-            // The program and the account (account_actions.rs).
+            // The program and the account (commands/account.rs).
             commands::app_state,
             commands::set_up,
             commands::log_in,
             commands::log_out,
             commands::change_password,
             // Settings, tab AI: the connections to AI services
-            // (ai_config_actions.rs).
+            // (commands/ai.rs).
             commands::ai_config,
             commands::save_ai_connection,
             commands::delete_ai_connection,
@@ -143,17 +143,17 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             commands::delete_ai_key,
             commands::check_ai_connection,
             commands::ai_field_instruction,
-            // The scan of the serial ports (scan_actions.rs).
+            // The scan of the serial ports (commands/scan.rs).
             commands::scan_ports,
             commands::save_scan_settings,
-            // The chat with the AI (chat_actions.rs).
+            // The chat with the AI (commands/chats.rs).
             commands::list_chats,
             commands::open_chat,
             commands::delete_chat,
             commands::send_message,
             commands::stop_reply,
-            // Create evaluation scheme: the documents of the standards
-            // (standard_actions.rs).
+            // The evaluation plan: the documents of the standards
+            // (commands/documents.rs).
             commands::list_documents,
             commands::load_documents,
             commands::stop_work,
@@ -162,39 +162,6 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             commands::document_page,
             commands::search_documents,
             commands::document_pdf,
-            // Create evaluation scheme: the test projects, the list of
-            // their schemes, the table of contents read by the AI, the
-            // exchange as a file (project_actions.rs).
-            commands::list_projects,
-            commands::create_project,
-            commands::open_project,
-            commands::update_project,
-            commands::set_project_ready,
-            commands::delete_project,
-            commands::create_scheme,
-            commands::update_scheme,
-            commands::accept_schemes,
-            commands::delete_schemes,
-            commands::propose_schemes,
-            commands::export_project,
-            commands::import_project,
-            // Create evaluation scheme: the drawing of one scheme, its
-            // tiles and links, and the analysis of chapters by the AI
-            // (scheme_actions.rs).
-            commands::open_scheme,
-            commands::add_tile,
-            commands::update_tile,
-            commands::move_tile,
-            commands::move_tiles,
-            commands::delete_tiles,
-            commands::accept_tiles,
-            commands::add_link,
-            commands::delete_link,
-            commands::undo_scheme,
-            commands::analysis_instructions,
-            commands::save_analysis_instructions,
-            commands::analyse_scheme,
-            commands::analyse_schemes,
         ])
         .run(tauri::generate_context!());
 

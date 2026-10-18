@@ -8,7 +8,7 @@ use tokio::sync::watch;
 use crate::ai::api::test_support::{
     FakeAnswer, FakeService, checked, completions as completions_format, completions_events, data,
 };
-use crate::business::test_projects::test_support::database;
+use crate::business::standards::test_support::database;
 use crate::db::ai::journal::read as journal_read;
 use crate::model::api_key::ApiKey;
 
@@ -93,10 +93,10 @@ async fn a_question_is_recorded_without_the_key() {
     let reply = create(&model, &turns, &receiver, |_| true).await;
 
     let test = database();
-    record(&test.db, &model, Task::Contents, &turns, &reply).unwrap();
+    record(&test.db, &model, Task::Chat, &turns, &reply).unwrap();
 
     let entry = &journal_read::last(&test.db, 1).unwrap()[0];
-    assert_eq!((entry.task.as_str(), entry.role.as_str()), ("contents", "text_analysis"));
+    assert_eq!((entry.task.as_str(), entry.role.as_str()), ("chat", "consultation"));
     assert_eq!((entry.connection.as_str(), entry.model.as_str()), ("Local", "local-model"));
     assert!(entry.request.contains("Read the table of contents."), "{}", entry.request);
     assert!(!entry.request.contains("sk-test-secret"));

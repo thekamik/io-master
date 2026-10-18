@@ -12,7 +12,7 @@ pub enum DocumentError {
     Invalid(String),
     /// The same file is loaded already, as this document.
     Duplicate(i64),
-    /// A test project or an evaluation project uses the document.
+    /// An OSCAL document names the document (step 41.3).
     InUse,
     /// The database failed.
     Db(DbError),
@@ -23,10 +23,8 @@ impl fmt::Display for DocumentError {
         match self {
             DocumentError::Invalid(reason) => formatter.write_str(reason),
             DocumentError::Duplicate(_) => formatter.write_str("this file is loaded already"),
-            DocumentError::InUse => formatter.write_str(
-                "a test project or an evaluation uses this document; remove it from the test project, \
-                     or delete the evaluation, first",
-            ),
+            DocumentError::InUse => formatter
+                .write_str("an OSCAL document names this document as its source; remove it from that document first"),
             DocumentError::Db(error) => write!(formatter, "{error}"),
         }
     }

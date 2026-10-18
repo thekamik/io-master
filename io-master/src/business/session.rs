@@ -6,9 +6,7 @@
 //!   account       who is logged in
 //!   db            the database of the evaluator, open from the login
 //!                 to the logout (db/user/database.rs)
-//!   projects      the test projects open for editing, with their
-//!                 versions for "Undo" (test_projects/workspace.rs)
-//!   evaluations   the evaluations open for work (evaluations/workspace.rs)
+//!   (step 41: the evaluation plans and the evaluations open in memory)
 //! ```
 //!
 //! **Where the information is.** While an evaluator is logged in, the
@@ -34,8 +32,6 @@ pub mod accounts;
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use crate::business::evaluations::workspace::EvaluationWorkspace;
-use crate::business::test_projects::workspace::ProjectWorkspace;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::error::DbError;
 use crate::db::user::database::{self as user_db, UserDb};
@@ -47,8 +43,6 @@ use accounts::Account;
 pub struct Session {
     pub account: Account,
     db: Arc<Mutex<UserDb>>,
-    projects: Mutex<ProjectWorkspace>,
-    evaluations: Mutex<EvaluationWorkspace>,
 }
 
 /// Locks a mutex; a lock left by a panic is used as it is (see the top
@@ -64,12 +58,7 @@ impl Session {
     pub fn open(data_dir: &Path, account: Account, key: DatabaseKey) -> Result<Session, DbError> {
         let db = user_db::open(data_dir, account.id, &key)?;
 
-        Ok(Session {
-            account,
-            db: Arc::new(Mutex::new(db)),
-            projects: Mutex::new(ProjectWorkspace::default()),
-            evaluations: Mutex::new(EvaluationWorkspace::default()),
-        })
+        Ok(Session { account, db: Arc::new(Mutex::new(db)) })
     }
 
     /// The database of the evaluator, for one piece of work.
@@ -81,21 +70,5 @@ impl Session {
     /// journal of the AI after a reply (`completions::ask`).
     pub fn db_handle(&self) -> Arc<Mutex<UserDb>> {
         self.db.clone()
-    }
-
-    /// The database and the test projects open for editing, for one
-    /// piece of work (locked in this order).
-    pub fn projects(&self) -> (MutexGuard<'_, UserDb>, MutexGuard<'_, ProjectWorkspace>) {
-        let db = lock(&self.db);
-
-        (db, lock(&self.projects))
-    }
-
-    /// The database and the evaluations open for work, for one piece
-    /// of work (locked in this order).
-    pub fn evaluations(&self) -> (MutexGuard<'_, UserDb>, MutexGuard<'_, EvaluationWorkspace>) {
-        let db = lock(&self.db);
-
-        (db, lock(&self.evaluations))
     }
 }

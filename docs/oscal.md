@@ -1,6 +1,6 @@
 # Step 41: the evaluation plan and the evaluation on NIST OSCAL (concept)
 
-**State: decisions of the user of 2026-10-18 recorded (section 1); the concept (sections 2 to 7) proposed, waiting for the user's approval. No code before that.**
+**State: approved by the user on 2026-10-18 (sections 1 and 8); built part by part (section 8).**
 
 OSCAL (Open Security Controls Assessment Language, NIST) is the published, machine-readable format for requirements (*controls*) and their assessment. The program adopts it as the format of its data about standards, in the version **1.2.3** (the latest release at the time of writing; the version is pinned and changed only by a decision).
 
@@ -17,6 +17,9 @@ OSCAL (Open Security Controls Assessment Language, NIST) is the published, machi
 3. The models of OSCAL in use now: catalog, mapping, profile, assessment plan, assessment results; the system security plan and the component definition later, with step 30.
 4. **The earlier data is deleted** (no migration of the test projects and evaluations of the test installations). The NIST standard is the priority now; it strengthens the credibility of the program.
 5. The tests run on files of NIST, but the program must also **make schemes of its own**: the standards that matter most are **Common Criteria** and **ETSI EN 303 645**, which are not published in OSCAL.
+6. **No solution of its own for one standard** (second round): every standard is represented in OSCAL, by the same code; the evaluation plan decides what an evaluation covers, and the evaluation serves every case. The tables of section 3 are examples of how the author of a catalog represents a standard, not code of the program.
+7. **Every document that defines the work is a document of OSCAL and can be taken into a plan**: the criteria (CC Parts 1 to 5, ETSI EN 303 645), the methodology with its work units, which define the tests (the CEM), the Protection Profiles, which say directly which tests to carry out, and test specifications (ETSI TS 103 701). A plan may take several of them.
+8. The storage of section 8, question 1, way A (the document kept as its JSON, checked against the schema at every write; the types of `model/oscal/` with serde, an exception to the rule of serialization). The order of section 8, question 3; the old model of the test projects and the evaluations is removed: the model of NIST is the better one.
 
 ---
 
@@ -46,7 +49,9 @@ OSCAL (Open Security Controls Assessment Language, NIST) is the published, machi
                              state, the layout of the graph, the journal of the AI
 ```
 
-## 3. Mapping the standards onto the catalog
+## 3. How the standards are represented (examples, not code)
+
+One model for all: catalogs (requirements, work units, test cases), profiles (a selection with its parameters: a Protection Profile, a Security Target), mappings (relations between the documents). The rows below show how the documents named by the user are represented by their authors (the AI proposes, the evaluator accepts).
 
 ### 3.1 Common Criteria (ISO/IEC 15408, CEM ISO/IEC 18045)
 
@@ -58,7 +63,7 @@ OSCAL (Open Security Controls Assessment Language, NIST) is the published, machi
 | element (FAU_GEN.1.1; ADV_FSP.4.1D/C/E) | `part` `name="item"` of the `statement` |
 | operation `[assignment: ...]`, `[selection: ...]` | `param` (with `select`/`choice` for a selection); filled in the profile |
 | dependency (FAU_GEN.1 needs FPT_STM.1) | `link` `rel="required"`, and the mapping |
-| CEM work unit (ADV_FSP.4-1) | `part` `name="assessment-objective"` under the evaluator action element, with `assessment-method` parts (examine, interview, test) |
+| CEM work unit (ADV_FSP.4-1) | the CEM is a catalog of its own (decision 7): an activity is a group, a work unit a control with its `assessment-method` (examine, interview, test); a mapping links it to the evaluator action element of CC Part 3 |
 | application notes | `part` `name="guidance"` |
 
 The operations of CC (assignment, selection) are exactly what OSCAL calls parameters: the Security Target sets them, the profile records them.
@@ -118,3 +123,9 @@ Tables of their own, in `db/evaluation_support/`, linked to OSCAL objects only b
    - **B:** normalized tables per OSCAL object, and a conversion written by hand (as the file of a test project today): no exception to the rule, but much more code to review.
 2. **The CEM work units:** as assessment objectives inside the controls of CC Part 3 (proposed: what OSCAL objectives are for), or a catalog of the CEM of its own with a mapping.
 3. **The order of the parts:** 41.1 the rename and the removal of the old model; 41.2 the foundation (schemas, `model/oscal/`, `db/oscal/`, import and export of NIST catalogs); 41.3 own catalogs (CC, ETSI EN 303 645) made by the AI from the PDFs and edited by the evaluator, with the evaluation support; 41.4 profile and assessment plan with the graph; 41.5 assessment results, then steps 31 to 36 on them.
+
+### Answers of the user (2026-10-18)
+
+1. Way A.
+2. The CEM is a document of its own in OSCAL (it defines the tests through its work units), and so are the Protection Profiles (which say directly which tests to carry out); each can be taken into a plan.
+3. The order 41.1 to 41.5 as proposed.

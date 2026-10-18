@@ -13,20 +13,14 @@
 //! chats.rs           the chats with the AI
 //! installation.rs    the installation: identifier, role; user names
 //! standards.rs       the documents of standards
-//! test_projects.rs   the test projects: schemes, tiles, links
-//!   model/test_projects/rules.rs   the rules of their fields and links
-//! evaluations.rs     the evaluation projects: results, proposals, journal
 //! text.rs            the rules every text field follows
 //! time.rs            the time stamps
 //! ```
 
 pub mod ai;
-pub mod analysis;
 pub mod api_key;
 pub mod chats;
-pub mod evaluations;
 pub mod installation;
 pub mod standards;
-pub mod test_projects;
 pub mod text;
 pub mod time;

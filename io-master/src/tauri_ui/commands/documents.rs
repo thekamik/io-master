@@ -1,4 +1,4 @@
-//! The documents of standards in the tool Create evaluation scheme:
+//! The documents of standards in the tool Evaluation plan:
 //! loading PDFs, the list, their fields, the text of a page, the
 //! search, and the PDF itself for the viewer.
 //!
@@ -58,7 +58,7 @@ pub async fn update(state: &UiState, id: i64, form: DocumentForm) -> Result<Docu
     .await
 }
 
-/// Deletes a document no scheme uses.
+/// Deletes a document.
 pub async fn delete(state: &UiState, id: i64) -> Result<(), UiError> {
     if with_user_db(state, move |db| Ok(standards::documents::delete(db, id)?)).await? {
         Ok(())

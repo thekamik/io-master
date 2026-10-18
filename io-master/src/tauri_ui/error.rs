@@ -15,13 +15,9 @@ use crate::business::chats::conversation::SendError;
 use crate::business::installation::lifecycle::LifecycleError;
 use crate::business::session::accounts::AccountError;
 use crate::business::standards::error::DocumentError;
-use crate::business::test_projects::error::StoreError;
-use crate::business::test_projects::exchange::format::ExchangeError;
 use crate::business::work::WorkError;
 use crate::db::error::DbError;
 use crate::model::ai::{ConnectionError, Field};
-use crate::model::test_projects::rules::ProjectError;
-use crate::model::text::Entity;
 
 /// Why a command failed.
 #[derive(Debug)]
@@ -135,37 +131,12 @@ impl From<WorkError> for UiError {
     fn from(error: WorkError) -> UiError {
         match error {
             WorkError::Invalid(reason) => UiError::Invalid(reason),
-            WorkError::Store(error) => error.into(),
             WorkError::Document(error) => error.into(),
             WorkError::Model(error) => error.into(),
             WorkError::Message(error) => error.into(),
             WorkError::Db(error) => error.into(),
             WorkError::Interrupted => UiError::Failed(error.to_string()),
         }
-    }
-}
-
-impl From<StoreError> for UiError {
-    fn from(error: StoreError) -> UiError {
-        match error {
-            StoreError::Db(error) => UiError::Failed(error.to_string()),
-            StoreError::Rule(ProjectError::NotFound(Entity::Project)) => {
-                UiError::Invalid("the test project does not exist".to_owned())
-            }
-            StoreError::Rule(error) => UiError::Invalid(error.to_string()),
-        }
-    }
-}
-
-impl From<ProjectError> for UiError {
-    fn from(error: ProjectError) -> UiError {
-        UiError::Invalid(error.to_string())
-    }
-}
-
-impl From<ExchangeError> for UiError {
-    fn from(error: ExchangeError) -> UiError {
-        UiError::Invalid(error.to_string())
     }
 }
 

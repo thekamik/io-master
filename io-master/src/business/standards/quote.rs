@@ -1,7 +1,7 @@
 //! Finding a quote in the text of a page of a standard.
 //!
-//! Every tile of a scheme keeps the passages of the standard it comes
-//! from (`model/test_projects/rules.rs`). A passage is a quote: text copied from a page,
+//! Every requirement keeps the passages of the standard it comes from
+//! (the evaluation support of step 41). A passage is a quote: text copied from a page,
 //! by hand or by the AI (step 20 of `docs/todo.md`). The program checks
 //! that the quote really is on that page, so that a passage the AI
 //! made up is never taken for a part of the standard.

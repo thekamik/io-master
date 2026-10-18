@@ -3,7 +3,7 @@
 //! said to a model, and every reading of what it says, is here, in one
 //! place for the audit. A task works on plain data (`model/`) and gives
 //! back plain data: applying a proposal to a project is the work of
-//! the business (`business/test_projects/analysis/`).
+//! the business (step 41: the catalogs of OSCAL).
 //!
 //! ```text
 //! chapter.rs    the analysis of a chapter: tiles and links
@@ -12,7 +12,4 @@
 //! json.rs       the JSON object in an answer
 //! ```
 
-pub mod chapter;
 pub mod chat;
-pub mod contents;
-mod json;
