@@ -14,15 +14,15 @@ The number of a step is its name and never changes, so that references in the co
 | 6 | 7: AI chat with Anthropic | built; its connection replaced by step 15 (`history.md`) |
 | 7 | 14: The user interface: Tauri 2 + Svelte | built; waiting for the user's review (`history.md`) |
 | 8 | 15: Configurable AI connections (local models) | built; waiting for the user's test (`history.md`) |
-| 9 | 16 to 22: Evaluation schemes (data model, documents, viewer, drawing, AI analysis, checks, exchange) | built 2026-10-16; waiting for the user's test (`history.md`) |
-| 10 | 24 to 27: Test projects and chapters | built 2026-10-16; waiting for the user's test (`history.md`) |
+| 9 | 16 to 22: Evaluation schemes (data model, documents, viewer, drawing, AI analysis, checks, exchange) | built 2026-10-16; its model replaced by NIST OSCAL and removed in step 41.1; the documents, the viewer and the check of quotes kept (`history.md`) |
+| 10 | 24 to 27: Test projects and chapters | built 2026-10-16; replaced by NIST OSCAL and removed in step 41.1 (`history.md`) |
 | 11 | 37: The database layer by areas and CRUD | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 12 | 38: The AI layer | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 13 | 39: The domain folders and the objects in memory | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 14 | **40: The cleanup of the architecture** | **built 2026-10-17 on the branch `v0.5`; waiting for the user's review** (below) |
 | 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **concept in `docs/oscal.md`, approved 2026-10-18; 41.1 to 41.3 built, 41.4 next; before step 31** |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of v0.5 (`review.md`) |
-| next | 23: Evaluation with AI: carrying out a scheme, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built (its core), waiting for the user's review; step 31 next |
+| next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a placeholder in the sidebar; needed by steps 32 to 34 |
 | later | 28: Reports in the LaTeX template of the laboratory | with or after step 23 |
 | 16 | 13: Start: keyring, secret of the application, one user per account | after the review |
@@ -52,7 +52,7 @@ Built on the branch `v0.5` (the state before it is kept in `v0.4`), on the analy
 
 **Decisions of the user**
 - [x] The folders `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`; the business folder named `business/`.
-- [x] The operations of a resource are functions named after REST verbs (`projects::create`), as in `ai/api/`.
+- [x] The operations of a resource are functions named after REST verbs (then `projects::create`; today `catalogs::create`), as in `ai/api/`.
 - [x] The questions to the AI and the reading of its answers are in `ai/tasks/`.
 - [x] The README keeps both aims, written anew for the project as it is now.
 - [x] No approval of the review moves with the code: every file of v0.5 is reviewed from the start.
@@ -139,7 +139,7 @@ The concept changed several times while steps 0 to 7 were built (CLI removed, TP
 
 **Progress** (the user decides the order and the priority)
 - [x] `main.rs`: reviewed and approved by the user (2026-10-15). Changes: `--data-dir` and `--uninstall` removed; a flag in the place of a value is refused; the check of the installation moved to `installation/verify.rs`, the start of the server (HTTP, or TLS with `--address`) and Ctrl+C to `web_ui/startup.rs`; the header describes the present state.
-- [ ] `web_ui/`: high priority, **on hold** until step 14 decides whether the web interface stays (no review of code that may be replaced).
+- [x] `web_ui/`: not reviewed; removed in v0.4, when the window of step 14 replaced the web interface.
 - [ ] `installation/verify.rs` (`verify_installation`): lower priority, reviewed later; it is rebuilt anyway in step 13 (keyring).
 - [ ] The other modules: in an order the user chooses.
 
@@ -147,7 +147,7 @@ The concept changed several times while steps 0 to 7 were built (CLI removed, TP
 - [ ] Agreement with the concept: no remains of earlier concepts (comments, names, code paths, documentation of files that no longer exist).
 - [ ] Dead code and `allow(dead_code)` that is no longer needed; empty folders (`uart/`) and placeholder files.
 - [ ] One responsibility per file; repeated code (for example the `workstation()` check in every page) moved to one place; files that grew too large split.
-- [ ] Rules of `CLAUDE.md`: core without printing, errors as enums, serialization only in `web_ui/serializer/` (does not exist yet; decide what goes there, for example the JSON of the chat events), cancellation by the caller.
+- [ ] Rules of `CLAUDE.md`: core without printing, errors as enums, serialization only in `tauri_ui/serializer/` (with the exception of the types of `model/oscal/`, `oscal.md`), cancellation by the caller.
 - [ ] Errors: every failure reaches the user as a clear message; nothing panics on input from outside; no secret in any message.
 - [ ] Tests: missing cases, tests that test nothing, the same test helper written twice.
 - [ ] Comments: thorough, English, true to the code.
@@ -181,10 +181,10 @@ Agreed with the user on 2026-10-15 during the review (step 12); the concept is i
 - [x] Requirement of the system: a desktop session with a keyring through the Secret Service; no start over SSH or without a desktop (wanted: the evaluator works at the computer). Supported desktops: **GNOME and XFCE** (agreed 2026-10-15; the user works on XFCE), both with GNOME Keyring.
 
 **Open**
-- [ ] How the location is chosen in the web interface at the installation (the user has an idea; settled when the interface is reviewed).
+- [ ] How the location is chosen in the window at the installation (the user has an idea; settled when the interface is reviewed).
 - [x] The names of the keyring entries: `KEYRING_DATA_DIR_ENTRY = "io-master.data-dir"` and `KEYRING_APP_SECRET_ENTRY = "io-master.app-secret"` (now in `main.rs`; they move to `installation/verify.rs` with the code that uses them).
 - [ ] The red bar "No TPM is configured...": its text, now that the secret of the application protects copied files.
-- [ ] The removal in the web interface: what it asks for (password, typed confirmation).
+- [ ] The removal in the window: what it asks for (password, typed confirmation).
 - [ ] The library for the keyring (for example the crate `keyring` with the Secret Service backend), explained when it is added.
 - [ ] Test the keyring on GNOME and on XFCE; describe the setup of XFCE (PAM module `libpam-gnome-keyring`, LightDM, "Launch GNOME services on startup") in the installation guide; a clear message at the start when no Secret Service is available.
 
@@ -195,7 +195,7 @@ Agreed with the user on 2026-10-15 during the review (step 12); the concept is i
 - [ ] One user: remove adding users (Settings, `accounts::add`, its tests); the system database keeps one account.
 - [ ] The start page: new installation, or restoring with location + recovery code.
 - [ ] Settings: show the recovery code (after the password), replace the secret.
-- [ ] **Removal of the installation in the web interface** (a function to build, not forgotten): after login, password and a typed confirmation; removes the databases, the two keyring entries and, with the TPM factor, the marker in the TPM. The old console version is kept as a reminder in `installation/uninstall.rs` (not compiled, marked "do not use"); `lifecycle::uninstall` and `user_db::remove_all` are kept for it.
+- [ ] **Removal of the installation in the window** (a function to build, not forgotten): after login, password and a typed confirmation; removes the databases, the two keyring entries and, with the TPM factor, the marker in the TPM. The old console version is kept as a reminder in `installation/uninstall.rs` (not compiled, marked "do not use"); `lifecycle::uninstall` and `user_db::remove_all` are kept for it.
 - [x] `--data-dir` and `--uninstall` removed from `main.rs` and `main_tests.rs` (review of `main.rs`, 2026-10-15).
 - [ ] Documentation: `architecture.md` is already updated; `CLAUDE.md` and the comments of the code follow.
 
@@ -278,37 +278,40 @@ The workstation is the core of the program and is completed first (steps 0–10)
 
 ## Step 28: Reports in the LaTeX template of the laboratory (later)
 
-Designed with or after step 23. The laboratory provides a LaTeX template; the results of an evaluation (the outputs and their seven sections) are written into it, automatically by default.
+Designed with or after step 23. The laboratory provides a LaTeX template; the results of an evaluation (its OSCAL assessment results) are written into it, automatically by default.
 
 ---
 
-## Step 23: Evaluation with AI: carrying out a scheme (steps 29 to 36)
+## Step 23: Evaluation with AI: carrying out an evaluation plan (steps 29 to 36)
 
 Planned with the user on 2026-10-17. Step 23 is the name of the whole; it is built in the steps 29 to 36 below, each with its own concept, tests and approval. Decisions of the user are marked (user).
 
-**The idea.** An **evaluation** carries out one test project (marked ready) for one product (the TOE). The project says *what* has to be done (inputs, requirements, outputs, links); the evaluation records *how it was done*. The AI proposes, the evaluator decides (P1); every proposal carries verified quotes; everything is traceable (P3).
+**Changed by step 41 (2026-10-18).** The steps below were planned on the *test project* of steps 16 to 27 (schemes of tiles: inputs, requirements, outputs). That model was replaced by **NIST OSCAL** and removed in step 41.1 (`oscal.md`): an evaluation now carries out an **OSCAL assessment plan** and records its work as **OSCAL assessment results** (observations with their evidence, findings per objective, risks, the log of the assessment), built in step 41.5. The decisions of the user below still hold, mapped onto OSCAL (`oscal.md`, section 5); the tasks of steps 31 to 36 are designed again on the assessment results in the concept of each step.
+
+**The idea.** An **evaluation** carries out one evaluation plan for one product (the TOE). The plan says *what* has to be done (the requirements chosen in its profile, the tasks and activities of its assessment plan); the evaluation records *how it was done*. The AI proposes, the evaluator decides (P1); every proposal carries verified quotes; everything is traceable (P3).
 
 ```text
-ready test project ──copy──► evaluation of one product
-                               ├─ inputs:        provided by (a documentation project of step 30, an evidence file,
-                               │                 the result of another requirement), marked by the evaluator
-                               ├─ requirements:  phase 1: fragments of the documentation, accepted by the evaluator
-                               │                 phase 2: the AI proposes, on the accepted fragments only, the four results:
-                               │                 findings, analysis, assessment and verdict proposition,
-                               │                 vulnerabilities and notes; the evaluator accepts or writes them
-                               ├─ outputs:       the seven sections of the report, drafted by the AI, approved by the evaluator
-                               └─ journal:       every question to the AI, every acceptance and every change (P3)
+assessment plan (OSCAL) ──handed over──► assessment results (OSCAL) of one product
+                                           ├─ evidence:      observations (examine, interview, test) with their
+                                           │                 relevant evidence (documentation of step 30, files, tests)
+                                           ├─ requirements:  phase 1: fragments of the documentation, accepted by the evaluator
+                                           │                 phase 2: the AI proposes, on the accepted fragments only, the four
+                                           │                 results: findings, analysis, assessment and verdict proposition,
+                                           │                 vulnerabilities and notes; the evaluator accepts or writes them
+                                           ├─ findings:      per objective, their status set by the evaluator; risks
+                                           ├─ report:        drafted by the AI, approved by the evaluator (step 28: LaTeX)
+                                           └─ log:           every question to the AI, every acceptance and every change (P3)
 ```
 
 **Decisions (user, 2026-10-17)**
-- [x] **One requirement at a time.** The window of the evaluation goes project → scheme (chapter) → one requirement, which the evaluator works on; not the whole graph of a chapter at once, so that the work stays readable.
+- [x] **One requirement at a time.** The window of the evaluation goes plan → one requirement, which the evaluator works on; not the whole graph at once, so that the work stays readable.
 - [x] **The documentation of the product is analysed in two phases.** Phase 1 finds the fragments of the documentation that matter for the requirement; phase 2 assesses the requirement on those fragments only, not on the whole document.
 - [x] **A fragment = a verified quote + a separate AI note.** The quote is exact text of the document, checked on its page by the program (as `quote.rs` does for the standard). A summary of the context or any explanation of the model goes into a separate field, shown as *AI note*, never as a quote.
 - [x] **Only accepted fragments take part in the evaluation.** A methodological requirement (user): a fragment proposed by the AI is used in phase 2 only after the evaluator has accepted it; a workflow driven by the AI alone would not stand an audit. The evaluator may also add a fragment by hand (selected in the viewer).
-- [x] **The documentation of the manufacturer is analysed in a tool of its own** (step 30, designed later): an input tile of the evaluation (for example "Security Target") reads the projects of that tool.
+- [x] **The documentation of the manufacturer is analysed in a tool of its own** (step 30, designed later); the evaluation reads its results (in OSCAL: the system security plan and the component definition, `oscal.md`).
 
 **Decisions (user, 2026-10-17, second round)**
-- [x] **An evaluation is a separate process that starts when a project is imported.** The test project is transformed into a new form, the **evaluation project** (a copy: later changes of the test project do not touch it), and the workflow of the evaluation starts on it.
+- [x] **An evaluation is a separate process that starts when a plan is handed over.** Then: the test project was copied into an *evaluation project*; since step 41: the assessment plan is handed over and the evaluation records its own assessment results, so that later changes of the plan do not touch it.
 - [x] **No fixed verdicts.** The program supports many standards, so it imposes no list of verdicts. Every requirement gets four **results of the evaluation**, each a text field filled by the AI or the evaluator according to the standard:
   1. *Findings*;
   2. *Analysis*;
@@ -321,33 +324,21 @@ ready test project ──copy──► evaluation of one product
 
 ## Step 29: Evaluation: the evaluation project, the results and the journal
 
-Concept approved by the user on 2026-10-17: the import from both sources (a ready test project of the installation, and the file of an exported project); only the accepted part is copied; a seventh section of an output, *Vulnerabilities and notes*; the module `product_evaluation/`. The states of the inputs come with step 32, the fragments with step 33.
-
-- [x] The import: a test project → an evaluation project (a frozen copy of its accepted schemes, tiles, sources and links; the proposals left out and counted); the rules of `scheme.rs` checked again; the fields of the evaluation (name, product, version, manufacturer, evaluator) and its origin as text.
-- [x] The four results of every requirement (findings; analysis; assessment and verdict proposition; vulnerabilities and notes) as text; the proposals of the AI kept apart, marked AI, made results only by the evaluator (accept, correct, reject; or written alone); the origin of every result.
-- [x] The journal, append-only, kept so by the database (two triggers); every step written in the same transaction as its change.
-- [x] The seventh section of an output, *Vulnerabilities and notes* (`evaluation/scheme.rs`).
-- [ ] The user's review and approval.
-
-**As built (2026-10-17)**
-- `src/product_evaluation/`: `model.rs` (types, `ResultField`, `ResultOrigin`, `JournalAction`, `EvaluationError`, checks), `import.rs` (`from_project`: only a project marked ready; `from_exchange`: the documents found or loaded by the caller, the quotes checked again), `projects.rs` (`create` in one transaction with the first entry of the journal, `list`, `get`, `data`, `tile`, `delete` with `secure_delete`), `results.rs` (`propose`, `accept`, `correct`, `reject`, `write`, `of`, `proposals`), `journal.rs` (`append`, `of`), `test_support.rs`; 21 new tests (310 in all).
-- Database: tables `evaluations`, `evaluation_documents`, `evaluation_schemes`, `evaluation_tiles`, `evaluation_tile_sources`, `evaluation_links`, `evaluation_results`, `evaluation_proposals`, `evaluation_journal` with the triggers `evaluation_journal_unchanged` and `evaluation_journal_kept` (`db/user_db.rs`). A document of a standard used by an evaluation cannot be deleted (`evaluation/documents.rs`).
-- Not used by the window yet (step 31): the compiler warns of unused code until then.
-- Not committed.
+Built on 2026-10-17 on the test projects and removed with them in step 41.1; its record is in `history.md`. Its decisions (the four results, the proposals kept apart, the journal that is only added to) are carried onto the OSCAL assessment results in step 41.5.
 
 ## Step 30: Tool "Manufacturer documentation" (later)
 
-Designed later (user, 2026-10-17); its place in the sidebar holds a placeholder (`ui/src/pages/Documentation.svelte`). The documents of the manufacturer (Security Target, guidance, design) are loaded and analysed in a way proper to them, as projects of this tool; the input tiles of an evaluation read those projects. Steps 32 to 34 need it.
+Designed later (user, 2026-10-17); its place in the sidebar holds a placeholder (`ui/src/pages/Documentation.svelte`). The documents of the manufacturer (Security Target, guidance, design) are loaded and analysed in a way proper to them; in OSCAL they become the system security plan and the component definition (`oscal.md`, section 1), which an assessment plan imports and an evaluation reads. Steps 32 to 34 need it.
 
 ## Step 31: The window of the evaluation
 
-- [ ] The list of evaluations; a new evaluation from a ready project.
-- [ ] Project → scheme → one requirement: its inputs, fragments, assessments, verdict; the progress of the whole evaluation.
+- [ ] The list of evaluations; a new evaluation from an evaluation plan (an assessment plan of OSCAL).
+- [ ] Plan → one requirement: what it needs, its fragments, assessments, findings; the progress of the whole evaluation.
 
 ## Step 32: Inputs provided
 
-- [ ] The evaluator marks an input provided, open or not applicable: by a project of step 30, an evidence file (with SHA-256), or a note. An input *provided by* a requirement is met when that requirement is.
-- [ ] A requirement is ready to be assessed when all its inputs are met.
+- [ ] The evaluator marks what a requirement needs as provided, open or not applicable: by the documentation of step 30, an evidence file (with SHA-256), or a note; in OSCAL the subjects and the relevant evidence of the results. A need *provided by* another requirement is met when that requirement is.
+- [ ] A requirement is ready to be assessed when all it needs is provided.
 
 ## Step 33: Phase 1: the AI finds the fragments of a requirement
 
@@ -356,16 +347,16 @@ Designed later (user, 2026-10-17); its place in the sidebar holds a placeholder 
 
 ## Step 34: Phase 2: the assessment of a requirement
 
-- [ ] The requirement (its quotes from the standard, P5) and **only its accepted fragments** go to the model; it proposes the four results as text (findings; analysis; assessment and verdict proposition; vulnerabilities and notes) and names what is missing.
+- [ ] The requirement (its control in the catalog and its quotes from the standard, P5) and **only its accepted fragments** go to the model; it proposes the four results as text (findings; analysis; assessment and verdict proposition; vulnerabilities and notes) and names what is missing.
 - [ ] The proposals are marked AI and become results only when the evaluator accepts them (or writes their own); every run is recorded in the journal. Where something is missing, phase 1 can be repeated for this requirement.
 
 ## Step 35: Activities, tests and findings
 
-- [ ] Sections 3 and 5 of an output: a test recorded (method, steps, tools and configuration, date, who); findings. The AI may propose a test plan as text; **no command reaches a device** (P2); guided execution on a device comes later.
+- [ ] A test recorded as an observation with the method *test* (steps, tools and configuration as assessment assets of the plan, date, who); findings. The AI may propose a test plan as text; **no command reaches a device** (P2); guided execution on a device comes later.
 
 ## Step 36: Outputs
 
-- [ ] The seven sections assembled from steps 32 to 35 (sections 5 *Findings*, 6 *Verdict and rationale* and 7 *Vulnerabilities and notes* from the accepted results of the requirements, user 2026-10-17); the AI drafts the text by the instructions of the output, the evaluator corrects and approves it. Shown in the window until step 28 (LaTeX).
+- [ ] The report assembled from steps 32 to 35 (the findings, the verdicts and their rationale, the vulnerabilities and notes from the accepted results of the requirements, user 2026-10-17); the AI drafts the text by the instructions of the laboratory, the evaluator corrects and approves it. Shown in the window until step 28 (LaTeX).
 
 ---
 
@@ -373,11 +364,11 @@ Designed later (user, 2026-10-17); its place in the sidebar holds a placeholder 
 
 Not planned in detail yet; to be designed once the steps above are done:
 
-- Further AI providers (Gemini, local models) and AI on the data of the devices.
+- AI on the data of the devices (any provider and local models are configurable since step 15).
 - Backup of the databases with its own encryption, independent of the TPM; also the way to move to a new computer (`architecture.md`, section 5.5).
 - Git of the laboratory over a secure connection, with checks of its configuration (`architecture.md`, section 6).
 - Filling the LaTeX report templates of the laboratory and committing the result.
-- Git panel in the web UI.
+- Git panel in the window.
 - The other functions of v0.2 (`v0.2_functionality.md`): UART read and write with the confirmation of every command (P2), Bluetooth.
 - A build variant without the code of the master (`architecture.md`, section 3.2).
-- Beyond the evaluation (steps 16 to 36): guided execution of functional tests on the device. (The documentation of the product is now step 30.)
+- Beyond the evaluation (steps 41 and 31 to 36): guided execution of functional tests on the device, their results as observations of the OSCAL assessment results. (The documentation of the product is step 30.)

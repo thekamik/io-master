@@ -228,6 +228,8 @@ cargo test        the tests of Rust
 
 ## Evaluation schemes (steps 16 to 22)
 
+> **Replaced by step 41 (2026-10-18).** The model of the evaluation schemes (tiles and links) was replaced by NIST OSCAL and removed with its tables and data in step 41.1 (no migration; `oscal.md`, `todo.md`). What was kept: the loading of the PDFs of a standard and their text by pages, the viewer with the highlighted passages, the check of a quote on its page, and the work of the AI part by part.
+
 Raised by the user on 2026-10-16, with the highest priority: the program does not go further (not even to the review, step 12) until these steps are done. Decisions of the user of the same day are marked (user).
 
 **The idea.** An evaluator works against a **standard** (a norm): ISO/IEC 15408 with the CEM, but also any other (for example ETSI EN 303 645, IEC 62443-4-2, EN 18031, FIPS 140-3). Nothing is written for Common Criteria; the functions are general. From the documents of a standard, with the support of AI, an **evaluation scheme** is made: the plan of the evaluation (the plan of the tests), drawn as **tiles** joined by **links**. A head of the laboratory can make a scheme and give it to the evaluators (export and import, step 22).
@@ -368,6 +370,8 @@ The core types and their storage, without a window; everything later builds on t
 **Done when:** a scheme made on one installation is imported on another with its own copy of the standard, and all its quotes are found.
 
 ## Test projects and chapters (steps 24 to 28)
+
+> **Replaced by step 41 (2026-10-18).** The model of the test projects and their schemes per chapter was replaced by NIST OSCAL and removed with its tables and data in step 41.1 (no migration; `oscal.md`, `todo.md`). What was kept: the loading of the PDFs of a standard and their text by pages, the viewer with the highlighted passages, the check of a quote on its page, and the work of the AI part by part.
 
 Raised by the user on 2026-10-16 while testing the analysis of a real standard. Decisions of the user of that day:
 
@@ -563,3 +567,22 @@ Raised by the user on 2026-10-16. The program is meant to work with a **local mo
 
 ---
 
+## Step 29: Evaluation: the evaluation project, the results and the journal
+
+Concept approved by the user on 2026-10-17: the import from both sources (a ready test project of the installation, and the file of an exported project); only the accepted part is copied; a seventh section of an output, *Vulnerabilities and notes*; the module `product_evaluation/`. The states of the inputs come with step 32, the fragments with step 33.
+
+- [x] The import: a test project → an evaluation project (a frozen copy of its accepted schemes, tiles, sources and links; the proposals left out and counted); the rules of `scheme.rs` checked again; the fields of the evaluation (name, product, version, manufacturer, evaluator) and its origin as text.
+- [x] The four results of every requirement (findings; analysis; assessment and verdict proposition; vulnerabilities and notes) as text; the proposals of the AI kept apart, marked AI, made results only by the evaluator (accept, correct, reject; or written alone); the origin of every result.
+- [x] The journal, append-only, kept so by the database (two triggers); every step written in the same transaction as its change.
+- [x] The seventh section of an output, *Vulnerabilities and notes* (`evaluation/scheme.rs`).
+- [ ] The user's review and approval: not done; the step was removed first (below).
+
+**As built (2026-10-17)**
+- `src/product_evaluation/`: `model.rs` (types, `ResultField`, `ResultOrigin`, `JournalAction`, `EvaluationError`, checks), `import.rs` (`from_project`: only a project marked ready; `from_exchange`: the documents found or loaded by the caller, the quotes checked again), `projects.rs` (`create` in one transaction with the first entry of the journal, `list`, `get`, `data`, `tile`, `delete` with `secure_delete`), `results.rs` (`propose`, `accept`, `correct`, `reject`, `write`, `of`, `proposals`), `journal.rs` (`append`, `of`), `test_support.rs`; 21 new tests (310 in all).
+- Database: tables `evaluations`, `evaluation_documents`, `evaluation_schemes`, `evaluation_tiles`, `evaluation_tile_sources`, `evaluation_links`, `evaluation_results`, `evaluation_proposals`, `evaluation_journal` with the triggers `evaluation_journal_unchanged` and `evaluation_journal_kept` (`db/user_db.rs`). A document of a standard used by an evaluation cannot be deleted (`evaluation/documents.rs`).
+- Not used by the window yet (step 31): the compiler warns of unused code until then.
+- Committed in `e7711ee` (2026-10-17).
+
+> **Removed in step 41.1 (2026-10-18)** together with the test projects it copied (commit `f91cba8`); its decisions (the four results of a requirement, the proposals of the AI kept apart until the evaluator accepts them, the journal that is only added to) are carried onto the OSCAL assessment results in step 41.5 (`todo.md`, step 23).
+
+---

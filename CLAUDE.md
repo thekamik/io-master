@@ -62,7 +62,7 @@ Since v0.4 the whole workflow is controlled from a **desktop window** (Tauri 2 +
 
 ## The architecture (user, 2026-10-17; step 40 of docs/todo.md)
 
-The user's guidelines, built in step 40 on the branch `v0.5` (the layout and its rules: `docs/code_structure.md`). **No approval of a review moved with the code: every file of v0.5 is reviewed from the start** (`review.md`). Business functions are named after REST verbs (`projects::create`, `tiles::set_position`), listed with their REST form at the head of each resource file.
+The user's guidelines, built in step 40 on the branch `v0.5` (the layout and its rules: `docs/code_structure.md`). **No approval of a review moved with the code: every file of v0.5 is reviewed from the start** (`review.md`). Business functions are named after REST verbs (`catalogs::create`, `catalogs::add_group`), listed with their REST form at the head of each resource file.
 
 1. `tauri_ui/` is a minimal intermediate layer that only joins the back end and the front end.
 2. The business logic is in a folder of its own, reached by the interface in the form of a REST API: no server, but the functions are designed as resources and operations.

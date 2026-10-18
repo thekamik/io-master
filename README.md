@@ -1,14 +1,18 @@
 # IO Master
 
-**A desktop tool for evaluation laboratories: it maps a standard into a plan of tests, carries the evaluation of a product through it with the help of AI, and works with the device under evaluation, while every decision stays with the evaluator.**
+**A desktop tool for evaluation laboratories: it turns a standard into an evaluation plan in NIST OSCAL, carries the evaluation of a product through it with the help of AI, and works with the device under evaluation, while every decision stays with the evaluator.**
 
-IO Master is installed on the computer of an evaluator, in their own Linux account, and used through one desktop window. It knows no particular standard: the documents of a standard (Common Criteria, the CEM, EN 18031, ...) are loaded as PDFs, and everything the program does with them is traced back to the passages they come from.
+IO Master is installed on the computer of an evaluator, in their own Linux account, and used through one desktop window. It knows no particular standard. The requirements of a standard, the plan of their evaluation and its results are kept in **NIST OSCAL 1.2.3** (Open Security Controls Assessment Language), the published, machine-readable format of NIST, and every document is checked against the JSON schemas of NIST. Catalogs published in OSCAL are imported as they are; standards that are not (Common Criteria with the CEM, ETSI EN 303 645, ...) are made into OSCAL catalogs in the program, from their PDFs, with the help of AI, and every part traced back to the passage it comes from.
 
 **Project status:** development, version 0.5 (branch `v0.5`). The functions listed under "What works today" are built and tested; the evaluation itself, the work on devices beyond the scan, and the release hardening are planned.
 
 ## Aims
 
-1. **Support the evaluation of a product against a standard.** An evaluator works requirement by requirement: what the standard requires, what the evaluation needs for it (documentation, a sample, access, the result of another requirement), what was done and found, and the verdict. The program prepares and records that work; the AI reads the standard and the documentation of the product and proposes, and the evaluator accepts, corrects or rejects. Common Criteria (ISO/IEC 15408 with the CEM, ISO/IEC 18045) is the first target, but the program is not bound to one standard.
+1. **Support the evaluation of a product against a standard**, in two functions:
+   - **the evaluation plan:** the requirements of the standard as an OSCAL catalog (made in the program or loaded), the ones chosen for one evaluation as a profile, and the plan of the work as an OSCAL assessment plan, shown as a graph;
+   - **the evaluation:** the plan carried out for one product, requirement by requirement: the evidence, the checks whether each requirement is met, and the report, recorded as OSCAL assessment results.
+
+   The AI reads the standard and the documentation of the product and proposes; the evaluator accepts, corrects or rejects. Common Criteria (ISO/IEC 15408 with the CEM, ISO/IEC 18045) and ETSI EN 303 645 are the first targets, but every standard is represented the same way, in OSCAL, by the same code.
 2. **Investigate the device under evaluation.** Find its interfaces (serial ports today; UART and Bluetooth, re-created from version 0.2, next), talk to it, and keep what was observed, so that tests can be carried out on the device and their record becomes part of the evaluation.
 
 ## Principles
@@ -20,7 +24,7 @@ These are requirements of the design, not preferences (`docs/architecture.md`, s
 | P1 | **The evaluator decides.** | The program never issues a verdict. It proposes, with its reasons and its sources; the evaluator accepts. |
 | P2 | **No command reaches a device without an action of the evaluator for that command.** | The program proposes; the evaluator executes. Acting on a device carries responsibility. |
 | P3 | **Everything is traceable.** | Every question to the AI and its answer is in the journal of the AI; every step of an evaluation in its journal, which is only ever added to. |
-| P4 | **The standard is data, not code.** | Standards are loaded from their documents; nothing about a standard is written into the program. |
+| P4 | **The standard is data, not code.** | Standards are kept as OSCAL documents; nothing about a standard is written into the program. |
 | P5 | **The model reads; it does not invent sources.** | Every passage the AI proposes is checked against the page it names; a passage that is not there is shown as such. |
 
 ## What works today
@@ -30,12 +34,14 @@ These are requirements of the design, not preferences (`docs/architecture.md`, s
 - **Chat** with the AI, kept in the encrypted database.
 - **Scan of serial ports** with the kinds of port and the columns the evaluator chooses; the scan never opens a port.
 - **Documents of standards.** PDFs loaded page by page (Poppler), searched, and shown in a built-in viewer with the quoted passages highlighted.
-- **Test projects: the map of a standard.** A project holds one scheme per chapter; a scheme is drawn as tiles (inputs, requirements, outputs) joined by links whose meaning follows from the kinds they join, across chapters too. The AI reads the table of contents into proposed schemes and analyses the pages of each chapter into proposed tiles and links with verified quotes; the evaluator accepts or corrects. Checks name the gaps of a scheme; "Undo" takes back a change, also a whole analysis. A project is exported and imported as a file.
-- **Evaluation projects (core).** A test project becomes an evaluation of one product: its accepted part frozen, four text results per requirement, proposals of the AI kept apart until the evaluator accepts them, and a journal of every step. The window of the evaluation is the next step.
+- **OSCAL documents.** Catalogs, mappings, profiles, assessment plans and assessment results of OSCAL 1.2.3 imported from a file, exported and deleted; every document is checked against the schema of NIST when it is written, and kept in the encrypted database.
+- **Catalogs made in the program.** A standard that is not published in OSCAL is made into a catalog in an editor: a tree of its groups and controls, each with the passages of the standard it comes from (checked on their pages, shown in the viewer) and its fields as JSON of OSCAL. The AI proposes the groups from the table of contents and the controls from the pages of a group, with progress and a Stop button; the evaluator accepts, corrects or rejects every proposal.
+- **The evaluation support.** What the program adds to OSCAL (the quotes and their checks, the proposals of the AI, the instructions to the AI) is kept apart, in its own tables, and linked to the OSCAL objects only by their UUIDs and ids, so that nothing of ours is written into an OSCAL document.
 
 ## Planned
 
-- The window of the evaluation and its work with the AI: the fragments of the documentation of the product that matter for a requirement, then the assessment on the fragments the evaluator accepted (`docs/todo.md`, steps 31 to 36).
+- The evaluation plan as a profile and an assessment plan, shown as a graph; the CEM and the Protection Profiles as OSCAL documents a plan can take (`docs/todo.md`, step 41.4).
+- The evaluation as OSCAL assessment results (step 41.5), and its work with the AI: the fragments of the documentation of the product that matter for a requirement, then the assessment on the fragments the evaluator accepted (steps 31 to 36).
 - A tool for the documentation of the manufacturer (step 30) and reports in the LaTeX template of the laboratory, committed to its git (step 28).
 - The work on devices: access rights to ports, UART and Bluetooth (steps 6 and later).
 - Protection: the keyring of the Linux account and the secret of the application (step 13), the TPM 2.0 and passkeys as optional further factors (steps 8 and 9), and the master with an optional password reset (steps 4 and 11).
@@ -75,8 +81,10 @@ io-master/          the program (Rust, Tauri 2 + Svelte 5)
   src/              the core and the window, in layers: model, db, ai, hardware_tests,
                     security, business, tauri_ui (docs/code_structure.md)
   ui/               the page of the window
+  oscal/            the JSON schemas of OSCAL 1.2.3 and example documents of NIST
 docs/
-  architecture.md   what the program is and why: roles, secrets, AI, collaboration, devices
+  architecture.md   what the program is and why: roles, secrets, AI, standards, collaboration, devices
+  oscal.md          the evaluation plan and the evaluation on NIST OSCAL: the concept of step 41
   code_structure.md where everything is in the code, and the rules that keep it in order
   todo.md           the plan of the work, step by step
   history.md        the steps already built, with their decisions
