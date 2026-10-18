@@ -20,6 +20,7 @@ The number of a step is its name and never changes, so that references in the co
 | 12 | 38: The AI layer | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 13 | 39: The domain folders and the objects in memory | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 14 | **40: The cleanup of the architecture** | **built 2026-10-17 on the branch `v0.5`; waiting for the user's review** (below) |
+| 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **direction decided by the user 2026-10-18; concept proposed, waiting for the user's answers; before step 31** |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of v0.5 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out a scheme, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built (its core), waiting for the user's review; step 31 next |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a placeholder in the sidebar; needed by steps 32 to 34 |
@@ -73,6 +74,16 @@ Built on the branch `v0.5` (the state before it is kept in `v0.4`), on the analy
 - [x] The unused dependencies of the web interface removed (axum, futures-util, tower, http-body-util).
 
 **Done when:** the user has reviewed the new layout.
+
+---
+
+## Step 41: The evaluation plan on the model of NIST OSCAL (2026-10-18)
+
+**Decided by the user (2026-10-18):**
+- [x] The "test project" (the map of a standard, the tool "Create evaluation scheme") is renamed **evaluation plan**, in the code, the database, the window and the documents.
+- [x] The program adopts **NIST OSCAL** (Open Security Controls Assessment Language), the machine-readable format of NIST for requirements and their assessment, so that the requirements of a standard and the plan of their evaluation follow a published standard instead of a model of our own, which may have missed normative matters.
+
+**Open (concept proposed 2026-10-18, waiting for the user):** what the plan maps to which models of OSCAL (catalog, profile, mapping, assessment plan, assessment results), whether OSCAL is the shape of the model of the program or only its exchange format, the version of OSCAL, and what happens to the data of the test installations.
 
 ---
 
