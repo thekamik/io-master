@@ -97,6 +97,20 @@ impl UserDb {
     }
 }
 
+/// Runs `work` in one transaction of database `db`: every function of
+/// `db/` it calls writes into the transaction, which is committed when
+/// `work` succeeds and rolled back when it fails. For an operation of
+/// the business made of several writes that belong together (an
+/// accepted proposal: the object, its quotes, the proposal removed).
+pub fn in_transaction<T, E: From<DbError>>(db: &UserDb, work: impl FnOnce() -> Result<T, E>) -> Result<T, E> {
+    let transaction = db.connection.unchecked_transaction().map_err(DbError::from)?;
+    let result = work()?;
+
+    transaction.commit().map_err(DbError::from)?;
+
+    Ok(result)
+}
+
 /// The path of the database of an account.
 pub fn path(data_dir: &Path, user_id: i64) -> PathBuf {
     data_dir.join(DIRECTORY).join(format!("{user_id}.db"))

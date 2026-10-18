@@ -59,6 +59,17 @@ pub struct Document {
     pub page_count: u32,
 }
 
+/// A part of the text of one document of a standard, sent in one
+/// question to the AI (`business/standards/parts.rs`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Part {
+    pub document_id: i64,
+    pub first_page: u32,
+    pub last_page: u32,
+    /// The pages, each after a line "=== Page N ===".
+    pub text: String,
+}
+
 /// A hit of a search.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Hit {

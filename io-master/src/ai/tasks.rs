@@ -8,8 +8,14 @@
 //! ```text
 //! chapter.rs    the analysis of a chapter: tiles and links
 //! contents.rs   the table of contents: the chapters
+//! catalog_outline.rs   the groups of a catalog of OSCAL, from a table of contents
+//! catalog_section.rs   the controls of a group, from its pages
 //! chat.rs       the chat: what of its history goes to the model
+//! json.rs       the JSON object in an answer
 //! json.rs       the JSON object in an answer
 //! ```
 
+pub mod catalog_outline;
+pub mod catalog_section;
 pub mod chat;
+mod json;

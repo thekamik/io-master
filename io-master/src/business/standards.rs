@@ -3,6 +3,7 @@
 pub mod documents;
 pub mod error;
 pub mod load;
+pub mod parts;
 pub mod pdf_text;
 pub mod quote;
 #[cfg(test)]
