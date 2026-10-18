@@ -7,11 +7,12 @@
   library), in the colour of the text around them.
 -->
 <script lang="ts">
-  import { logOut, type AppView } from "../lib/api";
+  import { logOut, type AppView } from "../lib/api/app";
   import Chat from "./Chat.svelte";
+  import Documentation from "./Documentation.svelte";
   import Evaluation from "./Evaluation.svelte";
   import Scan from "./Scan.svelte";
-  import Schemes from "./Schemes.svelte";
+  import Plans from "./Plans.svelte";
   import Settings from "./Settings.svelte";
 
   let { app, onchange }: { app: AppView; onchange: (app: AppView) => void } = $props();
@@ -28,7 +29,8 @@
   const subtitles: Record<string, string> = {
     chat: "Ask the model of your active AI connection.",
     evaluation: "Carry out an evaluation scheme for a product.",
-    schemes: "Load the documents of a standard, analyse them with AI, and draw the plan of the evaluation.",
+    plans: "The standards in NIST OSCAL and the plan of an evaluation, with the documents of the standards they come from.",
+    documentation: "Load and analyse the documentation of the manufacturer for the evaluations.",
     scan: "The serial ports of this computer, and the access to them.",
     settings: "Your account, the connections to AI services, and this installation.",
     admin: "The password resets of the workstations.",
@@ -48,11 +50,14 @@
       <path d="M9 4h6v3H9z" />
       <path d="M7 5.5H5.5v14h13v-14H17" />
       <path d="M8.5 13l2.2 2.2 4.8-4.7" />
-    {:else if name === "schemes"}
+    {:else if name === "plans"}
       <rect x="3.5" y="4" width="6" height="5" rx="1.2" />
       <rect x="14.5" y="4" width="6" height="5" rx="1.2" />
       <rect x="9" y="15" width="6" height="5" rx="1.2" />
       <path d="M6.5 9v2.5h11V9M12 11.5V15" />
+    {:else if name === "documentation"}
+      <path d="M6 3.5h8l4 4v13H6z" />
+      <path d="M14 3.5v4h4M9 12h6M9 15h6M9 18h4" />
     {:else if name === "scan"}
       <rect x="4" y="8" width="16" height="9" rx="2" />
       <path d="M8 12h.01M12 12h.01M16 12h.01M9 4v4M15 4v4" />
@@ -110,8 +115,10 @@
       <Chat />
     {:else if active === "evaluation"}
       <Evaluation />
-    {:else if active === "schemes"}
-      <Schemes />
+    {:else if active === "plans"}
+      <Plans />
+    {:else if active === "documentation"}
+      <Documentation />
     {:else if active === "scan"}
       <Scan />
     {:else if active === "settings"}

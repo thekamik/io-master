@@ -7,8 +7,8 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::accounts::accounts::Account;
-use crate::installation::installation::Role;
+use crate::business::session::accounts::Account;
+use crate::model::installation::Role;
 
 /// The state of the program, as the page sees it.
 #[derive(Debug, Serialize)]
@@ -51,8 +51,10 @@ fn pages(role: Role) -> Vec<PageView> {
     match role {
         Role::Workstation => vec![
             PageView { id: "chat", title: "Chat" },
+            PageView { id: "plans", title: "Evaluation plan" },
             PageView { id: "evaluation", title: "Evaluation" },
-            PageView { id: "schemes", title: "Create evaluation scheme" },
+            // A placeholder until step 30 of docs/todo.md is designed.
+            PageView { id: "documentation", title: "Manufacturer documentation" },
             PageView { id: "scan", title: "Scan and permissions" },
             PageView { id: "settings", title: "Settings" },
         ],

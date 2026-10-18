@@ -2,7 +2,7 @@
 //! form of a connection on the tab AI of Settings.
 //!
 //! **A preset is only data.** It holds the same fields the evaluator
-//! would type (`ai/connection.rs`), and choosing one only fills the
+//! would type (`ai/api/connection.rs`), and choosing one only fills the
 //! form; nothing is stored until the evaluator checks the fields and
 //! saves them. The program treats a connection made from a preset
 //! exactly like one typed by hand: there is no code for any provider.
@@ -13,7 +13,11 @@
 //! are in its stream. Names of models change often; the evaluator
 //! checks the model before saving.
 
-use super::connection::{AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, DEFAULT_SYSTEM_PROMPT};
+use crate::model::ai::{AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, DEFAULT_SYSTEM_PROMPT};
+
+// The help for the fields of a connection, for a chatbot of the
+// evaluator's choice.
+pub mod field_help;
 
 /// A preset.
 #[derive(Debug, Clone)]

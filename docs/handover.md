@@ -1,36 +1,33 @@
-# Handover for a new session (2026-10-16)
+# Handover for a new session
 
-Read this file, `CLAUDE.md`, `review.md`, `docs/architecture.md` and the order table of `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English.
+Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md` and the order table of `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English.
 
-## Where the project is
+## Where the project is (2026-10-18)
 
-- Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, system rustc 1.95), branch **`v0.4`**. Branches `v0.2`/`V0.2` must never be changed. `v0.3` keeps the old web interface.
-- **Nothing since commit `acedc8b` is committed.** A commit is made only after the user approves it, ending with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
-- Built in this phase (all tested; 289 Rust tests pass, `npm run check` clean, clippy only known dead-code warnings):
-  - the desktop window (Tauri 2.12 + Svelte 5, `src/tauri_ui/`, `ui/`), the old `web_ui` removed;
-  - step 15: AI connections without any provider code (`src/ai/`: connection, connections, request, response, json_path, client, presets, field_help); Settings has tabs User / AI / Program;
-  - a new look of the window (`ui/src/style.css`, tokens, dark variant);
-  - steps 16–22: evaluation schemes (`src/evaluation/`, `tauri_ui/standard_actions.rs`, `tauri_ui/scheme_actions.rs`, `ui/src/pages/Schemes.svelte`, `SchemeEditor.svelte`, `PdfViewer.svelte`, `AnalysisPanel.svelte` …). Details: `docs/todo.md`, section "Evaluation schemes", "State (2026-10-16)".
-- The logo of v0.3 may not be used; it was removed from the git history of v0.3 and v0.4. Never bring back a picture from history.
+- Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branch **`v0.5`**. `v0.4` keeps the state before step 40 and is not changed; `v0.2`/`V0.2` are never changed; `v0.3` keeps the old web interface.
+- **Step 40 (the cleanup of the architecture) is built** on `v0.5`: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`, their rules and the tests that check them (`docs/code_structure.md`).
+- **Step 41 (NIST OSCAL, `docs/oscal.md`) is being built**, part by part (`docs/todo.md`, step 41): 41.1 to 41.3 are done. The evaluation plan works on documents of OSCAL 1.2.3 (import, export, deletion, every write checked against the schemas of NIST); catalogs are made in the program from the PDFs of a standard, with the AI proposing groups and controls and the evaluator accepting, correcting or rejecting them in the editor of a catalog (`ui/src/components/CatalogEditor.svelte`). The quotes and the proposals are the evaluation support (`db/evaluation_support/`), linked to OSCAL by UUID and id.
+- **The review starts anew** on the code of v0.5 (`review.md`): no approval moved with the code.
 
 ## What comes next
 
-1. **Code review, step 12 of `docs/todo.md`, led by the user.** The user reads the code file by file, asks and edits by hand. Claude answers precisely (the user knows C, is new to Rust: explain Rust through C analogies), points out errors, and changes code **only on request**. Claude does not review on its own initiative and does not push for decisions.
-   - `// ok kk` above a function: approved; every line added or removed in it needs the user's approval first. Reading and suggesting is fine; its tests may be changed. Claude never adds or removes the marker.
-   - When the user says a whole file is reviewed, write it into `review.md` with the date; every function of it then counts as `// ok kk`.
-   - `review.md` already notes: `io-master/src/main.rs` approved 2026-10-16, then changed only in its module lists (new modules `ai`, `evaluation`, `tauri_ui`); the function `main` is unchanged. The commented-out block `mod web_ui` in it waits for a decision.
-2. Steps 24 to 27 of `docs/todo.md` were built on 2026-10-16 (a requirement as the condition of another; test projects holding one scheme per chapter; links between schemes and moving tiles; AI reading the table of contents and analysing chapters). Details: `docs/todo.md`, "State (2026-10-16): steps 24 to 27". **The user must delete the database of the old test installation before starting the program** (the tables changed; no migration). Next: the user tests them with a real standard and a real model. Step 28 (reports in the LaTeX template of the laboratory) and step 23 (evaluation with AI) come later.
+1. **41.4: profile and assessment plan** (the evaluation plan proper), shown as a graph; the CEM and the Protection Profiles as documents of OSCAL that a plan can take. Concept details first where `docs/oscal.md` leaves them open (section 4: the import of an SSP).
+2. **41.5: assessment results** (the evaluation), then steps 31 to 36 on them.
+3. The user's review (step 12), file by file: Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.
+4. Later steps in the order table of `docs/todo.md`.
 
 ## Rules that are easy to forget
 
-- Concept first, approved by the user, then code; small steps, each with tests (`<module>_tests.rs`, attached with `#[cfg(test)] #[path = "..."] mod tests;`).
-- Core separate from the window; serialization only in `src/tauri_ui/serializer/`; core types carry no serde attributes (the scheme file `evaluation/exchange.rs` builds JSON by hand).
+- Concept first, approved by the user, then code; small steps, each with tests (`<file>_tests.rs`, attached with `#[cfg(test)] #[path = "..."] mod tests;`); `cargo fmt` before a commit.
+- The direction of the dependencies is checked by `src/architecture_tests.rs`; a new use against it is a finding, or an exception written there with its reason.
+- Every command of the window is listed in four places (`tauri_ui/commands.rs`, `main.rs`, `build.rs`, `capabilities/default.json`); a test checks them.
+- Serialization only in `src/tauri_ui/serializer/`; the core types carry no serde attributes.
 - Secrets only in the encrypted database of the evaluator; never shown back, never printed; the page holds no secret.
 - Every connection leaving the computer: TLS 1.3, verified certificate. Plain HTTP only to 127.0.0.1/::1 (AI connections).
-- Every command of the window is listed in four places: `commands.rs`, `main.rs` (generate_handler in `tauri_startup`), `build.rs` (AppManifest), `capabilities/default.json`.
 - `tauri.conf.json` keeps `freezePrototype: true`; `vite.config.ts` patches `d3-color` for it (the window does not start otherwise).
 - Never capture the user's screen. Window tests run only on a private Xvfb display, see below.
 - Before deleting or overwriting, look at the target. Dependencies: few, well known, versions pinned exactly, released at least two weeks before.
+- Commits end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 
 ## How to build and test
 
@@ -39,11 +36,14 @@ cd io-master
 npm ci                      # once
 npm run check               # svelte-check, must be clean
 npm run build               # copies pdf.js data, builds ui/dist (needed before cargo build)
-cargo build && cargo test
-T=$(rustup run stable rustc --print sysroot); RUSTC=$T/bin/rustc $T/bin/cargo clippy --all-targets --target-dir target/rustup; rm -rf target/rustup
+cargo fmt --check
+cargo build && cargo test   # also the test of the architecture and of the command lists
+cargo clippy --all-targets  # only the known warnings of unused code
 ```
 
-Window test on a private display (the scratchpad of the session holds the helpers; recreate them if missing):
+Rust comes from rustup (stable, 1.99.1 on 2026-10-18). The system also has the rustc/cargo of the Debian packages (1.95), and `/etc/fish/config.fish` puts `/usr/bin` first in `PATH`; `~/.config/fish/config.fish` moves `~/.cargo/bin` back to the front (`fish_add_path --move --path`). If `rustc --version` shows 1.95, that line is missing, and clippy (rustup only) fails with E0514 on a build made by the other compiler; after a change of compiler, `cargo clean` once.
+
+Window test on a private display (helpers in the scratchpad of the session; recreate them if missing):
 
 ```text
 Xvfb :99 -screen 0 1600x1000x24 -nolisten tcp &

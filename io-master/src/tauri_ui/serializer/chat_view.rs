@@ -12,8 +12,8 @@
 
 use serde::Serialize;
 
-use crate::ai::request::Speaker;
-use crate::ai::chats::{ChatMessage, ChatSummary, Ending};
+use crate::model::ai::Speaker;
+use crate::model::chats::{ChatMessage, ChatSummary, Ending};
 
 /// A chat in the list.
 #[derive(Debug, Serialize)]
@@ -26,11 +26,7 @@ pub struct ChatSummaryView {
 
 impl From<ChatSummary> for ChatSummaryView {
     fn from(chat: ChatSummary) -> ChatSummaryView {
-        ChatSummaryView {
-            id: chat.id,
-            title: chat.title,
-            created: chat.created,
-        }
+        ChatSummaryView { id: chat.id, title: chat.title, created: chat.created }
     }
 }
 

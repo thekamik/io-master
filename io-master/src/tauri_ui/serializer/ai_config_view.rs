@@ -13,11 +13,12 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::ai::client::{CheckReport, ReplyEnd};
-use crate::ai::connection::{API_KEY, AnswerMode, Connection};
-use crate::ai::connections::Stored;
+use crate::ai::api::checks::CheckReport;
+use crate::ai::api::completions::ReplyEnd;
+use crate::ai::api::completions::StopReason;
 use crate::ai::presets::Preset;
-use crate::ai::response::StopReason;
+use crate::model::ai::StoredConnection;
+use crate::model::ai::{API_KEY, AnswerMode, Connection};
 
 use super::super::error::UiError;
 
@@ -88,8 +89,8 @@ impl ConnectionView {
     }
 }
 
-impl From<Stored> for ConnectionView {
-    fn from(stored: Stored) -> ConnectionView {
+impl From<StoredConnection> for ConnectionView {
+    fn from(stored: StoredConnection) -> ConnectionView {
         ConnectionView::new(Some(stored.id), stored.connection, stored.has_key)
     }
 }
@@ -129,12 +130,12 @@ impl From<Preset> for PresetView {
 }
 
 impl AiConfigView {
-    pub fn new(connections: Vec<Stored>, active: Option<i64>) -> AiConfigView {
+    pub fn new(connections: Vec<StoredConnection>, active: Option<i64>, presets: Vec<Preset>) -> AiConfigView {
         AiConfigView {
             connections: connections.into_iter().map(ConnectionView::from).collect(),
             active,
             template: ConnectionView::new(None, Connection::template(), false),
-            presets: crate::ai::presets::all().into_iter().map(PresetView::from).collect(),
+            presets: presets.into_iter().map(PresetView::from).collect(),
         }
     }
 }
@@ -251,10 +252,9 @@ impl From<CheckReport> for CheckView {
                     .to_owned(),
             ),
             ReplyEnd::Finished(StopReason::Complete) => (true, "The connection works: the model answered.".to_owned()),
-            ReplyEnd::Finished(StopReason::Cut) => (
-                true,
-                "The connection works; the reply was cut at its largest length (see the body).".to_owned(),
-            ),
+            ReplyEnd::Finished(StopReason::Cut) => {
+                (true, "The connection works; the reply was cut at its largest length (see the body).".to_owned())
+            }
             ReplyEnd::Finished(StopReason::Refused) => {
                 (true, "The connection works; the model declined the test message.".to_owned())
             }
@@ -270,10 +270,7 @@ impl From<CheckReport> for CheckView {
                 .request
                 .headers
                 .iter()
-                .map(|(name, value)| HeaderView {
-                    name: name.clone(),
-                    value: value.as_str().to_owned(),
-                })
+                .map(|(name, value)| HeaderView { name: name.clone(), value: value.as_str().to_owned() })
                 .collect(),
             body: serde_json::to_string_pretty(&report.request.body).unwrap_or_default(),
             status: report.status,

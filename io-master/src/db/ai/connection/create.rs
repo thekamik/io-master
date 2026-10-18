@@ -1,0 +1,51 @@
+//! Storing a new AI connection. Its fields are checked by
+//! `ai/api/connections.rs` before; here the rules of the stored data:
+//! a name of its own, and the first connection becomes the active one.
+
+use crate::db::error::DbError;
+use crate::db::user;
+use crate::db::user::database::UserDb;
+use crate::model::ai::{Connection, SavedConnection};
+
+use super::read;
+use super::rows::{ACTIVE, COLUMNS, SaveError, with_connection_values};
+
+/// Stores a new connection. Its name must be free; the first
+/// connection becomes the active one. One transaction: the row and
+/// the choice of the active connection are stored together or not at
+/// all.
+pub fn connection(db: &UserDb, connection: &Connection) -> Result<SavedConnection, SaveError> {
+    if read::named(db, &connection.name)?.is_some() {
+        return Err(SaveError::NameTaken);
+    }
+
+    let transaction = db.connection().unchecked_transaction().map_err(DbError::from)?;
+
+    with_connection_values(connection, |values| {
+        transaction.execute(
+            &format!(
+                "INSERT INTO ai_connections ({}) VALUES ({})",
+                COLUMNS.join(", "),
+                COLUMNS.map(|column| format!(":{column}")).join(", ")
+            ),
+            values,
+        )
+    })
+    .map_err(|error| SaveError::Db(error.into()))?;
+
+    let id = transaction.last_insert_rowid();
+
+    if read::active(db)?.is_none() {
+        user::update::set_setting(db, ACTIVE, &id.to_string())?;
+    }
+
+    transaction.commit().map_err(DbError::from)?;
+
+    Ok(SavedConnection { id, key_removed: false })
+}
+
+// Unit tests, in their own file to keep this one readable. They
+// cover the whole folder (create, read, update, delete).
+#[cfg(test)]
+#[path = "create_tests.rs"]
+mod tests;

@@ -1,4 +1,4 @@
-//! Unit tests of `presets.rs`: every preset keeps the rules, and
+//! Unit tests of `read.rs` (the presets): every preset keeps the rules, and
 //! reads a stream in the form of its service, sent by the fake
 //! service of `test_support.rs` (the address of the preset replaced
 //! by that of the fake service, everything else as in the preset).
@@ -6,13 +6,12 @@
 use super::*;
 
 use serde_json::json;
-use tokio::sync::mpsc;
+use tokio::sync::watch;
 
-use crate::ai::api_key::ApiKey;
-use crate::ai::client::{self, Reply, ReplyEnd};
-use crate::ai::request::{Speaker, Turn};
-use crate::ai::response::StopReason;
-use crate::ai::test_support::{FakeAnswer, FakeRequest, FakeService, completions_events, data, messages_events};
+use crate::ai::api::completions::{self, Reply, ReplyEnd, StopReason};
+use crate::ai::api::roles::Model;
+use crate::ai::api::test_support::{FakeAnswer, FakeRequest, FakeService, completions_events, data, messages_events};
+use crate::model::api_key::ApiKey;
 
 fn preset(id: &str) -> Preset {
     all().into_iter().find(|preset| preset.id == id).unwrap()
@@ -31,18 +30,13 @@ fn at(service: &FakeService, mut connection: Connection) -> Connection {
 /// Asks for a reply over the preset at the fake service.
 async fn ask(answer: FakeAnswer, id: &str) -> (Reply, FakeRequest) {
     let service = FakeService::start(answer).await;
-    let connection = at(&service, preset(id).connection).check().unwrap();
-    let key = ApiKey::new("sk-test".to_owned()).unwrap();
-    let turns = [Turn {
-        speaker: Speaker::Evaluator,
-        text: "Hi".to_owned(),
-    }];
-
-    let (pieces, mut receiver) = mpsc::channel(64);
-    let draining = tokio::spawn(async move { while receiver.recv().await.is_some() {} });
-    let reply = client::reply(&connection, Some(&key), &turns, &pieces).await;
-    drop(pieces);
-    draining.await.unwrap();
+    let model = Model {
+        name: id.to_owned(),
+        connection: at(&service, preset(id).connection).check().unwrap(),
+        api_key: Some(ApiKey::new("sk-test".to_owned()).unwrap()),
+    };
+    let (_stop, receiver) = watch::channel(false);
+    let reply = completions::create(&model, &completions::single("Hi".to_owned()), &receiver, |_| true).await;
 
     (reply, service.received().remove(0))
 }
@@ -153,10 +147,7 @@ async fn the_google_preset_reads_its_stream() {
     assert!(request.head.starts_with("POST /v1beta/models/gemini-4-argon:streamGenerateContent?alt=sse "));
     assert_eq!(request.header("x-goog-api-key"), Some("sk-test"));
     assert_eq!(request.body["contents"], json!([{"role": "user", "parts": [{"text": "Hi"}]}]));
-    assert_eq!(
-        request.body["systemInstruction"]["parts"][0]["text"],
-        crate::ai::connection::DEFAULT_SYSTEM_PROMPT
-    );
+    assert_eq!(request.body["systemInstruction"]["parts"][0]["text"], crate::model::ai::DEFAULT_SYSTEM_PROMPT);
 }
 
 #[tokio::test]

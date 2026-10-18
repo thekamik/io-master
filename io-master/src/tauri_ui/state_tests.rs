@@ -2,18 +2,18 @@
 
 use super::*;
 
-use crate::db::database_key::DatabaseKey;
-use crate::random::random::fill_random;
+use crate::business::session::Session;
+use crate::db::encryption::database_key::DatabaseKey;
+use crate::db::user::database as user_db;
+use crate::security::random::fill_random;
+use crate::test_support::TempDir;
 
 fn state() -> UiState {
     UiState::new(PathBuf::from("/nonexistent"), Opened::FirstRun)
 }
 
 fn account() -> Account {
-    Account {
-        id: 1,
-        name: "anna".to_owned(),
-    }
+    Account { id: 1, name: "anna".to_owned() }
 }
 
 #[test]
@@ -22,7 +22,17 @@ fn a_session_starts_and_ends() {
 
     assert!(matches!(state.session(), Err(UiError::NotLoggedIn)));
 
-    state.log_in(account(), DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap());
+    // The database of the account, and its session.
+    let directory = TempDir::new();
+    let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
+    let again = DatabaseKey::fill_with(|bytes| {
+        bytes.copy_from_slice(key.expose());
+        Ok::<(), ()>(())
+    })
+    .unwrap();
+    user_db::create(directory.path(), 1, &key).unwrap();
+
+    state.log_in(Session::open(directory.path(), account(), again).unwrap());
     assert_eq!(state.current_user(), Some(account()));
     assert_eq!(state.session().unwrap().account, account());
 

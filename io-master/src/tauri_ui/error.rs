@@ -8,13 +8,17 @@
 
 use std::fmt;
 
-use crate::accounts::accounts::AccountError;
-use crate::ai::ai_error::AiError;
-use crate::ai::connection::{ConnectionError, Field};
-use crate::ai::connections::SaveError;
-use crate::ai::conversation::SendError;
-use crate::db::db::DbError;
-use crate::installation::lifecycle::LifecycleError;
+use crate::ai::api::completions::AiError;
+use crate::ai::api::connections::ConnectionSaveError;
+use crate::ai::api::roles::ModelError;
+use crate::business::chats::conversation::SendError;
+use crate::business::installation::lifecycle::LifecycleError;
+use crate::business::oscal::documents::OscalError;
+use crate::business::session::accounts::AccountError;
+use crate::business::standards::error::DocumentError;
+use crate::business::work::WorkError;
+use crate::db::error::DbError;
+use crate::model::ai::{ConnectionError, Field};
 
 /// Why a command failed.
 #[derive(Debug)]
@@ -100,16 +104,57 @@ impl From<SendError> for UiError {
     }
 }
 
-impl From<SaveError> for UiError {
-    fn from(error: SaveError) -> UiError {
+impl From<ModelError> for UiError {
+    fn from(error: ModelError) -> UiError {
         match error {
-            SaveError::Invalid(error) => UiError::Connection(error),
-            SaveError::NameTaken => UiError::Connection(ConnectionError {
-                field: Field::Name,
-                reason: error.to_string(),
-            }),
-            SaveError::NoSuchConnection => UiError::Invalid(error.to_string()),
-            SaveError::Db(error) => UiError::Failed(error.to_string()),
+            ModelError::NoConnection => UiError::Invalid(error.to_string()),
+            ModelError::BrokenConnection(_, error) => UiError::Connection(error),
+            ModelError::NoKey(_) => UiError::Ai(AiError::NoKey),
+            ModelError::Db(error) => UiError::Failed(error.to_string()),
+        }
+    }
+}
+
+impl From<ConnectionSaveError> for UiError {
+    fn from(error: ConnectionSaveError) -> UiError {
+        match error {
+            ConnectionSaveError::Invalid(error) => UiError::Connection(error),
+            ConnectionSaveError::NameTaken => {
+                UiError::Connection(ConnectionError { field: Field::Name, reason: error.to_string() })
+            }
+            ConnectionSaveError::NoSuchConnection => UiError::Invalid(error.to_string()),
+            ConnectionSaveError::Db(error) => UiError::Failed(error.to_string()),
+        }
+    }
+}
+
+impl From<WorkError> for UiError {
+    fn from(error: WorkError) -> UiError {
+        match error {
+            WorkError::Invalid(reason) => UiError::Invalid(reason),
+            WorkError::Document(error) => error.into(),
+            WorkError::Model(error) => error.into(),
+            WorkError::Message(error) => error.into(),
+            WorkError::Db(error) => error.into(),
+            WorkError::Interrupted => UiError::Failed(error.to_string()),
+        }
+    }
+}
+
+impl From<DocumentError> for UiError {
+    fn from(error: DocumentError) -> UiError {
+        match error {
+            DocumentError::Db(error) => UiError::Failed(error.to_string()),
+            other => UiError::Invalid(other.to_string()),
+        }
+    }
+}
+
+impl From<OscalError> for UiError {
+    fn from(error: OscalError) -> UiError {
+        match error {
+            OscalError::Db(error) => UiError::Failed(error.to_string()),
+            other => UiError::Invalid(other.to_string()),
         }
     }
 }

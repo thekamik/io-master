@@ -1,0 +1,162 @@
+//! The rules every text field of the program follows, the error when
+//! one is broken, and the names of the fields and of the objects the
+//! errors of the rules speak of (as enums, so that the window can tell
+//! them apart). The areas (`standards.rs`, and the documents of OSCAL of step 41,
+//! `standards.rs`) check their fields with [`check_text`] and turn
+//! [`Invalid`] into their own errors.
+
+use std::fmt;
+
+/// A field of a project, a scheme, a tile, an evaluation or a document.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Field {
+    Author,
+    Description,
+    Document,
+    Documents,
+    Evaluator,
+    External,
+    Identifier,
+    Instructions,
+    Kind,
+    Link,
+    Manufacturer,
+    Model,
+    Name,
+    Number,
+    Pages,
+    Part,
+    Place,
+    Position,
+    Product,
+    ProductVersion,
+    Project,
+    Quote,
+    Scheme,
+    Sections,
+    Sources,
+    Text,
+    Title,
+    Version,
+}
+
+impl Field {
+    /// The name of the field, in the sentences of the errors.
+    pub fn name(self) -> &'static str {
+        match self {
+            Field::Author => "author",
+            Field::Description => "description",
+            Field::Document => "document",
+            Field::Documents => "documents",
+            Field::Evaluator => "evaluator",
+            Field::External => "external",
+            Field::Identifier => "identifier",
+            Field::Instructions => "instructions",
+            Field::Kind => "kind",
+            Field::Link => "link",
+            Field::Manufacturer => "manufacturer",
+            Field::Model => "model",
+            Field::Name => "name",
+            Field::Number => "number",
+            Field::Pages => "pages",
+            Field::Part => "part",
+            Field::Place => "place",
+            Field::Position => "position",
+            Field::Product => "product",
+            Field::ProductVersion => "product version",
+            Field::Project => "project",
+            Field::Quote => "quote",
+            Field::Scheme => "scheme",
+            Field::Sections => "sections",
+            Field::Sources => "sources",
+            Field::Text => "text",
+            Field::Title => "title",
+            Field::Version => "version",
+        }
+    }
+}
+
+impl fmt::Display for Field {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.name())
+    }
+}
+
+/// An object an error speaks of.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Entity {
+    Document,
+    Evaluation,
+    Link,
+    Project,
+    Proposal,
+    Scheme,
+    TestProject,
+    Tile,
+}
+
+impl Entity {
+    /// The name of the object, in the sentences of the errors.
+    pub fn name(self) -> &'static str {
+        match self {
+            Entity::Document => "document",
+            Entity::Evaluation => "evaluation",
+            Entity::Link => "link",
+            Entity::Project => "project",
+            Entity::Proposal => "proposal",
+            Entity::Scheme => "scheme",
+            Entity::TestProject => "test project",
+            Entity::Tile => "tile",
+        }
+    }
+}
+
+impl fmt::Display for Entity {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.name())
+    }
+}
+
+/// A field that breaks a rule: which field, and why (a sentence for
+/// the evaluator).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Invalid {
+    pub field: Field,
+    pub reason: String,
+}
+
+impl Invalid {
+    pub fn new(field: Field, reason: impl Into<String>) -> Invalid {
+        Invalid { field, reason: reason.into() }
+    }
+}
+
+impl fmt::Display for Invalid {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.reason)
+    }
+}
+
+impl std::error::Error for Invalid {}
+
+/// A text field: at most `max` characters; no control characters
+/// other than line breaks and tabs where `lines` allows them.
+pub fn check_text(field: Field, text: &str, max: usize, lines: bool) -> Result<(), Invalid> {
+    if text.chars().count() > max {
+        return Err(Invalid::new(field, format!("the {field} is longer than {max} characters")));
+    }
+
+    let bad = |character: char| character.is_control() && !(lines && (character == '\n' || character == '\t'));
+
+    if text.chars().any(bad) {
+        return Err(Invalid::new(field, format!("the {field} holds a control character")));
+    }
+
+    Ok(())
+}
+
+// Unit tests, in their own file to keep this one readable. They
+// are part of this module, so they can use its private items.
+#[cfg(test)]
+#[path = "text_tests.rs"]
+mod tests;

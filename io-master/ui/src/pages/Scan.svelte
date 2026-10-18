@@ -8,7 +8,8 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import { saveScanSettings, scanPorts, sentence, type ScanView } from "../lib/api";
+  import { sentence } from "../lib/api/errors";
+import { saveScanSettings, scanPorts, type ScanView } from "../lib/api/scan";
 
   let view: ScanView | null = $state(null);
   let problem = $state("");

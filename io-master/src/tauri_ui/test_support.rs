@@ -1,11 +1,11 @@
 //! Help for the tests of the desktop interface: a state with a real
 //! installation (databases, accounts) in a temporary directory.
 
-use crate::installation::installation::Role;
-use crate::installation::lifecycle::{self, Opened};
-use crate::tpm::test_support::TempDir;
+use crate::business::installation::lifecycle::{self, Opened};
+use crate::model::installation::Role;
+use crate::test_support::TempDir;
 
-use super::account_actions;
+use super::commands::account;
 use super::state::UiState;
 
 /// The password of the user of the tests.
@@ -42,7 +42,7 @@ pub fn installed() -> TestState {
 pub async fn logged_in() -> TestState {
     let test = installed();
 
-    account_actions::log_in(&test.state, "anna".to_owned(), PASSWORD.to_owned()).await.unwrap();
+    account::log_in(&test.state, "anna".to_owned(), PASSWORD.to_owned()).await.unwrap();
 
     test
 }
@@ -55,7 +55,7 @@ pub async fn with_document() -> (TestState, i64) {
     let path = directory.path().join("cc-part3.pdf");
     std::fs::write(
         &path,
-        crate::evaluation::test_support::pdf(&[
+        crate::business::standards::test_support::pdf(&[
             "ADV_FSP.4 Complete functional specification",
             "The developer shall provide a functional specification.",
             "ATE_IND.2 The evaluator shall test a subset of the TSF.",
@@ -63,34 +63,8 @@ pub async fn with_document() -> (TestState, i64) {
     )
     .unwrap();
 
-    super::standard_actions::load(&test.state, vec![path], |_| true).await.unwrap();
-    let id = super::standard_actions::list(&test.state).await.unwrap()[0].id;
+    super::commands::documents::load(&test.state, vec![path], |_| true).await.unwrap();
+    let id = super::commands::documents::list(&test.state).await.unwrap()[0].id;
 
     (test, id)
-}
-
-/// The form of a project that uses `documents`.
-pub fn project_form(name: &str, documents: Vec<i64>) -> super::serializer::project_view::ProjectForm {
-    super::serializer::project_view::ProjectForm {
-        name: name.into(),
-        version: "1".into(),
-        description: String::new(),
-        author: "Head".into(),
-        documents,
-    }
-}
-
-/// The form of an accepted scheme, with the pages `pages` of
-/// `document` when given.
-pub fn scheme_form(number: &str, name: &str, pages: Option<(i64, u32, u32)>) -> super::serializer::project_view::SchemeForm {
-    super::serializer::project_view::SchemeForm {
-        number: number.into(),
-        name: name.into(),
-        pages: pages.map(|(document_id, first_page, last_page)| super::serializer::project_view::PageSpanView {
-            document_id,
-            first_page,
-            last_page,
-        }),
-        state: "accepted".into(),
-    }
 }

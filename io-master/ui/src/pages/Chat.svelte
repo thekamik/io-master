@@ -11,18 +11,9 @@
 <script lang="ts">
   import { onMount, tick } from "svelte";
 
-  import {
-    aiConfig,
-    deleteChat,
-    listChats,
-    openChat,
-    sendMessage,
-    sentence,
-    stopReply,
-    type ChatSummaryView,
-    type ConnectionView,
-    type MessageView,
-  } from "../lib/api";
+  import { aiConfig, type ConnectionView } from "../lib/api/ai";
+import { deleteChat, listChats, openChat, sendMessage, stopReply, type ChatSummaryView, type MessageView } from "../lib/api/chat";
+import { sentence } from "../lib/api/errors";
 
   /** The active connection; null when none is chosen. */
   let connection = $state<ConnectionView | null>(null);

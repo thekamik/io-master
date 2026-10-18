@@ -1,0 +1,102 @@
+/* ---------------------------------------------------------------
+ * 5. Cards and tabs
+ * ------------------------------------------------------------- */
+
+.card,
+fieldset,
+.panel {
+    min-width: 0;
+    margin: 0 0 1.25rem;
+    padding: 1.1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+/* The title of a card: on its first line, not in the frame. */
+legend {
+    float: left;
+    width: 100%;
+    margin: 0 0 0.9rem;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 650;
+}
+
+legend + * {
+    clear: both;
+}
+
+.panel {
+    max-width: 30rem;
+}
+
+.card > h2:first-child,
+.card > h3:first-child {
+    margin-top: 0;
+}
+
+/* Tabs: a row of buttons with a line under the chosen one. */
+.tabs {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0 0 1.25rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.tabs button {
+    min-height: 2.4rem;
+    padding: 0.4rem 0.95rem;
+    margin-bottom: -1px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+}
+
+.tabs button:hover:not(:disabled) {
+    color: var(--text);
+    background: none;
+}
+
+.tabs button.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+/* Folded settings (the scanner): a card that opens. */
+details.settings {
+    margin-bottom: 1.25rem;
+    padding: 0.85rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+details.settings summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+details.settings[open] summary {
+    margin-bottom: 1rem;
+}
+
+details.settings fieldset {
+    box-shadow: none;
+    background: var(--surface-2);
+}
+
+.choices {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+    gap: 0.35rem 1rem;
+    margin-top: 0.5rem;
+}
+
+.choices label.choice {
+    margin-bottom: 0;
+}

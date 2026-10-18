@@ -10,7 +10,7 @@
 //! owns it:
 //!
 //! 1. checks the installation of this Linux account
-//!    (`installation/verify.rs`); a damaged installation is a
+//!    (`business/installation/verify.rs`); a damaged installation is a
 //!    critical error and the program does not start;
 //! 2. opens the window ([`tauri_startup`] below) and runs until it
 //!    is closed.
@@ -23,122 +23,30 @@
 //! Linux account; one Linux account holds one installation with one
 //! user (docs/architecture.md, sections 3 and 5.6).
 
-mod ai {
-    pub mod ai_error;
-    pub mod api_key;
-    pub mod chats;
-    pub mod client;
-    pub mod connection;
-    pub mod connections;
-    pub mod conversation;
-    pub mod field_help;
-    pub mod json_path;
-    pub mod presets;
-    pub mod request;
-    pub mod response;
-    pub mod sse;
-    #[cfg(test)]
-    pub mod test_support;
-}
+// The folders of the program. Each declares its own modules in the
+// file of the same name next to it (`db.rs` next to `db/`), so that
+// a new file never changes this one; the whole tree is described in
+// docs/code_structure.md.
+mod ai;
+mod business;
+mod db;
+mod hardware_tests;
+mod model;
+mod security;
+mod tauri_ui;
+#[cfg(test)]
+mod test_support;
 
-mod evaluation {
-    pub mod analysis;
-    pub mod checks;
-    pub mod contents;
-    pub mod documents;
-    pub mod exchange;
-    pub mod pdf_text;
-    pub mod projects;
-    pub mod quote;
-    pub mod scheme;
-    pub mod schemes;
-    #[cfg(test)]
-    pub mod test_support;
-}
-
-mod accounts {
-    // Same layout as installation/installation.rs.
-    #[allow(clippy::module_inception)]
-    pub mod accounts;
-}
-
-mod installation {
-    // The file is installation/installation.rs by choice of the
-    // project layout; clippy would prefer a different name for it.
-    #[allow(clippy::module_inception)]
-    pub mod installation;
-    pub mod lifecycle;
-    pub mod verify;
-}
-
-mod devices {
-    // Same layout as installation/installation.rs.
-    #[allow(clippy::module_inception)]
-    pub mod devices;
-    pub mod port_property;
-    pub mod scan_settings;
-}
-
-mod tpm {
-    pub mod device_secret;
-    pub mod emulator;
-    #[cfg(test)]
-    pub mod test_support;
-    // Same layout as installation/installation.rs.
-    #[allow(clippy::module_inception)]
-    pub mod tpm;
-}
-
-mod db {
-    pub mod database_key;
-    // Same layout as installation/installation.rs.
-    #[allow(clippy::module_inception)]
-    pub mod db;
-    pub mod generate_key;
-    pub mod keys;
-    pub mod system_db;
-    pub mod user_db;
-}
-
-mod random {
-    // Same layout as installation/installation.rs.
-    #[allow(clippy::module_inception)]
-    pub mod random;
-}
-
-mod tauri_ui {
-    pub mod account_actions;
-    pub mod ai_config_actions;
-    pub mod blocking;
-    pub mod chat_actions;
-    pub mod commands;
-    pub mod error;
-    pub mod model_run;
-    pub mod project_actions;
-    pub mod scan_actions;
-    pub mod scheme_actions;
-    pub mod serializer {
-        pub mod ai_config_view;
-        pub mod app_view;
-        pub mod chat_view;
-        pub mod error_view;
-        pub mod project_view;
-        pub mod scan_view;
-        pub mod scheme_view;
-        pub mod standard_view;
-    }
-    pub mod standard_actions;
-    pub mod state;
-    #[cfg(test)]
-    pub mod test_support;
-    pub mod user_data;
-}
+// The direction of the dependencies between the folders, checked on
+// the source.
+#[cfg(test)]
+mod architecture_tests;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use installation::lifecycle::Opened;
-use installation::verify::{InstallationState, verify_installation};
+use business::installation::lifecycle::Opened;
+use business::installation::verify::{InstallationState, verify_installation};
 use tauri_ui::commands;
 use tauri_ui::state::UiState;
 
@@ -149,7 +57,7 @@ use tauri_ui::state::UiState;
 // at every start and never written into the program.
 //
 // TODO (step 13 of docs/todo.md): move both to
-// installation/verify.rs, where the keyring will be read; unused
+// business/installation/verify.rs, where the keyring will be read; unused
 // until then.
 
 /// Name of the keyring entry with the location of the installation
@@ -174,7 +82,7 @@ fn main() -> ExitCode {
     }
 
     // The state of the installation decides how the window starts
-    // (installation/verify.rs). A damaged installation is a
+    // (business/installation/verify.rs). A damaged installation is a
     // critical error: the program does not start
     // (docs/architecture.md, section 3.2).
     let (data_dir, opened) = match verify_installation() {
@@ -219,14 +127,14 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         // listed in build.rs and capabilities/default.json, or the
         // page is refused when it calls it.
         .invoke_handler(tauri::generate_handler![
-            // The program and the account (account_actions.rs).
+            // The program and the account (commands/account.rs).
             commands::app_state,
             commands::set_up,
             commands::log_in,
             commands::log_out,
             commands::change_password,
             // Settings, tab AI: the connections to AI services
-            // (ai_config_actions.rs).
+            // (commands/ai.rs).
             commands::ai_config,
             commands::save_ai_connection,
             commands::delete_ai_connection,
@@ -235,17 +143,17 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             commands::delete_ai_key,
             commands::check_ai_connection,
             commands::ai_field_instruction,
-            // The scan of the serial ports (scan_actions.rs).
+            // The scan of the serial ports (commands/scan.rs).
             commands::scan_ports,
             commands::save_scan_settings,
-            // The chat with the AI (chat_actions.rs).
+            // The chat with the AI (commands/chats.rs).
             commands::list_chats,
             commands::open_chat,
             commands::delete_chat,
             commands::send_message,
             commands::stop_reply,
-            // Create evaluation scheme: the documents of the standards
-            // (standard_actions.rs).
+            // The evaluation plan: the documents of the standards
+            // (commands/documents.rs).
             commands::list_documents,
             commands::load_documents,
             commands::stop_work,
@@ -254,39 +162,29 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             commands::document_page,
             commands::search_documents,
             commands::document_pdf,
-            // Create evaluation scheme: the test projects, the list of
-            // their schemes, the table of contents read by the AI, the
-            // exchange as a file (project_actions.rs).
-            commands::list_projects,
-            commands::create_project,
-            commands::open_project,
-            commands::update_project,
-            commands::set_project_ready,
-            commands::delete_project,
-            commands::create_scheme,
-            commands::update_scheme,
-            commands::accept_schemes,
-            commands::delete_schemes,
-            commands::propose_schemes,
-            commands::export_project,
-            commands::import_project,
-            // Create evaluation scheme: the drawing of one scheme, its
-            // tiles and links, and the analysis of chapters by the AI
-            // (scheme_actions.rs).
-            commands::open_scheme,
-            commands::add_tile,
-            commands::update_tile,
-            commands::move_tile,
-            commands::move_tiles,
-            commands::delete_tiles,
-            commands::accept_tiles,
-            commands::add_link,
-            commands::delete_link,
-            commands::undo_scheme,
-            commands::analysis_instructions,
-            commands::save_analysis_instructions,
-            commands::analyse_scheme,
-            commands::analyse_schemes,
+            // The evaluation plan: the documents of OSCAL
+            // (commands/oscal.rs).
+            commands::list_oscal_documents,
+            commands::import_oscal_document,
+            commands::export_oscal_document,
+            commands::delete_oscal_document,
+            // The evaluation plan: the catalogs of OSCAL
+            // (commands/catalogs.rs).
+            commands::create_catalog,
+            commands::open_catalog,
+            commands::add_catalog_group,
+            commands::update_catalog_group,
+            commands::add_catalog_control,
+            commands::update_catalog_control,
+            commands::delete_catalog_object,
+            commands::add_catalog_quote,
+            commands::delete_catalog_quote,
+            commands::accept_catalog_proposal,
+            commands::reject_catalog_proposal,
+            commands::catalog_instructions,
+            commands::save_catalog_instructions,
+            commands::propose_catalog_groups,
+            commands::propose_catalog_controls,
         ])
         .run(tauri::generate_context!());
 
@@ -298,4 +196,3 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         }
     }
 }
-

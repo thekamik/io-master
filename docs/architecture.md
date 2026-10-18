@@ -1,6 +1,6 @@
-# IO Master v0.3: architecture
+# IO Master: architecture
 
-This document records the concept of the new version, as agreed on 2026-10-14 and changed on 2026-10-15 (one user per installation, the keyring, the secret of the application; sections 3, 5.1, 5.6, 9). It describes *what* the program is and *why* it is built this way. Implementation details belong in the code; the functions of v0.2 that are being re-created are listed in `v0.2_functionality.md`.
+This document records the concept of the program, as agreed from 2026-10-14 on (one user per installation, the keyring and the secret of the application on 2026-10-15; the desktop window on 2026-10-16; the layers of the code on 2026-10-17; the standards in NIST OSCAL on 2026-10-18). It describes *what* the program is and *why* it is built this way. *Where* everything is in the code is in `code_structure.md`; the work with standards on NIST OSCAL in `oscal.md`; the functions of v0.2 that are being re-created are listed in `v0.2_functionality.md`.
 
 Status markers: **agreed** is decided; **open** still needs a decision; **TODO** is known work that must not be forgotten.
 
@@ -8,7 +8,7 @@ Status markers: **agreed** is decided; **open** still needs a decision; **TODO**
 
 ## 1. Purpose
 
-IO Master is a tool for evaluators who work under Common Criteria (ISO/IEC 15408, CEM ISO/IEC 18045). It brings together the work on the device under evaluation (serial ports, Bluetooth), AI assistance, and the record of everything that was done.
+IO Master is a tool for evaluators of security laboratories, who evaluate products against standards: first of all Common Criteria (ISO/IEC 15408, CEM ISO/IEC 18045) and ETSI EN 303 645, and any other standard in the same way. The requirements of a standard, the plan of their evaluation and its results are kept in **NIST OSCAL** (section 7.1). The program brings together the evaluation plan and the evaluation with AI assistance, the work on the device under evaluation (serial ports, Bluetooth), and the record of everything that was done.
 
 The program is installed **locally, on the computer of the evaluator**, in their own Linux account: **one Linux account holds one installation with one user of the program** (section 3). It is used through a **desktop window** (section 4). There is no console interface.
 
@@ -21,8 +21,8 @@ Carried over from the design of v0.2; they are requirements, not preferences.
 | P1 | **The evaluator decides.** | The program never issues a verdict. It offers an estimate with its reasons. |
 | P2 | **No command reaches a device without an action of the evaluator for that command.** | The program proposes; the evaluator executes. Acting on a device carries legal responsibility. |
 | P3 | **Everything is traceable.** | Every passage used, every proposal of the model, every approval, every command and every answer of the device is recorded. |
-| P4 | **The norm is data, not code.** | CC and CEM are loaded from replaceable index files. |
-| P5 | **The model reads; it does not search the norm.** | Passages of the norm are found by their identifiers. The model works on the documents of the product. |
+| P4 | **The norm is data, not code.** | Every standard is kept as OSCAL documents (catalogs, profiles, mappings), made or loaded; nothing about a standard is written into the program (section 7.1). |
+| P5 | **The model reads; it does not invent sources.** | Passages of the norm are found by the identifiers of their OSCAL objects and the quotes kept with them; every quote the AI proposes is checked on its page. The model works on the text it is given. |
 
 ## 3. One program, two roles (agreed)
 
@@ -32,13 +32,13 @@ There is one program. Its **role is chosen once, at the first start, in the wind
 
 | Role | Where | What it can do | What is blocked |
 |---|---|---|---|
-| **Workstation** | the Linux account of an evaluator | everything: web UI, AI, chats, device scan and tests, evaluations. **One user only**: the evaluator who installed it | the master panel; adding users |
+| **Workstation** | the Linux account of an evaluator | everything: the window, AI, chats, device scan and tests, evaluations. **One user only**: the evaluator who installed it | the master panel; adding users |
 | **Master** | a separate, dedicated machine | only the password reset service: an API for workstations and a panel where its administrator approves requests. **One user only**: the one who installed it | everything else; adding users |
 
 ```text
  workstation of evaluator A          workstation of evaluator B
 ┌──────────────────────────┐        ┌──────────────────────────┐
-│ browser ── web UI        │        │ browser ── web UI        │
+│ the window (Tauri)       │        │ the window (Tauri)       │
 │ io-master (workstation)  │        │ io-master (workstation)  │
 │  data, AI, devices       │        │  data, AI, devices       │
 └────────────┬─────────────┘        └────────────┬─────────────┘
@@ -58,7 +58,7 @@ A master and a workstation **never run on the same computer**, not even for deve
 
 ### 3.2 The first start (agreed, changed 2026-10-15)
 
-The first start is the real moment of installation. **It is told by the keyring of the Linux account** (section 5.6): two entries, the location of the installation and the secret of the application, are written there by the installation. The checks run in `startup/` before the server starts; `main` only calls them.
+The first start is the real moment of installation. **It is told by the keyring of the Linux account** (section 5.6): two entries, the location of the installation and the secret of the application, are written there by the installation. The checks run in `business/installation/verify.rs` before the window opens; `main` only calls them.
 
 | Entries in the keyring | Installation at the recorded location | State | What the program does |
 |---|---|---|---|
@@ -70,13 +70,12 @@ The first start is the real moment of installation. **It is told by the keyring 
 - **A new installation** is made only in an empty or new folder, so it can never overwrite an existing installation. The location is chosen by the user; how it is chosen in the window is decided when the interface is reviewed.
 - **Restoring an installation** asks for its location and its recovery code (the secret of the application, section 5.6). The program checks both against the system database and writes them back into the keyring. This is the way back after a lost keyring: a reset of the Linux password by an administrator, keyring entries removed by hand, a new system.
 - With the optional TPM factor (section 5.1) the marker in the TPM is compared as well; a marker without an installation, or an installation without its marker, is a damaged installation and stops the program.
-- At the first start the program prints a **one-time setup code** in the terminal. The setup page asks for it, so only the person who started the program can install it, not another user or program of the computer.
-- The setup is possible only in the local interface (without `--address`).
+- The setup is made in the window, by the person in front of it: the window opens no network port, so no other user or program of the computer can reach the setup (the one-time setup code of the web interface of v0.3 is no longer needed).
 - The person who installs the program is its **only user**.
 - **Only the role is final.** The connection to a master is set, changed or removed later in Settings; a workstation works fully without a master (section 5.4).
 - The data of an installation lives in its folder (the system database and the encrypted database of the user). All settings are in the databases; only the two entries of section 5.6 are kept in the keyring.
 - A build without the master code is possible later as a separate build variant.
-- **Removing the installation** is done in the window, after a login and a confirmation; it removes the databases, the keyring entries and, with the TPM factor, the marker in the TPM. There is no console command for it: whoever can type in a terminal of the account must not be able to remove the work of the evaluator. TODO (step 12): `installation/uninstall.rs` is a console function marked "do not use" until it is reworked.
+- **Removing the installation** is done in the window, after a login and a confirmation; it removes the databases, the keyring entries and, with the TPM factor, the marker in the TPM. There is no console command for it: whoever can type in a terminal of the account must not be able to remove the work of the evaluator. TODO (step 12): `business/installation/uninstall.rs` is a console function marked "do not use" (not compiled) until it is reworked.
 
 ## 4. User interface (agreed, changed 2026-10-16)
 
@@ -88,11 +87,15 @@ The first start is the real moment of installation. **It is told by the keyring 
   - `https://` with TLS 1.3 and a verified certificate (the system's, or only the CA certificate of the connection); **plain `http://` only to the loopback** (`127.0.0.0/8`, `::1`, written as an IP address), because that traffic does not leave the computer; no redirects, no proxy of the environment.
   - The API key only where `{{api_key}}` stands in a header, never in the URL or the body; never shown back; masked in the report of a check; bound to the scheme, host and port it was entered for (a changed address removes it).
   - Placeholders of the body are whole JSON values, replaced as values: a message can never change the structure of the request.
+  - **The AI layer (steps 38 and 40, 2026-10-17):** the rest of the program asks the AI only through `ai/api/`, in the form of REST (connections, roles, tasks, completions, checks); the communication with the provider (`ai/api/provider/`) is reachable only from there, and the text of every question and the reading of every answer are in `ai/tasks/`. Every question is asked in a task and a role (analysis of a text and its fragments, summary, consultation, formal analysis) and written into the journal of the AI by `ai/api/` itself (`completions::ask`), which is never changed. The connections, the roles, the instructions, the chats and the journal are stored by `db/ai/`.
 - Minimal layout: **navigation on the left**, the selected page on the right.
-- Pages of the workstation, in this order of work:
+- Pages of the workstation, in this order in the navigation:
   1. **Chat**: the AI assistant, over the active AI connection.
-  2. **Scan and permissions**: the serial ports, a filter by port type, and the access rights to the ports.
-  3. **Settings**, in tabs: **User** (the password, later the factors of the person), **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
+  2. **Evaluation plan**: the OSCAL documents of the standards (catalogs made in the program or loaded, mappings, profiles, assessment plans), and the documents of standards (PDF) they quote (section 7.1).
+  3. **Evaluation**: an evaluation plan carried out for one product (section 7.1; a placeholder until step 41.5).
+  4. **Manufacturer documentation**: a placeholder until step 30.
+  5. **Scan and permissions**: the serial ports, a filter by port type, and the access rights to the ports.
+  6. **Settings**, in tabs: **User** (the password, later the factors of the person), **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
 - The master shows only its administration panel.
 - **Logging in** is built as a mock-up first; the real mechanism comes near the end of development. The design of the keys (section 5) is fixed now, because the encrypted database depends on it.
 
@@ -127,7 +130,7 @@ secret of the application (keyring) ──────┼─► HKDF ──► u
 [secret of the device (TPM), optional] ───┘
 ```
 
-- The key of the database is random (`db/generate_key.rs`) and is never stored in plain form; it is stored encrypted with the unlocking key. Each stored key records which factors it needs.
+- The key of the database is random (`db/encryption/generate_key.rs`) and is never stored in plain form; it is stored encrypted with the unlocking key. Each stored key records which factors it needs.
 - Opening the database needs the password and the secret of the application, and with the TPM factor also the device.
 - Changing the password re-encrypts only the 32-byte key of the database, not the database.
 - Limit: while an evaluator is logged in, the key is in the memory of the program. The scheme protects the data when the program is closed or logged out.
@@ -142,6 +145,8 @@ secret of the application (keyring) ──────┼─► HKDF ──► u
 The system database is opened before anyone gives a password, so without the TPM there is no key that could protect it: it therefore holds **nothing secret**. The keys of the evaluators' databases it holds are encrypted and useless without the passwords.
 
 **Open (step 4):** the private key of the TLS server is needed at program start, before any login. With the TPM factor it is protected by the TPM; without it, how it is protected is still to be decided.
+
+**The code (steps 37 and 40 of `todo.md`, 2026-10-17):** all SQL is in `src/db/`, one folder per area of data, each with its tables and its files of create, read, update and delete; all code of encryption is in `src/db/encryption/`, and `sqlcipher.rs` is the only place where a database file is opened or created. The connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile. The database of an evaluator is opened once at the login and kept in the session of the evaluator (`business/session.rs`) until the logout; the key that opened it is wiped. The OSCAL documents are kept as their JSON, checked against the schema of NIST at every write, with tables of index for their UUIDs and ids (`db/oscal/`); the evaluation support has tables of its own (`db/evaluation_support/`). The business changes them and writes them through to the database at once. Details: `code_structure.md`.
 
 Both databases are **SQLite files** (agreed, implemented in step 3), the database of the evaluator encrypted with SQLCipher: no separate database service, one file per database in the folder of the installation (section 3.2), transactions that survive an interrupted write, and a built-in way to copy a running database.
 
@@ -179,7 +184,7 @@ The keyring of the Linux account (through the Secret Service interface; GNOME Ke
 
 - **Every damage is critical.** A missing, damaged or contradictory entry, or an installation that does not match them, stops the program (section 3.2), except when both entries are missing: then the start page offers a new installation or the restoring of an existing one.
 - **The secret is also the recovery code.** It is shown as text that can be copied by hand: the alphabet without 0, O, 1 and I, groups of five characters, with a check sum against typing errors (about 52 characters). The evaluator keeps it outside the computer, for example in the safe of the laboratory.
-- **It can be shown again** in Settings, only after the password is entered again, so that an open, logged-in browser tab is not enough to read it.
+- **It can be shown again** in Settings, only after the password is entered again, so that an open, logged-in window is not enough to read it.
 - **It can be replaced** when it may have been stolen: a new secret is made, the key of the database is encrypted again with the password and the new secret, and the keyring entry is replaced. Limit, stated in the page: a copy of the files taken *together with* the old secret still opens with the old secret and the password; the replacement protects the files on the computer, not copies already taken.
 - **What the keyring does not prove.** It needs a desktop session, which makes work over SSH or without a desktop impossible: wanted, because the evaluator is to work at the computer. It is not a proof of presence: while the session is unlocked (also behind a locked screen) the keyring is open to every program of the account. A proof of presence is the passkey with user verification (section 5.1, optional, step 9).
 
@@ -192,24 +197,25 @@ The program does not share data between evaluators itself. The laboratory uses i
 - The program answers for its own security and for the transport. What happens on the git server (for example disk encryption) is the responsibility of the laboratory.
 - Credentials for git are secrets, protected like all others (section 5.1).
 - **What goes to git (agreed): only the filled-in report template of the laboratory.** The laboratory writes its own report template in LaTeX with markers; the program fills the markers with parts of the evaluation and the result is committed. Everything else (API keys, chats, working results) stays in the encrypted database of the workstation. This comes in a later stage (see section 8).
-- Planned later as well: a small git panel in the web UI.
+- Planned later as well: a small git panel in the window.
 
-## 7. Work on devices
+## 7. Work on devices and on standards
 
-Devices are reached from the workstation only. The first function is the scan of serial ports (`devices/devices.rs`); it reads only the description of the ports and never opens one. Sending to a device follows P2: proposed by the program, executed by an action of the evaluator.
+Devices are reached from the workstation only. The first function is the scan of serial ports (`hardware_tests/devices/serial_ports.rs`); it reads only the description of the ports and never opens one. Sending to a device follows P2: proposed by the program, executed by an action of the evaluator.
 
-### 7.1 Test projects and evaluation schemes (agreed and built 2026-10-16, steps 16 to 22 and 24 to 27 of `todo.md`)
+### 7.1 Standards: the evaluation plan and the evaluation on NIST OSCAL (agreed 2026-10-18, step 41 of `todo.md`)
 
-The program works against any **standard** (not only Common Criteria): its documents are loaded as PDFs, read page by page (`pdftotext` of Poppler, the PDF on its standard input), and kept with their text in the encrypted database of the evaluator. From them a **test project** is made: the map of the standard (only the map: providing documents, tests and reports belong to the tool *Evaluation*). A project holds a flat list of **schemes**, one per chapter of the standard; each scheme is drawn as tiles on a canvas, the user picks a chapter from the list and sees its graph. AI creates, the person corrects and approves.
+The program works against any **standard**, not only Common Criteria. **The data of the standards is stored in NIST OSCAL 1.2.3** (Open Security Controls Assessment Language), the published, machine-readable format of NIST for requirements and their assessment; every OSCAL document is checked against the JSON schemas of NIST (kept in the repository, `io-master/oscal/`) whenever it is written. The whole concept, with the decisions of the user and the examples of how Common Criteria and ETSI EN 303 645 are represented, is in **`oscal.md`**; this section gives its frame.
 
-- **Three kinds of tile:** *input* (what the evaluation needs: documentation, a sample, access, the result of another requirement, a part of another document of the standard), *requirement* (met when all its inputs are), *output* (the result in the standard form of a report: requirements reported, inputs, activities and tests, evidence, findings, verdict and rationale).
-- **Links** follow from the kinds they join: input → requirement (needed by), requirement → output (reported in), requirement → input (provides), requirement → requirement (precedes: must be met first); no other pair and no circle. Links belong to the project: their two tiles may be in two schemes, and a tile of another scheme is drawn as a read-only shadow. Tiles can be moved between the schemes of a project.
-- **Sources:** every tile keeps the passages it comes from (document, page, quote); the program checks that a quote is on its page and keeps the result; the viewer (pdf.js, built in) shows it highlighted in the original page.
-- **AI** reads the table of contents and proposes the schemes (the pages of each chapter found by its heading in the text), then analyses the pages of each chapter part by part over the active AI connection and proposes tiles and links (also to requirements of other chapters); every proposal enters the scheme as *proposed*, its quotes checked; the user accepts, corrects or deletes (P1). Inputs described in a document that is not loaded become inputs to be completed later.
-- **Checks** name the gaps of a scheme (requirements without inputs or not reported, unused inputs, inputs to be completed, proposals, quotes not found, untraced requirements); a project is marked ready by the user.
-- **Export and import** of a whole project as a JSON file (format `io-master-project`, version 1), the documents named by title, part, version and SHA-256, the PDFs carried only if the user chooses; a head of the laboratory gives projects to the evaluators this way. The laboratory is trusted: no signatures.
+- **Two functions.** The **evaluation plan** makes or loads the OSCAL scheme of a standard, shows it as a graph and hands it over; the **evaluation** takes a plan and, with the AI, provides the evidence, checks whether the requirements are met and makes the report. Besides them, the program integrates the tools with which the laboratory carries out the functional tests (section 7). It supports the laboratory; it is not the whole process of certification.
+- **The models of OSCAL in use:** catalog (the requirements of a standard), mapping (relations between requirements, also of two standards), profile (the requirements chosen for one evaluation, their parameters set), assessment plan (the plan: tasks, activities, subjects, tools) and assessment results (observations, findings, risks, the log of the assessment). The system security plan and the component definition come with the documentation of the manufacturer (step 30).
+- **No solution of its own for one standard.** Every document that defines the work is an OSCAL document and can be taken into a plan: the criteria (CC Parts 1 to 5, ETSI EN 303 645), the methodology with its work units (the CEM), the Protection Profiles, test specifications (ETSI TS 103 701). Catalogs published in OSCAL (NIST SP 800-53, ...) are imported as they are; the others are made in the program.
+- **Documents of a standard.** Its PDFs are loaded, read page by page (`pdftotext` of Poppler, the PDF on its standard input) and kept with their text in the encrypted database of the evaluator; a catalog names the PDFs it comes from as resources of its back matter, by the SHA-256 of the file. The viewer (pdf.js, built in) shows a quoted passage highlighted on its page.
+- **Catalogs made in the program.** The AI proposes the groups of a catalog from the table of contents and the controls of a group from its pages, part by part over the active AI connection; every proposal carries quotes, each checked on its page by the program. The evaluator accepts, corrects or rejects every proposal (P1) and edits the catalog by hand.
+- **The evaluation support (our own model).** What the program adds to OSCAL (the quotes of an object with their pages and the result of their check, the AI notes, the proposals of the AI and their state, the instructions to the AI and the prompts, the layout of the graph) is kept in tables of its own and linked to OSCAL objects only by their UUIDs and ids; **nothing of ours is written into an OSCAL document**, so an export is valid OSCAL and the evaluation support travels beside it.
 - **Where the text of a standard goes is the decision of the laboratory**: the program sends it over the connection the user chose and does not warn or block. Recommended: a local model for licensed standards (a connection to `http://127.0.0.1`, which never leaves the computer); a cloud service only where the licence of the standard and the rules of the laboratory allow it.
-- **Later (step 23):** the tool *Evaluation* carries a project out for one product with the help of AI; verdicts and final decisions stay with the evaluator. **Step 28:** the results are written into the LaTeX template of the laboratory, automatically by default.
+- **The evaluation (step 41.5, then steps 31 to 36)** records its work as OSCAL assessment results. The decisions of the user of 2026-10-17 stand: the evaluator works on **one requirement at a time**; the documentation of the product is used in **two phases**, first the fragments that matter for the requirement (each an exact quote checked on its page, the explanation of the model in a separate *AI note*, never presented as a quote), then the assessment on **only the fragments the evaluator has accepted**, a methodological requirement that keeps the evaluation defensible in an audit; the program imposes **no list of verdicts**, each requirement gets four text results (*Findings*, *Analysis*, *Assessment and verdict proposition*, *Vulnerabilities and notes*), which map onto the findings, observations and risks of OSCAL (`oscal.md`, section 5); what the AI proposes becomes a result only when the evaluator accepts it; every step is logged. **Step 30:** the documentation of the manufacturer (Security Target, guidance, design) is analysed in a tool of its own. **Step 28:** the results are written into the LaTeX template of the laboratory.
+- **Before step 41** (steps 16 to 29, 2026-10-16 and 17) the program had a model of its own, the *test project*: schemes of tiles (inputs, requirements, outputs) and links per chapter, and an *evaluation project* copied from it. It was replaced by OSCAL and removed with its data in step 41.1 (`history.md`); the loading of the PDFs, the viewer, the check of quotes and the work of the AI part by part were kept.
 
 ## 8. TODO
 

@@ -12,9 +12,10 @@
 //! {"event": "end", "stopped": false}                                     last
 //! ```
 
+use crate::business::standards::load::LoadProgress;
 use serde::{Deserialize, Serialize};
 
-use crate::evaluation::documents::{Document, DocumentFields, Hit};
+use crate::model::standards::{Document, DocumentFields, Hit};
 
 /// A loaded document.
 #[derive(Debug, Clone, Serialize)]
@@ -53,11 +54,7 @@ pub struct DocumentForm {
 
 impl From<DocumentForm> for DocumentFields {
     fn from(form: DocumentForm) -> DocumentFields {
-        DocumentFields {
-            title: form.title,
-            part: form.part,
-            version: form.version,
-        }
+        DocumentFields { title: form.title, part: form.part, version: form.version }
     }
 }
 
@@ -71,11 +68,7 @@ pub struct HitView {
 
 impl From<Hit> for HitView {
     fn from(hit: Hit) -> HitView {
-        HitView {
-            document_id: hit.document_id,
-            page: hit.page,
-            snippet: hit.snippet,
-        }
+        HitView { document_id: hit.document_id, page: hit.page, snippet: hit.snippet }
     }
 }
 
@@ -93,4 +86,16 @@ pub enum LoadEvent {
     Failed { name: String, message: String },
     /// The loading is over.
     End { stopped: bool },
+}
+
+impl From<LoadProgress> for LoadEvent {
+    fn from(progress: LoadProgress) -> LoadEvent {
+        match progress {
+            LoadProgress::File { name, index, count } => LoadEvent::File { name, index, count },
+            LoadProgress::Pages { done, total } => LoadEvent::Pages { done, total },
+            LoadProgress::Loaded(document) => LoadEvent::Loaded { document: document.into() },
+            LoadProgress::Failed { name, message } => LoadEvent::Failed { name, message },
+            LoadProgress::End { stopped } => LoadEvent::End { stopped },
+        }
+    }
 }

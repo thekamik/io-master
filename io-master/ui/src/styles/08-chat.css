@@ -1,0 +1,176 @@
+/* ---------------------------------------------------------------
+ * 8. Chat
+ * ------------------------------------------------------------- */
+
+/* The list on the left, the conversation (or the form) on the right;
+   also the layout of the tab AI. */
+.chat {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+}
+
+.chat-list {
+    width: 15rem;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+}
+
+.chat-list > button {
+    width: 100%;
+}
+
+.chat-list ul {
+    list-style: none;
+    margin: 0.85rem 0 0;
+    padding: 0;
+}
+
+.chat-list li {
+    margin-bottom: 0.2rem;
+}
+
+.chat-list button.link {
+    display: block;
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-list button.link:hover:not(:disabled) {
+    background: var(--surface);
+}
+
+.chat-list button.link.active {
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.chat-list li > .note {
+    display: block;
+    padding-left: 0.65rem;
+    font-size: 0.75rem;
+}
+
+.chat-list li > .badge {
+    margin: 0.1rem 0 0.3rem 0.65rem;
+}
+
+.conversation {
+    flex: 1;
+    min-width: 0;
+    max-width: 62rem;
+}
+
+.conversation > h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+/* The active connection, above the chat. */
+.status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 1.25rem;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+}
+
+.status strong {
+    color: var(--text);
+}
+
+.status::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--success);
+}
+
+/* Messages: those of the evaluator on the right, the replies of the
+   model on the left. */
+.messages {
+    display: flex;
+    flex-direction: column;
+    gap: 0.9rem;
+    margin: 1rem 0;
+}
+
+.message {
+    max-width: 85%;
+    padding: 0.75rem 1rem;
+    border-radius: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow);
+}
+
+.message.evaluator {
+    align-self: flex-end;
+    background: var(--accent-soft);
+    border-color: transparent;
+    border-bottom-right-radius: 4px;
+}
+
+.message.model {
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+}
+
+.message header {
+    margin-bottom: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+/* The text as it was written: lines kept, long words broken. */
+.message .text {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.message .text:empty::after {
+    content: "…";
+    color: var(--text-muted);
+}
+
+.message .ending {
+    margin: 0.5rem 0 0;
+    font-size: 0.8rem;
+    color: var(--warning);
+}
+
+/* The field for the next message, at the bottom of the page. */
+form.ask {
+    position: sticky;
+    bottom: 0;
+    padding: 0.75rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-raised);
+}
+
+form.ask textarea {
+    margin: 0;
+    border: none;
+    box-shadow: none;
+    padding: 0.35rem 0.4rem;
+}
+
+form.ask .buttons {
+    margin-top: 0.5rem;
+}

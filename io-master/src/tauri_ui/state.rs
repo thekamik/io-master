@@ -1,36 +1,23 @@
 //! The state of the desktop interface, kept in Rust and never in
-//! the page: the installation, the logged-in evaluator with the key
-//! of their database, and the reply that is being written. (The AI
-//! connections are data of the evaluator, kept in their database:
-//! `ai/connections.rs`.)
+//! the page: the installation, the session of the logged-in evaluator
+//! (`business/session.rs`: the account, the open database and the work
+//! in memory), and the stop signals of the work that is running.
 //!
 //! The page (`ui/`) holds no secret and no state that matters: it
 //! asks through the commands (`commands.rs`) and shows what it gets
 //! back. Reloading the page loses nothing; ending the program ends
 //! the session and wipes the key of the database from memory.
 
-use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
 use tokio::sync::watch;
 
-use crate::accounts::accounts::Account;
-use crate::db::database_key::DatabaseKey;
-use crate::evaluation::projects::ProjectData;
-use crate::installation::lifecycle::{Opened, Running};
+use crate::business::installation::lifecycle::{Opened, Running};
+use crate::business::session::Session;
+use crate::business::session::accounts::Account;
 
 use super::error::UiError;
-
-/// The logged-in evaluator.
-#[derive(Debug, Clone)]
-pub struct Session {
-    pub account: Account,
-    /// The key of the database of the account, opened by the
-    /// password at login. Shared with the work that runs at the
-    /// moment; wiped when the last holder drops it.
-    pub key: Arc<DatabaseKey>,
-}
 
 /// Everything the commands reach. One for the whole program.
 #[derive(Debug)]
@@ -40,24 +27,16 @@ pub struct UiState {
     /// The running installation; `None` until the first start is
     /// done. Written once, by the setup.
     running: RwLock<Option<Arc<Running>>>,
-    /// The logged-in evaluator; `None` while nobody is logged in.
-    session: Mutex<Option<Session>>,
+    /// The session of the logged-in evaluator; `None` while nobody is
+    /// logged in. Shared with the work that runs at the moment.
+    session: Mutex<Option<Arc<Session>>>,
     /// The stop signal of the reply that is being written, if one
     /// is: sending `true` stops it (the "Stop" button).
     reply_stop: Mutex<Option<watch::Sender<bool>>>,
     /// The stop signal of a long work (loading a standard, an
     /// analysis), the same way.
     work_stop: Mutex<Option<watch::Sender<bool>>>,
-    /// For "Undo" in the drawing of the schemes: the content (tiles
-    /// and links) of every test project before its last changes, the
-    /// newest last; one stack per project, because a change may touch
-    /// two schemes (a link between them, a moved tile). Kept in memory
-    /// only, for the session.
-    undo: Mutex<HashMap<i64, Vec<ProjectData>>>,
 }
-
-/// How many changes of one test project can be undone.
-const UNDO_DEPTH: usize = 50;
 
 /// Locks a mutex. A panic in another command while it held the lock
 /// cannot leave the value half-written (every change is a single
@@ -80,7 +59,6 @@ impl UiState {
             session: Mutex::new(None),
             reply_stop: Mutex::new(None),
             work_stop: Mutex::new(None),
-            undo: Mutex::new(HashMap::new()),
         }
     }
 
@@ -101,10 +79,10 @@ impl UiState {
         *self.running.write().unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(Arc::new(running));
     }
 
-    /// The logged-in evaluator, or the error that nobody is logged
-    /// in. Every command that reads or changes the data of the
-    /// evaluator starts with this check.
-    pub fn session(&self) -> Result<Session, UiError> {
+    /// The session of the logged-in evaluator, or the error that
+    /// nobody is logged in. Every command that reads or changes the
+    /// data of the evaluator starts with this check.
+    pub fn session(&self) -> Result<Arc<Session>, UiError> {
         lock(&self.session).clone().ok_or(UiError::NotLoggedIn)
     }
 
@@ -115,19 +93,17 @@ impl UiState {
 
     /// Starts the session of a logged-in evaluator, replacing an
     /// earlier one.
-    pub fn log_in(&self, account: Account, key: DatabaseKey) {
-        *lock(&self.session) = Some(Session {
-            account,
-            key: Arc::new(key),
-        });
+    pub fn log_in(&self, session: Session) {
+        *lock(&self.session) = Some(Arc::new(session));
     }
 
     /// Ends the session; a reply being written and a long work are
-    /// stopped.
+    /// stopped. The database closes and the work in memory is forgotten
+    /// when the last holder of the session (a work still finishing)
+    /// lets it go.
     pub fn log_out(&self) {
         self.stop_reply();
         self.stop_work();
-        lock(&self.undo).clear();
         *lock(&self.session) = None;
     }
 
@@ -161,36 +137,6 @@ impl UiState {
         }
 
         receiver
-    }
-
-    /// Keeps the content of a test project before a change, for
-    /// "Undo".
-    pub fn remember(&self, before: ProjectData) {
-        let mut undo = lock(&self.undo);
-        let stack = undo.entry(before.project.id).or_default();
-
-        stack.push(before);
-
-        if stack.len() > UNDO_DEPTH {
-            stack.remove(0);
-        }
-    }
-
-    /// The content of a test project before its last change, taken
-    /// off the stack; `None` when there is nothing to undo.
-    pub fn take_undo(&self, project: i64) -> Option<ProjectData> {
-        lock(&self.undo).get_mut(&project).and_then(Vec::pop)
-    }
-
-    /// Whether a change of the test project can be undone.
-    pub fn can_undo(&self, project: i64) -> bool {
-        lock(&self.undo).get(&project).is_some_and(|stack| !stack.is_empty())
-    }
-
-    /// Forgets the changes of a test project (it was deleted, or one of
-    /// its schemes was, which an earlier content may still name).
-    pub fn forget_undo(&self, project: i64) {
-        lock(&self.undo).remove(&project);
     }
 
     /// Stops the long work, if there is one.

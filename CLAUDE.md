@@ -7,13 +7,16 @@
 - The new version is the Rust project in `io-master/`. It is built from scratch, not ported line by line.
 - Version 0.2 (C) is the reference for *what* the tool can do: `v0.2_functionality.md` lists its functions with IDs (CLI-1, UART-4, ...). Its code is in git history (commit `6cc4091`). Functions are re-created one at a time, redesigned for the new version.
 - The long-term direction is AI-assisted Common Criteria evaluation (`v0.2_functionality.md`, section 3.7).
-- **The agreed concept of v0.3 is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the window, one Linux account = one installation = one user (workstation and master alike), a desktop window (Tauri 2 + Svelte) as the only interface, the password plus the secret of the application in the keyring of the Linux account as the default factors (a desktop session with GNOME Keyring is required) with the TPM 2.0 as an optional further factor, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
+- **The agreed concept is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the window, one Linux account = one installation = one user (workstation and master alike), a desktop window (Tauri 2 + Svelte) as the only interface, the password plus the secret of the application in the keyring of the Linux account as the default factors (a desktop session with GNOME Keyring is required) with the TPM 2.0 as an optional further factor, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
+- **The structure of the code is in `docs/code_structure.md`** (the layers, the direction of the dependencies and its test, the conventions, the whole tree). Read it before writing code.
+- **Branches:** the work is on `v0.5`; `v0.4` keeps the state before step 40 and is not changed; `v0.2`/`V0.2` are never changed.
 - The program must run without a TPM (virtual machines). TODO before release: the optional TPM factor uses a real TPM 2.0, not the emulator `swtpm`.
 - **The work follows `docs/todo.md`, one step at a time, in the order of its table "order of work"; step numbers are names and never change.** Every step: concept approved by the user, implementation with tests, check, approval, commit. When the list is done, further functionality is planned anew.
+- **The order of work is a guide, not an absolute rule** (user, 2026-10-17). Architecture, readability of the code and security come first, so that the program stays maintainable and auditable: when the user finds that a part of the code escapes their overview (as the database code did), it is a critical error and is fixed at once, before further functions.
 
 ## Main design rule: the desktop window is the only interface
 
-Since v0.4 the whole workflow is controlled from a **desktop window** (Tauri 2 + Svelte, `src/tauri_ui/` and `ui/`; `docs/architecture.md`, section 4). The program is started without parameters and opens no network port for its interface; network functions (the reset service of a master and its client) are started from the window. There is no console interface. The web interface of v0.3 was removed (branch `v0.3` in git). Every function is designed so that the interface can use it without changes to the function:
+Since v0.4 the whole workflow is controlled from a **desktop window** (Tauri 2 + Svelte, `src/tauri_ui/` and `ui/`, a thin layer over `src/business/`; `docs/architecture.md`, section 4). The program is started without parameters and opens no network port for its interface; network functions (the reset service of a master and its client) are started from the window. There is no console interface. The web interface of v0.3 was removed (branch `v0.3` in git). Every function is designed so that the interface can use it without changes to the function:
 
 - **Core logic is separate from presentation.** Functions in the core never print, never read from the terminal, and never exit the process. They take parameters and return results; the interface presents them.
 - **Results and errors are data.** Internal functions return plain Rust types (structs, enums, `Vec`, `Result`) and are used only inside Rust. Errors are enums that the UI can tell apart, not only text.
@@ -37,10 +40,48 @@ Since v0.4 the whole workflow is controlled from a **desktop window** (Tauri 2 +
 - `review.md` (repository root) records the state of the review. When the user says in the chat that a whole file is reviewed, Claude writes it there with the date; every function of such a file counts as marked `// ok kk`.
 - Decisions and rules the user gives in the chat that matter beyond the current task are written down at once (this file for working rules, `docs/` for the concept and the plan), so that they survive a reset of the context.
 
+## Database code (steps 37 and 40 of docs/todo.md)
+
+- **SQL lives only in `io-master/src/db/`.** The business (`business/`) and `ai/` keep their logic and call the functions of `db/`; they never write SQL.
+- `db/` has one subfolder per area of data; each holds `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD: `create.rs`, `read.rs`, `update.rs`, `delete.rs` (a file that an area does not need is missing, which is visible in an audit).
+- Free functions only; a caller imports an area as `db_<area>` and calls `db_<area>::<operation>::<object>`. Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`, changes of the layout are migrations by version (`db/user/migrations.rs`).
+- `db/encryption/` holds all code of encryption; the head of every area states in which database its data lives and how it is protected.
+- The mechanism of encryption is moved as it is, unchanged; the user audits it and redesigns it later.
+- **Whatever happens in the database is in `db/`, in a subfolder of its own** (user, 2026-10-17), so that nothing is mixed: for example `db/ai/connection/`, `db/ai/chats/`, `db/ai/journal/`. Rules of the stored data (a name unique, a key bound to its address) live there with their CRUD.
+
+## AI layer (steps 38 and 40 of docs/todo.md)
+
+- **`ai/api/` is the only way to the AI**, its functions in the form of REST (resources and operations: `connections`, `roles`, `tasks`, `completions`, `checks`); not a server. `ai/api/provider/` (HTTP, TLS, request, answer, stream) is visible only inside `ai/api/`, so a request built elsewhere does not compile.
+- Every question is asked in a **task** with its **role** (text analysis, summary, consultation, formal analysis) and written into the journal of the AI by `ai/api/` itself (`completions::ask`); no caller can skip it.
+- **The text of every question and the reading of every answer are in `ai/tasks/`** (one file per task: `chapter`, `contents`, `chat`), on plain data of `model/`. The memory of the chat (`ai/tasks/chat.rs`) is controlled by parameters, and quotes of a standard are never shortened.
+
+## The pipeline of data (user, 2026-10-17)
+
+- The functions and the responsibilities of the parts of the code are separated, and the pipeline is very readable: **at every moment one can tell where the information the program works on is** (in the page, in an object in memory, in the database, on its way to the AI).
+- The business manages the objects in memory of the session of the evaluator (`business/session.rs`: the open database, a project open for editing with its versions for "Undo", an evaluation open for work); `db/` writes them lastingly, through at once (write-through); `ai/api/` is the only way to the AI.
+
+## The architecture (user, 2026-10-17; step 40 of docs/todo.md)
+
+The user's guidelines, built in step 40 on the branch `v0.5` (the layout and its rules: `docs/code_structure.md`). **No approval of a review moved with the code: every file of v0.5 is reviewed from the start** (`review.md`). Business functions are named after REST verbs (`catalogs::create`, `catalogs::add_group`), listed with their REST form at the head of each resource file.
+
+1. `tauri_ui/` is a minimal intermediate layer that only joins the back end and the front end.
+2. The business logic is in a folder of its own, reached by the interface in the form of a REST API: no server, but the functions are designed as resources and operations.
+3. Every operation on a database is in `db/`, ordered as CRUD.
+4. All communication with AI is in `ai/`, the intermediary between the external services and the program (one folder for the whole integration, for the audit).
+5. Everything that talks to hardware (devices, UART, Bluetooth, permissions of the ports, ...) is in `hardware_tests/`.
+6. The documentation is renewed, with a new README that states the aims of the project as they are now.
+
+## Standards and NIST OSCAL (user, 2026-10-18; step 41 of docs/todo.md)
+
+- The work with standards is two functions: the **evaluation plan** (was "test project": the OSCAL scheme of a standard, made or loaded, shown as a graph, handed over) and the **evaluation** (evidence and checks with the AI, the report); besides them the program integrates the tools of the functional tests.
+- **The data of the standards is stored in NIST OSCAL** (catalog, mapping, profile, assessment plan, assessment results; SSP and component definition later). What the program adds (AI instructions, prompts, quotes and their checks, proposals, the layout of the graph) is the **evaluation support**, our own model, kept apart and linked to OSCAL objects only by their UUIDs and ids; nothing of ours is written into an OSCAL document.
+- Schemes of our own are needed (Common Criteria, ETSI EN 303 645); the tests also run on files of NIST. Concept and open questions: `docs/oscal.md`.
+
 ## Way of working
 
 - Propose the concept first and get approval, then write code.
 - Small steps, each tested on its own (unit tests in Rust, end-to-end tests where a front end is involved) before the next step starts.
 - Readability first: the user has to keep an overview of the code. Clear structure, one responsibility per file.
-- Unit tests live in their own file next to the module, named `<module>_tests.rs` (`devices.rs` keeps `device_tests.rs`), and are attached with `#[cfg(test)] #[path = "<file>"] mod tests;`.
+- Unit tests live in their own file next to the module, named `<file>_tests.rs`, and are attached with `#[cfg(test)] #[path = "<file>_tests.rs"] mod tests;`. `cargo fmt` (`rustfmt.toml`, 120 characters) before every commit.
+- A command of the window is listed in four places (`tauri_ui/commands.rs`, `main.rs`, `build.rs`, `capabilities/default.json`); the tests check that they agree, and that no folder uses a folder above it (`src/architecture_tests.rs`).
 - Prefer few, well-known dependencies; explain each one when it is added.

@@ -12,8 +12,9 @@
   with one user (docs/architecture.md, section 3).
 -->
 <script lang="ts">
-  import { changePassword, sentence, type AppView } from "../lib/api";
-  import AiConfig from "./AiConfig.svelte";
+  import { changePassword, type AppView } from "../lib/api/app";
+import { sentence } from "../lib/api/errors";
+  import AiConfig from "../components/AiConfig.svelte";
 
   let { app }: { app: AppView } = $props();
 

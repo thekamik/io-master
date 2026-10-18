@@ -1,0 +1,75 @@
+/* ---------------------------------------------------------------
+ * 3. Text and notices
+ * ------------------------------------------------------------- */
+
+.note {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.centered {
+    text-align: center;
+    margin-top: 4rem;
+}
+
+/* A message after an action: a soft box with a coloured edge. */
+p.problem,
+p.done {
+    padding: 0.6rem 0.85rem;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid;
+    font-size: 0.925rem;
+}
+
+.problem {
+    color: var(--danger);
+}
+
+p.problem {
+    background: var(--danger-soft);
+}
+
+.done {
+    color: var(--success);
+}
+
+p.done {
+    background: var(--success-soft);
+}
+
+/* A small rounded label: "used by the chat", the state of a key. */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--accent-soft);
+    color: var(--accent);
+    white-space: nowrap;
+}
+
+.badge.success {
+    background: var(--success-soft);
+    color: var(--success);
+}
+
+.badge.danger {
+    background: var(--danger-soft);
+    color: var(--danger);
+}
+
+.badge.warning {
+    background: var(--warning-soft);
+    color: var(--warning);
+}
+
+.badge::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}

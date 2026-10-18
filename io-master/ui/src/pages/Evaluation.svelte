@@ -1,46 +1,18 @@
 <!--
-  Evaluation: carrying out a scheme for one product with the help of
-  AI (step 23 of docs/todo.md). Designed when the schemes are done
-  (user, 2026-10-16); until then the page lists the test projects that are
-  ready to be carried out.
+  Evaluation: carrying out an evaluation plan for one product with the
+  help of AI (steps 41.5 and 31 to 36 of docs/todo.md): the evidence,
+  the checks of the requirements, the report, recorded as OSCAL
+  assessment results. Built after the evaluation plan.
 -->
 <script lang="ts">
-  import { onMount } from "svelte";
-
-  import { listProjects, sentence, type ProjectView } from "../lib/api";
-
-  let projects: ProjectView[] = $state([]);
-  let problem = $state("");
-
-  onMount(async () => {
-    try {
-      projects = (await listProjects()).filter((project) => project.ready);
-    } catch (error) {
-      problem = sentence(error);
-    }
-  });
+  // No state yet: the evaluation is built after the evaluation plan.
 </script>
-
-{#if problem}<p class="problem">{problem}</p>{/if}
 
 <div class="card">
   <h3>Coming next</h3>
   <p class="note">
-    An evaluation carries out a scheme for one product: the inputs are provided, a requirement is met when all its
-    inputs are, and the outputs make the report in its standard form. The AI helps at each step with its sources; the
-    verdicts and the final decisions are yours. The test projects are made in the tool Create evaluation scheme.
+    An evaluation takes an evaluation plan (tab Evaluation plan) and carries it out for one product: the AI helps to
+    find the evidence and to check whether each requirement is met, with its sources; the findings and the verdicts are
+    yours. The results are kept as NIST OSCAL assessment results, and the report is made from them.
   </p>
-</div>
-
-<div class="card">
-  <h3>Test projects ready to be carried out</h3>
-  {#if projects.length === 0}
-    <p class="note">No test project is marked ready yet.</p>
-  {:else}
-    <ul class="plain">
-      {#each projects as project (project.id)}
-        <li><strong>{project.name}</strong> <span class="note">{project.version}{project.author ? ` · ${project.author}` : ""}</span></li>
-      {/each}
-    </ul>
-  {/if}
 </div>

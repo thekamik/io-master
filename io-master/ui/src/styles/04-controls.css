@@ -1,0 +1,161 @@
+/* ---------------------------------------------------------------
+ * 4. Controls
+ * ------------------------------------------------------------- */
+
+button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 2.1rem;
+    padding: 0.35rem 0.95rem;
+    font: inherit;
+    font-size: 0.9rem;
+    font-weight: 550;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s, box-shadow 0.12s;
+}
+
+button:hover:not(:disabled) {
+    background: var(--surface-2);
+    border-color: var(--text-muted);
+}
+
+button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus);
+}
+
+button:disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+/* The main action of a form. */
+button.primary,
+button[type="submit"] {
+    color: var(--accent-text);
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+button.primary:hover:not(:disabled),
+button[type="submit"]:hover:not(:disabled) {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+}
+
+/* An action that deletes. */
+button.danger {
+    color: var(--danger);
+    border-color: var(--border-strong);
+}
+
+button.danger:hover:not(:disabled) {
+    background: var(--danger-soft);
+    border-color: var(--danger);
+}
+
+/* A quiet action without a frame. */
+button.ghost {
+    background: none;
+    border-color: transparent;
+}
+
+button.small {
+    min-height: 1.75rem;
+    padding: 0.15rem 0.65rem;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+}
+
+/* Buttons that are entries of a list (the chats, the connections). */
+button.link {
+    display: flex;
+    width: 100%;
+    justify-content: flex-start;
+    text-align: left;
+    border: none;
+    background: none;
+    font-weight: 500;
+}
+
+input:not([type="radio"], [type="checkbox"]),
+textarea,
+select {
+    display: block;
+    width: 100%;
+    margin-top: 0.3rem;
+    padding: 0.5rem 0.7rem;
+    font: inherit;
+    /* Not the weight of the label around it. */
+    font-weight: 400;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+input.mono,
+textarea.mono {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+}
+
+textarea {
+    resize: vertical;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--focus);
+}
+
+input[readonly],
+textarea[readonly] {
+    background: var(--surface-2);
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+    accent-color: var(--accent);
+    width: 1rem;
+    height: 1rem;
+    margin: 0 0.45rem 0 0;
+    vertical-align: -0.15rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.9rem;
+    font-size: 0.9rem;
+    font-weight: 550;
+}
+
+label .note {
+    display: block;
+    margin-top: 0.3rem;
+    font-weight: 400;
+}
+
+label.choice {
+    display: block;
+    font-weight: 400;
+    white-space: normal;
+}
+
+.buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
