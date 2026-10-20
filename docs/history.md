@@ -586,3 +586,17 @@ Concept approved by the user on 2026-10-17: the import from both sources (a read
 > **Removed in step 41.1 (2026-10-18)** together with the test projects it copied (commit `f91cba8`); its decisions (the four results of a requirement, the proposals of the AI kept apart until the evaluator accepts them, the journal that is only added to) are carried onto the OSCAL assessment results in step 41.5 (`todo.md`, step 23).
 
 ---
+
+## Branches until 2026-10-20
+
+Until 2026-10-20 the stages of the work were kept in branches named as versions. The user removed them on 2026-10-20 (the project is at an early stage, so no versions are kept yet; `CLAUDE.md`, "Branches"): `main` holds the tested state and `test_branch` the work. Every commit of the removed branches is in the history of `main`; their last commits:
+
+| Branch | Last commit | What it held |
+|---|---|---|
+| `v0.2`, `V0.2` | `6cc4091` | version 0.2, the program in C (`v0.2_functionality.md`) |
+| `v1.1` | `8ec09cf` | Bluetooth in the program in C, untested (before `6cc4091`) |
+| `v0.3` | `acedc8b` | the Rust program with the web interface (steps 0 to 7) |
+| `v0.4` | `fbc3c47` | the desktop window (step 14) and the evaluation schemes, before step 40 |
+| `v0.5` | `f5e0e5c` | step 40 (the layers) and step 41.1 to 41.3 (NIST OSCAL), the CEM catalog |
+
+Older entries of this file name these branches as they were then.

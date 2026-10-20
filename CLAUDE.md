@@ -9,24 +9,24 @@
 - The long-term direction is AI-assisted Common Criteria evaluation (`v0.2_functionality.md`, section 3.7).
 - **The agreed concept is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the window, one Linux account = one installation = one user (workstation and master alike), a desktop window (Tauri 2 + Svelte) as the only interface, the password plus the secret of the application in the keyring of the Linux account as the default factors (a desktop session with GNOME Keyring is required) with the TPM 2.0 as an optional further factor, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
 - **The structure of the code is in `docs/code_structure.md`** (the layers, the direction of the dependencies and its test, the conventions, the whole tree). Read it before writing code.
-- **Branches:** the work is on `v0.5`; `v0.4` keeps the state before step 40 and is not changed; `v0.2`/`V0.2` are never changed.
+- **Branches (user, 2026-10-20):** `main` holds the state that is tested and approved; the work is done on `test_branch` and goes to `main` once it is approved. No other branches and **no version numbers** while the project is at an early stage (the program stays at version 0.1.0 of `Cargo.toml`); the earlier branches `v0.2` to `v0.5` were removed, their history is in `main` (the commits named in `docs/history.md`, section "Branches until 2026-10-20").
 - The program must run without a TPM (virtual machines). TODO before release: the optional TPM factor uses a real TPM 2.0, not the emulator `swtpm`.
 - **The work follows `docs/todo.md`, one step at a time, in the order of its table "order of work"; step numbers are names and never change.** Every step: concept approved by the user, implementation with tests, check, approval, commit. When the list is done, further functionality is planned anew.
 - **The order of work is a guide, not an absolute rule** (user, 2026-10-17). Architecture, readability of the code and security come first, so that the program stays maintainable and auditable: when the user finds that a part of the code escapes their overview (as the database code did), it is a critical error and is fixed at once, before further functions.
 
 ## Main design rule: the desktop window is the only interface
 
-Since v0.4 the whole workflow is controlled from a **desktop window** (Tauri 2 + Svelte, `src/tauri_ui/` and `ui/`, a thin layer over `src/business/`; `docs/architecture.md`, section 4). The program is started without parameters and opens no network port for its interface; network functions (the reset service of a master and its client) are started from the window. There is no console interface. The web interface of v0.3 was removed (branch `v0.3` in git). Every function is designed so that the interface can use it without changes to the function:
+Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop window** (Tauri 2 + Svelte, `src/tauri_ui/` and `ui/`, a thin layer over `src/business/`; `docs/architecture.md`, section 4). The program is started without parameters and opens no network port for its interface; network functions (the reset service of a master and its client) are started from the window. There is no console interface. The earlier web interface was removed (its last state: commit `acedc8b`). Every function is designed so that the interface can use it without changes to the function:
 
 - **Core logic is separate from presentation.** Functions in the core never print, never read from the terminal, and never exit the process. They take parameters and return results; the interface presents them.
 - **Results and errors are data.** Internal functions return plain Rust types (structs, enums, `Vec`, `Result`) and are used only inside Rust. Errors are enums that the UI can tell apart, not only text.
-- **Serialization belongs to the UI.** Conversion to JSON or any other external format is done only at the boundary to the interface, in `io-master/src/tauri_ui/serializer/` (desktop interface, Tauri 2 + Svelte, since v0.4). The core types carry no serialization code and no serde attributes.
+- **Serialization belongs to the UI.** Conversion to JSON or any other external format is done only at the boundary to the interface, in `io-master/src/tauri_ui/serializer/` (desktop interface, Tauri 2 + Svelte, since step 14). The core types carry no serialization code and no serde attributes.
 - **Long operations report progress as events** (for example a channel or a stream), not by printing. The window receives them live through a channel of Tauri.
 - **Operations can be cancelled by the caller** (a cancellation token).
 - **Questions to the user go through the interface.** When an operation needs an answer (a PIN, a confirmation), it asks through an interface the UI implements, never by reading stdin itself.
 - **State lives in the core, not in the page.** The page holds no secret and no state that matters.
 
-## Rules carried over from v0.2
+## Rules carried over from version 0.2 (the program in C)
 
 - No command reaches a device without an action of a person for that command. The program proposes; a person executes.
 - Secrets (API keys, the key of the database, git credentials) only in the encrypted databases of the evaluators, opened by the password (+ optional TPM factor) (`docs/architecture.md`, section 5). Never in plain files, and never in the system database, which is not encrypted.
@@ -62,7 +62,7 @@ Since v0.4 the whole workflow is controlled from a **desktop window** (Tauri 2 +
 
 ## The architecture (user, 2026-10-17; step 40 of docs/todo.md)
 
-The user's guidelines, built in step 40 on the branch `v0.5` (the layout and its rules: `docs/code_structure.md`). **No approval of a review moved with the code: every file of v0.5 is reviewed from the start** (`review.md`). Business functions are named after REST verbs (`catalogs::create`, `catalogs::add_group`), listed with their REST form at the head of each resource file.
+The user's guidelines, built in step 40 (the layout and its rules: `docs/code_structure.md`). **No approval of a review moved with the code: every file is reviewed from the start of step 40 on** (`review.md`). Business functions are named after REST verbs (`catalogs::create`, `catalogs::add_group`), listed with their REST form at the head of each resource file.
 
 1. `tauri_ui/` is a minimal intermediate layer that only joins the back end and the front end.
 2. The business logic is in a folder of its own, reached by the interface in the form of a REST API: no server, but the functions are designed as resources and operations.

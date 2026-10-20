@@ -4,7 +4,7 @@
 
 IO Master is installed on the computer of an evaluator, in their own Linux account, and used through one desktop window. It knows no particular standard. The requirements of a standard, the plan of their evaluation and its results are kept in **NIST OSCAL 1.2.3** (Open Security Controls Assessment Language), the published, machine-readable format of NIST, and every document is checked against the JSON schemas of NIST. Catalogs published in OSCAL are imported as they are; standards that are not (Common Criteria with the CEM, ETSI EN 303 645, ...) are made into OSCAL catalogs in the program, from their PDFs, with the help of AI, and every part traced back to the passage it comes from.
 
-**Project status:** development, version 0.5 (branch `v0.5`). The functions listed under "What works today" are built and tested; the evaluation itself, the work on devices beyond the scan, and the release hardening are planned.
+**Project status:** early development (no releases and no version numbers yet; `main` holds the tested state, the work goes on in `test_branch`). The functions listed under "What works today" are built and tested; the evaluation itself, the work on devices beyond the scan, and the release hardening are planned.
 
 ## Aims
 
@@ -93,7 +93,7 @@ v0.2_functionality.md   the functions of version 0.2 (C), the catalogue the new 
 review.md           the state of the code review
 ```
 
-Version 0.2, written in C with console shells for UART, Bluetooth and an AI chat, is kept in the branch `v0.2` and in the git history; version 0.3 (a web interface) in the branch `v0.3`.
+Version 0.2, written in C with console shells for UART, Bluetooth and an AI chat, is in the history of git (commit `6cc4091`); the later web interface in commit `acedc8b`.
 
 ## License
 

@@ -19,9 +19,9 @@ The number of a step is its name and never changes, so that references in the co
 | 11 | 37: The database layer by areas and CRUD | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 12 | 38: The AI layer | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 13 | 39: The domain folders and the objects in memory | built 2026-10-17; reworked by step 40 (`history.md`) |
-| 14 | **40: The cleanup of the architecture** | **built 2026-10-17 on the branch `v0.5`; waiting for the user's review** (below) |
+| 14 | **40: The cleanup of the architecture** | **built 2026-10-17; waiting for the user's review** (below) |
 | 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **concept in `docs/oscal.md`, approved 2026-10-18; 41.1 to 41.3 built, 41.4 next; before step 31** |
-| 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of v0.5 (`review.md`) |
+| 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a placeholder in the sidebar; needed by steps 32 to 34 |
 | later | 28: Reports in the LaTeX template of the laboratory | with or after step 23 |
@@ -38,7 +38,7 @@ The number of a step is its name and never changes, so that references in the co
 1. **Concept.** Claude proposes how the step is built (files, dependencies, open decisions). The user approves or corrects it. No code before that.
 2. **Implementation** in small parts, each with its unit tests (`<file>_tests.rs`), in the layers of `code_structure.md`.
 3. **Check.** `cargo fmt --check` clean, builds without warnings, all tests (also of the architecture and of the command lists), `npm run check` and `clippy` pass; the user tries the result.
-4. **Approval** by the user, then a commit to the branch of the version (`v0.5` now; `v0.4` keeps the state before step 40).
+4. **Approval** by the user, then a commit to `test_branch`; the tested and approved state goes to `main` (`CLAUDE.md`, "Branches").
 
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
@@ -48,15 +48,15 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 40: The cleanup of the architecture (2026-10-17)
 
-Built on the branch `v0.5` (the state before it is kept in `v0.4`), on the analysis of the code of 2026-10-17 and the guidelines of the user. **The structure and the rules that came out of it are in `code_structure.md`**; the guidelines are in `CLAUDE.md`, section "The architecture".
+Built on the analysis of the code of 2026-10-17 and the guidelines of the user. **The structure and the rules that came out of it are in `code_structure.md`**; the guidelines are in `CLAUDE.md`, section "The architecture".
 
 **Decisions of the user**
 - [x] The folders `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`; the business folder named `business/`.
 - [x] The operations of a resource are functions named after REST verbs (then `projects::create`; today `catalogs::create`), as in `ai/api/`.
 - [x] The questions to the AI and the reading of its answers are in `ai/tasks/`.
 - [x] The README keeps both aims, written anew for the project as it is now.
-- [x] No approval of the review moves with the code: every file of v0.5 is reviewed from the start.
-- [x] The modified code goes to the branch `v0.5`.
+- [x] No approval of the review moves with the code: every file is reviewed from the start.
+- [x] The modified code went to the branch `v0.5` (since 2026-10-20: `main` and `test_branch`).
 
 **Tasks** (one commit each, all tests passing after every one)
 - [x] 40.2 `rustfmt.toml` (120 characters) and one run of `cargo fmt`.
@@ -85,7 +85,7 @@ Built on the branch `v0.5` (the state before it is kept in `v0.4`), on the analy
 
 **Second round (user, 2026-10-18):** two functions, *evaluation plan* (make or load the OSCAL scheme of a standard, show it as a graph, hand it over) and *evaluation* (evidence and checks with the AI, the report), plus the integration of the tools of the functional tests; the data of standards stored in the NIST standard, our own additions (AI instructions, prompts, the work of the evaluation) kept apart as the **evaluation support** and only linked to it; catalog, mapping, profile, assessment plan and assessment results now, SSP and component definition with step 30; the earlier data deleted, no migration; tests on NIST files, and schemes of our own for Common Criteria and ETSI EN 303 645. **The concept is in `docs/oscal.md`**, approved by the user on 2026-10-18 (with the answers of its section 8).
 
-**Parts** (one commit each, on `v0.5`):
+**Parts** (one commit each):
 - [x] 41.1 The rename to *evaluation plan*; the old model of the test projects and the evaluations removed with its tables (no migration).
 - [x] 41.2 The foundation: the JSON schemas of OSCAL 1.2.3 in the repository (`oscal/`), the types of `model/oscal/` with the check against the schemas, `db/oscal/`; import, export and deletion of documents in the window (part 1: types and schemas; part 2: storage and window).
 - [x] 41.3 Own catalogs made in the program: part 1 the catalogs and the evaluation support (quotes, proposals); part 2 the AI proposes the groups (from a table of contents) and the controls (from the pages of a group), the evaluator accepts, corrects or rejects; part 3 the window: the editor of a catalog (tree, object, its quotes in the viewer, its fields as JSON of OSCAL; the AI with progress and Stop; the proposals; the instructions of the two tasks). Tested in the window with a fake model.
@@ -139,7 +139,7 @@ The concept changed several times while steps 0 to 7 were built (CLI removed, TP
 
 **Progress** (the user decides the order and the priority)
 - [x] `main.rs`: reviewed and approved by the user (2026-10-15). Changes: `--data-dir` and `--uninstall` removed; a flag in the place of a value is refused; the check of the installation moved to `installation/verify.rs`, the start of the server (HTTP, or TLS with `--address`) and Ctrl+C to `web_ui/startup.rs`; the header describes the present state.
-- [x] `web_ui/`: not reviewed; removed in v0.4, when the window of step 14 replaced the web interface.
+- [x] `web_ui/`: not reviewed; removed when the window of step 14 replaced the web interface.
 - [ ] `installation/verify.rs` (`verify_installation`): lower priority, reviewed later; it is rebuilt anyway in step 13 (keyring).
 - [ ] The other modules: in an order the user chooses.
 
@@ -248,6 +248,7 @@ A further factor next to the TPM, chosen by each user for their own account (`ar
 - [ ] Without the TPM factor the system database is not encrypted and the private key of the TLS server (step 4) has no key to protect it at program start: decide how it is protected without a TPM.
 - [ ] Final login: limits on failed attempts, session expiry, logout everywhere.
 - [ ] Security review of the whole program.
+- [x] **Paste on Wayland (found 2026-10-18; gone the same day after the user put the packages of the system in order, so a fault of the unstable system, not of the program):** on KDE Plasma (Wayland, Parrot OS, WebKitGTK 2.54.0) the program ended with SIGSEGV when the clipboard was emptied by a clipboard cleaner while it was being pasted. The fault is inside WebKitGTK (`request_targets_received_func` of GTK calls back into WebKit with an empty list of targets); not reproduced on X11, where the same refusals are handled. Should it come back, the concept proposed then: the page catches every paste (Ctrl+V, Shift+Insert, middle click, the context menu of the fields), the program reads the clipboard itself through GTK (`request_text`, an empty clipboard is `None`) and shows "Nothing was pasted: copy the text again" instead of ending.
 - [ ] Installation package: the program and its start as a service; the role is chosen at the first start (step 1).
 
 ---
@@ -369,6 +370,6 @@ Not planned in detail yet; to be designed once the steps above are done:
 - Git of the laboratory over a secure connection, with checks of its configuration (`architecture.md`, section 6).
 - Filling the LaTeX report templates of the laboratory and committing the result.
 - Git panel in the window.
-- The other functions of v0.2 (`v0.2_functionality.md`): UART read and write with the confirmation of every command (P2), Bluetooth.
+- The other functions of version 0.2 (`v0.2_functionality.md`): UART read and write with the confirmation of every command (P2), Bluetooth.
 - A build variant without the code of the master (`architecture.md`, section 3.2).
 - Beyond the evaluation (steps 41 and 31 to 36): guided execution of functional tests on the device, their results as observations of the OSCAL assessment results. (The documentation of the product is step 30.)

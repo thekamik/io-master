@@ -21,7 +21,7 @@ export interface AppView {
   user: string | null;
   pages: PageView[];
   warnings: WarningView[];
-  /** The version of the program: "0.4.0". */
+  /** The version of the program (`Cargo.toml`): "0.1.0". */
   version: string;
   /** The folder of the installation. */
   data_dir: string;
