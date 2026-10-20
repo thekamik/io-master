@@ -16,10 +16,10 @@ Two levels of approval:
 A file that changes after its approval goes back to "to review"
 (with a note of what changed) once the user has approved the change.
 
-**The review started anew on 2026-10-17 with the code of v0.5** (the
-layout of step 40, `docs/code_structure.md`). No approval of v0.4
-moved with the code (decision of the user, 2026-10-17); the approval of
-`main.rs` of v0.4 is kept in the history of git (branch `v0.4`). The
+**The review started anew on 2026-10-17 with the code of step 40** (the
+layout of `docs/code_structure.md`). No approval of the code before
+step 40 moved with it (decision of the user, 2026-10-17); the approval of
+that `main.rs` is kept in the history of git (commit `fbc3c47`). The
 markers `// ok kk` still in the code of `main.rs` count again only when
 the user confirms them.
 

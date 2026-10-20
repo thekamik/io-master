@@ -4,10 +4,10 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 
 ## Where the project is (2026-10-18)
 
-- Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branch **`v0.5`**. `v0.4` keeps the state before step 40 and is not changed; `v0.2`/`V0.2` are never changed; `v0.3` keeps the old web interface.
-- **Step 40 (the cleanup of the architecture) is built** on `v0.5`: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`, their rules and the tests that check them (`docs/code_structure.md`).
+- Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branches **`main`** (the tested state) and **`test_branch`** (the work); no other branches and no version numbers yet (`CLAUDE.md`, "Branches"; the earlier branches are named in `docs/history.md`).
+- **Step 40 (the cleanup of the architecture) is built**: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`, their rules and the tests that check them (`docs/code_structure.md`).
 - **Step 41 (NIST OSCAL, `docs/oscal.md`) is being built**, part by part (`docs/todo.md`, step 41): 41.1 to 41.3 are done. The evaluation plan works on documents of OSCAL 1.2.3 (import, export, deletion, every write checked against the schemas of NIST); catalogs are made in the program from the PDFs of a standard, with the AI proposing groups and controls and the evaluator accepting, correcting or rejecting them in the editor of a catalog (`ui/src/components/CatalogEditor.svelte`). The quotes and the proposals are the evaluation support (`db/evaluation_support/`), linked to OSCAL by UUID and id.
-- **The review starts anew** on the code of v0.5 (`review.md`): no approval moved with the code.
+- **The review starts anew** on the code of step 40 (`review.md`): no approval moved with the code.
 
 ## What comes next
 

@@ -70,7 +70,7 @@ The first start is the real moment of installation. **It is told by the keyring 
 - **A new installation** is made only in an empty or new folder, so it can never overwrite an existing installation. The location is chosen by the user; how it is chosen in the window is decided when the interface is reviewed.
 - **Restoring an installation** asks for its location and its recovery code (the secret of the application, section 5.6). The program checks both against the system database and writes them back into the keyring. This is the way back after a lost keyring: a reset of the Linux password by an administrator, keyring entries removed by hand, a new system.
 - With the optional TPM factor (section 5.1) the marker in the TPM is compared as well; a marker without an installation, or an installation without its marker, is a damaged installation and stops the program.
-- The setup is made in the window, by the person in front of it: the window opens no network port, so no other user or program of the computer can reach the setup (the one-time setup code of the web interface of v0.3 is no longer needed).
+- The setup is made in the window, by the person in front of it: the window opens no network port, so no other user or program of the computer can reach the setup (the one-time setup code of the earlier web interface is no longer needed).
 - The person who installs the program is its **only user**.
 - **Only the role is final.** The connection to a master is set, changed or removed later in Settings; a workstation works fully without a master (section 5.4).
 - The data of an installation lives in its folder (the system database and the encrypted database of the user). All settings are in the databases; only the two entries of section 5.6 are kept in the keyring.
@@ -79,7 +79,7 @@ The first start is the real moment of installation. **It is told by the keyring 
 
 ## 4. User interface (agreed, changed 2026-10-16)
 
-- **A desktop window** (Tauri 2 with a page in Svelte, since v0.4; step 14 of `todo.md`). The page is built into the program and talks to it through a fixed list of commands; **the program opens no network port for its interface**. The earlier web interface on 127.0.0.1 (v0.3, with its Host and Origin checks against DNS rebinding and cross-site requests) was removed in v0.4; it is in the git history (branch `v0.3`).
+- **A desktop window** (Tauri 2 with a page in Svelte, since 2026-10-16; step 14 of `todo.md`). The page is built into the program and talks to it through a fixed list of commands; **the program opens no network port for its interface**. The earlier web interface on 127.0.0.1 (with its Host and Origin checks against DNS rebinding and cross-site requests) was removed with step 14; it is in the git history (commit `acedc8b`).
 - **The program is started without parameters.** A parameter given anyway is refused. All configuration is made in the window.
 - **Network functions are started from the window, never from the command line:** on a master, the server of the password reset service (an API, HTTPS with TLS 1.3 only); on a workstation, its client (section 5.4, step 11). A remote access to the interface itself does not exist: the evaluator works at the computer (section 5.6).
 - TLS 1.3 is used wherever data leaves the computer: the reset service between a workstation and the master, the AI services, git.

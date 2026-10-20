@@ -23,7 +23,7 @@ pub struct AppView {
     pub pages: Vec<PageView>,
     /// The bars at the top of every page, the most serious first.
     pub warnings: Vec<WarningView>,
-    /// The version of the program: "0.4.0".
+    /// The version of the program (`Cargo.toml`): "0.1.0".
     pub version: &'static str,
     /// The folder of the installation (not a secret: its databases
     /// are encrypted).
