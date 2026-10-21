@@ -31,7 +31,22 @@ The user's bible; they must not be broken. The rules as the user gave them (G. J
 9. Pointers restricted: at most one level of dereference, none hidden in macros or typedefs; no function pointers.
 10. All warnings enabled at the most pedantic level from the first day, the code compiles without warnings, and it is checked daily with at least one (preferably more) strong static analyzer with zero warnings.
 
-**How each rule applies to Rust, Svelte and the dependencies is being agreed with the user** (2026-10-21); until it is written here, ask before deciding a case the rules do not settle literally.
+### The rules for Rust (adapted by Claude with the user's leave, 2026-10-21; the user may correct each)
+
+They bind **our code** (`src/`, `ui/`). The dependencies (Tauri, rusqlite, serde, rustls, ...) cannot follow them; they are kept few and well known, checked by `cargo-audit` and `cargo-deny`, and reached through a narrow, documented boundary.
+
+1. **Control flow.** No recursion, direct or indirect. No `panic!`, `unreachable!`, `todo!`, `unimplemented!` outside the tests. `?` is a plain return and allowed. A tree (the groups and controls of OSCAL) is walked with an explicit stack bounded by a constant depth; a deeper document is refused with an error. In Svelte: no recursive snippets or components (a tree reaches the page flattened, row and level).
+2. **Bounded loops.** A `loop` or `while` is written as `for _ in 0..MAX_...` with a named constant. A `for` over a collection is bounded by the limit of that collection, checked when the data entered the program. A stream (the answer of an AI, a file) is read up to a constant number of bytes or events.
+3. **Bounded memory** (instead of "no allocation", which Rust and its libraries cannot do; leaks, use-after-free and double free are excluded by ownership). Every input that enters the program has a maximum size checked at the boundary: a file, its pages, a text, a JSON document, an answer of the AI, the number of objects. No collection grows without a limit in a long work. `Vec::with_capacity` where the size is known.
+4. **Short functions.** At most 60 lines per function (`clippy::too_many_lines` with the threshold 60), one statement per line.
+5. **Checks with recovery.** No `assert!` or `debug_assert!` outside the tests: they stop the process, which is no recovery. A condition that should never happen is checked with `ensure!(condition, error)`, a simple macro that returns the error to the caller. On average at least two per function, for what the types do not guarantee; a check the compiler or the type already proves is not written (the rule itself forbids it).
+6. **Smallest scope.** Every binding at the smallest scope; no `static mut`, no global mutable state besides the state of the window (`tauri_ui/state.rs`), which says why it is there.
+7. **Every result handled, every parameter checked.** No `unwrap`, `expect`, `let _ =` on a `Result`, or `.ok()` that drops an error. What comes from the page is checked once at its entry and turned into a type of `model/` that carries its validity; a function checks what its parameter types do not guarantee.
+8. **Macros.** Own `macro_rules!` only simple (like `ensure!`): no recursion, no repetitions `$(...)*`, each expanding into a complete expression or statement. The macros of std (`format!`, `vec!`, `write!`) are allowed. Procedural macros (serde derives, `#[tauri::command]`) only at the boundary to the page. `#[cfg]` only as `#[cfg(test)]`.
+9. **References.** `#![forbid(unsafe_code)]`; no raw pointers, no `&&T`, no `dyn Trait` or `Box<dyn ...>`, no `Rc<RefCell<...>>` in our code. No function pointers and no closures as parameters of our own functions. Closures only where a library requires them (`spawn_blocking`, a sort key), short, and each such place names the reason; prefer a `for` loop to an iterator chain with closures.
+10. **Zero warnings, from now on.** Warnings of rustc denied; clippy `pedantic` and the restriction lints that carry these rules (`unwrap_used`, `expect_used`, `panic`, `indexing_slicing`, `as_conversions`, ...) denied in `Cargo.toml` (`[lints]`); `cargo clippy`, `cargo-audit`, `cargo-deny` clean before every commit. In the page: TypeScript strict, `svelte-check` and eslint clean.
+
+**The code does not follow them yet** (measured 2026-10-21: ~16 recursive functions, 44 `while`/`loop`, 10 functions over 60 lines, no checks of rule 5, 24 closures as parameters, 22 warnings of rustc and 125 of clippy pedantic). Every file that is rebuilt is brought to them; a new file follows them from its first line.
 
 ## Main design rule: the desktop window is the only interface
 
