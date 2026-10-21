@@ -13,7 +13,7 @@
 /// The tables, created with `IF NOT EXISTS` whenever the database is
 /// opened (`db/user/database.rs`). Times are seconds since 1970 (UTC).
 pub const SCHEMA: &str = "
-    -- found: whether the text was found on its page (business/standards/quote.rs).
+    -- found: whether the text was found on its page (model/standards/quote.rs).
     CREATE TABLE IF NOT EXISTS support_quotes (
         id                  INTEGER PRIMARY KEY,
         document_uuid       TEXT NOT NULL,

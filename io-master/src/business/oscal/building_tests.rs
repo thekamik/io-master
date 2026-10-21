@@ -9,13 +9,13 @@ use serde_json::json;
 use crate::ai::api::connections;
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions as connection_to, completions_events};
 use crate::business::oscal::proposals;
-use crate::business::standards::test_support::load;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
 use crate::model::api_key::ApiKey;
 use crate::model::oscal::OscalModel;
 use crate::security::random::fill_random;
 use crate::test_support::TempDir;
+use crate::test_support::standards::load;
 use tokio::sync::watch;
 
 /// A session of an evaluator whose AI is `service`, with the small
@@ -144,7 +144,7 @@ async fn the_controls_of_a_group_are_proposed_corrected_and_accepted() {
     assert_eq!(all[0].0, ["Development"]);
     assert_eq!(all[0].1.title, "Complete functional specification (corrected)");
     assert_eq!(quotes::list(&db, &uuid, Some("ADV_FSP.4")).unwrap().len(), 1);
-    assert_eq!(crate::business::oscal::documents::list(&db).unwrap()[0].model, OscalModel::Catalog);
+    assert_eq!(crate::db::oscal::read::summaries(&db).unwrap()[0].model, OscalModel::Catalog);
 }
 
 #[tokio::test]

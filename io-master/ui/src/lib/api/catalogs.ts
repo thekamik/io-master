@@ -8,7 +8,7 @@
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 
-import type { OscalDocumentView } from "./oscal";
+import type { OscalDocumentView } from "./plans/oscal_documents";
 
 /** A part of a control or group (statement, item, guidance, ...). */
 export interface OscalPart {
@@ -101,8 +101,9 @@ export type BuildEvent =
 /** The instructions of the two tasks of the catalogs. */
 export type CatalogTask = "catalog_outline" | "catalog_section";
 
-export function createCatalog(title: string, version: string, sources: number[]): Promise<OscalDocumentView> {
-  return invoke("create_catalog", { title, version, sources });
+/** Stops the work of the AI on the catalog. */
+export function stopWork(): Promise<void> {
+  return invoke("stop_work");
 }
 
 export function openCatalog(uuid: string): Promise<CatalogView> {

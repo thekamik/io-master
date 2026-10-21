@@ -38,6 +38,7 @@ mod db;
 mod hardware_tests;
 mod installation;
 mod model;
+mod pdf;
 mod security;
 mod tauri_ui;
 #[cfg(test)]
@@ -168,25 +169,23 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             views::chat::conversation::commands::conversation_send,
             views::chat::conversation::commands::conversation_stop,
             views::chat::conversation::commands::conversation_delete,
-            // The evaluation plan: the documents of the standards
-            // (commands/documents.rs).
-            commands::list_documents,
-            commands::load_documents,
+            // The view Evaluation plan (views/plans/).
+            views::plans::oscal_documents::commands::oscal_documents_get,
+            views::plans::oscal_documents::commands::oscal_documents_import,
+            views::plans::oscal_documents::commands::oscal_documents_export,
+            views::plans::oscal_documents::commands::oscal_documents_delete,
+            views::plans::new_catalog::commands::new_catalog_sources,
+            views::plans::new_catalog::commands::new_catalog_create,
+            views::plans::standard_documents::commands::standard_documents_get,
+            views::plans::standard_documents::commands::standard_documents_load,
+            views::plans::standard_documents::commands::standard_documents_stop,
+            views::plans::standard_documents::commands::standard_documents_update,
+            views::plans::standard_documents::commands::standard_documents_delete,
+            views::plans::document_search::commands::document_search_run,
+            views::plans::pdf_viewer::commands::pdf_viewer_documents,
+            views::plans::pdf_viewer::commands::pdf_viewer_get,
+            // The editor of a catalog (commands/catalogs.rs).
             commands::stop_work,
-            commands::update_document,
-            commands::delete_document,
-            commands::document_page,
-            commands::search_documents,
-            commands::document_pdf,
-            // The evaluation plan: the documents of OSCAL
-            // (commands/oscal.rs).
-            commands::list_oscal_documents,
-            commands::import_oscal_document,
-            commands::export_oscal_document,
-            commands::delete_oscal_document,
-            // The evaluation plan: the catalogs of OSCAL
-            // (commands/catalogs.rs).
-            commands::create_catalog,
             commands::open_catalog,
             commands::add_catalog_group,
             commands::update_catalog_group,

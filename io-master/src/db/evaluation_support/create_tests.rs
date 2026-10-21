@@ -5,8 +5,8 @@ use super::*;
 
 use serde_json::json;
 
-use crate::business::standards::test_support::{database, load};
 use crate::db::evaluation_support::{delete, read};
+use crate::test_support::standards::{database, load};
 
 #[test]
 fn quotes_are_stored_read_and_deleted() {

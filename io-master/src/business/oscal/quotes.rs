@@ -9,17 +9,17 @@
 //! ```
 //!
 //! **Nothing is taken on trust:** the text of a quote is looked for on
-//! the page it names (`business/standards/quote.rs`), and the result is
+//! the page it names (`model/standards/quote.rs`), and the result is
 //! kept with it; a passage that is not there stays visible as such.
 
-use crate::business::standards;
-use crate::business::standards::quote::is_on_page;
 use crate::db::error::DbError;
 use crate::db::evaluation_support as db_evaluation_support;
+use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_support::{Quote, QuoteDraft};
+use crate::model::standards::quote::is_on_page;
 
-use super::documents::OscalError;
+use crate::db::oscal::error::OscalError;
 
 /// The longest quote, in characters: a passage, not a page.
 pub use crate::model::standards::MAX_QUOTE;
@@ -38,7 +38,7 @@ pub fn checked(db: &UserDb, source: i64, page: u32, text: &str) -> Result<QuoteD
         return Err(OscalError::Invalid(format!("a quote has 1 to {MAX_QUOTE} characters")));
     }
 
-    let page_text = standards::documents::page(db, source, page)?
+    let page_text = db_standards::read::page(db, source, page)?
         .ok_or_else(|| OscalError::Invalid(format!("the document of the standard has no page {page}")))?;
 
     Ok(QuoteDraft { source_document_id: source, page, text: text.to_owned(), found: is_on_page(text, &page_text) })

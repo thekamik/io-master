@@ -17,9 +17,9 @@ use crate::model::oscal::catalog::{Control, Group};
 
 use crate::tauri_ui::error::UiError;
 use crate::tauri_ui::serializer::catalog_view::{BuildEvent, CatalogView, PageRange, object};
-use crate::tauri_ui::serializer::oscal_view::OscalDocumentView;
 use crate::tauri_ui::session::with_user_db;
 use crate::tauri_ui::state::UiState;
+use crate::views::plans::oscal_documents::view::OscalDocumentView;
 
 /// The catalog `uuid` as the editor shows it.
 fn view(db: &UserDb, uuid: &str) -> Result<CatalogView, UiError> {
@@ -27,19 +27,12 @@ fn view(db: &UserDb, uuid: &str) -> Result<CatalogView, UiError> {
         documents::get(db, uuid)?.ok_or(UiError::Invalid("the OSCAL document does not exist".to_owned()))?.summary();
     let catalog = catalogs::get(db, uuid)?;
 
-    CatalogView::new(summary.into(), &catalog, quotes::list(db, uuid, None)?, proposals::list(db, uuid)?)
-}
-
-/// Makes a new catalog from the documents `sources` of a standard.
-pub async fn create(
-    state: &UiState,
-    title: String,
-    version: String,
-    sources: Vec<i64>,
-) -> Result<OscalDocumentView, UiError> {
-    let summary = with_user_db(state, move |db| Ok(catalogs::create(db, &title, &version, &sources)?)).await?;
-
-    Ok(summary.into())
+    CatalogView::new(
+        OscalDocumentView::new(summary),
+        &catalog,
+        quotes::list(db, uuid, None)?,
+        proposals::list(db, uuid)?,
+    )
 }
 
 pub async fn open(state: &UiState, uuid: String) -> Result<CatalogView, UiError> {

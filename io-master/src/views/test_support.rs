@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use serde_json::Value;
-use tauri::ipc::{CallbackFn, InvokeBody};
+use tauri::ipc::{CallbackFn, InvokeBody, InvokeResponseBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_context, noop_assets};
 use tauri::webview::InvokeRequest;
 use tauri::{App, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
@@ -17,7 +17,7 @@ use crate::tauri_ui::state::UiState;
 use crate::tauri_ui::test_support::{TestState, first_start, installed, logged_in};
 use crate::test_support::TempDir;
 
-use super::{chat, scan, settings, shell, start};
+use super::{chat, plans, scan, settings, shell, start};
 
 /// A window, and what must live as long as it: the app and the folder
 /// of the installation.
@@ -39,17 +39,30 @@ impl TestWindow {
     /// writes them: `allTypes`), as the page does; the answer of the
     /// command, or the error the page would get.
     pub fn call(&self, command: &str, arguments: Value) -> Result<Value, Value> {
-        let request = InvokeRequest {
-            cmd: command.to_owned(),
-            callback: CallbackFn(0),
-            error: CallbackFn(1),
-            url: "tauri://localhost".parse().expect("a URL"),
-            body: InvokeBody::Json(arguments),
-            headers: tauri::http::HeaderMap::default(),
-            invoke_key: INVOKE_KEY.to_owned(),
-        };
+        get_ipc_response(&self.window, request(command, arguments))
+            .map(|body| body.deserialize::<Value>().expect("JSON"))
+    }
 
-        get_ipc_response(&self.window, request).map(|body| body.deserialize::<Value>().expect("JSON"))
+    /// Calls `command` as [`TestWindow::call`] does, for a command that
+    /// answers with raw bytes (a PDF).
+    pub fn call_bytes(&self, command: &str, arguments: Value) -> Result<Vec<u8>, Value> {
+        get_ipc_response(&self.window, request(command, arguments)).map(|body| match body {
+            InvokeResponseBody::Raw(bytes) => bytes,
+            InvokeResponseBody::Json(text) => text.into_bytes(),
+        })
+    }
+}
+
+/// The request the page sends for `command` with `arguments`.
+fn request(command: &str, arguments: Value) -> InvokeRequest {
+    InvokeRequest {
+        cmd: command.to_owned(),
+        callback: CallbackFn(0),
+        error: CallbackFn(1),
+        url: "tauri://localhost".parse().expect("a URL"),
+        body: InvokeBody::Json(arguments),
+        headers: tauri::http::HeaderMap::default(),
+        invoke_key: INVOKE_KEY.to_owned(),
     }
 }
 
@@ -97,6 +110,20 @@ fn window(test: TestState) -> TestWindow {
             settings::api_key::commands::api_key_store,
             settings::api_key::commands::api_key_delete,
             settings::connection_check::commands::connection_check_run,
+            plans::oscal_documents::commands::oscal_documents_get,
+            plans::oscal_documents::commands::oscal_documents_import,
+            plans::oscal_documents::commands::oscal_documents_export,
+            plans::oscal_documents::commands::oscal_documents_delete,
+            plans::new_catalog::commands::new_catalog_sources,
+            plans::new_catalog::commands::new_catalog_create,
+            plans::standard_documents::commands::standard_documents_get,
+            plans::standard_documents::commands::standard_documents_load,
+            plans::standard_documents::commands::standard_documents_stop,
+            plans::standard_documents::commands::standard_documents_update,
+            plans::standard_documents::commands::standard_documents_delete,
+            plans::document_search::commands::document_search_run,
+            plans::pdf_viewer::commands::pdf_viewer_documents,
+            plans::pdf_viewer::commands::pdf_viewer_get,
             scan::ports_table::commands::ports_table_scan,
             scan::scanner_settings::commands::scanner_settings_get,
             scan::scanner_settings::commands::scanner_settings_save,

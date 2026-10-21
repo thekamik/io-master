@@ -40,12 +40,19 @@
     type OscalGroup,
     type OscalPart,
     type Place,
-  } from "../lib/api/catalogs";
-  import { stopWork, type DocumentView } from "../lib/api/documents";
+      stopWork,
+} from "../lib/api/catalogs";
+  import * as standardDocuments from "../lib/api/plans/standard_documents";
+  import type { DocumentView } from "../lib/api/plans/standard_documents";
   import { sentence } from "../lib/api/errors";
-  import PdfViewer from "./PdfViewer.svelte";
+  import PdfViewer from "../views/plans/PdfViewer.svelte";
 
-  let { uuid, documents, onclose }: { uuid: string; documents: DocumentView[]; onclose: () => void } = $props();
+  let { uuid, onclose }: { uuid: string; onclose: () => void } = $props();
+
+  // The documents of the standard, for the work of the AI and the titles
+  // of the sources. Until the editor moves to views/ (step 42) it reads
+  // them with the command of the list of documents.
+  let documents: DocumentView[] = $state([]);
 
   /** An object of the catalog found by its id. */
   type Found = { kind: "group"; object: OscalGroup } | { kind: "control"; object: OscalControl };
@@ -79,10 +86,10 @@
   let firstDocument = $derived(documents[0]?.id ?? 0);
 
   onMount(async () => {
-    outline.document_id = firstDocument;
-    section.document_id = firstDocument;
-
     try {
+      documents = await standardDocuments.get();
+      outline.document_id = firstDocument;
+      section.document_id = firstDocument;
       view = await openCatalog(uuid);
     } catch (error) {
       problem = sentence(error);
@@ -542,7 +549,6 @@
 
 {#if viewer}
   <PdfViewer
-    {documents}
     documentId={viewer.documentId}
     page={viewer.page}
     quote={viewer.quote}

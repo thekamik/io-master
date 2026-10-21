@@ -18,7 +18,6 @@ use std::sync::Arc;
 use tokio::sync::watch;
 
 use crate::ai::api::roles::ModelError;
-use crate::business::standards::error::DocumentError;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
@@ -48,8 +47,6 @@ impl Cancel {
 pub enum WorkError {
     /// What was asked is not possible; the reason, for the evaluator.
     Invalid(String),
-    /// A document of a standard.
-    Document(DocumentError),
     /// No AI connection can be used for the task.
     Model(ModelError),
     /// The database failed.
@@ -62,7 +59,6 @@ impl fmt::Display for WorkError {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             WorkError::Invalid(reason) => formatter.write_str(reason),
-            WorkError::Document(error) => write!(formatter, "{error}"),
             WorkError::Model(error) => write!(formatter, "{error}"),
             WorkError::Db(error) => write!(formatter, "{error}"),
             WorkError::Interrupted => formatter.write_str("the work was interrupted"),
@@ -71,12 +67,6 @@ impl fmt::Display for WorkError {
 }
 
 impl std::error::Error for WorkError {}
-
-impl From<DocumentError> for WorkError {
-    fn from(error: DocumentError) -> WorkError {
-        WorkError::Document(error)
-    }
-}
 
 impl From<ModelError> for WorkError {
     fn from(error: ModelError) -> WorkError {

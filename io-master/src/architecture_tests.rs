@@ -29,10 +29,12 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-const ALLOWED: [(&str, &[&str]); 9] = [
+const ALLOWED: [(&str, &[&str]); 10] = [
     ("model", &[]),
     ("security", &[]),
     ("hardware_tests", &[]),
+    // Reading PDFs with Poppler: another program, nothing of ours.
+    ("pdf", &[]),
     ("db", &["model", "security"]),
     ("ai", &["db", "model", "security"]),
     // The installation, its account and the session: the core of the
@@ -58,13 +60,18 @@ const ALLOWED: [(&str, &[&str]); 9] = [
             // The error of a form of the settings of the scanner, turned
             // into an error of the page.
             "hardware_tests::devices::scan_settings::ScanSettingsError",
+            // Until the editor of a catalog moves to views/ (step 42): the
+            // stored documents of OSCAL and their view, which the editor
+            // shows.
+            "db::oscal::error::OscalError",
+            "views::plans::oscal_documents::view::OscalDocumentView",
         ],
     ),
     // The views (views.rs): the commands of the elements of the window,
     // on top of everything. They use the state and the errors of the
     // window (tauri_ui/) and do their work with the folders below; the
     // business is allowed until every view is moved (step 42).
-    ("views", &["tauri_ui", "business", "ai", "db", "hardware_tests", "installation", "model", "security"]),
+    ("views", &["tauri_ui", "business", "ai", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

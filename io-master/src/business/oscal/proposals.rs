@@ -18,7 +18,7 @@ use crate::model::evaluation_support::{Proposal, ProposalKind};
 use crate::model::oscal::catalog::{Control, Group};
 
 use super::catalogs::{self, Place};
-use super::documents::OscalError;
+use crate::db::oscal::error::OscalError;
 
 /// The proposals waiting for document `uuid`, the oldest first.
 pub fn list(db: &UserDb, uuid: &str) -> Result<Vec<Proposal>, DbError> {

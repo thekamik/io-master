@@ -23,6 +23,7 @@
 //! beside this folder.
 
 pub mod chat;
+pub mod plans;
 pub mod scan;
 pub mod settings;
 pub mod shell;

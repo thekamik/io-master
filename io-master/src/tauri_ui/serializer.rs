@@ -2,5 +2,3 @@
 
 pub mod catalog_view;
 pub mod error_view;
-pub mod oscal_view;
-pub mod standard_view;

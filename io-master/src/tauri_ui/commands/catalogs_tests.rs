@@ -11,8 +11,13 @@ use crate::tauri_ui::test_support::with_document;
 async fn a_catalog_is_made_edited_and_quoted_through_the_commands() {
     let (test, document) = with_document().await;
 
-    let made = create(&test.state, "CC Part 3".into(), "CC:2022".into(), vec![document]).await.unwrap();
-    assert_eq!(made.model, "catalog");
+    let made = crate::business::oscal::catalogs::create(
+        &test.state.session().unwrap().db(),
+        "CC Part 3",
+        "CC:2022",
+        &[document],
+    )
+    .unwrap();
 
     let view = add_group(&test.state, made.uuid.clone(), Place::Top, json!({"id": "ADV", "title": "Development"}))
         .await

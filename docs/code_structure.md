@@ -8,7 +8,7 @@ This document says **where** everything is in the code and **which rules keep it
 4. All communication with AI is in `ai/`, the intermediary between the external services and the program: one folder for the whole integration, for the audit.
 5. Everything that talks to hardware is in `hardware_tests/`.
 
-**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Moved: Scan (the pilot), Start, Shell, Chat, Settings; the other views still go through `business/` and `tauri_ui/commands/` until they are moved**, so both forms are in the code for now.
+**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Moved: Scan (the pilot), Start, Shell, Chat, Settings, Evaluation plan; the editor of a catalog still go through `business/` and `tauri_ui/commands/` until they are moved**, so both forms are in the code for now.
 
 ---
 
@@ -22,6 +22,7 @@ io-master/src/
   db/                every operation on a database, as CRUD; depends only on model/ and security/
   ai/                the whole communication with AI services
   hardware_tests/    the whole communication with hardware
+  pdf/               reading PDFs with Poppler (pdfinfo, pdftotext): another program, in one place
   security/          the building blocks of protection: random numbers, the TPM
   installation/      the installation, its one account and the session: the core of the protection
   business/          the business logic, as resources and operations (being replaced by views/)
@@ -127,6 +128,10 @@ ai/presets/      the ready settings of known services, and the help for the fiel
 ### 2.4 `hardware_tests/`: hardware
 
 The scan of the serial ports (`devices/`) and the settings of the scanner (`devices/scan_settings.rs`: plain data and its rules, no I/O, stored by `db/scan_settings/`); later the access rights (`permissions/`, step 6), UART and Bluetooth. No function here sends to a device without a command started by an action of the evaluator (P2).
+
+### 2.4a `pdf/`: reading PDFs
+
+`poppler.rs`: the number of pages and the title of a PDF (`pdfinfo`), and the text of a range of pages (`pdftotext`), the PDF given on the standard input, never through a shell. It uses nothing of the program; the loading of the documents of a standard (`views/plans/standard_documents/load.rs`) reads a document part by part with it, reports every part and can stop between them.
 
 ### 2.5 `security/`
 
@@ -244,7 +249,8 @@ model.rs/                  The data of the program as plain Rust types, and the 
     profile.rs                   An OSCAL profile: a selection of the controls of catalogs (or of
     schema.rs                    The check of an OSCAL document against the JSON schema of NIST, of
     values.rs                    The values OSCAL defines by a pattern, made by the program: a UUID
-  standards.rs                 The documents of standards an evaluator has loaded (steps 16 to 22
+  standards.rs/                The documents of standards an evaluator has loaded (steps 16 to 22
+    quote.rs                     Finding a quote in the text of a page of a standard.
   text.rs                      The rules every text field of the program follows, the error when
   time.rs                      The time stamps of the program: seconds since 1970 (UTC), as the
 db.rs/                     Every operation on a database (CLAUDE.md, "Database code").
@@ -291,6 +297,7 @@ db.rs/                     Every operation on a database (CLAUDE.md, "Database c
   oscal.rs/                    The documents of NIST OSCAL (step 41): catalogs, mappings, profiles,
     create.rs                    Storing a new document of OSCAL, checked against the schema of NIST.
     delete.rs                    Deleting a document of OSCAL. Its text is overwritten in the file,
+    error.rs                     The error of an operation on a stored document of OSCAL: the rules of
     read.rs                      Reading the documents of OSCAL.
     rows.rs                      The rows of the documents of OSCAL and the types they become
     schema.rs                    The table of the documents of OSCAL, in the database of an
@@ -347,6 +354,8 @@ hardware_tests.rs/         Everything that talks to hardware (step 40 of docs/to
     port_property.rs             The properties of a serial port that can be shown, one per
     scan_settings.rs             The settings of the scanner: which kinds of port a scan looks for,
     serial_ports.rs              Discovery of serial ports.
+pdf.rs/                    Reading PDFs with the tools of Poppler (`pdfinfo`, `pdftotext`): the
+  poppler.rs                   Reading the text of a PDF, page by page, with the tools of
 installation.rs/           The installation of this Linux account, its one user and the
   accounts.rs                  The accounts of the evaluators: creating them, logging in, and
   lifecycle.rs                 The life of an installation: the first start, every later
@@ -363,30 +372,21 @@ business.rs/               The business logic of the program (step 40 of docs/to
   oscal.rs/                    The documents of NIST OSCAL of the evaluator (step 41,
     building.rs                  The long works that make a catalog of OSCAL from the documents of a
     catalogs.rs                  The catalogs of the evaluator as a resource (step 41.3): a standard
-    documents.rs                 The documents of OSCAL as a resource (step 41.2): loaded from files
+    documents.rs                 The documents of OSCAL as the work on catalogs reads them (moved with
     ids.rs                       New UUIDs and the time of a change, for the documents the program
     proposals.rs                 The proposals of the AI for an OSCAL document (evaluation support,
     quotes.rs                    The passages of the documents of a standard (PDF) the objects of an
-  standards.rs/                The documents of standards: loading, reading, searching, quotes.
-    documents.rs                 The documents of standards as a resource (steps 16 to 22 of
-    error.rs                     The error of an operation on a document of a standard.
-    load.rs                      The loading of documents of standards from PDF files: a long work
+  standards.rs/                The pages of a standard cut into parts for the AI (moved with the
     parts.rs                     The pages of a standard cut into parts that fit the context of a
-    pdf_text.rs                  Reading the text of a PDF, page by page, with the tools of
-    quote.rs                     Finding a quote in the text of a page of a standard.
   work.rs                      What the long works of the business share (step 40): the stop
 tauri_ui.rs/               The desktop window (Tauri 2), the thin layer between the business
   blocking.rs                  Blocking work of the commands, kept off the threads that keep
   commands.rs/                 The commands the page can call: the whole surface between the
     catalogs.rs                  The catalogs of OSCAL in the tool Evaluation plan (step 41.3): made
-    documents.rs                 The documents of standards in the tool Evaluation plan:
-    oscal.rs                     The documents of OSCAL in the tool Evaluation plan (step 41.2): the
   error.rs                     The errors the commands give back to the page, in kinds the page
   serializer.rs/               The views and forms of the page (serde): the only place of serialization.
     catalog_view.rs              A catalog of OSCAL as the editor of the page shows it: the catalog
     error_view.rs                How an error of a command reaches the page:
-    oscal_view.rs                The documents of OSCAL as the page shows them in a list.
-    standard_view.rs             The documents of standards as the page shows them, and the events
   session.rs                   The session of the logged-in evaluator (`installation/session.rs`), for
   state.rs                     The state of the desktop interface, kept in Rust and never in
 views.rs/                  The views of the window, one folder per view and one folder per
@@ -402,6 +402,26 @@ views.rs/                  The views of the window, one folder per view and one 
       stored.rs                    What a chat keeps (`db/ai/chats/`, tables `chats` and `messages`, in
       turn.rs                      One turn of a chat: the message of the evaluator is checked and
       view.rs                      The data of the conversation as the page gets it: an open chat, and
+  plans/                       The view Evaluation plan: the documents of the standards in NIST OSCAL
+    document_search/             The element "search" of the view Evaluation plan: the text of the
+      commands.rs                  The command of the search.
+      search.rs                    The search of the text of the documents of standards: in the one form
+      view.rs                      The data of the search, as the page gets it.
+    new_catalog/                 The element "new catalog" of the view Evaluation plan: a catalog of
+      commands.rs                  The command of a new catalog.
+      view.rs                      The data of a new catalog, as the page gets it: the documents it can
+    oscal_documents/             The element "documents of OSCAL" of the view Evaluation plan: the
+      commands.rs                  The commands of the documents of OSCAL. The files are chosen in the
+      file.rs                      A file of OSCAL (JSON) read into the database, and written from it:
+      view.rs                      The data of the list of documents of OSCAL, as the page gets it.
+    pdf_viewer/                  The element "viewer of a standard" of the view Evaluation plan: the
+      commands.rs                  The command of the viewer of a standard.
+      view.rs                      The data of the viewer, as the page gets it: the documents it can
+    standard_documents/          The element "documents of standards" of the view Evaluation plan: the
+      commands.rs                  The commands of the documents of standards.
+      load.rs                      The loading of documents of standards from PDF files: a long work.
+      stored.rs                    What is stored of a document of a standard, with its rules: a file is
+      view.rs                      The data of the list of documents of standards, as the page gets and
   scan/                        The view Scan: the serial ports of the computer and the settings of
     column_view.rs               A column of the table of ports, as both elements of the view show
     ports_table/                 The element "table of ports" of the view Scan

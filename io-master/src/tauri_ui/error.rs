@@ -11,10 +11,9 @@ use std::fmt;
 use crate::ai::api::completions::AiError;
 use crate::ai::api::connections::ConnectionSaveError;
 use crate::ai::api::roles::ModelError;
-use crate::business::oscal::documents::OscalError;
-use crate::business::standards::error::DocumentError;
 use crate::business::work::WorkError;
 use crate::db::error::DbError;
+use crate::db::oscal::error::OscalError;
 use crate::hardware_tests::devices::scan_settings::ScanSettingsError;
 use crate::installation::accounts::AccountError;
 use crate::installation::lifecycle::LifecycleError;
@@ -123,19 +122,9 @@ impl From<WorkError> for UiError {
     fn from(error: WorkError) -> UiError {
         match error {
             WorkError::Invalid(reason) => UiError::Invalid(reason),
-            WorkError::Document(error) => error.into(),
             WorkError::Model(error) => error.into(),
             WorkError::Db(error) => error.into(),
             WorkError::Interrupted => UiError::Failed(error.to_string()),
-        }
-    }
-}
-
-impl From<DocumentError> for UiError {
-    fn from(error: DocumentError) -> UiError {
-        match error {
-            DocumentError::Db(error) => UiError::Failed(error.to_string()),
-            other => UiError::Invalid(other.to_string()),
         }
     }
 }

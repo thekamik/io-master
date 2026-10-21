@@ -56,24 +56,12 @@ pub fn log_in(state: &UiState, password: &str) {
     state.log_in(Session::open(&state.data_dir, account, key).unwrap());
 }
 
-/// "anna" logged in, with one loaded document of three pages (a small
-/// real PDF, read by Poppler); returns the state and the document.
+/// "anna" logged in, with one loaded document of three pages (the
+/// small standard of `test_support/standards.rs`); returns the state and
+/// the document.
 pub async fn with_document() -> (TestState, i64) {
     let test = logged_in().await;
-    let directory = TempDir::new();
-    let path = directory.path().join("cc-part3.pdf");
-    std::fs::write(
-        &path,
-        crate::business::standards::test_support::pdf(&[
-            "ADV_FSP.4 Complete functional specification",
-            "The developer shall provide a functional specification.",
-            "ATE_IND.2 The evaluator shall test a subset of the TSF.",
-        ]),
-    )
-    .unwrap();
-
-    super::commands::documents::load(&test.state, vec![path], |_| true).await.unwrap();
-    let id = super::commands::documents::list(&test.state).await.unwrap()[0].id;
+    let id = crate::test_support::standards::load(&test.state.session().unwrap().db(), b"%PDF-1.4 cc-part3");
 
     (test, id)
 }

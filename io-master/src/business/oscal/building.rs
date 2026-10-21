@@ -25,11 +25,11 @@ use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
 use crate::ai::tasks::{catalog_outline, catalog_section};
-use crate::business::standards;
 use crate::business::standards::parts;
 use crate::business::work::{Cancel, WorkError, on_db};
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::evaluation_support::create::NewProposal;
+use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::{Role, Task, Turn};
@@ -38,8 +38,8 @@ use crate::model::oscal::catalog::Catalog;
 use crate::model::standards::Part;
 
 use super::catalogs;
-use super::documents::OscalError;
 use super::quotes;
+use crate::db::oscal::error::OscalError;
 
 /// How a long work of building a catalog goes, for the evaluator.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,7 +156,7 @@ async fn parts_of(
         let mut out = Vec::new();
 
         for part in parts::parts(db, &ranges, part_size)? {
-            let document = standards::documents::get(db, part.document_id)?
+            let document = db_standards::read::document(db, part.document_id)?
                 .ok_or(WorkError::Invalid("the document of the standard does not exist".to_owned()))?;
             out.push((part, document));
         }

@@ -22,16 +22,16 @@
 
 use std::collections::HashSet;
 
-use crate::business::standards;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
+use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::model::oscal::catalog::{Catalog, Control, Group};
 use crate::model::oscal::common::{BackMatter, Hash, Metadata, Resource, ResourceLink};
 use crate::model::oscal::{OSCAL_VERSION, OscalDocument, OscalSummary};
 
-use super::documents::OscalError;
 use super::ids::{new_uuid, now_date_time};
+use crate::db::oscal::error::OscalError;
 
 /// Where a new object goes: the top of the catalog, a group, or a
 /// control (for an enhancement).
@@ -56,8 +56,8 @@ pub fn create(db: &UserDb, title: &str, version: &str, sources: &[i64]) -> Resul
     let mut resources = Vec::new();
 
     for source in sources {
-        let document =
-            standards::documents::get(db, *source)?.ok_or(OscalError::Invalid("a source does not exist".to_owned()))?;
+        let document = db_standards::read::document(db, *source)?
+            .ok_or(OscalError::Invalid("a source does not exist".to_owned()))?;
         let fields = &document.fields;
         let mut name = fields.title.clone();
 

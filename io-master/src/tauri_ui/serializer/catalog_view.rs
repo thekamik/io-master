@@ -21,7 +21,7 @@ use crate::model::evaluation_support::{Proposal, Quote, QuoteDraft};
 use crate::model::oscal::catalog::Catalog;
 
 use super::super::error::UiError;
-use super::oscal_view::OscalDocumentView;
+use crate::views::plans::oscal_documents::view::OscalDocumentView;
 
 /// A quote of an object.
 #[derive(Debug, Serialize)]

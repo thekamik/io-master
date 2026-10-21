@@ -3,8 +3,8 @@
 use super::*;
 
 use crate::business::oscal::{documents, quotes};
-use crate::business::standards::test_support::{database, load};
 use crate::model::oscal::common::{Part, Property};
+use crate::test_support::standards::{database, load};
 
 fn group(id: &str, title: &str) -> Group {
     Group {
@@ -126,7 +126,7 @@ fn quotes_are_looked_for_on_their_pages_and_go_with_their_object() {
     assert!(!stored[1].found, "made up");
 
     // A document of a standard that a quote names stays.
-    assert!(crate::business::standards::documents::delete(&test.db, source).is_err());
+    assert!(crate::views::plans::standard_documents::stored::delete(&test.db, source).is_err());
 
     delete_object(&test.db, &uuid, "ADV_FSP.4").unwrap();
     assert!(quotes::list(&test.db, &uuid, None).unwrap().is_empty());

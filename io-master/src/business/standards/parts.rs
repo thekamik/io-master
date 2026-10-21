@@ -2,8 +2,8 @@
 //! model (local models have small ones): the text a task of the AI
 //! sends, part by part (`business/oscal/building.rs`).
 
-use crate::business::standards;
 use crate::db::error::DbError;
+use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::model::standards::Part;
 
@@ -27,7 +27,7 @@ pub fn parts(db: &UserDb, ranges: &[(i64, u32, u32)], size: usize) -> Result<Vec
         let mut current: Option<Part> = None;
 
         for number in first..=last {
-            let Some(page) = standards::documents::page(db, document, number)? else {
+            let Some(page) = db_standards::read::page(db, document, number)? else {
                 break;
             };
 

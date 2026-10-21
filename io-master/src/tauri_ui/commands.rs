@@ -21,182 +21,22 @@
 //! names of the page (`chatId`) into the names of Rust (`chat_id`).
 
 pub mod catalogs;
-pub mod documents;
-pub mod oscal;
 
-use tauri::ipc::{Channel, Response};
-use tauri::{AppHandle, State};
-use tauri_plugin_dialog::DialogExt;
+use tauri::State;
+use tauri::ipc::Channel;
 
 use super::error::UiError;
 use super::serializer::catalog_view::{BuildEvent, CatalogView, PageRange, PlaceForm};
-use super::serializer::oscal_view::OscalDocumentView;
-use super::serializer::standard_view::{DocumentForm, DocumentView, HitView, LoadEvent};
 use super::state::UiState;
 
 /* ---------------------------------------------------------------
- * The evaluation plan: the documents of standards
+ * The editor of a catalog (moved to views/ next, step 42)
  * ------------------------------------------------------------- */
-
-#[tauri::command]
-pub async fn list_documents(state: State<'_, UiState>) -> Result<Vec<DocumentView>, UiError> {
-    documents::list(&state).await
-}
-
-/// Asks for PDFs in a dialog of the system and loads them; the
-/// progress arrives through `on_event`. The page never sees a path:
-/// the dialog is opened here, in Rust.
-#[tauri::command]
-pub async fn load_documents(
-    app: AppHandle,
-    state: State<'_, UiState>,
-    on_event: Channel<LoadEvent>,
-) -> Result<(), UiError> {
-    state.session()?;
-
-    let chosen = tokio::task::spawn_blocking(move || {
-        app.dialog()
-            .file()
-            .set_title("Load documents of a standard")
-            .add_filter("PDF", &["pdf", "PDF"])
-            .blocking_pick_files()
-    })
-    .await
-    .map_err(|error| UiError::Failed(format!("the dialog failed: {error}")))?;
-
-    let paths: Vec<std::path::PathBuf> =
-        chosen.unwrap_or_default().into_iter().filter_map(|file| file.into_path().ok()).collect();
-
-    if paths.is_empty() {
-        return Ok(());
-    }
-
-    documents::load(&state, paths, move |event| on_event.send(event).is_ok()).await
-}
 
 /// Stops the long work running (loading, an analysis).
 #[tauri::command]
 pub fn stop_work(state: State<'_, UiState>) {
     state.stop_work();
-}
-
-#[tauri::command]
-pub async fn update_document(
-    state: State<'_, UiState>,
-    id: i64,
-    document: DocumentForm,
-) -> Result<DocumentView, UiError> {
-    documents::update(&state, id, document).await
-}
-
-#[tauri::command]
-pub async fn delete_document(state: State<'_, UiState>, id: i64) -> Result<(), UiError> {
-    documents::delete(&state, id).await
-}
-
-#[tauri::command]
-pub async fn document_page(state: State<'_, UiState>, id: i64, page: u32) -> Result<String, UiError> {
-    documents::page(&state, id, page).await
-}
-
-#[tauri::command]
-pub async fn search_documents(
-    state: State<'_, UiState>,
-    text: String,
-    document: Option<i64>,
-) -> Result<Vec<HitView>, UiError> {
-    documents::search(&state, text, document).await
-}
-
-/* ---------------------------------------------------------------
- * The evaluation plan: the documents of OSCAL
- * ------------------------------------------------------------- */
-
-#[tauri::command]
-pub async fn list_oscal_documents(state: State<'_, UiState>) -> Result<Vec<OscalDocumentView>, UiError> {
-    oscal::list(&state).await
-}
-
-/// Asks for a file of OSCAL (JSON) in a dialog of the system and
-/// imports it; `None` when no file was chosen.
-#[tauri::command]
-pub async fn import_oscal_document(
-    app: AppHandle,
-    state: State<'_, UiState>,
-) -> Result<Option<OscalDocumentView>, UiError> {
-    state.session()?;
-
-    let chosen = tokio::task::spawn_blocking(move || {
-        app.dialog()
-            .file()
-            .set_title("Import an OSCAL document")
-            .add_filter("OSCAL (JSON)", &["json"])
-            .blocking_pick_file()
-    })
-    .await
-    .map_err(|error| UiError::Failed(format!("the dialog failed: {error}")))?;
-
-    let Some(path) = chosen.and_then(|file| file.into_path().ok()) else {
-        return Ok(None);
-    };
-
-    Ok(Some(oscal::import(&state, path).await?))
-}
-
-/// Asks where to write document `uuid` in a dialog of the system and
-/// writes it; `false` when no place was chosen.
-#[tauri::command]
-pub async fn export_oscal_document(
-    app: AppHandle,
-    state: State<'_, UiState>,
-    uuid: String,
-    file_name: String,
-) -> Result<bool, UiError> {
-    state.session()?;
-
-    let file_name: String = file_name
-        .chars()
-        .map(|character| if character.is_alphanumeric() || "-_ .".contains(character) { character } else { '_' })
-        .collect();
-
-    let chosen = tokio::task::spawn_blocking(move || {
-        app.dialog()
-            .file()
-            .set_title("Export the OSCAL document")
-            .set_file_name(format!("{}.json", file_name.trim()))
-            .add_filter("OSCAL (JSON)", &["json"])
-            .blocking_save_file()
-    })
-    .await
-    .map_err(|error| UiError::Failed(format!("the dialog failed: {error}")))?;
-
-    let Some(path) = chosen.and_then(|file| file.into_path().ok()) else {
-        return Ok(false);
-    };
-
-    oscal::export(&state, uuid, &path).await?;
-
-    Ok(true)
-}
-
-#[tauri::command]
-pub async fn delete_oscal_document(state: State<'_, UiState>, uuid: String) -> Result<(), UiError> {
-    oscal::delete(&state, uuid).await
-}
-
-/* ---------------------------------------------------------------
- * The evaluation plan: the catalogs of OSCAL
- * ------------------------------------------------------------- */
-
-/// Makes a new catalog from the documents `sources` of a standard.
-#[tauri::command]
-pub async fn create_catalog(
-    state: State<'_, UiState>,
-    title: String,
-    version: String,
-    sources: Vec<i64>,
-) -> Result<OscalDocumentView, UiError> {
-    catalogs::create(&state, title, version, sources).await
 }
 
 #[tauri::command]
@@ -327,11 +167,4 @@ pub async fn propose_catalog_controls(
     on_event: Channel<BuildEvent>,
 ) -> Result<CatalogView, UiError> {
     catalogs::propose_controls(&state, uuid, group, ranges, part_size, move |event| on_event.send(event).is_ok()).await
-}
-
-/// The PDF of a document, as raw bytes (an ArrayBuffer in the page),
-/// for the viewer.
-#[tauri::command]
-pub async fn document_pdf(state: State<'_, UiState>, id: i64) -> Result<Response, UiError> {
-    Ok(Response::new(documents::pdf(&state, id).await?))
 }
