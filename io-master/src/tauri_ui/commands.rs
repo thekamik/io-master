@@ -20,8 +20,6 @@
 //! The arguments arrive from the page as JSON; Tauri turns the
 //! names of the page (`chatId`) into the names of Rust (`chat_id`).
 
-pub mod account;
-pub mod ai;
 pub mod catalogs;
 pub mod documents;
 pub mod oscal;
@@ -31,83 +29,10 @@ use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
 use super::error::UiError;
-use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
 use super::serializer::catalog_view::{BuildEvent, CatalogView, PageRange, PlaceForm};
 use super::serializer::oscal_view::OscalDocumentView;
 use super::serializer::standard_view::{DocumentForm, DocumentView, HitView, LoadEvent};
 use super::state::UiState;
-
-/* ---------------------------------------------------------------
- * The program and the account
- * ------------------------------------------------------------- */
-
-#[tauri::command]
-pub async fn change_password(
-    state: State<'_, UiState>,
-    current: String,
-    password: String,
-    password_repeat: String,
-) -> Result<(), UiError> {
-    account::change_password(&state, current, password, password_repeat).await
-}
-
-/* ---------------------------------------------------------------
- * Settings, tab AI: the connections to AI services
- * ------------------------------------------------------------- */
-
-#[tauri::command]
-pub async fn ai_config(state: State<'_, UiState>) -> Result<AiConfigView, UiError> {
-    ai::ai_config(&state).await
-}
-
-/// Saves a connection; `id` null: a new one.
-#[tauri::command]
-pub async fn save_ai_connection(
-    state: State<'_, UiState>,
-    id: Option<i64>,
-    connection: ConnectionForm,
-) -> Result<SavedView, UiError> {
-    ai::save_connection(&state, id, connection).await
-}
-
-#[tauri::command]
-pub async fn delete_ai_connection(state: State<'_, UiState>, id: i64) -> Result<AiConfigView, UiError> {
-    ai::delete_connection(&state, id).await
-}
-
-/// Makes a connection the one the chat uses.
-#[tauri::command]
-pub async fn activate_ai_connection(state: State<'_, UiState>, id: i64) -> Result<AiConfigView, UiError> {
-    ai::activate_connection(&state, id).await
-}
-
-#[tauri::command]
-pub async fn store_ai_key(state: State<'_, UiState>, id: i64, api_key: String) -> Result<AiConfigView, UiError> {
-    ai::store_key(&state, id, api_key).await
-}
-
-#[tauri::command]
-pub async fn delete_ai_key(state: State<'_, UiState>, id: i64) -> Result<AiConfigView, UiError> {
-    ai::delete_key(&state, id).await
-}
-
-/// The instruction for a chatbot that helps to fill one field of the
-/// form (`connection`, as it is now).
-#[tauri::command]
-pub fn ai_field_instruction(
-    state: State<'_, UiState>,
-    field: String,
-    connection: ConnectionForm,
-) -> Result<String, UiError> {
-    ai::field_instruction(&state, &field, connection)
-}
-
-/// Sends one short message over a stored connection and reports
-/// what happened.
-#[tauri::command]
-pub async fn check_ai_connection(state: State<'_, UiState>, id: i64) -> Result<CheckView, UiError> {
-    ai::check_connection(&state, id).await
-}
 
 /* ---------------------------------------------------------------
  * The evaluation plan: the documents of standards

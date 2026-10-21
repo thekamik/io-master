@@ -8,7 +8,7 @@ This document says **where** everything is in the code and **which rules keep it
 4. All communication with AI is in `ai/`, the intermediary between the external services and the program: one folder for the whole integration, for the audit.
 5. Everything that talks to hardware is in `hardware_tests/`.
 
-**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Moved: Scan (the pilot), Start, Shell, Chat; the other views still go through `business/` and `tauri_ui/commands/` until they are moved**, so both forms are in the code for now.
+**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Moved: Scan (the pilot), Start, Shell, Chat, Settings; the other views still go through `business/` and `tauri_ui/commands/` until they are moved**, so both forms are in the code for now.
 
 ---
 
@@ -378,14 +378,11 @@ business.rs/               The business logic of the program (step 40 of docs/to
 tauri_ui.rs/               The desktop window (Tauri 2), the thin layer between the business
   blocking.rs                  Blocking work of the commands, kept off the threads that keep
   commands.rs/                 The commands the page can call: the whole surface between the
-    account.rs                   The password of the logged-in evaluator (the tab User of Settings;
-    ai.rs                        The tab AI of Settings: the AI connections of the evaluator, their
     catalogs.rs                  The catalogs of OSCAL in the tool Evaluation plan (step 41.3): made
     documents.rs                 The documents of standards in the tool Evaluation plan:
     oscal.rs                     The documents of OSCAL in the tool Evaluation plan (step 41.2): the
   error.rs                     The errors the commands give back to the page, in kinds the page
   serializer.rs/               The views and forms of the page (serde): the only place of serialization.
-    ai_config_view.rs            The AI connections as the tab AI of Settings shows and sends them,
     catalog_view.rs              A catalog of OSCAL as the editor of the page shows it: the catalog
     error_view.rs                How an error of a command reaches the page:
     oscal_view.rs                The documents of OSCAL as the page shows them in a list.
@@ -414,6 +411,21 @@ views.rs/                  The views of the window, one folder per view and one 
       commands.rs                  The commands of the settings of the scanner.
       view.rs                      The data of the settings of the scanner, as the page gets it: the
     stored_settings.rs           The settings of the scanner as they are stored: read by both
+  settings/                    The view Settings: the password of the evaluator, the connections to
+    api_key/                     The element "API key" of the view Settings, tab AI: the key of one
+      commands.rs                  The commands of the API key.
+      view.rs                      The data of the API key, as the page gets it: never the key itself.
+    connection_check/            The element "check of a connection" of the view Settings, tab AI
+      commands.rs                  The command of the check of a connection.
+      view.rs                      The report of a check of a connection, as the page gets it; the key
+    connection_form/             The element "connection form" of the view Settings, tab AI: one
+      commands.rs                  The commands of the connection form.
+      view.rs                      The data of the connection form, as the page gets it and sends it.
+    connection_list/             The element "list of connections" of the view Settings, tab AI
+      commands.rs                  The command of the list of connections.
+      view.rs                      The data of the list of connections, as the page gets it.
+    password_form/               The element "password form" of the view Settings, tab User
+      commands.rs                  The command of the password form.
   shell/                       The view Shell: the frame of the window around every page of a
     program/                     The element "program" of the view Shell: the state of the program the
       commands.rs                  The command of the state of the program.

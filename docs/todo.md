@@ -65,6 +65,7 @@ The user found that `business/` and the commands of `tauri_ui/` did the same thi
 - [x] `ensure!` (`checks.rs`); the tests of the commands through the IPC of Tauri (`views/test_support.rs`); the test of the command lists for the views (`command_lists_tests.rs`); `views/` in the test of the architecture.
 - [x] Start (`setup_form`, `login_form`) and Shell (`program`, `user_menu`); the installation, the account and the session moved unchanged to `installation/`. The setup, the login and the logout give no data back: the page reads the state of the program again (`program_get`).
 - [x] Chat (`connection_line`, `chat_list`, `conversation`); one turn of a chat (`business/chats/`) moved into the conversation (`turn.rs`, `stored.rs`); the line names the connection of the role *consultation*, as the chat uses it.
+- [x] Settings (`password_form`, `connection_list`, `connection_form`, `api_key`, `connection_check`); the tab Program shows the state of the program the frame has read. The key has an element of its own: the form never carries it, and the key is read again after a save (a changed address removes it).
 - [ ] The other views, one at a time: Settings with the tab AI, Evaluation plan, the editor of a catalog. For the heavy work (Argon2id, PDFs, the AI): how a command keeps it off the threads of the runtime.
 - [ ] When the last view is moved: `business/`, `tauri_ui/commands/`, `tauri_ui/serializer/` and `ui/src/pages/` removed; the exceptions of `architecture_tests.rs` for `tauri_ui/` revisited.
 

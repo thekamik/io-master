@@ -144,18 +144,19 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             views::start::login_form::commands::login_form_log_in,
             views::shell::program::commands::program_get,
             views::shell::user_menu::commands::user_menu_log_out,
-            // The password (commands/account.rs).
-            commands::change_password,
-            // Settings, tab AI: the connections to AI services
-            // (commands/ai.rs).
-            commands::ai_config,
-            commands::save_ai_connection,
-            commands::delete_ai_connection,
-            commands::activate_ai_connection,
-            commands::store_ai_key,
-            commands::delete_ai_key,
-            commands::check_ai_connection,
-            commands::ai_field_instruction,
+            // The view Settings (views/settings/).
+            views::settings::password_form::commands::password_form_change,
+            views::settings::connection_list::commands::connection_list_get,
+            views::settings::connection_form::commands::connection_form_new,
+            views::settings::connection_form::commands::connection_form_get,
+            views::settings::connection_form::commands::connection_form_save,
+            views::settings::connection_form::commands::connection_form_delete,
+            views::settings::connection_form::commands::connection_form_activate,
+            views::settings::connection_form::commands::connection_form_field_help,
+            views::settings::api_key::commands::api_key_get,
+            views::settings::api_key::commands::api_key_store,
+            views::settings::api_key::commands::api_key_delete,
+            views::settings::connection_check::commands::connection_check_run,
             // The view Scan (views/scan/).
             views::scan::ports_table::commands::ports_table_scan,
             views::scan::scanner_settings::commands::scanner_settings_get,

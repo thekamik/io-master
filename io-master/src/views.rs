@@ -24,6 +24,7 @@
 
 pub mod chat;
 pub mod scan;
+pub mod settings;
 pub mod shell;
 pub mod start;
 #[cfg(test)]

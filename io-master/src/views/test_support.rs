@@ -17,7 +17,7 @@ use crate::tauri_ui::state::UiState;
 use crate::tauri_ui::test_support::{TestState, first_start, installed, logged_in};
 use crate::test_support::TempDir;
 
-use super::{chat, scan, shell, start};
+use super::{chat, scan, settings, shell, start};
 
 /// A window, and what must live as long as it: the app and the folder
 /// of the installation.
@@ -85,6 +85,18 @@ fn window(test: TestState) -> TestWindow {
             chat::conversation::commands::conversation_send,
             chat::conversation::commands::conversation_stop,
             chat::conversation::commands::conversation_delete,
+            settings::password_form::commands::password_form_change,
+            settings::connection_list::commands::connection_list_get,
+            settings::connection_form::commands::connection_form_new,
+            settings::connection_form::commands::connection_form_get,
+            settings::connection_form::commands::connection_form_save,
+            settings::connection_form::commands::connection_form_delete,
+            settings::connection_form::commands::connection_form_activate,
+            settings::connection_form::commands::connection_form_field_help,
+            settings::api_key::commands::api_key_get,
+            settings::api_key::commands::api_key_store,
+            settings::api_key::commands::api_key_delete,
+            settings::connection_check::commands::connection_check_run,
             scan::ports_table::commands::ports_table_scan,
             scan::scanner_settings::commands::scanner_settings_get,
             scan::scanner_settings::commands::scanner_settings_save,

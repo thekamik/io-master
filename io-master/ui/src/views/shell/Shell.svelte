@@ -13,7 +13,7 @@
   import Documentation from "../../pages/Documentation.svelte";
   import Evaluation from "../../pages/Evaluation.svelte";
   import Plans from "../../pages/Plans.svelte";
-  import Settings from "../../pages/Settings.svelte";
+  import Settings from "../settings/Settings.svelte";
   import Scan from "../scan/Scan.svelte";
   import UserMenu from "./UserMenu.svelte";
 
