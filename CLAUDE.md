@@ -48,6 +48,11 @@ They bind **our code** (`src/`, `ui/`). The dependencies (Tauri, rusqlite, serde
 
 **The code does not follow them yet** (measured 2026-10-21: ~16 recursive functions, 44 `while`/`loop`, 10 functions over 60 lines, no checks of rule 5, 24 closures as parameters, 22 warnings of rustc and 125 of clippy pedantic). Every file that is rebuilt is brought to them; a new file follows them from its first line.
 
+## Terms (user, 2026-10-21)
+
+- **"UI"** in the words of the user is the Rust folder `io-master/src/tauri_ui/`; **"business"** is the Rust folder `io-master/src/business/`. The page (`io-master/ui/`, Svelte and TypeScript) is called **the page** or the front end.
+- **The page and the Rust program are two separate projects that communicate** (through the commands of Tauri). Their files are never mixed in one folder.
+
 ## Main design rule: the desktop window is the only interface
 
 Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop window** (Tauri 2 + Svelte, `src/tauri_ui/` and `ui/`, a thin layer over `src/business/`; `docs/architecture.md`, section 4). The program is started without parameters and opens no network port for its interface; network functions (the reset service of a master and its client) are started from the window. There is no console interface. The earlier web interface was removed (its last state: commit `acedc8b`). Every function is designed so that the interface can use it without changes to the function:
