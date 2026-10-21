@@ -8,7 +8,7 @@ This document says **where** everything is in the code and **which rules keep it
 4. All communication with AI is in `ai/`, the intermediary between the external services and the program: one folder for the whole integration, for the audit.
 5. Everything that talks to hardware is in `hardware_tests/`.
 
-**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Scan is moved (the pilot); the other views still go through `business/` and `tauri_ui/commands/` until they are moved**, so both forms are in the code for now.
+**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Moved: Scan (the pilot), Start, Shell; the other views still go through `business/` and `tauri_ui/commands/` until they are moved**, so both forms are in the code for now.
 
 ---
 
@@ -23,6 +23,7 @@ io-master/src/
   ai/                the whole communication with AI services
   hardware_tests/    the whole communication with hardware
   security/          the building blocks of protection: random numbers, the TPM
+  installation/      the installation, its one account and the session: the core of the protection
   business/          the business logic, as resources and operations (being replaced by views/)
   tauri_ui/          what the whole window shares (state, errors); the commands not moved yet
   views/             one folder per view and per element: its commands and the data it gets
@@ -87,7 +88,7 @@ business/                  the rules; the objects in memory of the session:
   └──► hardware_tests/     the only way to a device
 ```
 
-The page never holds a secret. The key of the database of an evaluator opens the database once at the login and is wiped (`business/session.rs`); the database stays open until the logout.
+The page never holds a secret. The key of the database of an evaluator opens the database once at the login and is wiped (`installation/session.rs`); the database stays open until the logout.
 
 ---
 
@@ -131,6 +132,10 @@ The scan of the serial ports (`devices/`) and the settings of the scanner (`devi
 
 `random.rs` (random bytes from the kernel) and `tpm/` (the TPM 2.0, the optional further factor). Later the keyring (step 13).
 
+### 2.5a `installation/`: the installation, the account, the session
+
+The core of the protection (moved from `business/` in step 42, unchanged): the first start and every later start (`lifecycle.rs`), the check before the window opens (`verify.rs`, called by `main.rs`), the account with the keys of its database (`accounts.rs`: Argon2id, the TPM factor), and the session of the logged-in evaluator (`session.rs`: the account and the database opened once at the login). It uses `db/`, `security/` and `model/`; the window (`tauri_ui/state.rs`) and the views use it.
+
 ### 2.6 `business/`: the business logic
 
 **The form of REST, without a server.** A resource is a module; its operations are functions named after REST verbs, listed with their REST form at the head of the file:
@@ -143,7 +148,6 @@ The scan of the serial ports (`devices/`) and the settings of the scanner (`devi
 //! delete_object()    DELETE  /catalogs/{uuid}/objects/{id}     a group or a control, with its content
 ```
 
-- **The session** (`session.rs`): the account and the database opened once at the login, behind a lock.
 - **Documents of OSCAL** (`oscal/`, step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction; the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
 - **Long works** (`work.rs`): the loading of PDFs (`standards/load.rs`), the building of a catalog with the AI (`oscal/building.rs`), a message of the chat (`chats/conversation.rs`). Each reports its progress as an enum of its own (`Progress`, `LoadProgress`, `ChatEvent`) to a function of the caller, stops on `Cancel`, and holds no lock of the session while it waits for files or for the model.
 - **Errors**: one enum per area (`OscalError`, `DocumentError`, `WorkError`, ...), with the error of the rules of `model/` inside.
@@ -343,6 +347,12 @@ hardware_tests.rs/         Everything that talks to hardware (step 40 of docs/to
     port_property.rs             The properties of a serial port that can be shown, one per
     scan_settings.rs             The settings of the scanner: which kinds of port a scan looks for,
     serial_ports.rs              Discovery of serial ports.
+installation.rs/           The installation of this Linux account, its one user and the
+  accounts.rs                  The accounts of the evaluators: creating them, logging in, and
+  lifecycle.rs                 The life of an installation: the first start, every later
+  session.rs                   The logged-in evaluator (step 40): their account, their database,
+  uninstall.rs                 (not compiled: "DO NOT USE: TO BE REWORKED", step 12)
+  verify.rs                    The check of the installation at the start of the program.
 security.rs/               The building blocks of protection: random numbers from the system,
   random.rs                    Random bytes from the kernel.
   tpm.rs/                      The TPM 2.0, the optional further factor (`docs/architecture.md`,
@@ -353,10 +363,6 @@ business.rs/               The business logic of the program (step 40 of docs/to
   chats.rs/                    The chats of the evaluator with the AI: the stored chats and one
     conversation.rs              One turn of a chat, without any user interface ([`send`]): the
     history.rs                   The chats of an evaluator with an AI model, kept in their
-  installation.rs/             The installation: its life (first start, removal) and its check.
-    lifecycle.rs                 The life of an installation: the first start, every later
-    uninstall.rs                 (not compiled: "DO NOT USE: TO BE REWORKED", step 12)
-    verify.rs                    The check of the installation at the start of the program.
   oscal.rs/                    The documents of NIST OSCAL of the evaluator (step 41,
     building.rs                  The long works that make a catalog of OSCAL from the documents of a
     catalogs.rs                  The catalogs of the evaluator as a resource (step 41.3): a standard
@@ -364,8 +370,6 @@ business.rs/               The business logic of the program (step 40 of docs/to
     ids.rs                       New UUIDs and the time of a change, for the documents the program
     proposals.rs                 The proposals of the AI for an OSCAL document (evaluation support,
     quotes.rs                    The passages of the documents of a standard (PDF) the objects of an
-  session.rs/                  The logged-in evaluator (step 40): their account, their database,
-    accounts.rs                  The accounts of the evaluators: creating them, logging in, and
   standards.rs/                The documents of standards: loading, reading, searching, quotes.
     documents.rs                 The documents of standards as a resource (steps 16 to 22 of
     error.rs                     The error of an operation on a document of a standard.
@@ -377,7 +381,7 @@ business.rs/               The business logic of the program (step 40 of docs/to
 tauri_ui.rs/               The desktop window (Tauri 2), the thin layer between the business
   blocking.rs                  Blocking work of the commands, kept off the threads that keep
   commands.rs/                 The commands the page can call: the whole surface between the
-    account.rs                   The first start, the login, the logout and the password.
+    account.rs                   The password of the logged-in evaluator (the tab User of Settings;
     ai.rs                        The tab AI of Settings: the AI connections of the evaluator, their
     catalogs.rs                  The catalogs of OSCAL in the tool Evaluation plan (step 41.3): made
     chats.rs                     The chats: the list, an open chat, deleting, and a message with
@@ -386,13 +390,12 @@ tauri_ui.rs/               The desktop window (Tauri 2), the thin layer between 
   error.rs                     The errors the commands give back to the page, in kinds the page
   serializer.rs/               The views and forms of the page (serde): the only place of serialization.
     ai_config_view.rs            The AI connections as the tab AI of Settings shows and sends them,
-    app_view.rs                  What the page needs to know to show itself: whether the program
     catalog_view.rs              A catalog of OSCAL as the editor of the page shows it: the catalog
     chat_view.rs                 The chats as the page shows them, and the events of a reply
     error_view.rs                How an error of a command reaches the page:
     oscal_view.rs                The documents of OSCAL as the page shows them in a list.
     standard_view.rs             The documents of standards as the page shows them, and the events
-  session.rs                   The session of the logged-in evaluator (`business/session.rs`), for
+  session.rs                   The session of the logged-in evaluator (`installation/session.rs`), for
   state.rs                     The state of the desktop interface, kept in Rust and never in
 views.rs/                  The views of the window, one folder per view and one folder per
   scan/                        The view Scan: the serial ports of the computer and the settings of
@@ -404,4 +407,15 @@ views.rs/                  The views of the window, one folder per view and one 
       commands.rs                  The commands of the settings of the scanner.
       view.rs                      The data of the settings of the scanner, as the page gets it: the
     stored_settings.rs           The settings of the scanner as they are stored: read by both
+  shell/                       The view Shell: the frame of the window around every page of a
+    program/                     The element "program" of the view Shell: the state of the program the
+      commands.rs                  The command of the state of the program.
+      view.rs                      The state of the program as the page gets it: whether the program
+    user_menu/                   The element "user menu" of the view Shell: the logged-in evaluator at
+      commands.rs                  The command of the user menu.
+  start/                       The view Start: what the window shows before anybody is logged in
+    login_form/                  The element "login form" of the view Start
+      commands.rs                  The command of the login form.
+    setup_form/                  The element "setup form" of the view Start
+      commands.rs                  The command of the setup form.
 ```

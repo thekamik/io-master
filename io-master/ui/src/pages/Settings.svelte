@@ -12,11 +12,12 @@
   with one user (docs/architecture.md, section 3).
 -->
 <script lang="ts">
-  import { changePassword, type AppView } from "../lib/api/app";
+  import { changePassword } from "../lib/api/app";
+  import type { ProgramView } from "../lib/api/shell/program";
 import { sentence } from "../lib/api/errors";
   import AiConfig from "../components/AiConfig.svelte";
 
-  let { app }: { app: AppView } = $props();
+  let { app }: { app: ProgramView } = $props();
 
   /** A message after a form was sent. */
   type Notice = { done: boolean; text: string } | null;

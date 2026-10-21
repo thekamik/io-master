@@ -33,7 +33,6 @@ use tauri_plugin_dialog::DialogExt;
 
 use super::error::UiError;
 use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
-use super::serializer::app_view::AppView;
 use super::serializer::catalog_view::{BuildEvent, CatalogView, PageRange, PlaceForm};
 use super::serializer::chat_view::{ChatSummaryView, ChatView, ReplyEvent};
 use super::serializer::oscal_view::OscalDocumentView;
@@ -43,35 +42,6 @@ use super::state::UiState;
 /* ---------------------------------------------------------------
  * The program and the account
  * ------------------------------------------------------------- */
-
-/// The state of the program: installed, who is logged in, pages.
-#[tauri::command]
-pub fn app_state(state: State<'_, UiState>) -> AppView {
-    account::app_view(&state)
-}
-
-/// The first start.
-#[tauri::command]
-pub async fn set_up(
-    state: State<'_, UiState>,
-    name: String,
-    password: String,
-    password_repeat: String,
-    role: String,
-    role_confirmed: bool,
-) -> Result<AppView, UiError> {
-    account::set_up(&state, name, password, password_repeat, role, role_confirmed).await
-}
-
-#[tauri::command]
-pub async fn log_in(state: State<'_, UiState>, name: String, password: String) -> Result<AppView, UiError> {
-    account::log_in(&state, name, password).await
-}
-
-#[tauri::command]
-pub fn log_out(state: State<'_, UiState>) -> AppView {
-    account::log_out(&state)
-}
 
 #[tauri::command]
 pub async fn change_password(

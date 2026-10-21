@@ -10,10 +10,10 @@ use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_
 use tauri::webview::InvokeRequest;
 use tauri::{App, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-use crate::tauri_ui::test_support::{TestState, installed, logged_in};
+use crate::tauri_ui::test_support::{TestState, first_start, installed, logged_in};
 use crate::test_support::TempDir;
 
-use super::scan;
+use super::{scan, shell, start};
 
 /// A window, and what must live as long as it: the app and the folder
 /// of the installation.
@@ -49,6 +49,11 @@ pub fn logged_in_window() -> TestWindow {
     window(tauri::async_runtime::block_on(logged_in()))
 }
 
+/// A window at the first start: nothing is installed.
+pub fn first_start_window() -> TestWindow {
+    window(first_start())
+}
+
 /// A window of an installation where nobody is logged in.
 pub fn logged_out_window() -> TestWindow {
     window(installed())
@@ -61,6 +66,10 @@ fn window(test: TestState) -> TestWindow {
     let app = mock_builder()
         .manage(state)
         .invoke_handler(tauri::generate_handler![
+            start::setup_form::commands::setup_form_install,
+            start::login_form::commands::login_form_log_in,
+            shell::program::commands::program_get,
+            shell::user_menu::commands::user_menu_log_out,
             scan::ports_table::commands::ports_table_scan,
             scan::scanner_settings::commands::scanner_settings_get,
             scan::scanner_settings::commands::scanner_settings_save,

@@ -64,7 +64,7 @@ Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop win
 - **Operations can be cancelled by the caller** (a cancellation token).
 - **Questions to the user go through the interface.** When an operation needs an answer (a PIN, a confirmation), it asks through an interface the UI implements, never by reading stdin itself.
 - **State lives in the core, not in the page.** The page holds no secret and no state that matters.
-- **What goes to Rust and what stays in the page (user, 2026-10-21).** An element of the window calls the back end only for what matters: running the AI, processing or storing data, anything that changes the state of the evaluation. What is only presentation (hover, an open menu, a selection, a tab, the position during a drag) stays in the page. Only the final result is sent, never the steps in between: for a diagram, the last coordinates (to restore it), not every position of a drag. **The views (user, 2026-10-21; step 42 of `docs/todo.md`, layout in `docs/code_structure.md`, section 2.9):** one folder per view and one per interactive element in `src/views/`, whose commands take the parameters from the page, do the work with the folders below and give the data back; they replace `business/` and the commands of `tauri_ui/`. Scan is moved (the pilot); every other view is moved the same way, one at a time.
+- **What goes to Rust and what stays in the page (user, 2026-10-21).** An element of the window calls the back end only for what matters: running the AI, processing or storing data, anything that changes the state of the evaluation. What is only presentation (hover, an open menu, a selection, a tab, the position during a drag) stays in the page. Only the final result is sent, never the steps in between: for a diagram, the last coordinates (to restore it), not every position of a drag. **The views (user, 2026-10-21; step 42 of `docs/todo.md`, layout in `docs/code_structure.md`, section 2.9):** one folder per view and one per interactive element in `src/views/`, whose commands take the parameters from the page, do the work with the folders below and give the data back; they replace `business/` and the commands of `tauri_ui/`. Moved: Scan (the pilot), Start, Shell; every other view is moved the same way, one at a time.
 
 ## Rules carried over from version 0.2 (the program in C)
 
@@ -98,7 +98,7 @@ Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop win
 ## The pipeline of data (user, 2026-10-17)
 
 - The functions and the responsibilities of the parts of the code are separated, and the pipeline is very readable: **at every moment one can tell where the information the program works on is** (in the page, in an object in memory, in the database, on its way to the AI).
-- The business manages the objects in memory of the session of the evaluator (`business/session.rs`: the open database, a project open for editing with its versions for "Undo", an evaluation open for work); `db/` writes them lastingly, through at once (write-through); `ai/api/` is the only way to the AI.
+- The business manages the objects in memory of the session of the evaluator (`installation/session.rs`: the open database, a project open for editing with its versions for "Undo", an evaluation open for work); `db/` writes them lastingly, through at once (write-through); `ai/api/` is the only way to the AI.
 
 ## The architecture (user, 2026-10-17; step 40 of docs/todo.md)
 

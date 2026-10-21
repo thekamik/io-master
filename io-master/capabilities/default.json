@@ -6,10 +6,10 @@
     "main"
   ],
   "permissions": [
-    "allow-app-state",
-    "allow-set-up",
-    "allow-log-in",
-    "allow-log-out",
+    "allow-setup-form-install",
+    "allow-login-form-log-in",
+    "allow-program-get",
+    "allow-user-menu-log-out",
     "allow-change-password",
     "allow-ai-config",
     "allow-save-ai-connection",

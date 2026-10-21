@@ -5,8 +5,8 @@ use crate::installation::lifecycle::{self, Opened};
 use crate::model::installation::Role;
 use crate::test_support::TempDir;
 
-use super::commands::account;
 use super::state::UiState;
+use crate::installation::{accounts, session::Session};
 
 /// The password of the user of the tests.
 pub const PASSWORD: &str = "correct horse battery";
@@ -41,10 +41,19 @@ pub fn installed() -> TestState {
 /// A workstation with "anna" logged in.
 pub async fn logged_in() -> TestState {
     let test = installed();
-
-    account::log_in(&test.state, "anna".to_owned(), PASSWORD.to_owned()).await.unwrap();
+    log_in(&test.state, PASSWORD);
 
     test
+}
+
+/// Logs "anna" in with `password`, as the login form does.
+pub fn log_in(state: &UiState, password: &str) {
+    let running = state.installed().unwrap();
+    let (account, key) =
+        accounts::log_in(&running.system_db, running.device_secret.as_ref(), &state.data_dir, "anna", password)
+            .unwrap();
+
+    state.log_in(Session::open(&state.data_dir, account, key).unwrap());
 }
 
 /// "anna" logged in, with one loaded document of three pages (a small

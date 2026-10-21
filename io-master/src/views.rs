@@ -23,5 +23,7 @@
 //! beside this folder.
 
 pub mod scan;
+pub mod shell;
+pub mod start;
 #[cfg(test)]
 pub mod test_support;

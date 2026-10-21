@@ -58,7 +58,7 @@ A master and a workstation **never run on the same computer**, not even for deve
 
 ### 3.2 The first start (agreed, changed 2026-10-15)
 
-The first start is the real moment of installation. **It is told by the keyring of the Linux account** (section 5.6): two entries, the location of the installation and the secret of the application, are written there by the installation. The checks run in `business/installation/verify.rs` before the window opens; `main` only calls them.
+The first start is the real moment of installation. **It is told by the keyring of the Linux account** (section 5.6): two entries, the location of the installation and the secret of the application, are written there by the installation. The checks run in `installation/verify.rs` before the window opens; `main` only calls them.
 
 | Entries in the keyring | Installation at the recorded location | State | What the program does |
 |---|---|---|---|
@@ -75,7 +75,7 @@ The first start is the real moment of installation. **It is told by the keyring 
 - **Only the role is final.** The connection to a master is set, changed or removed later in Settings; a workstation works fully without a master (section 5.4).
 - The data of an installation lives in its folder (the system database and the encrypted database of the user). All settings are in the databases; only the two entries of section 5.6 are kept in the keyring.
 - A build without the master code is possible later as a separate build variant.
-- **Removing the installation** is done in the window, after a login and a confirmation; it removes the databases, the keyring entries and, with the TPM factor, the marker in the TPM. There is no console command for it: whoever can type in a terminal of the account must not be able to remove the work of the evaluator. TODO (step 12): `business/installation/uninstall.rs` is a console function marked "do not use" (not compiled) until it is reworked.
+- **Removing the installation** is done in the window, after a login and a confirmation; it removes the databases, the keyring entries and, with the TPM factor, the marker in the TPM. There is no console command for it: whoever can type in a terminal of the account must not be able to remove the work of the evaluator. TODO (step 12): `installation/uninstall.rs` is a console function marked "do not use" (not compiled) until it is reworked.
 
 ## 4. User interface (agreed, changed 2026-10-16)
 
@@ -146,7 +146,7 @@ The system database is opened before anyone gives a password, so without the TPM
 
 **Open (step 4):** the private key of the TLS server is needed at program start, before any login. With the TPM factor it is protected by the TPM; without it, how it is protected is still to be decided.
 
-**The code (steps 37 and 40 of `todo.md`, 2026-10-17):** all SQL is in `src/db/`, one folder per area of data, each with its tables and its files of create, read, update and delete; all code of encryption is in `src/db/encryption/`, and `sqlcipher.rs` is the only place where a database file is opened or created. The connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile. The database of an evaluator is opened once at the login and kept in the session of the evaluator (`business/session.rs`) until the logout; the key that opened it is wiped. The OSCAL documents are kept as their JSON, checked against the schema of NIST at every write, with tables of index for their UUIDs and ids (`db/oscal/`); the evaluation support has tables of its own (`db/evaluation_support/`). The business changes them and writes them through to the database at once. Details: `code_structure.md`.
+**The code (steps 37 and 40 of `todo.md`, 2026-10-17):** all SQL is in `src/db/`, one folder per area of data, each with its tables and its files of create, read, update and delete; all code of encryption is in `src/db/encryption/`, and `sqlcipher.rs` is the only place where a database file is opened or created. The connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile. The database of an evaluator is opened once at the login and kept in the session of the evaluator (`installation/session.rs`) until the logout; the key that opened it is wiped. The OSCAL documents are kept as their JSON, checked against the schema of NIST at every write, with tables of index for their UUIDs and ids (`db/oscal/`); the evaluation support has tables of its own (`db/evaluation_support/`). The business changes them and writes them through to the database at once. Details: `code_structure.md`.
 
 Both databases are **SQLite files** (agreed, implemented in step 3), the database of the evaluator encrypted with SQLCipher: no separate database service, one file per database in the folder of the installation (section 3.2), transactions that survive an interrupted write, and a built-in way to copy a running database.
 

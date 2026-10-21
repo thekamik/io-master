@@ -1,14 +1,17 @@
 <!--
-  The first start: the user and the role of the installation.
+  The element "setup form" of the view Start (src/views/start/setup_form/):
+  the first start, the user and the role of the installation. When it is
+  done it tells the application (ondone), which reads the state of the
+  program again.
 
   Unlike the web interface there is no one-time setup code: it
   protected a network port, and the window has none.
 -->
 <script lang="ts">
-  import { setUp, type AppView } from "../lib/api/app";
-import { sentence } from "../lib/api/errors";
+  import { sentence } from "../../lib/api/errors";
+  import { install } from "../../lib/api/start/setup_form";
 
-  let { onchange }: { onchange: (app: AppView) => void } = $props();
+  let { ondone }: { ondone: () => void } = $props();
 
   let name = $state("");
   let password = $state("");
@@ -24,7 +27,8 @@ import { sentence } from "../lib/api/errors";
     busy = true;
 
     try {
-      onchange(await setUp({ name, password, passwordRepeat, role, roleConfirmed }));
+      await install({ name, password, passwordRepeat, role, roleConfirmed });
+      ondone();
     } catch (error) {
       problem = sentence(error);
     } finally {

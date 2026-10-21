@@ -1,4 +1,4 @@
-//! The session of the logged-in evaluator (`business/session.rs`), for
+//! The session of the logged-in evaluator (`installation/session.rs`), for
 //! the commands: its database, on a thread for blocking work.
 //!
 //! ```text

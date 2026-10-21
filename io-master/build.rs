@@ -9,10 +9,10 @@
 
 fn main() {
     let commands = tauri_build::AppManifest::new().commands(&[
-        "app_state",
-        "set_up",
-        "log_in",
-        "log_out",
+        "setup_form_install",
+        "login_form_log_in",
+        "program_get",
+        "user_menu_log_out",
         "change_password",
         "ai_config",
         "save_ai_connection",

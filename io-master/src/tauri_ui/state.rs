@@ -1,6 +1,6 @@
 //! The state of the desktop interface, kept in Rust and never in
 //! the page: the installation, the session of the logged-in evaluator
-//! (`business/session.rs`: the account, the open database and the work
+//! (`installation/session.rs`: the account, the open database and the work
 //! in memory), and the stop signals of the work that is running.
 //!
 //! The page (`ui/`) holds no secret and no state that matters: it
@@ -16,6 +16,7 @@ use tokio::sync::watch;
 use crate::installation::accounts::Account;
 use crate::installation::lifecycle::{Opened, Running};
 use crate::installation::session::Session;
+use crate::model::installation::Role;
 
 use super::error::UiError;
 
@@ -66,6 +67,12 @@ impl UiState {
     /// is done.
     pub fn running(&self) -> Option<Arc<Running>> {
         self.running.read().unwrap_or_else(|poisoned| poisoned.into_inner()).clone()
+    }
+
+    /// The role of the installation, or `None` before the first start
+    /// is done.
+    pub fn role(&self) -> Option<Role> {
+        Some(self.running()?.installation.role)
     }
 
     /// The running installation, or the error that nothing is

@@ -10,7 +10,7 @@
 //! owns it:
 //!
 //! 1. checks the installation of this Linux account
-//!    (`business/installation/verify.rs`); a damaged installation is a
+//!    (`installation/verify.rs`); a damaged installation is a
 //!    critical error and the program does not start;
 //! 2. opens the window ([`tauri_startup`] below) and runs until it
 //!    is closed.
@@ -66,7 +66,7 @@ use tauri_ui::state::UiState;
 // at every start and never written into the program.
 //
 // TODO (step 13 of docs/todo.md): move both to
-// business/installation/verify.rs, where the keyring will be read; unused
+// installation/verify.rs, where the keyring will be read; unused
 // until then.
 
 /// Name of the keyring entry with the location of the installation
@@ -91,7 +91,7 @@ fn main() -> ExitCode {
     }
 
     // The state of the installation decides how the window starts
-    // (business/installation/verify.rs). A damaged installation is a
+    // (installation/verify.rs). A damaged installation is a
     // critical error: the program does not start
     // (docs/architecture.md, section 3.2).
     let (data_dir, opened) = match verify_installation() {
@@ -138,11 +138,13 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         // capabilities/default.json, or the page is refused when it
         // calls it.
         .invoke_handler(tauri::generate_handler![
-            // The program and the account (commands/account.rs).
-            commands::app_state,
-            commands::set_up,
-            commands::log_in,
-            commands::log_out,
+            // The view Start (views/start/) and the frame of the window
+            // (views/shell/).
+            views::start::setup_form::commands::setup_form_install,
+            views::start::login_form::commands::login_form_log_in,
+            views::shell::program::commands::program_get,
+            views::shell::user_menu::commands::user_menu_log_out,
+            // The password (commands/account.rs).
             commands::change_password,
             // Settings, tab AI: the connections to AI services
             // (commands/ai.rs).

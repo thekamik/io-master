@@ -1,9 +1,13 @@
-<!-- The login. -->
+<!--
+  The element "login form" of the view Start (src/views/start/login_form/).
+  When the evaluator is logged in it tells the application (ondone), which
+  reads the state of the program again.
+-->
 <script lang="ts">
-  import { logIn, type AppView } from "../lib/api/app";
-import { sentence } from "../lib/api/errors";
+  import { sentence } from "../../lib/api/errors";
+  import { logIn } from "../../lib/api/start/login_form";
 
-  let { onchange }: { onchange: (app: AppView) => void } = $props();
+  let { ondone }: { ondone: () => void } = $props();
 
   let name = $state("");
   let password = $state("");
@@ -16,7 +20,8 @@ import { sentence } from "../lib/api/errors";
     busy = true;
 
     try {
-      onchange(await logIn(name, password));
+      await logIn(name, password);
+      ondone();
     } catch (error) {
       problem = sentence(error);
       password = "";

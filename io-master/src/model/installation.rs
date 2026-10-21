@@ -3,7 +3,7 @@
 //!
 //! The record itself is kept in the system database
 //! (`db/system/`). Whether this is the first start, and the
-//! installing and uninstalling, are in `business/installation/lifecycle.rs`.
+//! installing and uninstalling, are in `installation/lifecycle.rs`.
 
 use std::fmt;
 

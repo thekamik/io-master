@@ -1,21 +1,23 @@
 <!--
-  The frame of every page of a logged-in evaluator: the warning
-  bars at the top, the sidebar on the left (the mark, the pages, the
-  user), the page with its title on the right.
+  The view Shell (src/views/shell/): the frame of every page of a
+  logged-in evaluator: the warning bars at the top, the sidebar on the
+  left (the mark, the pages, the user menu), the page with its title on
+  the right. Which page is open is presentation, kept here.
 
   The icons are drawn here as simple SVG lines (no images, no icon
   library), in the colour of the text around them.
 -->
 <script lang="ts">
-  import { logOut, type AppView } from "../lib/api/app";
-  import Chat from "./Chat.svelte";
-  import Documentation from "./Documentation.svelte";
-  import Evaluation from "./Evaluation.svelte";
-  import Scan from "../views/scan/Scan.svelte";
-  import Plans from "./Plans.svelte";
-  import Settings from "./Settings.svelte";
+  import type { ProgramView } from "../../lib/api/shell/program";
+  import Chat from "../../pages/Chat.svelte";
+  import Documentation from "../../pages/Documentation.svelte";
+  import Evaluation from "../../pages/Evaluation.svelte";
+  import Plans from "../../pages/Plans.svelte";
+  import Settings from "../../pages/Settings.svelte";
+  import Scan from "../scan/Scan.svelte";
+  import UserMenu from "./UserMenu.svelte";
 
-  let { app, onchange }: { app: AppView; onchange: (app: AppView) => void } = $props();
+  let { app, onloggedout }: { app: ProgramView; onloggedout: () => void } = $props();
 
   /** The page chosen in the sidebar; null: none chosen yet. */
   let chosen: string | null = $state(null);
@@ -35,10 +37,6 @@
     settings: "Your account, the connections to AI services, and this installation.",
     admin: "The password resets of the workstations.",
   };
-
-  async function leave() {
-    onchange(await logOut());
-  }
 </script>
 
 {#snippet icon(name: string)}
@@ -68,8 +66,6 @@
     {:else if name === "admin"}
       <path d="M12 3.5l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9v-5z" />
       <path d="M9.5 12l1.8 1.8 3.4-3.6" />
-    {:else if name === "logout"}
-      <path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10" />
     {:else if name === "warning"}
       <path d="M12 4l9 16H3z" />
       <path d="M12 10v4M12 17h.01" />
@@ -98,11 +94,7 @@
       </button>
     {/each}
 
-    <div class="user">
-      <span class="avatar">{app.user?.charAt(0) ?? "?"}</span>
-      <span class="who">{app.user}</span>
-      <button class="ghost" onclick={leave} title="Log out">{@render icon("logout")}</button>
-    </div>
+    <UserMenu user={app.user} {onloggedout} />
   </nav>
 
   <main>

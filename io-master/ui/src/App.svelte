@@ -1,33 +1,32 @@
 <!--
-  The application: shows the setup, the login or the pages,
-  depending on the state of the program, which Rust keeps
-  (src/tauri_ui/state.rs). Every page reports a changed state
-  (installed, logged in, logged out) through `onchange`.
+  The application: shows the setup, the login or the frame of the
+  window, from the state of the program (the element "program" of the
+  view Shell, src/views/shell/program/), which Rust keeps. It reads that
+  state at the start and again whenever an element says it changed it
+  (installed, logged in, logged out).
 -->
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import { appState, type AppView } from "./lib/api/app";
-import { sentence } from "./lib/api/errors";
-  import Login from "./pages/Login.svelte";
-  import Setup from "./pages/Setup.svelte";
-  import Shell from "./pages/Shell.svelte";
+  import { sentence } from "./lib/api/errors";
+  import * as program from "./lib/api/shell/program";
+  import Shell from "./views/shell/Shell.svelte";
+  import LoginForm from "./views/start/LoginForm.svelte";
+  import SetupForm from "./views/start/SetupForm.svelte";
 
   /** The state of the program; null until it is read. */
-  let app: AppView | null = $state(null);
+  let app: program.ProgramView | null = $state(null);
   let problem = $state("");
 
-  onMount(async () => {
+  async function reload() {
     try {
-      app = await appState();
+      app = await program.get();
     } catch (error) {
       problem = sentence(error);
     }
-  });
-
-  function changed(next: AppView) {
-    app = next;
   }
+
+  onMount(reload);
 </script>
 
 {#if problem}
@@ -35,9 +34,9 @@ import { sentence } from "./lib/api/errors";
 {:else if app === null}
   <p class="note centered">Starting…</p>
 {:else if !app.installed}
-  <Setup onchange={changed} />
+  <SetupForm ondone={reload} />
 {:else if app.user === null}
-  <Login onchange={changed} />
+  <LoginForm ondone={reload} />
 {:else}
-  <Shell {app} onchange={changed} />
+  <Shell {app} onloggedout={reload} />
 {/if}

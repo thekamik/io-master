@@ -1,4 +1,4 @@
-//! What the page needs to know to show itself: whether the program
+//! The state of the program as the page gets it: whether the program
 //! is installed, who is logged in, which pages exist, the warnings
 //! every page shows at the top, and what the tab Program of Settings
 //! shows about the installation.
@@ -12,7 +12,7 @@ use crate::model::installation::Role;
 
 /// The state of the program, as the page sees it.
 #[derive(Debug, Serialize)]
-pub struct AppView {
+pub struct ProgramView {
     /// `false` at the first start: the page shows the setup.
     pub installed: bool,
     /// `"workstation"` or `"master"`; `None` before the setup.
@@ -83,18 +83,35 @@ fn warnings() -> Vec<WarningView> {
     ]
 }
 
-impl AppView {
+impl ProgramView {
     /// The view of the program with the given role (`None` before
     /// the setup), logged-in evaluator and folder of the installation.
-    pub fn new(role: Option<Role>, user: Option<&Account>, data_dir: &Path) -> AppView {
-        AppView {
-            installed: role.is_some(),
-            role: role.map(Role::name),
-            user: user.map(|account| account.name.clone()),
-            pages: role.map(pages).unwrap_or_default(),
-            warnings: if role.is_some() { warnings() } else { Vec::new() },
+    pub fn new(role: Option<Role>, user: Option<Account>, data_dir: &Path) -> ProgramView {
+        let Some(role) = role else {
+            return ProgramView {
+                installed: false,
+                role: None,
+                user: None,
+                pages: Vec::new(),
+                warnings: Vec::new(),
+                version: env!("CARGO_PKG_VERSION"),
+                data_dir: data_dir.display().to_string(),
+            };
+        };
+
+        ProgramView {
+            installed: true,
+            role: Some(role.name()),
+            user: name_of(user),
+            pages: pages(role),
+            warnings: warnings(),
             version: env!("CARGO_PKG_VERSION"),
             data_dir: data_dir.display().to_string(),
         }
     }
+}
+
+/// The name of the logged-in evaluator, if somebody is.
+fn name_of(user: Option<Account>) -> Option<String> {
+    Some(user?.name)
 }
