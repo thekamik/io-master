@@ -64,7 +64,7 @@ fn a_catalog_is_made_from_the_documents_of_a_standard() {
     assert_eq!(catalog.metadata.oscal_version, OSCAL_VERSION);
     let resource = &catalog.back_matter.as_ref().unwrap().resources[0];
     assert_eq!(resource.rlinks[0].hashes[0].algorithm, "SHA-256");
-    assert_eq!(documents::list(&test.db).unwrap().len(), 1);
+    assert_eq!(crate::db::oscal::read::summaries(&test.db).unwrap().len(), 1);
 
     assert!(matches!(create(&test.db, " ", "", &[]), Err(OscalError::Invalid(_))));
 }
