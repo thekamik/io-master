@@ -1,11 +1,8 @@
-//! The chats of an evaluator with an AI model, kept in their
-//! encrypted database (`db/ai/chats/`, tables `chats` and
-//! `messages`).
-//!
-//! A chat is a list of messages: those of the evaluator and the
-//! replies of the model. A reply is kept also when it did not end
-//! normally, with how it ended ([`Ending`]), so that the page shows
-//! the same history after a reload:
+//! What a chat keeps (`db/ai/chats/`, tables `chats` and `messages`, in
+//! the encrypted database of the evaluator): a new chat with the title
+//! taken from its first message, and a reply of the model with how it
+//! ended ([`Ending`]), so that the page shows the same history after a
+//! reload:
 //!
 //! ```text
 //! complete   the model finished
@@ -18,23 +15,22 @@
 //!            text written before the failure
 //! ```
 //!
-//! Times are kept as seconds since 1970 (UTC); SQLite turns them
-//! into the local time of the computer when they are read. The SQL is
-//! in `db/ai/chats/`; what of the history goes to the model is
-//! decided by `memory.rs`.
+//! Times are kept as seconds since 1970 (UTC); SQLite turns them into
+//! the local time of the computer when they are read. What of the history
+//! goes to the model is decided by `ai/tasks/chat.rs`.
 
 use crate::ai::api::completions::{Reply, ReplyEnd, StopReason};
 use crate::db::ai::chats as db_chats;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::chats::{ChatMessage, ChatSummary, Ending};
+use crate::model::chats::Ending;
 
 /// The longest title of a chat, in characters; the title is the
 /// beginning of the first message.
 const TITLE_LENGTH: usize = 60;
 
-/// The title of a new chat: the beginning of its first message, on
-/// one line.
+/// The title of a new chat: the beginning of its first message, on one
+/// line, at most [`TITLE_LENGTH`] characters.
 fn title_of(text: &str) -> String {
     let line = text.split_whitespace().collect::<Vec<_>>().join(" ");
 
@@ -42,42 +38,27 @@ fn title_of(text: &str) -> String {
         return line;
     }
 
-    let mut title: String = line.chars().take(TITLE_LENGTH - 1).collect();
+    let mut title = String::with_capacity(TITLE_LENGTH * 4);
+
+    for character in line.chars().take(TITLE_LENGTH - 1) {
+        title.push(character);
+    }
+
     title.push('…');
     title
 }
 
-/// Starts a chat with the first message of the evaluator; returns
-/// the number of the chat.
+/// Starts a chat with the first message of the evaluator; returns the
+/// number of the chat.
 pub fn start(db: &UserDb, first_message: &str) -> Result<i64, DbError> {
     let id = db_chats::create::chat(db, &title_of(first_message))?;
-    add_message(db, id, first_message)?;
+    db_chats::create::message(db, id, first_message)?;
 
     Ok(id)
 }
 
-/// The chats, the newest first.
-pub fn list(db: &UserDb) -> Result<Vec<ChatSummary>, DbError> {
-    db_chats::read::chats(db)
-}
-
-/// The title of a chat, or `None` when there is no such chat.
-pub fn title(db: &UserDb, chat_id: i64) -> Result<Option<String>, DbError> {
-    db_chats::read::chat_title(db, chat_id)
-}
-
-/// The messages of a chat, in order.
-pub fn messages(db: &UserDb, chat_id: i64) -> Result<Vec<ChatMessage>, DbError> {
-    db_chats::read::messages(db, chat_id)
-}
-
-/// Adds a message of the evaluator to a chat.
-pub fn add_message(db: &UserDb, chat_id: i64, text: &str) -> Result<(), DbError> {
-    db_chats::create::message(db, chat_id, text)
-}
-
-/// How a reply ended, as it is kept: the ending, and for a failed
-/// reply the explanation.
+/// How a reply ended, as it is kept: the ending, and for a failed reply
+/// the explanation.
 pub fn ending_of(reply: &Reply) -> (Ending, Option<String>) {
     match &reply.end {
         ReplyEnd::Finished(StopReason::Cut) => (Ending::Cut, None),
@@ -88,7 +69,7 @@ pub fn ending_of(reply: &Reply) -> (Ending, Option<String>) {
     }
 }
 
-/// Adds a reply of the model to a chat, with how it ended.
+/// Adds a reply of the model to chat `chat_id`, with how it ended.
 pub fn add_reply(db: &UserDb, chat_id: i64, reply: &Reply) -> Result<(), DbError> {
     let (ending, note) = ending_of(reply);
 
@@ -109,14 +90,8 @@ pub fn add_reply(db: &UserDb, chat_id: i64, reply: &Reply) -> Result<(), DbError
     )
 }
 
-/// Deletes a chat with its messages; returns whether it existed.
-pub fn delete(db: &UserDb, chat_id: i64) -> Result<bool, DbError> {
-    // The text of the chat is overwritten in the file (db/ai/delete.rs).
-    db_chats::delete::chat(db, chat_id)
-}
-
 // Unit tests, in their own file to keep this one readable. They
 // are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "history_tests.rs"]
+#[path = "stored_tests.rs"]
 mod tests;

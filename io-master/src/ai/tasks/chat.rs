@@ -2,7 +2,7 @@
 //! chat, what of its history goes to the model with the next message.
 //!
 //! **Today: the whole history**, word for word, except the replies the
-//! model refused, whose text is already dropped (`business/chats/history.rs`).
+//! model refused, whose text is already dropped (`views/chat/conversation/stored.rs`).
 //!
 //! The memory may be extended later (user, 2026-10-17): shortening the
 //! history to the context of a model, summaries and other operations

@@ -160,12 +160,13 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             views::scan::ports_table::commands::ports_table_scan,
             views::scan::scanner_settings::commands::scanner_settings_get,
             views::scan::scanner_settings::commands::scanner_settings_save,
-            // The chat with the AI (commands/chats.rs).
-            commands::list_chats,
-            commands::open_chat,
-            commands::delete_chat,
-            commands::send_message,
-            commands::stop_reply,
+            // The view Chat (views/chat/).
+            views::chat::connection_line::commands::connection_line_get,
+            views::chat::chat_list::commands::chat_list_get,
+            views::chat::conversation::commands::conversation_open,
+            views::chat::conversation::commands::conversation_send,
+            views::chat::conversation::commands::conversation_stop,
+            views::chat::conversation::commands::conversation_delete,
             // The evaluation plan: the documents of the standards
             // (commands/documents.rs).
             commands::list_documents,

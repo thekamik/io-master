@@ -11,7 +11,6 @@ use std::fmt;
 use crate::ai::api::completions::AiError;
 use crate::ai::api::connections::ConnectionSaveError;
 use crate::ai::api::roles::ModelError;
-use crate::business::chats::conversation::SendError;
 use crate::business::oscal::documents::OscalError;
 use crate::business::standards::error::DocumentError;
 use crate::business::work::WorkError;
@@ -96,15 +95,6 @@ impl From<AiError> for UiError {
     }
 }
 
-impl From<SendError> for UiError {
-    fn from(error: SendError) -> UiError {
-        match error {
-            SendError::Db(error) => UiError::Failed(format!("the message was not stored: {error}")),
-            other => UiError::Invalid(other.to_string()),
-        }
-    }
-}
-
 impl From<ModelError> for UiError {
     fn from(error: ModelError) -> UiError {
         match error {
@@ -135,7 +125,6 @@ impl From<WorkError> for UiError {
             WorkError::Invalid(reason) => UiError::Invalid(reason),
             WorkError::Document(error) => error.into(),
             WorkError::Model(error) => error.into(),
-            WorkError::Message(error) => error.into(),
             WorkError::Db(error) => error.into(),
             WorkError::Interrupted => UiError::Failed(error.to_string()),
         }

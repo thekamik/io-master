@@ -8,7 +8,7 @@ This document says **where** everything is in the code and **which rules keep it
 4. All communication with AI is in `ai/`, the intermediary between the external services and the program: one folder for the whole integration, for the audit.
 5. Everything that talks to hardware is in `hardware_tests/`.
 
-**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Moved: Scan (the pilot), Start, Shell; the other views still go through `business/` and `tauri_ui/commands/` until they are moved**, so both forms are in the code for now.
+**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Moved: Scan (the pilot), Start, Shell, Chat; the other views still go through `business/` and `tauri_ui/commands/` until they are moved**, so both forms are in the code for now.
 
 ---
 
@@ -360,9 +360,6 @@ security.rs/               The building blocks of protection: random numbers fro
     device_secret.rs             The secret of the device (`docs/architecture.md`, section 5.2).
     emulator.rs                  The TPM 2.0 emulator used until the beta version.
 business.rs/               The business logic of the program (step 40 of docs/todo.md): what
-  chats.rs/                    The chats of the evaluator with the AI: the stored chats and one
-    conversation.rs              One turn of a chat, without any user interface ([`send`]): the
-    history.rs                   The chats of an evaluator with an AI model, kept in their
   oscal.rs/                    The documents of NIST OSCAL of the evaluator (step 41,
     building.rs                  The long works that make a catalog of OSCAL from the documents of a
     catalogs.rs                  The catalogs of the evaluator as a resource (step 41.3): a standard
@@ -384,20 +381,30 @@ tauri_ui.rs/               The desktop window (Tauri 2), the thin layer between 
     account.rs                   The password of the logged-in evaluator (the tab User of Settings;
     ai.rs                        The tab AI of Settings: the AI connections of the evaluator, their
     catalogs.rs                  The catalogs of OSCAL in the tool Evaluation plan (step 41.3): made
-    chats.rs                     The chats: the list, an open chat, deleting, and a message with
     documents.rs                 The documents of standards in the tool Evaluation plan:
     oscal.rs                     The documents of OSCAL in the tool Evaluation plan (step 41.2): the
   error.rs                     The errors the commands give back to the page, in kinds the page
   serializer.rs/               The views and forms of the page (serde): the only place of serialization.
     ai_config_view.rs            The AI connections as the tab AI of Settings shows and sends them,
     catalog_view.rs              A catalog of OSCAL as the editor of the page shows it: the catalog
-    chat_view.rs                 The chats as the page shows them, and the events of a reply
     error_view.rs                How an error of a command reaches the page:
     oscal_view.rs                The documents of OSCAL as the page shows them in a list.
     standard_view.rs             The documents of standards as the page shows them, and the events
   session.rs                   The session of the logged-in evaluator (`installation/session.rs`), for
   state.rs                     The state of the desktop interface, kept in Rust and never in
 views.rs/                  The views of the window, one folder per view and one folder per
+  chat/                        The view Chat: the chats of the evaluator with the model of the role
+    chat_list/                   The element "list of chats" of the view Chat
+      commands.rs                  The command of the list of chats.
+      view.rs                      The data of the list of chats, as the page gets it.
+    connection_line/             The element "connection line" of the view Chat: which AI connection
+      commands.rs                  The command of the connection line.
+      view.rs                      The data of the connection line, as the page gets it.
+    conversation/                The element "conversation" of the view Chat: the open chat, a new
+      commands.rs                  The commands of the conversation.
+      stored.rs                    What a chat keeps (`db/ai/chats/`, tables `chats` and `messages`, in
+      turn.rs                      One turn of a chat: the message of the evaluator is checked and
+      view.rs                      The data of the conversation as the page gets it: an open chat, and
   scan/                        The view Scan: the serial ports of the computer and the settings of
     column_view.rs               A column of the table of ports, as both elements of the view show
     ports_table/                 The element "table of ports" of the view Scan

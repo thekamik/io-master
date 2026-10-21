@@ -64,7 +64,8 @@ The user found that `business/` and the commands of `tauri_ui/` did the same thi
 - [x] Scan: `views/scan/` (`ports_table/`, `scanner_settings/`), the settings of the scanner as plain data in `hardware_tests/devices/scan_settings.rs`, stored by `db/scan_settings/`; `business/hardware/`, `tauri_ui/commands/scan.rs` and `serializer/scan_view.rs` removed; the page in `ui/src/views/scan/`.
 - [x] `ensure!` (`checks.rs`); the tests of the commands through the IPC of Tauri (`views/test_support.rs`); the test of the command lists for the views (`command_lists_tests.rs`); `views/` in the test of the architecture.
 - [x] Start (`setup_form`, `login_form`) and Shell (`program`, `user_menu`); the installation, the account and the session moved unchanged to `installation/`. The setup, the login and the logout give no data back: the page reads the state of the program again (`program_get`).
-- [ ] The other views, one at a time: Chat, Settings with the tab AI, Evaluation plan, the editor of a catalog. For the heavy work (Argon2id, PDFs, the AI): how a command keeps it off the threads of the runtime.
+- [x] Chat (`connection_line`, `chat_list`, `conversation`); one turn of a chat (`business/chats/`) moved into the conversation (`turn.rs`, `stored.rs`); the line names the connection of the role *consultation*, as the chat uses it.
+- [ ] The other views, one at a time: Settings with the tab AI, Evaluation plan, the editor of a catalog. For the heavy work (Argon2id, PDFs, the AI): how a command keeps it off the threads of the runtime.
 - [ ] When the last view is moved: `business/`, `tauri_ui/commands/`, `tauri_ui/serializer/` and `ui/src/pages/` removed; the exceptions of `architecture_tests.rs` for `tauri_ui/` revisited.
 
 **Done when** every command of the window lives in the folder of its element and `business/` is gone.

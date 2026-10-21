@@ -22,6 +22,7 @@
 //! (step 42 of docs/todo.md); until every view is moved, both live
 //! beside this folder.
 
+pub mod chat;
 pub mod scan;
 pub mod shell;
 pub mod start;

@@ -23,7 +23,6 @@
 pub mod account;
 pub mod ai;
 pub mod catalogs;
-pub mod chats;
 pub mod documents;
 pub mod oscal;
 
@@ -34,7 +33,6 @@ use tauri_plugin_dialog::DialogExt;
 use super::error::UiError;
 use super::serializer::ai_config_view::{AiConfigView, CheckView, ConnectionForm, SavedView};
 use super::serializer::catalog_view::{BuildEvent, CatalogView, PageRange, PlaceForm};
-use super::serializer::chat_view::{ChatSummaryView, ChatView, ReplyEvent};
 use super::serializer::oscal_view::OscalDocumentView;
 use super::serializer::standard_view::{DocumentForm, DocumentView, HitView, LoadEvent};
 use super::state::UiState;
@@ -109,43 +107,6 @@ pub fn ai_field_instruction(
 #[tauri::command]
 pub async fn check_ai_connection(state: State<'_, UiState>, id: i64) -> Result<CheckView, UiError> {
     ai::check_connection(&state, id).await
-}
-
-/* ---------------------------------------------------------------
- * The chat
- * ------------------------------------------------------------- */
-
-#[tauri::command]
-pub async fn list_chats(state: State<'_, UiState>) -> Result<Vec<ChatSummaryView>, UiError> {
-    chats::list_chats(&state).await
-}
-
-#[tauri::command]
-pub async fn open_chat(state: State<'_, UiState>, chat_id: i64) -> Result<ChatView, UiError> {
-    chats::open_chat(&state, chat_id).await
-}
-
-#[tauri::command]
-pub async fn delete_chat(state: State<'_, UiState>, chat_id: i64) -> Result<(), UiError> {
-    chats::delete_chat(&state, chat_id).await
-}
-
-/// Sends a message; the reply arrives through `on_event` while it
-/// is written, and the command ends when the reply is stored.
-#[tauri::command]
-pub async fn send_message(
-    state: State<'_, UiState>,
-    chat_id: Option<i64>,
-    text: String,
-    on_event: Channel<ReplyEvent>,
-) -> Result<(), UiError> {
-    chats::send_message(&state, chat_id, text, move |event| on_event.send(event).is_ok()).await
-}
-
-/// Stops the reply being written.
-#[tauri::command]
-pub fn stop_reply(state: State<'_, UiState>) {
-    state.stop_reply();
 }
 
 /* ---------------------------------------------------------------

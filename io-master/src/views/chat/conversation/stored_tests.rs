@@ -1,12 +1,11 @@
-//! Unit tests of `chats.rs`.
+//! Unit tests of `stored.rs`.
 
 use super::*;
-
-use crate::model::ai::Speaker;
 
 use crate::ai::api::completions::AiError;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::user::database as user_db;
+use crate::model::ai::Speaker;
 use crate::security::random::fill_random;
 use crate::test_support::TempDir;
 
@@ -27,9 +26,9 @@ fn a_chat_keeps_its_messages_in_order() {
 
     let id = start(&db, "What is ADV_FSP?").unwrap();
     add_reply(&db, id, &reply("The functional specification.", ReplyEnd::Finished(StopReason::Complete))).unwrap();
-    add_message(&db, id, "And ADV_TDS?").unwrap();
+    db_chats::create::message(&db, id, "And ADV_TDS?").unwrap();
 
-    let messages = messages(&db, id).unwrap();
+    let messages = db_chats::read::messages(&db, id).unwrap();
 
     assert_eq!(messages.len(), 3);
     assert_eq!(messages[0].speaker, Speaker::Evaluator);
@@ -42,7 +41,7 @@ fn a_chat_keeps_its_messages_in_order() {
     // "2026-10-14 15:04"
     assert_eq!(messages[0].created.len(), 16);
 
-    assert_eq!(title(&db, id).unwrap().as_deref(), Some("What is ADV_FSP?"));
+    assert_eq!(db_chats::read::chat_title(&db, id).unwrap().as_deref(), Some("What is ADV_FSP?"));
 }
 
 #[test]
@@ -53,7 +52,7 @@ fn the_newest_chat_comes_first() {
     let first = start(&db, "first").unwrap();
     let second = start(&db, "second").unwrap();
 
-    let ids: Vec<i64> = list(&db).unwrap().iter().map(|chat| chat.id).collect();
+    let ids: Vec<i64> = db_chats::read::chats(&db).unwrap().iter().map(|chat| chat.id).collect();
     assert_eq!(ids, [second, first]);
 }
 
@@ -78,7 +77,7 @@ fn unfinished_replies_are_kept_with_their_ending() {
         .unwrap();
     add_reply(&db, id, &reply("dropped", ReplyEnd::Finished(StopReason::Refused))).unwrap();
 
-    let messages = messages(&db, id).unwrap();
+    let messages = db_chats::read::messages(&db, id).unwrap();
     let endings: Vec<&Ending> = messages[1..].iter().map(|message| &message.ending).collect();
 
     assert_eq!(endings, [&Ending::Stopped, &Ending::Cut, &Ending::Failed, &Ending::Refused]);
@@ -91,20 +90,4 @@ fn unfinished_replies_are_kept_with_their_ending() {
     // The text of a refused reply is not kept, and not sent again.
     assert_eq!(messages[4].text, "");
     assert_eq!(crate::ai::tasks::chat::turns(&messages).len(), 4);
-}
-
-#[test]
-fn a_deleted_chat_is_gone_with_its_messages() {
-    let directory = TempDir::new();
-    let db = database(&directory);
-
-    let kept = start(&db, "kept").unwrap();
-    let deleted = start(&db, "deleted").unwrap();
-
-    assert!(delete(&db, deleted).unwrap());
-    assert!(!delete(&db, deleted).unwrap());
-
-    assert_eq!(title(&db, deleted).unwrap(), None);
-    assert!(messages(&db, deleted).unwrap().is_empty());
-    assert_eq!(messages(&db, kept).unwrap().len(), 1);
 }

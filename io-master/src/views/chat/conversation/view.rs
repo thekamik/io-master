@@ -1,5 +1,5 @@
-//! The chats as the page shows them, and the events of a reply
-//! while it is written.
+//! The data of the conversation as the page gets it: an open chat, and
+//! the events of a reply while it is written.
 //!
 //! A reply reaches the page through a channel of Tauri, as these
 //! events:
@@ -13,22 +13,7 @@
 use serde::Serialize;
 
 use crate::model::ai::Speaker;
-use crate::model::chats::{ChatMessage, ChatSummary, Ending};
-
-/// A chat in the list.
-#[derive(Debug, Serialize)]
-pub struct ChatSummaryView {
-    pub id: i64,
-    pub title: String,
-    /// Local time it was started: "2026-10-14 15:04".
-    pub created: String,
-}
-
-impl From<ChatSummary> for ChatSummaryView {
-    fn from(chat: ChatSummary) -> ChatSummaryView {
-        ChatSummaryView { id: chat.id, title: chat.title, created: chat.created }
-    }
-}
+use crate::model::chats::{ChatMessage, Ending};
 
 /// A message of a chat.
 #[derive(Debug, Serialize)]
@@ -43,11 +28,11 @@ pub struct MessageView {
     pub notice: Option<String>,
 }
 
-impl From<ChatMessage> for MessageView {
-    fn from(message: ChatMessage) -> MessageView {
+impl MessageView {
+    pub fn new(message: ChatMessage) -> MessageView {
         let (speaker, who) = match message.speaker {
             Speaker::Evaluator => ("evaluator", "You".to_owned()),
-            Speaker::Model => ("model", message.model.clone().unwrap_or_else(|| "Model".to_owned())),
+            Speaker::Model => ("model", message.model.unwrap_or("Model".to_owned())),
         };
 
         MessageView {
@@ -66,6 +51,19 @@ pub struct ChatView {
     pub id: i64,
     pub title: String,
     pub messages: Vec<MessageView>,
+}
+
+impl ChatView {
+    /// Chat `id` with its `messages`, in order.
+    pub fn new(id: i64, title: String, messages: Vec<ChatMessage>) -> ChatView {
+        let mut views = Vec::with_capacity(messages.len());
+
+        for message in messages {
+            views.push(MessageView::new(message));
+        }
+
+        ChatView { id, title, messages: views }
+    }
 }
 
 /// An event of a reply being written.

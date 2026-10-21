@@ -4,28 +4,37 @@
 //! does: by its name, with its arguments as JSON, through the IPC of
 //! Tauri.
 
+use std::sync::Arc;
+
 use serde_json::Value;
 use tauri::ipc::{CallbackFn, InvokeBody};
 use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_context, noop_assets};
 use tauri::webview::InvokeRequest;
-use tauri::{App, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
+use tauri::{App, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
+use crate::installation::session::Session;
+use crate::tauri_ui::state::UiState;
 use crate::tauri_ui::test_support::{TestState, first_start, installed, logged_in};
 use crate::test_support::TempDir;
 
-use super::{scan, shell, start};
+use super::{chat, scan, shell, start};
 
 /// A window, and what must live as long as it: the app and the folder
 /// of the installation.
 pub struct TestWindow {
     window: WebviewWindow<MockRuntime>,
-    #[allow(dead_code)]
     app: App<MockRuntime>,
     #[allow(dead_code)]
     directory: TempDir,
 }
 
 impl TestWindow {
+    /// The session of the logged-in evaluator, to prepare data the way
+    /// another view would.
+    pub fn session(&self) -> Arc<Session> {
+        self.app.state::<UiState>().session().expect("somebody is logged in")
+    }
+
     /// Calls `command` with `arguments` (an object, the names as the page
     /// writes them: `allTypes`), as the page does; the answer of the
     /// command, or the error the page would get.
@@ -70,6 +79,12 @@ fn window(test: TestState) -> TestWindow {
             start::login_form::commands::login_form_log_in,
             shell::program::commands::program_get,
             shell::user_menu::commands::user_menu_log_out,
+            chat::connection_line::commands::connection_line_get,
+            chat::chat_list::commands::chat_list_get,
+            chat::conversation::commands::conversation_open,
+            chat::conversation::commands::conversation_send,
+            chat::conversation::commands::conversation_stop,
+            chat::conversation::commands::conversation_delete,
             scan::ports_table::commands::ports_table_scan,
             scan::scanner_settings::commands::scanner_settings_get,
             scan::scanner_settings::commands::scanner_settings_save,

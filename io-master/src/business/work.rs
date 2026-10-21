@@ -18,7 +18,6 @@ use std::sync::Arc;
 use tokio::sync::watch;
 
 use crate::ai::api::roles::ModelError;
-use crate::business::chats::conversation::SendError;
 use crate::business::standards::error::DocumentError;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -53,8 +52,6 @@ pub enum WorkError {
     Document(DocumentError),
     /// No AI connection can be used for the task.
     Model(ModelError),
-    /// A message of the chat was refused.
-    Message(SendError),
     /// The database failed.
     Db(DbError),
     /// A step was interrupted (its thread ended without a result).
@@ -67,7 +64,6 @@ impl fmt::Display for WorkError {
             WorkError::Invalid(reason) => formatter.write_str(reason),
             WorkError::Document(error) => write!(formatter, "{error}"),
             WorkError::Model(error) => write!(formatter, "{error}"),
-            WorkError::Message(error) => write!(formatter, "{error}"),
             WorkError::Db(error) => write!(formatter, "{error}"),
             WorkError::Interrupted => formatter.write_str("the work was interrupted"),
         }
@@ -85,12 +81,6 @@ impl From<DocumentError> for WorkError {
 impl From<ModelError> for WorkError {
     fn from(error: ModelError) -> WorkError {
         WorkError::Model(error)
-    }
-}
-
-impl From<SendError> for WorkError {
-    fn from(error: SendError) -> WorkError {
-        WorkError::Message(error)
     }
 }
 

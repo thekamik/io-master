@@ -9,7 +9,7 @@
 -->
 <script lang="ts">
   import type { ProgramView } from "../../lib/api/shell/program";
-  import Chat from "../../pages/Chat.svelte";
+  import Chat from "../chat/Chat.svelte";
   import Documentation from "../../pages/Documentation.svelte";
   import Evaluation from "../../pages/Evaluation.svelte";
   import Plans from "../../pages/Plans.svelte";
