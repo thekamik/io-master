@@ -3,10 +3,11 @@
 //!
 //! Each command only hands over to the file of its resource in
 //! `commands/`, which can be tested without a window. A command is
-//! callable from the page only when it is listed in **four places**:
+//! callable from the page only when it is listed in **four places**
+//! (checked by `src/command_lists_tests.rs`):
 //!
 //! ```text
-//! here                            the function, #[tauri::command]
+//! here, or views/**/commands.rs   the function, #[tauri::command]
 //! main.rs, generate_handler!      registered with Tauri
 //! build.rs, AppManifest           its permission "allow-<name>" made
 //! capabilities/default.json       that permission given to the window
@@ -25,7 +26,6 @@ pub mod catalogs;
 pub mod chats;
 pub mod documents;
 pub mod oscal;
-pub mod scan;
 
 use tauri::ipc::{Channel, Response};
 use tauri::{AppHandle, State};
@@ -37,7 +37,6 @@ use super::serializer::app_view::AppView;
 use super::serializer::catalog_view::{BuildEvent, CatalogView, PageRange, PlaceForm};
 use super::serializer::chat_view::{ChatSummaryView, ChatView, ReplyEvent};
 use super::serializer::oscal_view::OscalDocumentView;
-use super::serializer::scan_view::ScanView;
 use super::serializer::standard_view::{DocumentForm, DocumentView, HitView, LoadEvent};
 use super::state::UiState;
 
@@ -140,25 +139,6 @@ pub fn ai_field_instruction(
 #[tauri::command]
 pub async fn check_ai_connection(state: State<'_, UiState>, id: i64) -> Result<CheckView, UiError> {
     ai::check_connection(&state, id).await
-}
-
-/* ---------------------------------------------------------------
- * The scan
- * ------------------------------------------------------------- */
-
-#[tauri::command]
-pub async fn scan_ports(state: State<'_, UiState>) -> Result<ScanView, UiError> {
-    scan::scan(&state).await
-}
-
-#[tauri::command]
-pub async fn save_scan_settings(
-    state: State<'_, UiState>,
-    all_types: bool,
-    types: Vec<String>,
-    columns: Vec<String>,
-) -> Result<ScanView, UiError> {
-    scan::save_scan_settings(&state, all_types, types, columns).await
 }
 
 /* ---------------------------------------------------------------
@@ -499,9 +479,3 @@ pub async fn propose_catalog_controls(
 pub async fn document_pdf(state: State<'_, UiState>, id: i64) -> Result<Response, UiError> {
     Ok(Response::new(documents::pdf(&state, id).await?))
 }
-
-// Unit tests, in their own file to keep this one readable: the four
-// lists of the commands agree.
-#[cfg(test)]
-#[path = "commands_tests.rs"]
-mod tests;

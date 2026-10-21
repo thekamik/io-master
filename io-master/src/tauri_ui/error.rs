@@ -18,6 +18,7 @@ use crate::business::session::accounts::AccountError;
 use crate::business::standards::error::DocumentError;
 use crate::business::work::WorkError;
 use crate::db::error::DbError;
+use crate::hardware_tests::devices::scan_settings::ScanSettingsError;
 use crate::model::ai::{ConnectionError, Field};
 
 /// Why a command failed.
@@ -156,5 +157,11 @@ impl From<OscalError> for UiError {
             OscalError::Db(error) => UiError::Failed(error.to_string()),
             other => UiError::Invalid(other.to_string()),
         }
+    }
+}
+
+impl From<ScanSettingsError> for UiError {
+    fn from(error: ScanSettingsError) -> UiError {
+        UiError::Invalid(error.to_string())
     }
 }

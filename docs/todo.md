@@ -21,6 +21,7 @@ The number of a step is its name and never changes, so that references in the co
 | 13 | 39: The domain folders and the objects in memory | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 14 | **40: The cleanup of the architecture** | **built 2026-10-17; waiting for the user's review** (below) |
 | 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **concept in `docs/oscal.md`, approved 2026-10-18; 41.1 to 41.3 built, 41.4 next; before step 31** |
+| 14b | **42: The views: one folder per element of the window, instead of `business/` and the commands of `tauri_ui/`** | **concept approved 2026-10-21; Scan moved (the pilot); the other views next** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a placeholder in the sidebar; needed by steps 32 to 34 |
@@ -43,6 +44,29 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 42: The views (2026-10-21)
+
+The user found that `business/` and the commands of `tauri_ui/` did the same thing in two layers: one action of the page went through three Rust functions of the same name and two closures, and the data flow could not be followed. The layout and its rules: `code_structure.md`, section 2.9.
+
+**Decisions of the user**
+- [x] Like the views of Django: every function that joins the program with the page belongs to an element of the window; `business/` and the commands of `tauri_ui/` are joined into `src/views/<view>/<element>/`.
+- [x] The page (`ui/`) and the Rust program are separate projects; their files are never mixed. The page has the same names (`ui/src/views/<view>/`).
+- [x] Only what matters goes to Rust (the AI, processing, storing); presentation stays in the page; only final results are sent.
+- [x] When an element changes data another element shows, it tells the view, and the other element reads the data again with its own command.
+- [x] `mod.rs` in the folder of a view and of an element; commands named `<element>_<action>`.
+- [x] The pilot is Scan.
+- [x] New code follows the rules for Rust (CLAUDE.md, "The rules for Rust").
+
+**Tasks**
+- [x] Scan: `views/scan/` (`ports_table/`, `scanner_settings/`), the settings of the scanner as plain data in `hardware_tests/devices/scan_settings.rs`, stored by `db/scan_settings/`; `business/hardware/`, `tauri_ui/commands/scan.rs` and `serializer/scan_view.rs` removed; the page in `ui/src/views/scan/`.
+- [x] `ensure!` (`checks.rs`); the tests of the commands through the IPC of Tauri (`views/test_support.rs`); the test of the command lists for the views (`command_lists_tests.rs`); `views/` in the test of the architecture.
+- [ ] The other views, one at a time: Start (setup, login) and Shell, Chat, Settings with the tab AI, Evaluation plan, the editor of a catalog. For the heavy work (Argon2id, PDFs, the AI): how a command keeps it off the threads of the runtime.
+- [ ] When the last view is moved: `business/`, `tauri_ui/commands/`, `tauri_ui/serializer/` and `ui/src/pages/` removed; the exceptions of `architecture_tests.rs` for `tauri_ui/` revisited.
+
+**Done when** every command of the window lives in the folder of its element and `business/` is gone.
 
 ---
 

@@ -107,6 +107,12 @@ tokio-rustls = { version = "0.26.6", default-features = false, features = ["aws_
 # waiting in the tests.
 tokio = { version = "1.53.3", features = ["io-util", "time"] }
 
+# The commands of the views tested as the page calls them: by name,
+# with JSON, through the IPC of Tauri, in a window of its mock runtime
+# (views/test_support.rs). Only the feature "test" of the Tauri the
+# program uses already; no new crate.
+tauri = { version = "2.12.4", features = ["custom-protocol", "test"] }
+
 # Argon2id is slow on purpose; without optimization (the default
 # of debug builds) a login would take seconds. Only these crates
 # are optimized; the program itself stays easy to debug.

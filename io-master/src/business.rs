@@ -10,12 +10,10 @@
 //! standards/       the documents of standards (PDF): the sources
 //! oscal/           the documents of NIST OSCAL: the standards, the plans, the evaluations
 //! chats/           the chats with the AI
-//! hardware/        the scan of the ports and its settings
 //! work.rs          what the long works share: stop, error, steps
 //! ```
 
 pub mod chats;
-pub mod hardware;
 pub mod installation;
 pub mod oscal;
 pub mod session;

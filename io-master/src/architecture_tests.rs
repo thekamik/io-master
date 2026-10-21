@@ -4,6 +4,9 @@
 //! in one place:
 //!
 //! ```text
+//!                views/
+//!                  │  (views/ may also use every folder below)
+//!                  ▼
 //!               tauri_ui/
 //!                  │
 //!                  ▼
@@ -26,7 +29,7 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-const ALLOWED: [(&str, &[&str]); 7] = [
+const ALLOWED: [(&str, &[&str]); 8] = [
     ("model", &[]),
     ("security", &[]),
     ("hardware_tests", &[]),
@@ -48,16 +51,16 @@ const ALLOWED: [(&str, &[&str]); 7] = [
             // error of the page. Never a function of the CRUD of db/.
             "db::user::database::UserDb",
             "db::error",
-            // The types of a port, shown in the page of the scan; the
-            // scan itself goes through business/hardware/.
-            "hardware_tests::devices::serial_ports::PortFilter",
-            "hardware_tests::devices::serial_ports::PortType",
-            "hardware_tests::devices::serial_ports::SerialPortInfo",
-            "hardware_tests::devices::serial_ports::UsbInfo",
-            "hardware_tests::devices::serial_ports::AccessInfo",
-            "hardware_tests::devices::port_property",
+            // The error of a form of the settings of the scanner, turned
+            // into an error of the page.
+            "hardware_tests::devices::scan_settings::ScanSettingsError",
         ],
     ),
+    // The views (views.rs): the commands of the elements of the window,
+    // on top of everything. They use the state and the errors of the
+    // window (tauri_ui/) and do their work with the folders below; the
+    // business is allowed until every view is moved (step 42).
+    ("views", &["tauri_ui", "business", "ai", "db", "hardware_tests", "model", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

@@ -11,7 +11,7 @@
   import Chat from "./Chat.svelte";
   import Documentation from "./Documentation.svelte";
   import Evaluation from "./Evaluation.svelte";
-  import Scan from "./Scan.svelte";
+  import Scan from "../views/scan/Scan.svelte";
   import Plans from "./Plans.svelte";
   import Settings from "./Settings.svelte";
 

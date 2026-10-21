@@ -23,6 +23,11 @@
 //! Linux account; one Linux account holds one installation with one
 //! user (docs/architecture.md, sections 3 and 5.6).
 
+// The check `ensure!` (rule 5 of CLAUDE.md), declared before the
+// folders so that every one of them knows it by its name alone.
+#[macro_use]
+mod checks;
+
 // The folders of the program. Each declares its own modules in the
 // file of the same name next to it (`db.rs` next to `db/`), so that
 // a new file never changes this one; the whole tree is described in
@@ -36,11 +41,14 @@ mod security;
 mod tauri_ui;
 #[cfg(test)]
 mod test_support;
+mod views;
 
-// The direction of the dependencies between the folders, checked on
-// the source.
+// The direction of the dependencies between the folders, and the four
+// lists of the commands, checked on the source.
 #[cfg(test)]
 mod architecture_tests;
+#[cfg(test)]
+mod command_lists_tests;
 
 use std::path::PathBuf;
 use std::process::ExitCode;
@@ -121,11 +129,13 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         // The state shared by all commands: the installation, the
         // session, the work in progress (tauri_ui/state.rs).
         .manage(UiState::new(data_dir, opened))
-        // The commands the page may call. Each is a thin function in
-        // tauri_ui/commands.rs that hands over to the file named in
-        // its group, where the work is done. A command must also be
-        // listed in build.rs and capabilities/default.json, or the
-        // page is refused when it calls it.
+        // The commands the page may call: those of the views, each in
+        // the folder of its element (views/<view>/<element>/commands.rs),
+        // and those not moved yet, thin functions in
+        // tauri_ui/commands.rs that hand over to the file named in
+        // their group. A command must also be listed in build.rs and
+        // capabilities/default.json, or the page is refused when it
+        // calls it.
         .invoke_handler(tauri::generate_handler![
             // The program and the account (commands/account.rs).
             commands::app_state,
@@ -143,9 +153,10 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             commands::delete_ai_key,
             commands::check_ai_connection,
             commands::ai_field_instruction,
-            // The scan of the serial ports (commands/scan.rs).
-            commands::scan_ports,
-            commands::save_scan_settings,
+            // The view Scan (views/scan/).
+            views::scan::ports_table::commands::ports_table_scan,
+            views::scan::scanner_settings::commands::scanner_settings_get,
+            views::scan::scanner_settings::commands::scanner_settings_save,
             // The chat with the AI (commands/chats.rs).
             commands::list_chats,
             commands::open_chat,

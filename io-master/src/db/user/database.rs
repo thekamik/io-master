@@ -13,6 +13,7 @@
 //! db/ai/              AI: connections, chats, roles,
 //!                     instructions, journal, presets
 //! db/standards/       documents of standards
+//! db/scan_settings/   the settings of the scanner (in the settings above)
 //! db/oscal/           documents of NIST OSCAL
 //! db/evaluation_support/  quotes and proposals linked to them
 //! ```

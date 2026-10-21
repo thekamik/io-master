@@ -102,14 +102,15 @@ The program is started without parameters; everything is set in its window.
 ```text
 io-master/          the program (Rust, Tauri 2 + Svelte 5)
   src/              the core and the window, in layers: model, db, ai, hardware_tests,
-                    security, business, tauri_ui (docs/code_structure.md)
-  ui/               the page of the window
+                    security, business, tauri_ui, views (docs/code_structure.md); views replace
+                    business and the commands of tauri_ui, one view at a time
+  ui/               the page of the window, a separate project
   oscal/            the JSON schemas of OSCAL 1.2.3 and example documents of NIST
 docs/
   architecture.md   what the program is and why: roles, secrets, AI, standards, collaboration, devices
   oscal.md          the evaluation plan and the evaluation on NIST OSCAL: the concept of step 41
   code_structure.md where everything is in the code, and the rules that keep it in order
-  todo.md           the plan of the work, step by step
+  todo.md           the steps of the work: a heap of reminders, not an order
   history.md        the steps already built, with their decisions
   handover.md       the state of the work, for a new working session
 v0.2_functionality.md   the functions of version 0.2 (C), the catalogue the new version re-creates
