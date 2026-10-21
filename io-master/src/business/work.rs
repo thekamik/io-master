@@ -19,10 +19,10 @@ use tokio::sync::watch;
 
 use crate::ai::api::roles::ModelError;
 use crate::business::chats::conversation::SendError;
-use crate::business::session::Session;
 use crate::business::standards::error::DocumentError;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::installation::session::Session;
 
 /// The stop signal of a long work: `true` once it is to stop.
 #[derive(Debug, Clone)]

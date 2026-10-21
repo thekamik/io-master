@@ -1,7 +1,7 @@
 //! Help for the tests of the desktop interface: a state with a real
 //! installation (databases, accounts) in a temporary directory.
 
-use crate::business::installation::lifecycle::{self, Opened};
+use crate::installation::lifecycle::{self, Opened};
 use crate::model::installation::Role;
 use crate::test_support::TempDir;
 

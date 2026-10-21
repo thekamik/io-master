@@ -36,7 +36,7 @@ fn ready(service: &FakeService, directory: &TempDir) -> (Arc<Session>, String, i
     let uuid = catalogs::create(&db, "CC Part 3", "", &[source]).unwrap().uuid;
     drop(db);
 
-    let account = crate::business::session::accounts::Account { id: 1, name: "anna".to_owned() };
+    let account = crate::installation::accounts::Account { id: 1, name: "anna".to_owned() };
     let session = Arc::new(Session::open(directory.path(), account, again).unwrap());
 
     (session, uuid, source)

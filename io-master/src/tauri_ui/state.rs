@@ -13,9 +13,9 @@ use std::sync::{Arc, Mutex, MutexGuard, RwLock};
 
 use tokio::sync::watch;
 
-use crate::business::installation::lifecycle::{Opened, Running};
-use crate::business::session::Session;
-use crate::business::session::accounts::Account;
+use crate::installation::accounts::Account;
+use crate::installation::lifecycle::{Opened, Running};
+use crate::installation::session::Session;
 
 use super::error::UiError;
 

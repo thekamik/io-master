@@ -11,11 +11,11 @@
 //!                  │
 //!                  ▼
 //!               business/
-//!          ┌───────┼──────────────┐
-//!          ▼       ▼              ▼
-//!         ai/   hardware_tests/   │
-//!          │       │              │
-//!          └───────┴──────► db/ ◄─┘
+//!          ┌───────┼──────────────┬──────────────┐
+//!          ▼       ▼              ▼              ▼
+//!         ai/   hardware_tests/   │        installation/
+//!          │       │              │              │
+//!          └───────┴──────► db/ ◄─┴──────────────┘
 //!                           │
 //!          all of them ───► model/, security/
 //! ```
@@ -29,17 +29,21 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-const ALLOWED: [(&str, &[&str]); 8] = [
+const ALLOWED: [(&str, &[&str]); 9] = [
     ("model", &[]),
     ("security", &[]),
     ("hardware_tests", &[]),
     ("db", &["model", "security"]),
     ("ai", &["db", "model", "security"]),
-    ("business", &["ai", "db", "hardware_tests", "model", "security"]),
+    // The installation, its account and the session: the core of the
+    // protection, below the window and the views.
+    ("installation", &["db", "model", "security"]),
+    ("business", &["ai", "db", "hardware_tests", "installation", "model", "security"]),
     (
         "tauri_ui",
         &[
             "business",
+            "installation",
             "model",
             // The settings of the AI are resources of ai/api/ already
             // (connections, roles, checks): the tab AI shows them as
@@ -60,7 +64,7 @@ const ALLOWED: [(&str, &[&str]); 8] = [
     // on top of everything. They use the state and the errors of the
     // window (tauri_ui/) and do their work with the folders below; the
     // business is allowed until every view is moved (step 42).
-    ("views", &["tauri_ui", "business", "ai", "db", "hardware_tests", "model", "security"]),
+    ("views", &["tauri_ui", "business", "ai", "db", "hardware_tests", "installation", "model", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

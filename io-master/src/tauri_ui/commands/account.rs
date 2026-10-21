@@ -11,8 +11,8 @@
 
 use zeroize::Zeroizing;
 
-use crate::business::installation::lifecycle::{self, LifecycleError};
-use crate::business::session::{Session, accounts};
+use crate::installation::lifecycle::{self, LifecycleError};
+use crate::installation::{accounts, session::Session};
 use crate::model::installation::Role;
 
 use crate::tauri_ui::blocking::blocking;

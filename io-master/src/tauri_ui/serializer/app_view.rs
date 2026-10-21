@@ -7,7 +7,7 @@ use std::path::Path;
 
 use serde::Serialize;
 
-use crate::business::session::accounts::Account;
+use crate::installation::accounts::Account;
 use crate::model::installation::Role;
 
 /// The state of the program, as the page sees it.

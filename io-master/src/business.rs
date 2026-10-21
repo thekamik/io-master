@@ -5,8 +5,6 @@
 //! presents anything itself.
 //!
 //! ```text
-//! session/         the logged-in evaluator: accounts, login, password
-//! installation/    the first start, the state of the installation
 //! standards/       the documents of standards (PDF): the sources
 //! oscal/           the documents of NIST OSCAL: the standards, the plans, the evaluations
 //! chats/           the chats with the AI
@@ -14,8 +12,6 @@
 //! ```
 
 pub mod chats;
-pub mod installation;
 pub mod oscal;
-pub mod session;
 pub mod standards;
 pub mod work;

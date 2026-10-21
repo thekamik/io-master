@@ -8,8 +8,8 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use crate::business::session::Session;
 use crate::business::work::{Cancel, WorkError, on_db};
+use crate::installation::session::Session;
 use crate::model::standards::{Document, DocumentFields};
 
 use super::documents;

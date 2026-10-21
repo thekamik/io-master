@@ -18,10 +18,10 @@ use std::sync::Arc;
 
 use crate::ai::api::completions;
 use crate::ai::api::roles::{self, Model, ModelError};
-use crate::business::session::Session;
 use crate::business::work::{Cancel, WorkError, on_db};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::installation::session::Session;
 use crate::model::ai::ConnectionError;
 use crate::model::ai::Role;
 use crate::model::ai::Task;

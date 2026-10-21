@@ -27,8 +27,6 @@
 //! made in memory only after the database stored it, and SQLite rolls
 //! back an unfinished transaction, so nothing is left half done.
 
-pub mod accounts;
-
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
@@ -36,7 +34,7 @@ use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::error::DbError;
 use crate::db::user::database::{self as user_db, UserDb};
 
-use accounts::Account;
+use super::accounts::Account;
 
 /// The logged-in evaluator.
 #[derive(Debug)]

@@ -30,11 +30,11 @@ use std::io;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
 
-use crate::business::session::accounts::{self, Account, AccountError};
 use crate::db::encryption::keys;
 use crate::db::error::DbError;
 use crate::db::system::database::{self as system_db, SystemDb};
 use crate::db::user::database as user_db;
+use crate::installation::accounts::{self, Account, AccountError};
 use crate::security::random::fill_random;
 use crate::security::tpm::device_secret::{self, DeviceSecret};
 use crate::security::tpm::emulator::EMULATOR_DIRECTORY;

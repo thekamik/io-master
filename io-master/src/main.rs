@@ -36,6 +36,7 @@ mod ai;
 mod business;
 mod db;
 mod hardware_tests;
+mod installation;
 mod model;
 mod security;
 mod tauri_ui;
@@ -53,8 +54,8 @@ mod command_lists_tests;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use business::installation::lifecycle::Opened;
-use business::installation::verify::{InstallationState, verify_installation};
+use installation::lifecycle::Opened;
+use installation::verify::{InstallationState, verify_installation};
 use tauri_ui::commands;
 use tauri_ui::state::UiState;
 
