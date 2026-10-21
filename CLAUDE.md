@@ -9,10 +9,29 @@
 - The long-term direction is AI-assisted Common Criteria evaluation (`v0.2_functionality.md`, section 3.7).
 - **The agreed concept is in `docs/architecture.md`**: one program with two roles chosen once at the first start in the window, one Linux account = one installation = one user (workstation and master alike), a desktop window (Tauri 2 + Svelte) as the only interface, the password plus the secret of the application in the keyring of the Linux account as the default factors (a desktop session with GNOME Keyring is required) with the TPM 2.0 as an optional further factor, optional password reset through the master, collaboration through the laboratory's git. Read it before designing a function.
 - **The structure of the code is in `docs/code_structure.md`** (the layers, the direction of the dependencies and its test, the conventions, the whole tree). Read it before writing code.
+- **Commits (user, 2026-10-21):** Claude commits its changes to `test_branch` as it goes and pushes them to `origin`, so that no work stays on one machine (the user works on two). **Never a commit, merge or push to `main` without the user's permission**, asked each time.
+- **The documentation reflects the current state of the code** (user, 2026-10-21): a change of the code changes its documentation in the same commit; a document that describes a plan says so.
 - **Branches (user, 2026-10-20):** `main` holds the state that is tested and approved; the work is done on `test_branch` and goes to `main` once it is approved. No other branches and **no version numbers** while the project is at an early stage (the program stays at version 0.1.0 of `Cargo.toml`); the earlier branches `v0.2` to `v0.5` were removed, their history is in `main` (the commits named in `docs/history.md`, section "Branches until 2026-10-20").
 - The program must run without a TPM (virtual machines). TODO before release: the optional TPM factor uses a real TPM 2.0, not the emulator `swtpm`.
-- **The work follows `docs/todo.md`, one step at a time, in the order of its table "order of work"; step numbers are names and never change.** Every step: concept approved by the user, implementation with tests, check, approval, commit. When the list is done, further functionality is planned anew.
-- **The order of work is a guide, not an absolute rule** (user, 2026-10-17). Architecture, readability of the code and security come first, so that the program stays maintainable and auditable: when the user finds that a part of the code escapes their overview (as the database code did), it is a critical error and is fixed at once, before further functions.
+- **`docs/todo.md` is a heap of reminders, not a plan in order** (user, 2026-10-21): the user chooses what is done next; its table "order of work" is not followed. Step numbers are names and never change. Every step: concept approved by the user, implementation with tests, check, approval, commit.
+- **Architecture, readability of the code and security come first** (user, 2026-10-17), so that the program stays maintainable and auditable: when the user finds that a part of the code escapes their overview (as the database code did), it is a critical error and is fixed at once, before further functions. **Every data flow must be traceable by the user, and every function does one thing** (user, 2026-10-21): code that works but cannot be followed cannot be corrected or audited, which is unacceptable.
+
+## The rules of the code: "The Power of 10" (user, 2026-10-21)
+
+The user's bible; they must not be broken. The rules as the user gave them (G. J. Holzmann, NASA/JPL, written for C):
+
+1. Very simple control flow only: no goto, no setjmp/longjmp, no direct or indirect recursion.
+2. Every loop has a fixed upper bound that a checking tool can prove statically.
+3. No dynamic memory allocation after initialization.
+4. No function longer than one printed page: about 60 lines, one line per statement and per declaration.
+5. At least two assertions per function on average, for conditions that should never happen; side-effect free, Boolean; a failing assertion takes an explicit recovery action (an error returned to the caller); an assertion a tool can prove always true or always false breaks the rule.
+6. Every data object declared at the smallest possible scope.
+7. Every caller checks the return value of every non-void function; every called function checks the validity of all its parameters.
+8. The preprocessor only for including headers and simple macros: no token pasting, no variable argument lists, no recursive macros; every macro expands into a complete syntactic unit; conditional compilation kept to a minimum.
+9. Pointers restricted: at most one level of dereference, none hidden in macros or typedefs; no function pointers.
+10. All warnings enabled at the most pedantic level from the first day, the code compiles without warnings, and it is checked daily with at least one (preferably more) strong static analyzer with zero warnings.
+
+**How each rule applies to Rust, Svelte and the dependencies is being agreed with the user** (2026-10-21); until it is written here, ask before deciding a case the rules do not settle literally.
 
 ## Main design rule: the desktop window is the only interface
 
@@ -25,6 +44,7 @@ Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop win
 - **Operations can be cancelled by the caller** (a cancellation token).
 - **Questions to the user go through the interface.** When an operation needs an answer (a PIN, a confirmation), it asks through an interface the UI implements, never by reading stdin itself.
 - **State lives in the core, not in the page.** The page holds no secret and no state that matters.
+- **What goes to Rust and what stays in the page (user, 2026-10-21).** An element of the window calls the back end only for what matters: running the AI, processing or storing data, anything that changes the state of the evaluation. What is only presentation (hover, an open menu, a selection, a tab, the position during a drag) stays in the page. Only the final result is sent, never the steps in between: for a diagram, the last coordinates (to restore it), not every position of a drag. The current link between the page and the back end is not readable enough; its rebuild, one interactive element = one function called from the page with its parameters and its data back, is being designed (concept to be approved).
 
 ## Rules carried over from version 0.2 (the program in C)
 
