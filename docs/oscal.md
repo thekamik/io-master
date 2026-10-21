@@ -112,7 +112,7 @@ Tables of their own, in `db/evaluation_support/`, linked to OSCAL objects only b
 
 - `model/oscal/`: the types of the subset of OSCAL we use (catalog, mapping, profile, assessment plan, assessment results, the common metadata and back matter), with the names of OSCAL.
 - `db/oscal/` (one folder per model) and `db/evaluation_support/`.
-- `business/evaluation_plans/` (was `business/test_projects/`) and `business/evaluations/` on the new model; `ai/tasks/` builds catalogs from the PDFs of a standard.
+- The views of the evaluation plan (`views/plans/`, `views/catalog_editor/`) and, later, of the evaluation on the new model (step 42 replaced `business/` by the views); `ai/tasks/` builds catalogs from the PDFs of a standard.
 - **The schema:** the JSON schemas of OSCAL 1.2.3 kept in the repository; every import and every export is checked against them (a new dependency, the crate `jsonschema`, explained when it is added).
 - The old model of the test projects and the evaluations is removed, with its tables (no migration).
 

@@ -10,7 +10,8 @@
 //!
 //! The catalog is empty; its groups and controls are made in its editor,
 //! by hand or with the AI. The documents it comes from are resources of
-//! its back matter (`business/oscal/catalogs.rs`, moved with the editor).
+//! its back matter (`made.rs`).
 
 pub mod commands;
+pub mod made;
 pub mod view;

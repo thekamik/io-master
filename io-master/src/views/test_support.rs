@@ -17,7 +17,7 @@ use crate::tauri_ui::state::UiState;
 use crate::tauri_ui::test_support::{TestState, first_start, installed, logged_in};
 use crate::test_support::TempDir;
 
-use super::{chat, plans, scan, settings, shell, start};
+use super::{catalog_editor, chat, plans, scan, settings, shell, start};
 
 /// A window, and what must live as long as it: the app and the folder
 /// of the installation.
@@ -124,6 +124,25 @@ fn window(test: TestState) -> TestWindow {
             plans::document_search::commands::document_search_run,
             plans::pdf_viewer::commands::pdf_viewer_documents,
             plans::pdf_viewer::commands::pdf_viewer_get,
+            catalog_editor::catalog_tree::commands::catalog_tree_get,
+            catalog_editor::object_form::commands::object_form_get,
+            catalog_editor::object_form::commands::object_form_save_group,
+            catalog_editor::object_form::commands::object_form_save_control,
+            catalog_editor::object_form::commands::object_form_delete,
+            catalog_editor::new_object::commands::new_object_add_group,
+            catalog_editor::new_object::commands::new_object_add_control,
+            catalog_editor::object_quotes::commands::object_quotes_get,
+            catalog_editor::object_quotes::commands::object_quotes_add,
+            catalog_editor::object_quotes::commands::object_quotes_delete,
+            catalog_editor::proposals::commands::proposals_get,
+            catalog_editor::proposals::commands::proposals_accept,
+            catalog_editor::proposals::commands::proposals_reject,
+            catalog_editor::ai_builder::commands::ai_builder_sources,
+            catalog_editor::ai_builder::commands::ai_builder_groups,
+            catalog_editor::ai_builder::commands::ai_builder_controls,
+            catalog_editor::ai_builder::commands::ai_builder_stop,
+            catalog_editor::ai_instructions::commands::ai_instructions_get,
+            catalog_editor::ai_instructions::commands::ai_instructions_save,
             scan::ports_table::commands::ports_table_scan,
             scan::scanner_settings::commands::scanner_settings_get,
             scan::scanner_settings::commands::scanner_settings_save,

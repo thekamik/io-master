@@ -40,5 +40,5 @@ the user confirms them.
 
 Everything in `io-master/src/` and `io-master/ui/`. A suggested order,
 from the bottom of the layers up (`docs/code_structure.md`): `model/`,
-`db/`, `security/`, `ai/`, `hardware_tests/`, `business/`, `tauri_ui/`,
-`main.rs`, `ui/`.
+`db/`, `security/`, `ai/`, `hardware_tests/`, `pdf/`, `installation/`,
+`tauri_ui/`, `views/`, `main.rs`, `ui/`.

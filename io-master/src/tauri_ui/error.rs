@@ -1,5 +1,5 @@
-//! The errors the commands give back to the page, in kinds the page
-//! can tell apart.
+//! The errors the commands of the views give back to the page, in kinds
+//! the page can tell apart.
 //!
 //! Every kind carries a sentence for the evaluator; the page shows
 //! it as text. No error ever holds a secret (a password, the API
@@ -11,13 +11,13 @@ use std::fmt;
 use crate::ai::api::completions::AiError;
 use crate::ai::api::connections::ConnectionSaveError;
 use crate::ai::api::roles::ModelError;
-use crate::business::work::WorkError;
 use crate::db::error::DbError;
 use crate::db::oscal::error::OscalError;
 use crate::hardware_tests::devices::scan_settings::ScanSettingsError;
 use crate::installation::accounts::AccountError;
 use crate::installation::lifecycle::LifecycleError;
 use crate::model::ai::{ConnectionError, Field};
+use crate::model::oscal::catalog::CatalogError;
 
 /// Why a command failed.
 #[derive(Debug)]
@@ -118,17 +118,6 @@ impl From<ConnectionSaveError> for UiError {
     }
 }
 
-impl From<WorkError> for UiError {
-    fn from(error: WorkError) -> UiError {
-        match error {
-            WorkError::Invalid(reason) => UiError::Invalid(reason),
-            WorkError::Model(error) => error.into(),
-            WorkError::Db(error) => error.into(),
-            WorkError::Interrupted => UiError::Failed(error.to_string()),
-        }
-    }
-}
-
 impl From<OscalError> for UiError {
     fn from(error: OscalError) -> UiError {
         match error {
@@ -140,6 +129,12 @@ impl From<OscalError> for UiError {
 
 impl From<ScanSettingsError> for UiError {
     fn from(error: ScanSettingsError) -> UiError {
+        UiError::Invalid(error.to_string())
+    }
+}
+
+impl From<CatalogError> for UiError {
+    fn from(error: CatalogError) -> UiError {
         UiError::Invalid(error.to_string())
     }
 }

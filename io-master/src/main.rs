@@ -33,7 +33,6 @@ mod checks;
 // a new file never changes this one; the whole tree is described in
 // docs/code_structure.md.
 mod ai;
-mod business;
 mod db;
 mod hardware_tests;
 mod installation;
@@ -57,7 +56,6 @@ use std::process::ExitCode;
 
 use installation::lifecycle::Opened;
 use installation::verify::{InstallationState, verify_installation};
-use tauri_ui::commands;
 use tauri_ui::state::UiState;
 
 // The two entries of the installation in the keyring of the Linux
@@ -184,22 +182,26 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
             views::plans::document_search::commands::document_search_run,
             views::plans::pdf_viewer::commands::pdf_viewer_documents,
             views::plans::pdf_viewer::commands::pdf_viewer_get,
-            // The editor of a catalog (commands/catalogs.rs).
-            commands::stop_work,
-            commands::open_catalog,
-            commands::add_catalog_group,
-            commands::update_catalog_group,
-            commands::add_catalog_control,
-            commands::update_catalog_control,
-            commands::delete_catalog_object,
-            commands::add_catalog_quote,
-            commands::delete_catalog_quote,
-            commands::accept_catalog_proposal,
-            commands::reject_catalog_proposal,
-            commands::catalog_instructions,
-            commands::save_catalog_instructions,
-            commands::propose_catalog_groups,
-            commands::propose_catalog_controls,
+            // The view editor of a catalog (views/catalog_editor/).
+            views::catalog_editor::catalog_tree::commands::catalog_tree_get,
+            views::catalog_editor::object_form::commands::object_form_get,
+            views::catalog_editor::object_form::commands::object_form_save_group,
+            views::catalog_editor::object_form::commands::object_form_save_control,
+            views::catalog_editor::object_form::commands::object_form_delete,
+            views::catalog_editor::new_object::commands::new_object_add_group,
+            views::catalog_editor::new_object::commands::new_object_add_control,
+            views::catalog_editor::object_quotes::commands::object_quotes_get,
+            views::catalog_editor::object_quotes::commands::object_quotes_add,
+            views::catalog_editor::object_quotes::commands::object_quotes_delete,
+            views::catalog_editor::proposals::commands::proposals_get,
+            views::catalog_editor::proposals::commands::proposals_accept,
+            views::catalog_editor::proposals::commands::proposals_reject,
+            views::catalog_editor::ai_builder::commands::ai_builder_sources,
+            views::catalog_editor::ai_builder::commands::ai_builder_groups,
+            views::catalog_editor::ai_builder::commands::ai_builder_controls,
+            views::catalog_editor::ai_builder::commands::ai_builder_stop,
+            views::catalog_editor::ai_instructions::commands::ai_instructions_get,
+            views::catalog_editor::ai_instructions::commands::ai_instructions_save,
         ])
         .run(tauri::generate_context!());
 

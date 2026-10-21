@@ -4,19 +4,15 @@
 //! in one place:
 //!
 //! ```text
-//!                views/
-//!                  │  (views/ may also use every folder below)
-//!                  ▼
-//!               tauri_ui/
-//!                  │
-//!                  ▼
-//!               business/
-//!          ┌───────┼──────────────┬──────────────┐
-//!          ▼       ▼              ▼              ▼
-//!         ai/   hardware_tests/   │        installation/
-//!          │       │              │              │
-//!          └───────┴──────► db/ ◄─┴──────────────┘
-//!                           │
+//!                         views/
+//!                  (one folder per element of the window)
+//!        ┌──────────┬────────┼─────────┬──────────────┬───────────┐
+//!        ▼          ▼        ▼         ▼              ▼           ▼
+//!    tauri_ui/     ai/   hardware_  installation/    pdf/      (model/,
+//!  (state, errors)  │     tests/        │                       security/)
+//!        │          │                   │
+//!        └──────────┴──────► db/ ◄──────┘
+//!                            │
 //!          all of them ───► model/, security/
 //! ```
 //!
@@ -29,7 +25,7 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-const ALLOWED: [(&str, &[&str]); 10] = [
+const ALLOWED: [(&str, &[&str]); 9] = [
     ("model", &[]),
     ("security", &[]),
     ("hardware_tests", &[]),
@@ -40,38 +36,25 @@ const ALLOWED: [(&str, &[&str]); 10] = [
     // The installation, its account and the session: the core of the
     // protection, below the window and the views.
     ("installation", &["db", "model", "security"]),
-    ("business", &["ai", "db", "hardware_tests", "installation", "model", "security"]),
     (
         "tauri_ui",
         &[
-            "business",
             "installation",
             "model",
-            // The settings of the AI are resources of ai/api/ already
-            // (connections, roles, checks): the tab AI shows them as
-            // they are; and the presets of known services.
-            "ai::api",
-            "ai::presets",
-            // The type of the open database, passed from the session to
-            // the business, and the error of a database, turned into an
-            // error of the page. Never a function of the CRUD of db/.
-            "db::user::database::UserDb",
+            // The errors of the folders below, turned into errors of the
+            // page; never a function of them.
+            "ai::api::completions::AiError",
+            "ai::api::connections::ConnectionSaveError",
+            "ai::api::roles::ModelError",
             "db::error",
-            // The error of a form of the settings of the scanner, turned
-            // into an error of the page.
-            "hardware_tests::devices::scan_settings::ScanSettingsError",
-            // Until the editor of a catalog moves to views/ (step 42): the
-            // stored documents of OSCAL and their view, which the editor
-            // shows.
             "db::oscal::error::OscalError",
-            "views::plans::oscal_documents::view::OscalDocumentView",
+            "hardware_tests::devices::scan_settings::ScanSettingsError",
         ],
     ),
     // The views (views.rs): the commands of the elements of the window,
     // on top of everything. They use the state and the errors of the
-    // window (tauri_ui/) and do their work with the folders below; the
-    // business is allowed until every view is moved (step 42).
-    ("views", &["tauri_ui", "business", "ai", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
+    // window (tauri_ui/) and do their work with the folders below.
+    ("views", &["tauri_ui", "ai", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

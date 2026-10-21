@@ -22,6 +22,7 @@
 //! (step 42 of docs/todo.md); until every view is moved, both live
 //! beside this folder.
 
+pub mod catalog_editor;
 pub mod chat;
 pub mod plans;
 pub mod scan;

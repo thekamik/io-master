@@ -1,6 +1,8 @@
 //! The commands of the window are callable only when they are listed in
-//! four places (the top of `tauri_ui/commands.rs`); a mistake there
-//! closes the door, but it is a mistake. This test reads the four lists
+//! four places: the `commands.rs` of an element of `views/`, `main.rs`
+//! (`generate_handler!`), `build.rs` (`AppManifest`) and
+//! `capabilities/default.json`; a mistake there closes the door, but it
+//! is a mistake. This test reads the four lists
 //! and says what one of them lacks. It also checks the rule of the views
 //! (`views.rs`): a command of an element lives in the folder of that
 //! element and is named after it (`ports_table_scan` in
@@ -55,9 +57,10 @@ fn element_files() -> Vec<(String, String)> {
     found
 }
 
-/// The commands defined in `tauri_ui/commands.rs` and in the views.
+/// The commands defined in the views: since step 42 every command is in
+/// the folder of its element.
 fn defined() -> BTreeSet<String> {
-    let mut names: BTreeSet<String> = commands_in(include_str!("tauri_ui/commands.rs")).into_iter().collect();
+    let mut names = BTreeSet::new();
 
     for (_, source) in element_files() {
         names.extend(commands_in(&source));

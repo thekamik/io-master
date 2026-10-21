@@ -55,13 +55,3 @@ pub fn log_in(state: &UiState, password: &str) {
 
     state.log_in(Session::open(&state.data_dir, account, key).unwrap());
 }
-
-/// "anna" logged in, with one loaded document of three pages (the
-/// small standard of `test_support/standards.rs`); returns the state and
-/// the document.
-pub async fn with_document() -> (TestState, i64) {
-    let test = logged_in().await;
-    let id = crate::test_support::standards::load(&test.state.session().unwrap().db(), b"%PDF-1.4 cc-part3");
-
-    (test, id)
-}

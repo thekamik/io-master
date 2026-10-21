@@ -3,7 +3,7 @@
 
   - OSCAL: the documents of the standards in NIST OSCAL (catalogs,
     mappings, profiles, assessment plans), made or imported; a catalog
-    opens in its editor (components/CatalogEditor.svelte);
+    opens in its editor (views/catalog_editor/);
   - Documents of standards: the PDFs, loaded into the encrypted database,
     searched and shown in the viewer; the sources the OSCAL documents
     quote.
@@ -12,7 +12,7 @@
   the dialog of a new catalog, and what the viewer shows.
 -->
 <script lang="ts">
-  import CatalogEditor from "../../components/CatalogEditor.svelte";
+  import CatalogEditor from "../catalog_editor/CatalogEditor.svelte";
   import DocumentSearch from "./DocumentSearch.svelte";
   import NewCatalog from "./NewCatalog.svelte";
   import OscalDocuments from "./OscalDocuments.svelte";

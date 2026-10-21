@@ -1,25 +1,15 @@
-//! The desktop window (Tauri 2), the thin layer between the business
-//! (`business/`) and the page (`ui/`), step 40 of docs/todo.md:
+//! What the whole window shares (Tauri 2): the state the commands of the
+//! views reach, and their errors. The commands themselves are in the
+//! folders of the elements of the views (`views/`).
 //!
 //! ```text
-//! commands.rs     every command the page may call: the whole surface
-//! commands/       per resource: the session, the form into a type of
-//!                 model/, the call of business/, the result into a view
-//! serializer/     the views and forms (serde), only here
-//! session.rs      the session of the logged-in evaluator, for a command
-//! state.rs        the session and the stop signals
-//! error.rs        every error of the business as an error of the page
-//! blocking.rs     blocking work off the threads of the window
+//! state.rs        the installation, the session of the evaluator, the stop signals
+//! error.rs        every error of a command, in kinds the page tells apart
+//! serializer/     how an error reaches the page (serde)
 //! ```
-//!
-//! No rule of the business is here: a rule found in a command is a
-//! finding of the review.
 
-pub mod blocking;
-pub mod commands;
 pub mod error;
 pub mod serializer;
-pub mod session;
 pub mod state;
 #[cfg(test)]
 pub mod test_support;

@@ -33,16 +33,10 @@ pub fn all(hits: Vec<Hit>, documents: &[Document]) -> Vec<HitView> {
 }
 
 /// The title of document `id` and its part, as the page shows it.
-pub fn title_of(documents: &[Document], id: i64) -> String {
+fn title_of(documents: &[Document], id: i64) -> String {
     for document in documents {
         if document.id == id {
-            let fields = &document.fields;
-
-            return if fields.part.is_empty() {
-                fields.title.clone()
-            } else {
-                format!("{} — {}", fields.title, fields.part)
-            };
+            return document.title_and_part();
         }
     }
 

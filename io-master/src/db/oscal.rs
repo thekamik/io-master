@@ -4,6 +4,7 @@
 pub mod create;
 pub mod delete;
 pub mod error;
+pub mod ids;
 pub mod read;
 pub mod rows;
 pub mod schema;

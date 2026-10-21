@@ -1,4 +1,4 @@
-//! The views and forms of the page (serde): the only place of serialization.
+//! How an error of a command reaches the page (serde). The data of the
+//! elements is serialized in the `view.rs` of their folders (`views/`).
 
-pub mod catalog_view;
 pub mod error_view;

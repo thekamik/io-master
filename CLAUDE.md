@@ -50,12 +50,12 @@ They bind **our code** (`src/`, `ui/`). The dependencies (Tauri, rusqlite, serde
 
 ## Terms (user, 2026-10-21)
 
-- **"UI"** in the words of the user is the Rust folder `io-master/src/tauri_ui/`; **"business"** is the Rust folder `io-master/src/business/`. The page (`io-master/ui/`, Svelte and TypeScript) is called **the page** or the front end.
+- **"UI"** in the words of the user is the Rust folder `io-master/src/tauri_ui/`; **"business"** was the Rust folder `io-master/src/business/`, replaced by the views (`io-master/src/views/`) in step 42. The page (`io-master/ui/`, Svelte and TypeScript) is called **the page** or the front end.
 - **The page and the Rust program are two separate projects that communicate** (through the commands of Tauri). Their files are never mixed in one folder.
 
 ## Main design rule: the desktop window is the only interface
 
-Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop window** (Tauri 2 + Svelte, `src/tauri_ui/` and `ui/`, a thin layer over `src/business/`; `docs/architecture.md`, section 4). The program is started without parameters and opens no network port for its interface; network functions (the reset service of a master and its client) are started from the window. There is no console interface. The earlier web interface was removed (its last state: commit `acedc8b`). Every function is designed so that the interface can use it without changes to the function:
+Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop window** (Tauri 2 + Svelte, `src/views/` and `ui/`, a thin layer over the folders below; `src/tauri_ui/` holds what the whole window shares; `docs/architecture.md`, section 4). The program is started without parameters and opens no network port for its interface; network functions (the reset service of a master and its client) are started from the window. There is no console interface. The earlier web interface was removed (its last state: commit `acedc8b`). Every function is designed so that the interface can use it without changes to the function:
 
 - **Core logic is separate from presentation.** Functions in the core never print, never read from the terminal, and never exit the process. They take parameters and return results; the interface presents them.
 - **Results and errors are data.** Internal functions return plain Rust types (structs, enums, `Vec`, `Result`) and are used only inside Rust. Errors are enums that the UI can tell apart, not only text.
@@ -64,7 +64,7 @@ Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop win
 - **Operations can be cancelled by the caller** (a cancellation token).
 - **Questions to the user go through the interface.** When an operation needs an answer (a PIN, a confirmation), it asks through an interface the UI implements, never by reading stdin itself.
 - **State lives in the core, not in the page.** The page holds no secret and no state that matters.
-- **What goes to Rust and what stays in the page (user, 2026-10-21).** An element of the window calls the back end only for what matters: running the AI, processing or storing data, anything that changes the state of the evaluation. What is only presentation (hover, an open menu, a selection, a tab, the position during a drag) stays in the page. Only the final result is sent, never the steps in between: for a diagram, the last coordinates (to restore it), not every position of a drag. **The views (user, 2026-10-21; step 42 of `docs/todo.md`, layout in `docs/code_structure.md`, section 2.9):** one folder per view and one per interactive element in `src/views/`, whose commands take the parameters from the page, do the work with the folders below and give the data back; they replace `business/` and the commands of `tauri_ui/`. Moved: Scan (the pilot), Start, Shell, Chat, Settings, Evaluation plan; every other view is moved the same way, one at a time.
+- **What goes to Rust and what stays in the page (user, 2026-10-21).** An element of the window calls the back end only for what matters: running the AI, processing or storing data, anything that changes the state of the evaluation. What is only presentation (hover, an open menu, a selection, a tab, the position during a drag) stays in the page. Only the final result is sent, never the steps in between: for a diagram, the last coordinates (to restore it), not every position of a drag. **The views (user, 2026-10-21; step 42 of `docs/todo.md`, layout in `docs/code_structure.md`, section 2.9):** one folder per view and one per interactive element in `src/views/`, whose commands take the parameters from the page, do the work with the folders below and give the data back; they replace `business/` and the commands of `tauri_ui/`. Every view is moved (Scan the pilot; Start, Shell, Chat, Settings, Evaluation plan, the editor of a catalog); `business/` and the commands of `tauri_ui/` are removed.
 
 ## Rules carried over from version 0.2 (the program in C)
 
@@ -82,7 +82,7 @@ Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop win
 
 ## Database code (steps 37 and 40 of docs/todo.md)
 
-- **SQL lives only in `io-master/src/db/`.** The business (`business/`) and `ai/` keep their logic and call the functions of `db/`; they never write SQL.
+- **SQL lives only in `io-master/src/db/`.** The views (`views/`) and `ai/` keep their logic and call the functions of `db/`; they never write SQL.
 - `db/` has one subfolder per area of data; each holds `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD: `create.rs`, `read.rs`, `update.rs`, `delete.rs` (a file that an area does not need is missing, which is visible in an audit).
 - Free functions only; a caller imports an area as `db_<area>` and calls `db_<area>::<operation>::<object>`. Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`, changes of the layout are migrations by version (`db/user/migrations.rs`).
 - `db/encryption/` holds all code of encryption; the head of every area states in which database its data lives and how it is protected.
@@ -98,11 +98,11 @@ Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop win
 ## The pipeline of data (user, 2026-10-17)
 
 - The functions and the responsibilities of the parts of the code are separated, and the pipeline is very readable: **at every moment one can tell where the information the program works on is** (in the page, in an object in memory, in the database, on its way to the AI).
-- The business manages the objects in memory of the session of the evaluator (`installation/session.rs`: the open database, a project open for editing with its versions for "Undo", an evaluation open for work); `db/` writes them lastingly, through at once (write-through); `ai/api/` is the only way to the AI.
+- The session of the evaluator holds the objects in memory (`installation/session.rs`: the open database, a project open for editing with its versions for "Undo", an evaluation open for work); `db/` writes them lastingly, through at once (write-through); `ai/api/` is the only way to the AI.
 
 ## The architecture (user, 2026-10-17; step 40 of docs/todo.md)
 
-The user's guidelines, built in step 40 (the layout and its rules: `docs/code_structure.md`). **No approval of a review moved with the code: every file is reviewed from the start of step 40 on** (`review.md`). Business functions are named after REST verbs (`catalogs::create`, `catalogs::add_group`), listed with their REST form at the head of each resource file.
+The user's guidelines, built in step 40 (the layout and its rules: `docs/code_structure.md`). **No approval of a review moved with the code: every file is reviewed from the start of step 40 on** (`review.md`). Guideline 2 was replaced in step 42 by the views ("Main design rule" above): the commands are named `<element>_<action>` and live in the folder of their element.
 
 1. `tauri_ui/` is a minimal intermediate layer that only joins the back end and the front end.
 2. The business logic is in a folder of its own, reached by the interface in the form of a REST API: no server, but the functions are designed as resources and operations.
@@ -123,5 +123,5 @@ The user's guidelines, built in step 40 (the layout and its rules: `docs/code_st
 - Small steps, each tested on its own (unit tests in Rust, end-to-end tests where a front end is involved) before the next step starts.
 - Readability first: the user has to keep an overview of the code. Clear structure, one responsibility per file.
 - Unit tests live in their own file next to the module, named `<file>_tests.rs`, and are attached with `#[cfg(test)] #[path = "<file>_tests.rs"] mod tests;`. `cargo fmt` (`rustfmt.toml`, 120 characters) before every commit.
-- A command of the window is listed in four places (`tauri_ui/commands.rs`, `main.rs`, `build.rs`, `capabilities/default.json`); the tests check that they agree, and that no folder uses a folder above it (`src/architecture_tests.rs`).
+- A command of the window is listed in four places (the `commands.rs` of its element in `views/`, `main.rs`, `build.rs`, `capabilities/default.json`); the tests check that they agree, and that no folder uses a folder above it (`src/architecture_tests.rs`).
 - Prefer few, well-known dependencies; explain each one when it is added.

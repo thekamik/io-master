@@ -2,10 +2,22 @@
 //! groups, with their parts and parameters. In the program: the criteria
 //! of a standard, a methodology with its work units, a test
 //! specification (docs/oscal.md, section 3).
+//!
+//! ```text
+//! catalog.rs        the types (this file), the error of a change
+//! catalog/tree.rs   where an object is, the walk through all of them (no recursion)
+//! catalog/edit.rs   a group or a control added, changed, removed
+//! ```
+
+pub mod edit;
+pub mod tree;
+
+use std::fmt;
 
 use serde::{Deserialize, Serialize};
 
 use super::common::{BackMatter, Link, Metadata, Other, Parameter, Part, Property};
+use tree::{MAX_DEPTH, MAX_OBJECTS};
 
 /// A catalog.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -74,42 +86,31 @@ pub struct Control {
     pub other: Other,
 }
 
-impl Catalog {
-    /// Every control of the catalog, in the order of the document (the
-    /// groups and the enhancements walked through), with the path of
-    /// titles of the groups it is in.
-    pub fn all_controls(&self) -> Vec<(Vec<&str>, &Control)> {
-        fn walk_control<'a>(path: &[&'a str], control: &'a Control, out: &mut Vec<(Vec<&'a str>, &'a Control)>) {
-            out.push((path.to_vec(), control));
+/// Why a change of a catalog was refused.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CatalogError {
+    /// There is no group or control with this id where it was looked for.
+    NoSuchObject(String),
+    /// Another group or control of the catalog has this id.
+    IdTaken(String),
+    /// What was given breaks a rule; the reason, for the evaluator.
+    Invalid(String),
+    /// Groups and enhancements deeper than `tree::MAX_DEPTH` levels.
+    TooDeep,
+    /// More groups and controls than `tree::MAX_OBJECTS`.
+    TooLarge,
+}
 
-            for inner in &control.controls {
-                walk_control(path, inner, out);
-            }
+impl fmt::Display for CatalogError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CatalogError::NoSuchObject(id) => write!(formatter, "the catalog has no group or control {id}"),
+            CatalogError::IdTaken(id) => write!(formatter, "another group or control of the catalog has the id {id}"),
+            CatalogError::Invalid(reason) => formatter.write_str(reason),
+            CatalogError::TooDeep => write!(formatter, "the catalog is deeper than {MAX_DEPTH} levels"),
+            CatalogError::TooLarge => write!(formatter, "the catalog has more than {MAX_OBJECTS} groups and controls"),
         }
-
-        fn walk_group<'a>(path: &[&'a str], group: &'a Group, out: &mut Vec<(Vec<&'a str>, &'a Control)>) {
-            let mut path = path.to_vec();
-            path.push(&group.title);
-
-            for control in &group.controls {
-                walk_control(&path, control, out);
-            }
-
-            for inner in &group.groups {
-                walk_group(&path, inner, out);
-            }
-        }
-
-        let mut out = Vec::new();
-
-        for control in &self.controls {
-            walk_control(&[], control, &mut out);
-        }
-
-        for group in &self.groups {
-            walk_group(&[], group, &mut out);
-        }
-
-        out
     }
 }
+
+impl std::error::Error for CatalogError {}

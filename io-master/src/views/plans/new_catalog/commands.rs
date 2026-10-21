@@ -2,12 +2,12 @@
 
 use tauri::State;
 
-use crate::business::oscal::catalogs;
 use crate::db::standards as db_standards;
 use crate::tauri_ui::error::UiError;
 use crate::tauri_ui::state::UiState;
 
 use super::super::oscal_documents::view::OscalDocumentView;
+use super::made;
 use super::view::{self, SourceView};
 
 /// The documents of a standard a catalog can come from, by title and
@@ -34,7 +34,7 @@ pub fn new_catalog_create(
 ) -> Result<OscalDocumentView, UiError> {
     let session = state.session()?;
 
-    Ok(OscalDocumentView::new(catalogs::create(&session.db(), &title, &version, &sources)?))
+    Ok(OscalDocumentView::new(made::create(&session.db(), &title, &version, &sources)?))
 }
 
 // Unit tests, in their own file to keep this one readable.

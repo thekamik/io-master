@@ -60,8 +60,20 @@ pub struct Document {
     pub page_count: u32,
 }
 
+impl Document {
+    /// Its title and part as the evaluator reads them: "Common Criteria —
+    /// Part 3", or the title alone.
+    pub fn title_and_part(&self) -> String {
+        if self.fields.part.is_empty() {
+            self.fields.title.clone()
+        } else {
+            format!("{} — {}", self.fields.title, self.fields.part)
+        }
+    }
+}
+
 /// A part of the text of one document of a standard, sent in one
-/// question to the AI (`business/standards/parts.rs`).
+/// question to the AI (`views/catalog_editor/ai_builder/parts.rs`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Part {
     pub document_id: i64,

@@ -30,7 +30,7 @@ fn a_catalog_gives_its_controls_with_their_groups() {
     let OscalDocument::Catalog(catalog) = OscalDocument::from_json(EXAMPLES[0].0).unwrap() else {
         panic!("a catalog");
     };
-    let controls = catalog.all_controls();
+    let controls = catalog.all_controls().unwrap();
 
     assert!(!controls.is_empty());
     assert!(controls.iter().all(|(path, _)| !path.is_empty()), "the example has its controls in groups");

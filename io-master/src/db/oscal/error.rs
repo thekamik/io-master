@@ -6,6 +6,7 @@ use std::fmt;
 
 use crate::db::error::DbError;
 use crate::model::oscal::NotOscal;
+use crate::model::oscal::catalog::CatalogError;
 
 /// Why an operation on a document of OSCAL was refused.
 #[derive(Debug)]
@@ -53,6 +54,16 @@ impl From<DbError> for OscalError {
         match error {
             DbError::NotOscal(error) => OscalError::NotOscal(error),
             other => OscalError::Db(other),
+        }
+    }
+}
+
+impl From<CatalogError> for OscalError {
+    fn from(error: CatalogError) -> OscalError {
+        match error {
+            CatalogError::NoSuchObject(id) => OscalError::NoSuchObject(id),
+            CatalogError::IdTaken(id) => OscalError::IdTaken(id),
+            other => OscalError::Invalid(other.to_string()),
         }
     }
 }
