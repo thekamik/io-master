@@ -91,7 +91,7 @@ The user (2026-10-23): the unit tests move from their own files (`<file>_tests.r
 **Phases** (one commit each, pushed; every test passing after it; the move is mechanical: the content of `<file>_tests.rs` is put into `mod tests { }` at the end of `<file>.rs`, rustfmt indents it, the `#[path]` lines are removed)
 - [x] 44.1 The rule in `CLAUDE.md` and `code_structure.md`; `architecture_tests.rs` as above; the small folders: `checks`, `model/`, `pdf/`, `security/`, `app/`, `components/`, `installation/`.
 - [x] 44.2 `db/` (13 files). The tests of a whole area of CRUD were split by the function each checks (user, 2026-10-23): every file of an area ends with the tests of its own functions; the shared data of the tests of `db/` is in `src/test_support/db.rs`.
-- [ ] 44.3 `ai/` (15 files).
+- [x] 44.3 `ai/` (15 files; each tested one file).
 - [ ] 44.4 `hardware_tests/` (3 files).
 - [ ] 44.5 `views/`: `start`, `shell`, `chat`, `settings`, `devices`.
 - [ ] 44.6 `views/evaluation_plan/` with its editor of a catalog; `handover.md`, the state of this step.
