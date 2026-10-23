@@ -2,17 +2,17 @@
 
 Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md` and the order table of `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English.
 
-## Where the project is (2026-10-21)
+## Where the project is (2026-10-23)
 
 - Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branches **`main`** (the tested state) and **`test_branch`** (the work); no other branches and no version numbers yet (`CLAUDE.md`, "Branches"; the earlier branches are named in `docs/history.md`).
 - **Step 40 (the cleanup of the architecture) is built**: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `tauri_ui/` (now `app/`), their rules and the tests that check them (`docs/code_structure.md`).
 - **Step 41 (NIST OSCAL, `docs/oscal.md`) is being built**, part by part (`docs/todo.md`, step 41): 41.1 to 41.3 are done. The evaluation plan works on documents of OSCAL 1.2.3 (import, export, deletion, every write checked against the schemas of NIST); catalogs are made in the program from the PDFs of a standard, with the AI proposing groups and controls and the evaluator accepting, correcting or rejecting them in the editor of a catalog (`src/views/evaluation_plan/catalog_editor/`, page `ui/src/views/evaluation_plan/catalog_editor/`). The quotes and the proposals are the evaluation support (`db/evaluation_support/`), linked to OSCAL by UUID and id.
 - **Step 42 (the views) is built** (2026-10-21): every function that joins the program with the page is a command of an element in `src/views/<view>/<element>/`; `business/` and the commands of `tauri_ui/` are removed (`docs/code_structure.md`, section 2.9).
+- **Step 43 (one vocabulary, views and components) is built** (2026-10-23): the names of the code follow the vocabulary of `docs/architecture.md`, section 10 (`start`, `shell`, `chat`, `evaluation_plan` with its editor of a catalog, `evaluation_lab`, `devices`, `settings`); `app/` (was `tauri_ui/`) holds what every view uses; the list of the commands is `src/routes.rs`; the elements used more than once are in `components/` (`pdf_viewer`, `part_rows`). The test of the architecture checks that a view never uses another view and a component never a view; a test checks that the ids of the pages agree with `Shell.svelte`.
 - **The review starts anew** on the code of step 40 (`review.md`): no approval moved with the code.
 
 ## What comes next
 
-0. **Step 43 (one vocabulary, views and components) is being built, phase by phase** (`docs/todo.md`, step 43): a session takes the first phase not ticked, does it to the end (build, tests, clippy, `npm run check`, its documentation), commits and pushes it. The vocabulary: `docs/architecture.md`, section 10.
 1. **41.4: profile and assessment plan** (the evaluation plan proper), shown as a graph; the CEM and the Protection Profiles as documents of OSCAL that a plan can take. Concept details first where `docs/oscal.md` leaves them open (section 4: the import of an SSP).
 2. **41.5: assessment results** (the evaluation), then steps 31 to 36 on them.
 3. The user's review (step 12), file by file: Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.

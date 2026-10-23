@@ -94,8 +94,8 @@ The first start is the real moment of installation. **It is told by the keyring 
 - Pages of the workstation, in this order in the navigation:
   1. **Chat**: the AI assistant, over the active AI connection.
   2. **Evaluation plan**: the OSCAL documents of the standards (catalogs made in the program or loaded, mappings, profiles, assessment plans), and the documents of standards (PDF) they quote (section 7.1).
-  3. **Evaluation lab** (was Evaluation and Manufacturer documentation, step 43.8): an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
-  4. **Devices** (was Scan and permissions): the serial ports, a filter by port type, later the access rights to the ports and the work on a device (UART, Bluetooth).
+  3. **Evaluation lab**: an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
+  4. **Devices**: the serial ports, a filter by port type, later the access rights to the ports and the work on a device (UART, Bluetooth).
   5. **Settings**, in tabs: **User** (the password, later the factors of the person), **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
 - The master shows only its administration panel.
 - **Logging in** is built as a mock-up first; the real mechanism comes near the end of development. The design of the keys (section 5) is fixed now, because the encrypted database depends on it.
@@ -237,7 +237,7 @@ The work is planned step by step in `todo.md`. Two items must not be forgotten w
 
 ## 10. Vocabulary (agreed 2026-10-23)
 
-The user prompts in Polish and the code is written in English, so every name below is used the same way in Rust, in the page, in the navigation of the window and in the documents. **A plan (step 43 of `todo.md`):** where the code still has an old name, it is given in brackets.
+The user prompts in Polish and the code is written in English, so every name below is used the same way in Rust, in the page, in the navigation of the window and in the documents.
 
 ### 10.1 The views
 
@@ -248,9 +248,9 @@ A **view** is a whole page of the window, the high-level display.
 | `start` | ekran logowania | the login and the first installation, before anybody is logged in |
 | `shell` | shell | the frame of the window around every view: the navigation, the user menu |
 | `chat` | chat | the panel with the chatbot (the AI in the role *consultation*) |
-| `evaluation_plan` (was `plans`, `catalog_editor`) | plan ewaluacji | everything from the PDFs of a standard to OSCAL: the documents of standards, catalogs made from them (the editor of a catalog), OSCAL documents loaded, the scheme of the evaluation (profile, assessment plan) |
-| `evaluation_lab` (was the placeholder Evaluation, and the placeholder Manufacturer documentation) | evaluation lab | the structure of a standard joined with what the client and the laboratory deliver (the documentation of the manufacturer, the Security Target, the results of the tests), and the evidence assessed with the AI |
-| `devices` (was `scan`) | urządzenia | the serial ports: the scan now, later UART, Bluetooth |
+| `evaluation_plan` | plan ewaluacji | everything from the PDFs of a standard to OSCAL: the documents of standards, catalogs made from them (the editor of a catalog), OSCAL documents loaded, the scheme of the evaluation (profile, assessment plan) |
+| `evaluation_lab` | evaluation lab | the structure of a standard joined with what the client and the laboratory deliver (the documentation of the manufacturer, the Security Target, the results of the tests), and the evidence assessed with the AI |
+| `devices` | urządzenia | the serial ports: the scan now, later UART, Bluetooth |
 | `settings` | ustawienia | the settings panel |
 
 The view `evaluation_plan` is wider than the OSCAL document *assessment plan* it makes; the two are never called by the same name.
@@ -261,8 +261,8 @@ A **component** is a small element used more than once: several times in one vie
 
 | Name | The user's words | What it is |
 |---|---|---|
-| `pdf_viewer` (was in `plans/`) | podgląd normy | a document of a standard, a quote highlighted on its page; in the evaluation plan and in the editor of a catalog |
-| `part_rows` (was in `catalog_editor/`) | części obiektu | the parts of a group or a control as rows; the object chosen and the proposals of the AI |
+| `pdf_viewer` | podgląd normy | a document of a standard, a quote highlighted on its page; in the evaluation plan and in the editor of a catalog |
+| `part_rows` | części obiektu | the parts of a group or a control as rows; the object chosen and the proposals of the AI |
 | `requirement` (planned, step 41.5) | wymaganie | a tile that describes one requirement of a standard; many times in a view and in several views; functions of the AI, such as the analysis of the requirement |
 
 **Open (user, 2026-10-23): the tiles of the evidence.** Not thought through yet, so nothing is decided and nothing is built. The user's present idea: a requirement is linked to its **input** tiles, which say what is needed to satisfy it; a **proof** tile (dowód: a result of a test, quotes of a standard or of the Security Target) is linked to an input, and the AI in the input checks whether the proof meets the criteria to be that input of the requirement.
@@ -272,7 +272,7 @@ A **component** is a small element used more than once: several times in one vie
 | Name | The user's words | What it is |
 |---|---|---|
 | the page | strona, front end | `io-master/ui/`, Svelte and TypeScript: a separate project |
-| `app/` (was `tauri_ui/`) | app | what every view uses: the state of the window (`AppState`), the errors of the commands (`AppError`) |
+| `app/` | app | what every view uses: the state of the window (`AppState`), the errors of the commands (`AppError`) |
 | `routes.rs` | routes | the list of every command the page may call, as `urls.py` of Django; above the views it names |
 | command | komenda | a function of Rust the page calls through Tauri, named `<element>_<action>` |
 | evaluation support | wsparcie ewaluacji | what the program adds to OSCAL (quotes, proposals of the AI, instructions, the layout of the graph), linked to OSCAL by UUID and id (section 7.1) |
@@ -286,7 +286,7 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 | `views/` | the views of section 10.1: one folder per view, with the elements of its page used only there; a command takes the parameters from the page, does the work with the folders below and gives the data back | `components/`, everything below |
 | `components/` | the components of section 10.2, built as an element: its commands and its data | everything below `views/` |
 | `routes.rs` (a file, not a folder) | the list of every command the page may call; the window of the program and the window of the tests use it | `views/` |
-| `app/` (was `tauri_ui/`) | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart | `installation/`, `model/`, the errors of the folders below |
+| `app/` | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart | `installation/`, `model/`, the errors of the folders below |
 | `installation/` | the installation of the Linux account, its one account and the session of the logged-in evaluator: the core of the protection | `db/`, `security/`, `model/` |
 | `ai/` | the whole communication with AI services: `ai/api/` the only way to a model, `ai/tasks/` the questions and the reading of the answers | `db/`, `model/` |
 | `hardware_tests/` | everything that talks to hardware: the scan of the serial ports, later UART, Bluetooth, the permissions of the ports | `model/` |
