@@ -26,7 +26,7 @@ pub fn generate_database_key() -> io::Result<DatabaseKey> {
 mod tests {
     //! Unit tests of `generate_key.rs`.
     //!
-    //! The source of the bytes is tested in `random/random_tests.rs`;
+    //! The source of the bytes is tested in `security/random.rs`;
     //! these tests check that a key is filled from it.
 
     use super::*;

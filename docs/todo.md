@@ -93,7 +93,7 @@ The user (2026-10-23): the unit tests move from their own files (`<file>_tests.r
 - [x] 44.2 `db/` (13 files). The tests of a whole area of CRUD were split by the function each checks (user, 2026-10-23): every file of an area ends with the tests of its own functions; the shared data of the tests of `db/` is in `src/test_support/db.rs`.
 - [x] 44.3 `ai/` (15 files; each tested one file).
 - [x] 44.4 `hardware_tests/` (3 files).
-- [ ] 44.5 `views/`: `start`, `shell`, `chat`, `settings`, `devices`.
+- [x] 44.5 `views/`: `start`, `shell`, `chat`, `settings`, `devices`.
 - [ ] 44.6 `views/evaluation_plan/` with its editor of a catalog; `handover.md`, the state of this step.
 
 **Done when** no `<file>_tests.rs` is left besides the tests of the whole program, and the test of the architecture checks that every test module is the last item of its file.

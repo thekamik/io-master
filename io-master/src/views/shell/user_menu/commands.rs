@@ -12,7 +12,21 @@ pub fn user_menu_log_out(state: State<'_, AppState>) {
     state.log_out();
 }
 
-// Unit tests, in their own file to keep this one readable.
 #[cfg(test)]
-#[path = "commands_tests.rs"]
-mod tests;
+mod tests {
+    //! Unit tests of `user_menu/commands.rs`, through the IPC of Tauri.
+
+    use serde_json::json;
+
+    use crate::views::test_support::logged_in_window;
+
+    #[test]
+    fn the_logout_ends_the_session() {
+        let window = logged_in_window();
+
+        window.call("user_menu_log_out", json!({})).unwrap();
+
+        assert_eq!(window.call("program_get", json!({})).unwrap()["user"], json!(null));
+        assert_eq!(window.call("ports_table_scan", json!({})).unwrap_err()["kind"], "not_logged_in");
+    }
+}
