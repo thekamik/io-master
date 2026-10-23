@@ -16,7 +16,8 @@ This document says **where** everything is in the code and **which rules keep it
 
 ```text
 io-master/src/
-  main.rs            the list of the folders, main(), tauri_startup(); nothing else
+  main.rs            the map of the program (every folder and its modules, in the order of the
+                     layers, each group commented), main(), tauri_startup(); nothing else
   routes.rs          the list of the commands the page may call (as urls.py of Django), above views/
   checks.rs          the macro ensure! (rule 5 of CLAUDE.md), known in the whole program
   model/             the data as plain Rust types and the rules of their validity; no I/O
@@ -193,7 +194,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 | Topic | Rule |
 |---|---|
 | Names | No file repeats the name of its folder (`security/tpm/chip.rs`, not `tpm/tpm.rs`). Functions of a resource are verbs. |
-| Modules | Every folder declares its modules in the file of the same name next to it (`db.rs` next to `db/`); `main.rs` lists only the top folders, so a new file never changes it. The views and their elements use `mod.rs` inside their folder (section 2.9). |
+| Modules | **`main.rs` is the map of the program** (step 45, user 2026-10-23): every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment that says which part of the project it is; a file that would only declare modules does not exist. A file with code that has modules of its own (`model/oscal.rs`) declares them itself. **A plan:** the folders not written in `main.rs` yet still declare their modules in the file of their name (`db.rs` next to `db/`); the views and their elements use `mod.rs` inside their folder (section 2.9) until step 46. |
 | Rules of the code | CLAUDE.md, "The rules for Rust" (The Power of 10 adapted). A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error; never `assert!` outside the tests. |
 | Comments | Code comments and documentation in English, thorough; the head of every file says what it holds and, where it helps, draws the path of the data. |
 | Tests | In the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }` (step 44; a file `*_tests.rs` besides the two tests of the whole program is refused by `architecture_tests.rs`). Help for the tests in `test_support.rs` (of an area), `src/test_support.rs` (temporary folders) and `src/test_support/` (`db.rs`: the data of the tests of `db/`; `standards.rs`: a database with a small standard); a test of a whole area of CRUD is split by the function it checks, so that `read.rs` ends with the tests of reading; the tests of the whole program in `src/architecture_tests.rs` and `src/command_lists_tests.rs`. |
@@ -212,7 +213,7 @@ Generated from the heads of the files (the tests left out):
 main.rs                      Entry point of IO Master.
 routes.rs                  The routes of the window: the list of every command the page may
 checks.rs                  The checks of conditions that should never happen (rule 5 of
-model.rs/                  The data of the program as plain Rust types, and the rules of
+model/  (main.rs)           The data of the program as plain Rust types, and the rules of
   ai.rs                        The data of the communication with AI services: a connection as
   api_key.rs                   The API key of an AI connection of one evaluator
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the

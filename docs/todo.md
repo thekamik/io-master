@@ -24,7 +24,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14b | **42: The views: one folder per element of the window, instead of `business/` and the commands of `tauri_ui/`** | **built 2026-10-21: every view moved, `business/` and the commands of `tauri_ui/` removed** (below) |
 | 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **built 2026-10-23, in the phases 43.1 to 43.9** (below) |
 | 14d | **44: The tests in the file they test** | **built 2026-10-23, in the phases 44.1 to 44.6** (below) |
-| 14e | **45: The tree of the modules in `main.rs`** | **approved 2026-10-23; after step 44** (below) |
+| 14e | **45: The tree of the modules in `main.rs`** | **approved 2026-10-23; built in phases 45.1 to 45.4** (below) |
 | 14f | **46: The entry of a view** | **to be designed; after step 45** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
@@ -53,7 +53,7 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 45: The tree of the modules in `main.rs` (2026-10-23)
 
-**State: approved by the user (2026-10-23); built after step 44. No code changed yet.**
+**State: approved by the user (2026-10-23); built phase by phase (below).**
 
 27 files of the layers hold no code, only declarations of modules (`db.rs`, `db/ai.rs`, `db/ai/chats.rs`, `security.rs`, `security/tpm.rs`, ...). The user: they are moved into `main.rs`, but not as a heap: in the order of the layers (`model/` up to `views/`), each group with a comment that says which part of the project it is and what it does, and each module with its line; `main.rs` becomes the map of the program. Rust allows it: `mod security { pub mod random; pub mod tpm { pub mod chip; } }` in `main.rs` finds `src/security/random.rs` and `src/security/tpm/chip.rs`.
 
@@ -63,7 +63,11 @@ Legend: `[ ]` to do, `[x]` done.
 - [x] The comments of the removed files: a line that names a folder goes to its group in `main.rs`; a longer description of the architecture goes to `docs/` (Markdown, with schemes), never to the head of another file (`CLAUDE.md`, "Where the comments are").
 - [x] The `mod.rs` of the views and of the components (35 files) are not part of this step: step 46.
 
-**Tasks** (phases, one commit each, as in steps 43 and 44): the layers from the bottom (`model/`, `db/`, `security/`, `ai/`, `hardware_tests/`, `pdf/`, `installation/`, `app/`); `code_structure.md` (sections 3 and 4); the exception of `hardware_tests.rs` in `architecture_tests.rs` (`the_tests_of_a_file_are_never_in_a_file_of_their_own`) removed with the file.
+**Phases** (one commit each, pushed, every test passing; `code_structure.md`, sections 3 and 4, with each):
+- [x] 45.1 The map in `main.rs`: every folder in the order of the layers from the bottom up, each group commented; `model/` written as its tree, `model.rs` removed (its list of files named a file that no longer exists, `analysis.rs`: the descriptions in files without code go stale).
+- [ ] 45.2 `security/` and `db/`.
+- [ ] 45.3 `ai/`.
+- [ ] 45.4 `hardware_tests/`, `pdf/`, `installation/`, `app/`; the exception of `hardware_tests.rs` in `architecture_tests.rs` (`the_tests_of_a_file_are_never_in_a_file_of_their_own`) removed with the file; the state of this step.
 
 ---
 

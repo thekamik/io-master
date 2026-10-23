@@ -28,22 +28,61 @@
 #[macro_use]
 mod checks;
 
-// The folders of the program. Each declares its own modules in the
-// file of the same name next to it (`db.rs` next to `db/`), so that
-// a new file never changes this one; the whole tree is described in
-// docs/code_structure.md.
-mod ai;
-mod app;
-mod components;
-mod db;
-mod hardware_tests;
-mod installation;
-mod model;
-mod pdf;
+// ── The map of the program ──────────────────────────────────────────
+// Every folder of the program, in the order of its layers from the bottom
+// up: a folder uses only the folders above it in this list
+// (docs/code_structure.md, section 1; checked by architecture_tests.rs).
+// The comment of a group says which part of the project it is; what each
+// file holds is said at its functions. Step 45 of docs/todo.md writes the
+// modules of every folder here, one folder at a time; a folder not written
+// here yet declares its modules in the file of its name (`db.rs`).
+
+// model/: the data of the program as plain Rust types and the rules of
+// their validity; no I/O (no database, no network, no file).
+mod model {
+    pub mod ai;
+    pub mod api_key;
+    pub mod chats;
+    pub mod evaluation_support;
+    pub mod installation;
+    pub mod oscal;
+    pub mod standards;
+    pub mod text;
+    pub mod time;
+}
+
+// security/: the building blocks of protection: random numbers, the TPM.
 mod security;
+
+// db/: every operation on a database, as CRUD, one folder per area of data.
+mod db;
+
+// ai/: the whole communication with AI services.
+mod ai;
+
+// hardware_tests/: the whole communication with hardware.
+mod hardware_tests;
+
+// pdf/: reading PDFs with Poppler, another program, in one place.
+mod pdf;
+
+// installation/: the installation of this Linux account, its one account
+// and the session of the logged-in evaluator.
+mod installation;
+
+// app/: what every view uses: the state of the window, the errors of the
+// commands.
+mod app;
+
+// components/: the elements of the window used more than once.
+mod components;
+
+// views/: the views of the window, one folder per view.
+mod views;
+
+// Help for the tests: temporary folders, a database with a small standard.
 #[cfg(test)]
 mod test_support;
-mod views;
 
 // The routes of the window: the list of the commands the page may call,
 // above the views it names.
