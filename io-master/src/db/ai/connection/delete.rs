@@ -45,3 +45,36 @@ pub(super) fn remove_key(db: &UserDb, id: i64) -> Result<(), DbError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of deleting an AI connection and its API key.
+
+    use super::*;
+
+    use crate::db::ai::connection::{create, read, update};
+    use crate::test_support::db::{key, named};
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn deleting_the_active_connection_leaves_none_active() {
+        let test = database();
+        create::connection(&test.db, &named("A")).unwrap();
+        let second = create::connection(&test.db, &named("B")).unwrap().id;
+        update::active(&test.db, second).unwrap();
+
+        assert!(connection(&test.db, second).unwrap());
+        assert_eq!(read::active(&test.db).unwrap(), None);
+        assert!(!connection(&test.db, second).unwrap());
+    }
+
+    #[test]
+    fn the_key_is_removed_with_its_connection() {
+        let test = database();
+        let id = create::connection(&test.db, &named("Local")).unwrap().id;
+        update::api_key(&test.db, id, &key()).unwrap();
+
+        connection(&test.db, id).unwrap();
+        assert!(read::api_key(&test.db, id).unwrap().is_none());
+    }
+}

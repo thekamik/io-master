@@ -44,8 +44,61 @@ pub fn connection(db: &UserDb, connection: &Connection) -> Result<SavedConnectio
     Ok(SavedConnection { id, key_removed: false })
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// cover the whole folder (create, read, update, delete).
 #[cfg(test)]
-#[path = "create_tests.rs"]
-mod tests;
+mod tests {
+    //! Tests of storing a new AI connection.
+
+    use super::*;
+
+    use crate::db::ai::connection::read;
+    use crate::test_support::db::named;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_connection_is_stored_with_the_next_id_and_no_key() {
+        let test = database();
+
+        let saved = connection(&test.db, &named("Local")).unwrap();
+        assert_eq!(saved, SavedConnection { id: 1, key_removed: false });
+
+        let stored = read::get(&test.db, 1).unwrap().unwrap();
+        assert_eq!(stored.connection, named("Local"));
+        assert!(!stored.has_key);
+    }
+
+    #[test]
+    fn a_name_taken_in_another_case_is_refused() {
+        let test = database();
+        connection(&test.db, &named("Local")).unwrap();
+
+        assert!(matches!(connection(&test.db, &named("local")), Err(SaveError::NameTaken)));
+    }
+
+    #[test]
+    fn the_first_connection_becomes_the_active_one() {
+        let test = database();
+        let first = connection(&test.db, &named("A")).unwrap().id;
+        connection(&test.db, &named("B")).unwrap();
+
+        assert_eq!(read::active(&test.db).unwrap(), Some(first));
+    }
+
+    #[test]
+    fn a_connection_the_database_refuses_leaves_nothing_behind() {
+        let test = database();
+        connection(&test.db, &named("Local")).unwrap();
+
+        // The last statement of the save fails: the database refuses to
+        // store the active connection.
+        test.db
+            .connection_for_tests()
+            .execute_batch(
+                "DELETE FROM settings WHERE name = 'ai.active_connection';
+             CREATE TRIGGER refuse BEFORE INSERT ON settings BEGIN SELECT RAISE(ABORT, 'refused'); END;",
+            )
+            .unwrap();
+
+        assert!(connection(&test.db, &named("Second")).is_err());
+        assert_eq!(read::list(&test.db).unwrap().len(), 1);
+    }
+}
