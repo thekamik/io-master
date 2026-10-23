@@ -10,8 +10,8 @@
 //! slow derivation of a key from a password: the keys of this
 //! program are random or derived in `keys.rs` already.
 //!
-//! **The parameters in effect** (the defaults of SQLCipher 4; the
-//! program sets none of them; checked by the test
+//! **The parameters in effect** (the defaults of SQLCipher 4, except the
+//! three of the memory, which `open()` sets; checked by the test
 //! `the_parameters_of_the_encryption_are_those_described`):
 //!
 //! | Parameter | Value |
@@ -22,7 +22,14 @@
 //! | integrity | HMAC-SHA512 per page (`cipher_use_hmac = 1`) |
 //! | page | 4096 bytes; no part of the header left plain |
 //! | derivation of the key | none: the key is raw bytes (PBKDF2-HMAC-SHA512, 256000 rounds, only for a passphrase) |
-//! | memory security of SQLCipher | off (`cipher_memory_security = 0`) |
+//! | memory security of SQLCipher | on (`cipher_memory_security = 1`): the memory it frees is wiped, its keys are locked in RAM (never in the swap) |
+//! | temporary data of SQLite | in memory only (`temp_store = 2`), never in a file beside the database |
+//! | cache of pages | 2 MiB (`cache_size = -2048`): only the pages a query reads are decrypted, and few are kept |
+//!
+//! The memory: decrypted data is only in RAM, and only what the queries of
+//! the moment read (step 47 of docs/todo.md, user 2026-10-23); the file
+//! on the disk is always encrypted, so a cut of the power leaves nothing
+//! readable.
 //!
 //! Where the key comes from: `keys.rs` (the key of the database of an
 //! evaluator, random, stored only wrapped) and `database_key.rs`.
@@ -136,6 +143,10 @@ pub fn open(path: &Path, key: &DatabaseKey) -> Result<Connection, DbError> {
 
     let connection = Connection::open(path)?;
 
+    // Before the key: SQLCipher wipes the memory it frees and locks its
+    // keys in RAM from the start.
+    connection.execute_batch("PRAGMA cipher_memory_security = ON")?;
+
     // The statement with the key, written into memory that is
     // wiped afterwards: 64 hexadecimal digits of the raw key.
     let mut statement = Zeroizing::new(String::with_capacity(80));
@@ -156,6 +167,11 @@ pub fn open(path: &Path, key: &DatabaseKey) -> Result<Connection, DbError> {
     connection
         .query_row("SELECT count(*) FROM sqlite_master", [], |row| row.get::<_, i64>(0))
         .map_err(|_| DbError::WrongKey(path.to_owned()))?;
+
+    // Only the minimum decrypted in RAM: the temporary data of SQLite (a
+    // sort, an index being built) in memory, never in a file, and a small
+    // cache of the pages read.
+    connection.execute_batch("PRAGMA temp_store = MEMORY; PRAGMA cache_size = -2048")?;
 
     // Foreign keys are checked by SQLite only when asked to.
     connection.execute_batch("PRAGMA foreign_keys = ON")?;
@@ -263,6 +279,11 @@ mod tests {
         connection.query_row(&format!("PRAGMA {name}"), [], |row| row.get(0)).unwrap()
     }
 
+    /// The value of a `PRAGMA` that SQLite gives as a number.
+    fn number(connection: &Connection, name: &str) -> i64 {
+        connection.query_row(&format!("PRAGMA {name}"), [], |row| row.get(0)).unwrap()
+    }
+
     /// The parameters of the encryption in effect, as the head of
     /// `sqlcipher.rs` describes them. The program does not set them: they
     /// are the defaults of SQLCipher 4. A newer SQLCipher that changed a
@@ -284,7 +305,10 @@ mod tests {
         assert_eq!(pragma(&connection, "cipher_kdf_algorithm"), "PBKDF2_HMAC_SHA512");
         assert_eq!(pragma(&connection, "kdf_iter"), "256000");
 
-        // Off: SQLCipher does not lock and wipe its own memory.
-        assert_eq!(pragma(&connection, "cipher_memory_security"), "0");
+        // The memory (step 47): wiped and locked, the temporary data in
+        // memory, a small cache.
+        assert_eq!(pragma(&connection, "cipher_memory_security"), "1");
+        assert_eq!(number(&connection, "temp_store"), 2);
+        assert_eq!(number(&connection, "cache_size"), -2048);
     }
 }

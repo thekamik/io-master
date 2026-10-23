@@ -14,7 +14,7 @@
 //! in the session until the logout. The way of the key in every operation:
 //! `docs/architecture.md`, section 12.
 
-use tauri::State;
+use tauri::{AppHandle, Runtime, State};
 use zeroize::Zeroizing;
 
 use crate::app::error::AppError;
@@ -165,6 +165,21 @@ pub fn user_menu_log_out(state: State<'_, AppState>) {
     state.log_out();
 }
 
+/// Logs out and closes the program.
+///
+/// Called by the page: `UserMenu.svelte`, "Log out and close"
+/// (`users.userMenuClose()`).
+/// Calls: `AppState::log_out` (as "Log out"), then `AppHandle::exit`, whose
+/// event of the end ends the session once more on its way out (`main.rs`):
+/// the cross of the window takes that way alone.
+// Tauri hands a command its handle and its state by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn user_menu_close<R: Runtime>(app: AppHandle<R>, state: State<'_, AppState>) {
+    state.log_out();
+    app.exit(0);
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of the commands of the view Users, called as the page calls
@@ -278,4 +293,7 @@ mod tests {
         assert_eq!(window.call("program_get", json!({})).unwrap()["user"], json!(null));
         assert_eq!(window.call("ports_table_scan", json!({})).unwrap_err()["kind"], "not_logged_in");
     }
+    // `user_menu_close` is not called here: the mock runtime of Tauri does
+    // not implement the exit of the program. Its logout is the one tested
+    // above; the closing itself is tested in the window (docs/handover.md).
 }

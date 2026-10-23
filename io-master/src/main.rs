@@ -55,6 +55,7 @@ mod model {
 // system, and the TPM 2.0, the optional further factor. The encryption of
 // the databases is in db/encryption/.
 mod security {
+    pub mod process;
     pub mod random;
     // security/tpm/: the TPM 2.0 (docs/architecture.md, section 5.1).
     pub mod tpm {
@@ -447,6 +448,7 @@ use std::process::ExitCode;
 use app::state::AppState;
 use installation::lifecycle::Opened;
 use installation::verify::{InstallationState, verify_installation};
+use tauri::{Manager, RunEvent};
 
 // The two entries of the installation in the keyring of the Linux
 // account (docs/architecture.md, section 5.6). These constants are
@@ -513,7 +515,14 @@ fn main() -> ExitCode {
 /// of `tauri.conf.json` (only the own scripts and styles), and the
 /// list of commands it may call.
 fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
-    let result = tauri::Builder::default()
+    // The decrypted data is only in RAM: the system must never write the
+    // memory of the process into a file (security/process.rs).
+    if let Err(error) = security::process::forbid_memory_dumps() {
+        eprintln!("Error: the memory dumps of the program could not be forbidden: {error}");
+        return ExitCode::FAILURE;
+    }
+
+    let built = tauri::Builder::default()
         // The dialogs of the system, used only from Rust (commands.rs).
         .plugin(tauri_plugin_dialog::init())
         // The state shared by all commands: the installation, the
@@ -521,13 +530,26 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         .manage(AppState::new(data_dir, opened))
         // The commands the page may call (routes.rs).
         .invoke_handler(routes::handler())
-        .run(tauri::generate_context!());
+        .build(tauri::generate_context!());
 
-    match result {
-        Ok(()) => ExitCode::SUCCESS,
+    let app = match built {
+        Ok(app) => app,
         Err(error) => {
             eprintln!("Error: the window could not be opened: {error}");
-            ExitCode::FAILURE
+            return ExitCode::FAILURE;
         }
-    }
+    };
+
+    // However the program ends (the cross of the window, "Log out and
+    // close", the end of the session of the desktop), the session ends the
+    // way "Log out" ends it (AppState::log_out): the work stopped, the
+    // database closed, its key gone from memory. The closure is the one
+    // Tauri requires for its events (a library place, rule 9 of CLAUDE.md).
+    let code = app.run_return(|handle, event| {
+        if let RunEvent::Exit = event {
+            handle.state::<AppState>().log_out();
+        }
+    });
+
+    ExitCode::from(u8::try_from(code).unwrap_or(1))
 }

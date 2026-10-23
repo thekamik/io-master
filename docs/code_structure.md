@@ -349,6 +349,7 @@ installation/              The installation of this Linux account, its one user 
   uninstall.rs                 (not compiled: "DO NOT USE: TO BE REWORKED", step 12)
   verify.rs                    The check of the installation at the start of the program.
 security/                  The building blocks of protection: random numbers from the system,
+  process.rs                   The protection of the memory of the process: no memory dumps.
   random.rs                    Random bytes from the kernel.
   tpm/                         The TPM 2.0, the optional further factor (`docs/architecture.md`,
     chip.rs                      Talking to the TPM 2.0.

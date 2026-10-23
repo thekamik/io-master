@@ -27,6 +27,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::users::users::login_form_log_in,
         crate::views::users::users::password_form_change,
         crate::views::users::users::user_menu_log_out,
+        crate::views::users::users::user_menu_close,
         // The frame of the window (views/shell/).
         crate::views::shell::shell::program_get,
         // The view Settings (views/settings/): the settings of the program.

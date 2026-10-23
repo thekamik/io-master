@@ -41,3 +41,8 @@ export function passwordFormChange(
 export function userMenuLogOut(): Promise<void> {
   return invoke("user_menu_log_out");
 }
+
+/** Logs out and closes the program. Called by UserMenu.svelte, "Log out and close". */
+export function userMenuClose(): Promise<void> {
+  return invoke("user_menu_close");
+}

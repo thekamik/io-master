@@ -14,6 +14,7 @@ fn main() {
         "login_form_log_in",
         "program_get",
         "user_menu_log_out",
+        "user_menu_close",
         "password_form_change",
         "connection_list_get",
         "connection_form_new",
