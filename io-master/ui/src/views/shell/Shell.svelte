@@ -10,11 +10,11 @@
 <script lang="ts">
   import type { ProgramView } from "../../lib/api/shell/program";
   import Chat from "../chat/Chat.svelte";
+  import Devices from "../devices/Devices.svelte";
   import Documentation from "../../pages/Documentation.svelte";
   import Evaluation from "../../pages/Evaluation.svelte";
   import Plans from "../plans/Plans.svelte";
   import Settings from "../settings/Settings.svelte";
-  import Scan from "../scan/Scan.svelte";
   import UserMenu from "./UserMenu.svelte";
 
   let { app, onloggedout }: { app: ProgramView; onloggedout: () => void } = $props();
@@ -56,7 +56,7 @@
     {:else if name === "documentation"}
       <path d="M6 3.5h8l4 4v13H6z" />
       <path d="M14 3.5v4h4M9 12h6M9 15h6M9 18h4" />
-    {:else if name === "scan"}
+    {:else if name === "devices"}
       <rect x="4" y="8" width="16" height="9" rx="2" />
       <path d="M8 12h.01M12 12h.01M16 12h.01M9 4v4M15 4v4" />
     {:else if name === "settings"}
@@ -111,8 +111,8 @@
       <Plans />
     {:else if active === "documentation"}
       <Documentation />
-    {:else if active === "scan"}
-      <Scan />
+    {:else if active === "devices"}
+      <Devices />
     {:else if active === "settings"}
       <Settings {app} />
     {:else}

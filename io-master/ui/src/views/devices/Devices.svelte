@@ -1,6 +1,6 @@
 <!--
-  The view Scan (src/views/scan/): the settings of the scanner above the
-  table of ports. The view holds no data of its own: each element reads
+  The view Devices (src/views/devices/): the settings of the scanner
+  above the table of ports. The view holds no data of its own: each element reads
   its own, and the view only passes on that the settings were saved, so
   that the table scans again with them.
 -->

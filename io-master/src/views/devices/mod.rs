@@ -1,5 +1,6 @@
-//! The view Scan: the serial ports of the computer and the settings of
-//! the scanner (page: `ui/src/views/scan/`).
+//! The view Devices: the serial ports of the computer and the settings of
+//! the scanner (page: `ui/src/views/devices/`); later the work on a device
+//! (UART, Bluetooth). Named Scan until step 43.3 of docs/todo.md.
 //!
 //! ```text
 //! element            folder               commands

@@ -33,7 +33,7 @@ pub struct ProgramView {
 /// A page in the navigation.
 #[derive(Debug, Serialize)]
 pub struct PageView {
-    /// What the page calls it: `"chat"`, `"scan"`, ...
+    /// What the page calls it: `"chat"`, `"devices"`, ...
     pub id: &'static str,
     pub title: &'static str,
 }
@@ -55,7 +55,7 @@ fn pages(role: Role) -> Vec<PageView> {
             PageView { id: "evaluation", title: "Evaluation" },
             // A placeholder until step 30 of docs/todo.md is designed.
             PageView { id: "documentation", title: "Manufacturer documentation" },
-            PageView { id: "scan", title: "Scan and permissions" },
+            PageView { id: "devices", title: "Devices" },
             PageView { id: "settings", title: "Settings" },
         ],
         Role::Master => vec![PageView { id: "admin", title: "Password reset" }],

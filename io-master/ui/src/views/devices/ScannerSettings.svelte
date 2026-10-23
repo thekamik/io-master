@@ -1,6 +1,6 @@
 <!--
-  The element "scanner settings" of the view Scan
-  (src/views/scan/scanner_settings/): which kinds of port a scan looks
+  The element "scanner settings" of the view Devices
+  (src/views/devices/scanner_settings/): which kinds of port a scan looks
   for and which columns the table shows, folded under a one-line
   summary.
 
@@ -11,7 +11,7 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as scannerSettings from "../../lib/api/scan/scanner_settings";
+  import * as scannerSettings from "../../lib/api/devices/scanner_settings";
 
   let { onsaved }: { onsaved: () => void } = $props();
 

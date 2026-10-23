@@ -1,7 +1,7 @@
-// The element "scanner settings" of the view Scan: its commands and its
-// data (src/views/scan/scanner_settings/).
+// The element "scanner settings" of the view Devices: its commands and its
+// data (src/views/devices/scanner_settings/).
 //
-// The types mirror src/views/scan/scanner_settings/view.rs; a change
+// The types mirror src/views/devices/scanner_settings/view.rs; a change
 // there needs the same change here.
 
 import { invoke } from "@tauri-apps/api/core";

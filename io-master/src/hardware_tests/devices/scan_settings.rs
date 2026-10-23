@@ -3,7 +3,7 @@
 //!
 //! Plain data and its rules, without any I/O. They are stored by
 //! `db/scan_settings/` as two texts, and used by the elements of the
-//! view Scan (`views/scan/`):
+//! view Scan (`views/devices/`):
 //!
 //! ```text
 //! a form of the page   ScanSettings::from_form()     strict: what the page never sends is refused

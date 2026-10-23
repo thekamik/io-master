@@ -20,7 +20,7 @@ fn a_workstation_shows_its_pages_its_warnings_and_its_user() {
 
     assert_eq!(program["user"], "anna");
     assert_eq!(program["pages"].as_array().unwrap().len(), 6);
-    assert_eq!(program["pages"][4], json!({ "id": "scan", "title": "Scan and permissions" }));
+    assert_eq!(program["pages"][4], json!({ "id": "devices", "title": "Devices" }));
     assert_eq!(program["warnings"].as_array().unwrap().len(), 2);
     assert_ne!(program["version"], "");
 }

@@ -1,5 +1,5 @@
-//! The element "scanner settings" of the view Scan
-//! (page: `ui/src/views/scan/ScannerSettings.svelte`).
+//! The element "scanner settings" of the view Devices
+//! (page: `ui/src/views/devices/ScannerSettings.svelte`).
 //!
 //! ```text
 //! action   command                 parameters                 data back

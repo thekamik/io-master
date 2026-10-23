@@ -6,7 +6,7 @@
 //! and says what one of them lacks. It also checks the rule of the views
 //! (`views.rs`): a command of an element lives in the folder of that
 //! element and is named after it (`ports_table_scan` in
-//! `views/scan/ports_table/commands.rs`).
+//! `views/devices/ports_table/commands.rs`).
 
 use std::collections::BTreeSet;
 use std::fs;

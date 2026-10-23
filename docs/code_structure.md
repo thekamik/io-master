@@ -140,7 +140,7 @@ serializer/     how an error reaches the page (serde)
 
 ```text
 ui/src/views/<view>/  the views: the view and one component per element, named as the folders
-                      of src/views/ (Scan.svelte, PortsTable.svelte, ScannerSettings.svelte)
+                      of src/views/ (Devices.svelte, PortsTable.svelte, ScannerSettings.svelte)
 ui/src/lib/api/<view>/<element>.ts
                       the commands of one element as typed functions; the types mirror its view.rs
 ui/src/lib/api/errors.ts
@@ -159,13 +159,13 @@ views/<view>/<element>/mod.rs        the element: its actions, their parameters,
 views/<view>/<element>/commands.rs   its commands: parameters -> work -> data
 views/<view>/<element>/view.rs       the data it gets (serde)
 views/<view>/<element>/commands_tests.rs
-views/<view>/<file>.rs               what the elements of one view share (Scan: stored_settings.rs, column_view.rs)
+views/<view>/<file>.rs               what the elements of one view share (Devices: stored_settings.rs, column_view.rs)
 ```
 
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the folder of its element; a test (`src/command_lists_tests.rs`) checks both.
 - **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `hardware_tests/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
-- **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Scan: the settings are saved, the table scans again).
+- **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Devices: the settings are saved, the table scans again).
 - **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database, the scan) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/plans/standard_documents/load.rs`).
 - **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`) through a `Channel` of Tauri, stop on the stop signal of `app/state.rs`, and hold no lock of the session while they wait for files or for the model.
 - **Documents of OSCAL** (step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction (`db/oscal/`); the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
@@ -382,6 +382,15 @@ views.rs/                  The views of the window, one folder per view and one 
       stored.rs                    What a chat keeps (`db/ai/chats/`, tables `chats` and `messages`, in
       turn.rs                      One turn of a chat: the message of the evaluator is checked and
       view.rs                      The data of the conversation as the page gets it: an open chat, and
+  devices/                     The view Devices: the serial ports of the computer and the settings of
+    column_view.rs               A column of the table of ports, as both elements of the view show
+    ports_table/                 The element "table of ports" of the view Devices
+      commands.rs                  The commands of the table of ports.
+      view.rs                      The data of the table of ports, as the page gets it: a ready table
+    scanner_settings/            The element "scanner settings" of the view Devices
+      commands.rs                  The commands of the settings of the scanner.
+      view.rs                      The data of the settings of the scanner, as the page gets it: the
+    stored_settings.rs           The settings of the scanner as they are stored: read by both
   plans/                       The view Evaluation plan: the documents of the standards in NIST OSCAL
     document_search/             The element "search" of the view Evaluation plan: the text of the
       commands.rs                  The command of the search.
@@ -403,15 +412,6 @@ views.rs/                  The views of the window, one folder per view and one 
       load.rs                      The loading of documents of standards from PDF files: a long work.
       stored.rs                    What is stored of a document of a standard, with its rules: a file is
       view.rs                      The data of the list of documents of standards, as the page gets and
-  scan/                        The view Scan: the serial ports of the computer and the settings of
-    column_view.rs               A column of the table of ports, as both elements of the view show
-    ports_table/                 The element "table of ports" of the view Scan
-      commands.rs                  The commands of the table of ports.
-      view.rs                      The data of the table of ports, as the page gets it: a ready table
-    scanner_settings/            The element "scanner settings" of the view Scan
-      commands.rs                  The commands of the settings of the scanner.
-      view.rs                      The data of the settings of the scanner, as the page gets it: the
-    stored_settings.rs           The settings of the scanner as they are stored: read by both
   settings/                    The view Settings: the password of the evaluator, the connections to
     api_key/                     The element "API key" of the view Settings, tab AI: the key of one
       commands.rs                  The commands of the API key.

@@ -1,5 +1,5 @@
-//! The element "table of ports" of the view Scan
-//! (page: `ui/src/views/scan/PortsTable.svelte`).
+//! The element "table of ports" of the view Devices
+//! (page: `ui/src/views/devices/PortsTable.svelte`).
 //!
 //! ```text
 //! action   command            parameters   data back

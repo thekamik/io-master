@@ -1,6 +1,6 @@
 <!--
-  The element "table of ports" of the view Scan
-  (src/views/scan/ports_table/): the serial ports of the computer, with
+  The element "table of ports" of the view Devices
+  (src/views/devices/ports_table/): the serial ports of the computer, with
   the columns of the settings.
 
   It scans when it is shown, when "Scan again" is pressed, and when the
@@ -11,7 +11,7 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as portsTable from "../../lib/api/scan/ports_table";
+  import * as portsTable from "../../lib/api/devices/ports_table";
 
   let table: portsTable.PortsTableView | null = $state(null);
   let problem = $state("");

@@ -1,12 +1,12 @@
-// The element "table of ports" of the view Scan: its command and its
-// data (src/views/scan/ports_table/).
+// The element "table of ports" of the view Devices: its command and its
+// data (src/views/devices/ports_table/).
 //
-// The types mirror src/views/scan/ports_table/view.rs; a change there
+// The types mirror src/views/devices/ports_table/view.rs; a change there
 // needs the same change here.
 
 import { invoke } from "@tauri-apps/api/core";
 
-/** A column of the table (src/views/scan/column_view.rs). */
+/** A column of the table (src/views/devices/column_view.rs). */
 export interface ColumnView {
   key: string;
   title: string;
