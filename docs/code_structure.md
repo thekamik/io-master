@@ -162,7 +162,7 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 
 ### 2.8a `components/`: the components (step 43)
 
-A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as an element of a view (`mod.rs`, `commands.rs`, `view.rs`, its tests), its commands are named `<component>_<action>`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first one is the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog.
+A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as an element of a view (`mod.rs`, `commands.rs`, `view.rs`, its tests), its commands are named `<component>_<action>`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog, and the parts of an object (`part_rows/`), shown twice by the editor of a catalog; a component that only shows data the elements give it has no `commands.rs`.
 
 ### 2.9 `views/`: the views of the window (step 42)
 
@@ -354,6 +354,8 @@ app.rs/                    What the whole window shares (Tauri 2): the state the
     error_view.rs                How an error of a command reaches the page:
   state.rs                     The state of the desktop interface, kept in Rust and never in
 components.rs/             The components of the window: small elements used more than once,
+  part_rows/                   The component "parts of an object": the parts of a group or a control
+    view.rs                      The data of the component "parts of an object": the parts of a group or
   pdf_viewer/                  The component "viewer of a standard": the original page of a PDF, with a
     commands.rs                  The command of the viewer of a standard.
     view.rs                      The data of the viewer, as the page gets it: the documents it can
@@ -404,7 +406,6 @@ views.rs/                  The views of the window, one folder per view and one 
         commands.rs                  The commands of the quotes of an object.
         view.rs                      The data of the quotes of an object, as the page gets it.
       oscal_object.rs              A group or a control of OSCAL sent by the page as JSON, read into the
-      part_rows.rs                 The parts of a group or a control (statement, items, guidance, ...) as
       proposals/                   The element "proposals" of the editor of a catalog: what the AI
         accept.rs                    A proposal of the AI accepted into its catalog.
         commands.rs                  The commands of the proposals.

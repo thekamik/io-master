@@ -13,7 +13,7 @@
   import { sentence } from "../../../lib/api/errors";
   import * as objectForm from "../../../lib/api/evaluation_plan/catalog_editor/object_form";
   import type { Place } from "../../../lib/api/evaluation_plan/catalog_editor/new_object";
-  import PartRows from "./PartRows.svelte";
+  import PartRows from "../../../components/part_rows/PartRows.svelte";
 
   let {
     uuid,

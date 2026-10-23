@@ -1,6 +1,7 @@
-//! The parts of a group or a control (statement, items, guidance, ...) as
-//! rows with their level, so that the page shows them without recursion:
-//! for the object chosen and for the proposals of the AI.
+//! The data of the component "parts of an object": the parts of a group or
+//! a control (statement, items, guidance, ...) as rows with their level, so
+//! that the page shows them without recursion: for the object chosen and for
+//! the proposals of the AI.
 
 use serde::Serialize;
 

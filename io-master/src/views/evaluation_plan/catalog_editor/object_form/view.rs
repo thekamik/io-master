@@ -4,10 +4,9 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::app::error::AppError;
+use crate::components::part_rows::view::{self as part_rows, PartRowView};
 use crate::model::oscal::catalog::tree::Location;
 use crate::model::oscal::catalog::{Catalog, Control, Group};
-
-use super::super::part_rows::{self, PartRowView};
 
 /// A group or a control of the catalog.
 #[derive(Debug, Serialize)]

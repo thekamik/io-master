@@ -5,6 +5,8 @@
 //! `ui/src/components/<component>/`.
 //!
 //! ```text
+//! part_rows/    the parts of an object as rows: the object chosen and the proposals
+//!               of the editor of a catalog
 //! pdf_viewer/   the viewer of a standard: the evaluation plan, the editor of a catalog
 //! ```
 //!
@@ -12,4 +14,5 @@
 //! `architecture_tests.rs`), and does its work with the folders below, as
 //! the elements of a view do.
 
+pub mod part_rows;
 pub mod pdf_viewer;

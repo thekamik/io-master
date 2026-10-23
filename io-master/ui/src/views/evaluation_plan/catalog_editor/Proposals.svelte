@@ -8,7 +8,7 @@
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
   import * as proposals from "../../../lib/api/evaluation_plan/catalog_editor/proposals";
-  import PartRows from "./PartRows.svelte";
+  import PartRows from "../../../components/part_rows/PartRows.svelte";
 
   let {
     uuid,

@@ -35,7 +35,6 @@
 //! ```text
 //! checked_quote.rs   a quote looked for on its page (the quotes, the proposals of the AI)
 //! oscal_object.rs    a group or a control sent by the page, read into the types of OSCAL
-//! part_rows.rs       the parts of an object as rows with their level (no recursion in the page)
 //! ```
 
 pub mod ai_builder;
@@ -46,7 +45,6 @@ pub mod new_object;
 pub mod object_form;
 pub mod object_quotes;
 pub mod oscal_object;
-pub mod part_rows;
 pub mod proposals;
 #[cfg(test)]
 pub mod test_support;

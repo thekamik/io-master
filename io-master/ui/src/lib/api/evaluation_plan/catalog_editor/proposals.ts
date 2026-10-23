@@ -3,7 +3,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-import type { PartRowView } from "./part_rows";
+import type { PartRowView } from "../../components/part_rows";
 
 export interface DraftView {
   source_document_id: number;
