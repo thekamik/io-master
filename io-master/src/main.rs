@@ -33,9 +33,10 @@ mod checks;
 // up: a folder uses only the folders above it in this list
 // (docs/code_structure.md, section 1; checked by architecture_tests.rs).
 // The comment of a group says which part of the project it is; what each
-// file holds is said at its functions. Step 45 of docs/todo.md writes the
-// modules of every folder here, one folder at a time; a folder not written
-// here yet declares its modules in the file of its name (`db.rs`).
+// file holds is said at its functions. Since step 45 of docs/todo.md the
+// modules of every layer are written here; components/ and views/ still
+// declare theirs in their mod.rs (step 46), and a file with code that has
+// modules of its own (model/oscal.rs) declares them itself.
 
 // model/: the data of the program as plain Rust types and the rules of
 // their validity; no I/O (no database, no network, no file).
@@ -212,19 +213,50 @@ mod ai {
     pub mod presets;
 }
 
-// hardware_tests/: the whole communication with hardware.
-mod hardware_tests;
+// hardware_tests/: everything that talks to hardware. No command reaches a
+// device without an action of the evaluator for it (P2 of
+// docs/architecture.md). permissions/permission.rs is empty until step 6 of
+// docs/todo.md and not compiled.
+mod hardware_tests {
+    // hardware_tests/devices/: the scan of the serial ports, and the
+    // settings of the scanner.
+    pub mod devices {
+        pub mod port_property;
+        pub mod scan_settings;
+        pub mod serial_ports;
+    }
+}
 
-// pdf/: reading PDFs with Poppler, another program, in one place.
-mod pdf;
+// pdf/: reading PDFs with the tools of Poppler (pdfinfo, pdftotext): the only
+// place where the program starts another program on a document of the
+// evaluator, kept in one folder for the audit. It uses nothing of the program.
+mod pdf {
+    pub mod poppler;
+}
 
-// installation/: the installation of this Linux account, its one account
-// and the session of the logged-in evaluator.
-mod installation;
+// installation/: the installation of this Linux account, its one user and
+// the session of that user: the core of the protection of the program.
+// uninstall.rs is not compiled ("DO NOT USE: TO BE REWORKED", step 12 of
+// docs/todo.md).
+mod installation {
+    pub mod accounts;
+    pub mod lifecycle;
+    pub mod session;
+    pub mod verify;
+}
 
-// app/: what every view uses: the state of the window, the errors of the
-// commands.
-mod app;
+// app/: what every view uses: the state of the window, and the errors of
+// the commands in kinds the page tells apart.
+mod app {
+    pub mod error;
+    pub mod state;
+    #[cfg(test)]
+    pub mod test_support;
+    // app/serializer/: how an error of a command reaches the page (serde).
+    pub mod serializer {
+        pub mod error_view;
+    }
+}
 
 // components/: the elements of the window used more than once.
 mod components;

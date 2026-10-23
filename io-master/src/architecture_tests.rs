@@ -374,10 +374,7 @@ fn the_tests_of_a_file_are_never_in_a_file_of_their_own() {
     for (file, _) in all_rust_files(&root) {
         let name = Path::new(&file).file_name().unwrap_or_default().to_string_lossy().into_owned();
 
-        // `hardware_tests.rs` declares the modules of the folder
-        // `hardware_tests/` and holds no tests; its name only ends so. It
-        // goes away in step 45 (the tree of the modules in main.rs).
-        if name.ends_with("_tests.rs") && !FILES_OF_TESTS.contains(&name.as_str()) && file != "hardware_tests.rs" {
+        if name.ends_with("_tests.rs") && !FILES_OF_TESTS.contains(&name.as_str()) {
             found.push(file);
         }
     }

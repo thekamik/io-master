@@ -194,7 +194,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 | Topic | Rule |
 |---|---|
 | Names | No file repeats the name of its folder (`security/tpm/chip.rs`, not `tpm/tpm.rs`). Functions of a resource are verbs. |
-| Modules | **`main.rs` is the map of the program** (step 45, user 2026-10-23): every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment that says which part of the project it is; a file that would only declare modules does not exist. A file with code that has modules of its own (`model/oscal.rs`) declares them itself. **A plan:** the folders not written in `main.rs` yet still declare their modules in the file of their name (`db.rs` next to `db/`); the views and their elements use `mod.rs` inside their folder (section 2.9) until step 46. |
+| Modules | **`main.rs` is the map of the program** (step 45, user 2026-10-23): every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment that says which part of the project it is; a file that would only declare modules does not exist. A file with code that has modules of its own (`model/oscal.rs`) declares them itself. **A plan:** `components/` and `views/` still declare their modules in their `mod.rs` (section 2.9) until step 46. |
 | Rules of the code | CLAUDE.md, "The rules for Rust" (The Power of 10 adapted). A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error; never `assert!` outside the tests. |
 | Comments | Code comments and documentation in English, thorough; the head of every file says what it holds and, where it helps, draws the path of the data. |
 | Tests | In the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }` (step 44; a file `*_tests.rs` besides the two tests of the whole program is refused by `architecture_tests.rs`). Help for the tests in `test_support.rs` (of an area), `src/test_support.rs` (temporary folders) and `src/test_support/` (`db.rs`: the data of the tests of `db/`; `standards.rs`: a database with a small standard); a test of a whole area of CRUD is split by the function it checks, so that `read.rs` ends with the tests of reading; the tests of the whole program in `src/architecture_tests.rs` and `src/command_lists_tests.rs`. |
@@ -213,7 +213,7 @@ Generated from the heads of the files (the tests left out):
 main.rs                      Entry point of IO Master.
 routes.rs                  The routes of the window: the list of every command the page may
 checks.rs                  The checks of conditions that should never happen (rule 5 of
-model/  (main.rs)           The data of the program as plain Rust types, and the rules of
+model/                     The data of the program as plain Rust types, and the rules of
   ai.rs                        The data of the communication with AI services: a connection as
   api_key.rs                   The API key of an AI connection of one evaluator
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the
@@ -331,14 +331,14 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
     catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a
     json.rs                      The JSON object in an answer of a model, and its texts.
-hardware_tests.rs/         Everything that talks to hardware (step 40 of docs/todo.md).
-  devices.rs/                  The scan of the serial ports, and the settings of the scanner.
+hardware_tests/            Everything that talks to hardware (step 40 of docs/todo.md).
+  devices/                     The scan of the serial ports, and the settings of the scanner.
     port_property.rs             The properties of a serial port that can be shown, one per
     scan_settings.rs             The settings of the scanner: which kinds of port a scan looks for,
     serial_ports.rs              Discovery of serial ports.
-pdf.rs/                    Reading PDFs with the tools of Poppler (`pdfinfo`, `pdftotext`): the
+pdf/                       Reading PDFs with the tools of Poppler (`pdfinfo`, `pdftotext`): the
   poppler.rs                   Reading the text of a PDF, page by page, with the tools of
-installation.rs/           The installation of this Linux account, its one user and the
+installation/              The installation of this Linux account, its one user and the
   accounts.rs                  The accounts of the evaluators: creating them, logging in, and
   lifecycle.rs                 The life of an installation: the first start, every later
   session.rs                   The logged-in evaluator (step 40): their account, their database,
@@ -350,9 +350,9 @@ security/                  The building blocks of protection: random numbers fro
     chip.rs                      Talking to the TPM 2.0.
     device_secret.rs             The secret of the device (`docs/architecture.md`, section 5.2).
     emulator.rs                  The TPM 2.0 emulator used until the beta version.
-app.rs/                    What the whole window shares (Tauri 2): the state the commands of the
+app/                       What the whole window shares (Tauri 2): the state the commands of the
   error.rs                     The errors the commands give back to the page, in kinds the page
-  serializer.rs/               How an error of a command reaches the page (serde). The data of the
+  serializer/                  How an error of a command reaches the page (serde). The data of the
     error_view.rs                How an error of a command reaches the page:
   state.rs                     The state of the desktop interface, kept in Rust and never in
 components.rs/             The components of the window: small elements used more than once,
