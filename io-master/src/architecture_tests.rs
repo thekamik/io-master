@@ -344,7 +344,7 @@ fn the_tests_of_a_file_are_its_last_item() {
         }
 
         let after = text.split_once(TESTS_START).map(|(_, rest)| rest).unwrap_or_default();
-        let last = after.lines().filter(|line| !line.trim().is_empty()).next_back().unwrap_or_default();
+        let last = after.lines().rfind(|line| !line.trim().is_empty()).unwrap_or_default();
 
         if last != "}" {
             broken.push(format!("{file}: the file does not end with the module of tests"));
