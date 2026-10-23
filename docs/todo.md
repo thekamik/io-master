@@ -25,7 +25,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **built 2026-10-23, in the phases 43.1 to 43.9** (below) |
 | 14d | **44: The tests in the file they test** | **built 2026-10-23, in the phases 44.1 to 44.6** (below) |
 | 14e | **45: The tree of the modules in `main.rs`** | **built 2026-10-23, in the phases 45.1 to 45.4** (below) |
-| 14f | **46: The entry of a view** | **to be designed; after step 45** (below) |
+| 14f | **46: The entry of a view** | **approved 2026-10-23; built in phases 46.1 to 46.7** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -71,9 +71,29 @@ Legend: `[ ]` to do, `[x]` done.
 
 ---
 
-## Step 46: The entry of a view (to be designed)
+## Step 46: The entry of a view (2026-10-23)
 
-**State: the wish of the user (2026-10-23); its concept is made after step 45.** When the folder of a view is opened, one must see at once where the view begins: the file the page calls to open it, and the functions the page calls to refresh its elements. The 35 `mod.rs` of the views and the components go with it; their descriptions of the flow of data move to `docs/` (`architecture.md`, section 12, and `code_structure.md`), and every function gets the comment of `CLAUDE.md` ("Where the comments are"). Proposed in the chat (2026-10-23), not decided: one file per view, named after it, with all its commands.
+**State: approved by the user (2026-10-23); built phase by phase (below).**
+
+When the folder of a view is opened, one must see at once where the view begins: the file the page calls to open it, and the functions the page calls to refresh its elements (user, 2026-10-23). The functions are right already; the fault is readability.
+
+**Decisions of the user**
+- [x] **One entry file per view, named after the view** (`views/chat/chat.rs`): all the commands of the view; first those the page calls when the view opens, then the refreshes and the actions of its elements. Every function carries the comment of `CLAUDE.md` ("Where the comments are"): what it does, where the page calls it (which component), which functions it calls. The `commands.rs` of the elements are gone.
+- [x] The folders of the elements stay, with their data and logic only (`view.rs`, `turn.rs`, `stored.rs`), around the entry file that uses them.
+- [x] The 35 `mod.rs` of the views and the components are gone: their declarations go into the map of `main.rs`, their descriptions of the flow of data into `docs/architecture.md`, section 12. The editor of a catalog, a screen of its own, has its entry `catalog_editor.rs`; a component has the file of its name (`pdf_viewer.rs`).
+- [x] The page follows: one file of commands per view (`ui/src/lib/api/chat.ts`) instead of one per element.
+- [x] No new command "open the view": the entry file shows at its top the functions the page calls when the view opens.
+- [x] The tests of the command lists check the new layout: a command is in the entry file of its view (or component), its name begins with the name of an element of that view.
+- The entry file has the name of its folder, so its module has the name of its parent (`views::devices::devices`); clippy's `module_inception` is allowed at those declarations in `main.rs`, with the reason.
+
+**Phases** (one commit each, pushed, every test passing; the documents with each)
+- [x] 46.1 `devices`, the pilot; `views.rs` written in the map of `main.rs`; the test of the command lists for entry files.
+- [ ] 46.2 `start` and `shell`.
+- [ ] 46.3 `chat`.
+- [ ] 46.4 `settings`.
+- [ ] 46.5 `evaluation_plan`.
+- [ ] 46.6 the editor of a catalog.
+- [ ] 46.7 the components (`pdf_viewer`, `part_rows`); `components.rs` in the map; the state of this step.
 
 ---
 

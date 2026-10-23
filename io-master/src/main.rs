@@ -261,8 +261,41 @@ mod app {
 // components/: the elements of the window used more than once.
 mod components;
 
-// views/: the views of the window, one folder per view.
-mod views;
+// views/: the views of the window, one folder per view. The entry of a view
+// is the file of its name in its folder: every command the page calls for
+// it (step 46 of docs/todo.md); the folders of its elements around it hold
+// their data and logic. The entry has the name of its folder, so its
+// module has the name of its parent: clippy's `module_inception` is
+// allowed there, on purpose.
+mod views {
+    // views/devices/: the view Devices: the serial ports of the computer and
+    // the settings of the scanner.
+    pub mod devices {
+        #[allow(clippy::module_inception)]
+        pub mod devices;
+
+        pub mod column_view;
+        pub mod stored_settings;
+        pub mod ports_table {
+            pub mod view;
+        }
+        pub mod scanner_settings {
+            pub mod view;
+        }
+    }
+
+    // The views not written here yet declare their modules in their mod.rs
+    // (step 46).
+    pub mod chat;
+    pub mod evaluation_plan;
+    pub mod settings;
+    pub mod shell;
+    pub mod start;
+
+    // Help for the tests of the views: a window of the mock runtime of Tauri.
+    #[cfg(test)]
+    pub mod test_support;
+}
 
 // Help for the tests: temporary folders, a database with a small standard.
 #[cfg(test)]

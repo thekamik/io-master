@@ -1,8 +1,9 @@
 <!--
-  The element "scanner settings" of the view Devices
-  (src/views/devices/scanner_settings/): which kinds of port a scan looks
-  for and which columns the table shows, folded under a one-line
-  summary.
+  The element "scanner settings" of the view Devices: which kinds of
+  port a scan looks for and which columns the table shows, folded under a
+  one-line summary. Its commands: scanner_settings_get and
+  scanner_settings_save (src/views/devices/devices.rs); its data:
+  src/views/devices/scanner_settings/view.rs.
 
   After a save it tells the view (onsaved), which asks the table of
   ports to scan again.
@@ -11,11 +12,11 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as scannerSettings from "../../lib/api/devices/scanner_settings";
+  import * as devices from "../../lib/api/devices";
 
   let { onsaved }: { onsaved: () => void } = $props();
 
-  let settings: scannerSettings.ScannerSettingsView | null = $state(null);
+  let settings: devices.ScannerSettingsView | null = $state(null);
   let problem = $state("");
   let busy = $state(false);
 
@@ -24,7 +25,7 @@
   let types: string[] = $state([]);
   let columns: string[] = $state([]);
 
-  function show(next: scannerSettings.ScannerSettingsView) {
+  function show(next: devices.ScannerSettingsView) {
     settings = next;
     allTypes = next.all_types;
     types = [...next.types];
@@ -33,7 +34,7 @@
 
   async function load() {
     try {
-      show(await scannerSettings.get());
+      show(await devices.scannerSettingsGet());
     } catch (error) {
       problem = `Your settings cannot be read: ${sentence(error)}`;
     }
@@ -45,7 +46,7 @@
     problem = "";
 
     try {
-      show(await scannerSettings.save(allTypes, allTypes ? [] : types, columns));
+      show(await devices.scannerSettingsSave(allTypes, allTypes ? [] : types, columns));
       onsaved();
     } catch (error) {
       problem = `Your settings were not saved: ${sentence(error)}`;

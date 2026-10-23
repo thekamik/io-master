@@ -64,7 +64,7 @@ At every moment it is clear where the information the program works on is (the u
 the page (ui/src/views/<view>/<Element>.svelte)   what it shows; no secret, no state that matters
   │  a command of the element (ui/src/lib/api/<view>/<element>.ts), its arguments as JSON
   ▼
-views/<view>/<element>/commands.rs   the session taken, the parameters checked, the work done:
+views/<view>/<view>.rs               the entry of the view: its command, the parameters checked, the work done:
   ├──► model/, hardware_tests/       the rules of the data
   ├──► db/                           written through at once, in one transaction
   └──► ai/api/, hardware_tests/      the only ways to a model and to a device
@@ -140,7 +140,7 @@ serializer/     how an error reaches the page (serde)
 ```
 
 - **No command and no rule is here**: the commands are in the folders of the elements (`views/`).
-- A command is callable only when it is listed in **four places**: the `commands.rs` of an element of `views/`, `routes.rs` (`generate_handler!`, used by the window and by the tests of the commands), `build.rs` (`AppManifest`), `capabilities/default.json`. A test (`src/command_lists_tests.rs`) reads the four lists and fails when they differ.
+- A command is callable only when it is listed in **four places**: the entry of its view (`views/<view>/<view>.rs`; a `commands.rs` of an element in the views not moved yet), `routes.rs` (`generate_handler!`, used by the window and by the tests of the commands), `build.rs` (`AppManifest`), `capabilities/default.json`. A test (`src/command_lists_tests.rs`) reads the four lists and fails when they differ.
 
 ### 2.8 `ui/`: the page
 
@@ -167,18 +167,21 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 
 A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as an element of a view (`mod.rs`, `commands.rs`, `view.rs`, its tests), its commands are named `<component>_<action>`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog, and the parts of an object (`part_rows/`), shown twice by the editor of a catalog; a component that only shows data the elements give it has no `commands.rs`.
 
-### 2.9 `views/`: the views of the window (step 42)
+### 2.9 `views/`: the views of the window (steps 42 and 46)
 
 ```text
-views/<view>/mod.rs                  the view: its elements, and the flow of data between them (drawn)
-views/<view>/<element>/mod.rs        the element: its actions, their parameters, the data back
-views/<view>/<element>/commands.rs   its commands: parameters -> work -> data
-views/<view>/<element>/view.rs       the data it gets (serde)
+views/<view>/<view>.rs               the entry of the view: every command the page calls for it, first those
+                                     called when the view opens, then the actions of its elements; each with
+                                     what it does, where the page calls it, what it calls; its tests at the end
+views/<view>/<element>/view.rs       the data an element gets (serde); its logic beside it (turn.rs, ...)
 views/<view>/<file>.rs               what the elements of one view share (Devices: stored_settings.rs, column_view.rs)
+ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
 ```
 
+The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** only Devices is built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
+
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
-- **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the folder of its element; a test (`src/command_lists_tests.rs`) checks both.
+- **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
 - **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `hardware_tests/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
 - **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Devices: the settings are saved, the table scans again).
 - **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database, the scan) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/evaluation_plan/standard_documents/load.rs`).
@@ -375,12 +378,11 @@ views.rs/                  The views of the window, one folder per view and one 
       turn.rs                      One turn of a chat: the message of the evaluator is checked and
       view.rs                      The data of the conversation as the page gets it: an open chat, and
   devices/                     The view Devices: the serial ports of the computer and the settings of
+    devices.rs                   The entry of the view Devices: every command the page calls for it
     column_view.rs               A column of the table of ports, as both elements of the view show
     ports_table/                 The element "table of ports" of the view Devices
-      commands.rs                  The commands of the table of ports.
       view.rs                      The data of the table of ports, as the page gets it: a ready table
     scanner_settings/            The element "scanner settings" of the view Devices
-      commands.rs                  The commands of the settings of the scanner.
       view.rs                      The data of the settings of the scanner, as the page gets it: the
     stored_settings.rs           The settings of the scanner as they are stored: read by both
   evaluation_plan/             The view Evaluation plan: the documents of the standards in NIST OSCAL

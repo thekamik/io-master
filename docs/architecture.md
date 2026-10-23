@@ -304,7 +304,7 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 the page: a view, its elements and components     what it shows; no secret, no state that matters
   │  a command <element>_<action>, its arguments as JSON
   ▼
-views/<view>/<element>/commands.rs                the session taken, the parameters checked
+views/<view>/<view>.rs (the entry of the view)   its command: the session taken, the parameters checked
   ├──► model/                                     the rules of the data
   ├──► db/                                        written through at once, in one transaction
   └──► ai/api/, hardware_tests/, pdf/             the only ways to a model, a device, a PDF
@@ -352,11 +352,16 @@ AI ──groups / controls(pages)──► ai/api/: the model, part by part ─�
 proposal ──accepted by the evaluator (P1)──► the catalog in db/oscal/
 ```
 
-**`devices`.**
+**`devices`** (entry `views/devices/devices.rs`, page `ui/src/views/devices/`).
 
 ```text
-settings ──save(types, columns)──► db/scan_settings/ ──"saved"──► the view ──► table
-table ──scan()──► the settings from db/ ──► hardware_tests/: the descriptions of the ports (a port is never opened)
+the view opens
+  ├─► ScannerSettings ──scanner_settings_get()──► db/scan_settings/: the texts ──► ScannerSettingsView
+  └─► PortsTable ──ports_table_scan()──► db/scan_settings/: the texts ──► hardware_tests/: the descriptions
+                                          of the ports (a port is never opened) ──► PortsTableView
+ScannerSettings ──scanner_settings_save(all_types, types, columns)──► the rules of the settings
+  │                    (hardware_tests/devices/scan_settings.rs) ──► db/scan_settings/ ──► ScannerSettingsView
+  └── "saved" ──► the view ──► PortsTable ──ports_table_scan()──► the table again
 ```
 
 **`settings`.**

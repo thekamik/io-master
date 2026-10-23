@@ -41,9 +41,9 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::settings::api_key::commands::api_key_delete,
         crate::views::settings::connection_check::commands::connection_check_run,
         // The view Devices (views/devices/).
-        crate::views::devices::ports_table::commands::ports_table_scan,
-        crate::views::devices::scanner_settings::commands::scanner_settings_get,
-        crate::views::devices::scanner_settings::commands::scanner_settings_save,
+        crate::views::devices::devices::ports_table_scan,
+        crate::views::devices::devices::scanner_settings_get,
+        crate::views::devices::devices::scanner_settings_save,
         // The view Chat (views/chat/).
         crate::views::chat::connection_line::commands::connection_line_get,
         crate::views::chat::chat_list::commands::chat_list_get,

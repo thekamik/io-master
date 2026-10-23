@@ -1,7 +1,8 @@
 <!--
-  The element "table of ports" of the view Devices
-  (src/views/devices/ports_table/): the serial ports of the computer, with
-  the columns of the settings.
+  The element "table of ports" of the view Devices: the serial ports of
+  the computer, with the columns of the settings. Its command:
+  ports_table_scan (src/views/devices/devices.rs); its data:
+  src/views/devices/ports_table/view.rs.
 
   It scans when it is shown, when "Scan again" is pressed, and when the
   view asks for it after the settings were saved (scan(), below). The
@@ -11,9 +12,9 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as portsTable from "../../lib/api/devices/ports_table";
+  import * as devices from "../../lib/api/devices";
 
-  let table: portsTable.PortsTableView | null = $state(null);
+  let table: devices.PortsTableView | null = $state(null);
   let problem = $state("");
   let busy = $state(false);
 
@@ -23,7 +24,7 @@
     problem = "";
 
     try {
-      table = await portsTable.scan();
+      table = await devices.portsTableScan();
     } catch (error) {
       problem = sentence(error);
     } finally {
