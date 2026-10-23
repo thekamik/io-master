@@ -95,7 +95,7 @@ Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop win
 
 - **`ai/api/` is the only way to the AI**, its functions in the form of REST (resources and operations: `connections`, `roles`, `tasks`, `completions`, `checks`); not a server. `ai/api/provider/` (HTTP, TLS, request, answer, stream) is visible only inside `ai/api/`, so a request built elsewhere does not compile.
 - Every question is asked in a **task** with its **role** (text analysis, summary, consultation, formal analysis) and written into the journal of the AI by `ai/api/` itself (`completions::ask`); no caller can skip it.
-- **The text of every question and the reading of every answer are in `ai/tasks/`** (one file per task: `chapter`, `contents`, `chat`), on plain data of `model/`. The memory of the chat (`ai/tasks/chat.rs`) is controlled by parameters, and quotes of a standard are never shortened.
+- **The text of every question and the reading of every answer are in `ai/tasks/`** (one file per task: `catalog_outline`, `catalog_section`, `chat`), on plain data of `model/`. The memory of the chat (`ai/tasks/chat.rs`) is controlled by parameters, and quotes of a standard are never shortened.
 
 ## The pipeline of data (user, 2026-10-17)
 

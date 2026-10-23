@@ -66,7 +66,7 @@ Legend: `[ ]` to do, `[x]` done.
 **Phases** (one commit each, pushed, every test passing; `code_structure.md`, sections 3 and 4, with each):
 - [x] 45.1 The map in `main.rs`: every folder in the order of the layers from the bottom up, each group commented; `model/` written as its tree, `model.rs` removed (its list of files named a file that no longer exists, `analysis.rs`: the descriptions in files without code go stale).
 - [x] 45.2 `security/` and `db/` (15 files of declarations removed; `db/scan_settings.rs` stays, it holds the names of its settings). The comment of each area of `db/` says in which database its data lives; its `schema.rs` says how it is protected.
-- [ ] 45.3 `ai/`.
+- [x] 45.3 `ai/` (4 files of declarations removed; `ai/presets.rs` stays, it holds the presets). The provider stays reachable only from `ai/api/` (`pub(in crate::ai::api)`), seen to refuse a use from a view; the list of `ai/tasks.rs`, which named files that no longer exist, is gone, and `CLAUDE.md` names the real tasks.
 - [ ] 45.4 `hardware_tests/`, `pdf/`, `installation/`, `app/`; the exception of `hardware_tests.rs` in `architecture_tests.rs` (`the_tests_of_a_file_are_never_in_a_file_of_their_own`) removed with the file; the state of this step.
 
 ---

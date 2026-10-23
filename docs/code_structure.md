@@ -309,13 +309,13 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     read.rs                      Reading the settings and secrets of an evaluator.
     schema.rs                    The tables of the database of an evaluator that belong to no other
     update.rs                    Storing the settings and secrets of an evaluator. A value is made
-ai.rs/                     The communication with AI services (CLAUDE.md, "AI layer").
-  api.rs/                      The only way to the AI, in the form of REST: resources and operations.
+ai/                        The communication with AI services (CLAUDE.md, "AI layer").
+  api/                         The only way to the AI, in the form of REST: resources and operations.
     checks.rs                    The check of an AI connection: one short question, and a report of
     completions.rs               Questions to the AI model: the one way the rest of the program asks
     connection.rs                A connection to an AI service, as the evaluator sets it up on the
     connections.rs               The AI connections of the evaluator, as a resource (step 40): the
-    provider.rs/                 The communication with the provider: HTTP, TLS, request, answer, stream.
+    provider/                    The communication with the provider: HTTP, TLS, request, answer, stream.
       ai_error.rs                  Why a request to the AI service failed, in kinds that a front
       client.rs                    The connection to the AI service of a connection
       json_path.rs                 Paths into a JSON answer: how the evaluator tells the program
@@ -326,7 +326,7 @@ ai.rs/                     The communication with AI services (CLAUDE.md, "AI la
     tasks.rs                     The tasks of the AI: what a question is for. Every task is asked
   presets.rs/                  Presets: ready settings of well-known AI services, to fill the
     field_help.rs                Instructions for a chatbot: help to fill one field of an AI
-  tasks.rs/                    The tasks of the AI: for each, the question sent to the model and
+  tasks/                       The tasks of the AI: for each, the question sent to the model and
     catalog_outline.rs           The task `catalog_outline` of the AI (role *text analysis*): the
     catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a

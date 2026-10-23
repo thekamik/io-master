@@ -174,8 +174,43 @@ mod db {
     pub mod scan_settings;
 }
 
-// ai/: the whole communication with AI services.
-mod ai;
+// ai/: the whole communication with AI services (CLAUDE.md, "AI layer").
+mod ai {
+    // ai/api/: the only way to the AI, in the form of REST: resources and
+    // operations; every question is written into the journal of the AI.
+    pub mod api {
+        pub mod checks;
+        pub mod completions;
+        pub mod connection;
+        pub mod connections;
+        pub mod roles;
+        pub mod tasks;
+        #[cfg(test)]
+        pub mod test_support;
+        // ai/api/provider/: the communication with the provider (HTTP, TLS,
+        // request, answer, stream). Only ai/api/ reaches it; the rest of the
+        // program asks through the files above.
+        pub(in crate::ai::api) mod provider {
+            pub mod ai_error;
+            pub mod client;
+            pub mod json_path;
+            pub mod request;
+            pub mod response;
+            pub mod sse;
+        }
+    }
+    // ai/tasks/: for each task of the AI, the question sent to the model and
+    // the reading of its answer, on plain data of model/.
+    pub mod tasks {
+        pub mod catalog_outline;
+        pub mod catalog_section;
+        pub mod chat;
+        mod json;
+    }
+    // ai/presets/: the ready settings of well-known AI services (its file has
+    // the presets themselves, so it declares its own module).
+    pub mod presets;
+}
 
 // hardware_tests/: the whole communication with hardware.
 mod hardware_tests;
