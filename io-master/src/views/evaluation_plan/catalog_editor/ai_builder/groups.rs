@@ -112,8 +112,64 @@ fn store(db: &UserDb, uuid: &str, model: &str, part: &Part, outline: &Outline) -
     Ok(outline.groups.len())
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "groups_tests.rs"]
-pub mod tests;
+mod tests {
+    //! Tests of `groups.rs`: the AI is a fake service of the tests
+    //! (`ai/api/test_support.rs`) that answers with a fixed text; the events go
+    //! into a channel that collects them (`catalog_editor/test_support.rs`).
+
+    use super::*;
+
+    use serde_json::json;
+
+    use crate::ai::api::test_support::{FakeAnswer, FakeService, completions_events};
+    use crate::views::evaluation_plan::catalog_editor::test_support::{collector, ready};
+
+    #[tokio::test]
+    async fn the_groups_of_a_table_of_contents_are_proposed_and_wait() {
+        let answer = json!({"groups": [
+            {"identifier": "ADV", "title": "Development", "parent": null,
+             "quote": {"page": 2, "text": "ADV_FSP.4 Complete functional specification"}},
+            {"identifier": "ATE", "title": "Tests", "parent": null, "quote": {"page": 3, "text": "Made up heading"}}
+        ]})
+        .to_string();
+        let service = FakeService::start(FakeAnswer::Stream(completions_events(&[&answer]))).await;
+        let (test, uuid, source) = ready(&service).await;
+        let session = test.state.session().unwrap();
+        let (events, channel) = collector();
+        let range = PageRange { document_id: source, first_page: 1, last_page: 3 };
+
+        propose(&session, &uuid, &range, &test.state.start_work(), &channel).await.unwrap();
+
+        let events = events.lock().unwrap().clone();
+        assert!(events.contains(&json!({ "event": "proposed", "added": 2, "dropped": [] })), "{events:?}");
+        assert_eq!(events.last().unwrap(), &json!({ "event": "end", "stopped": false }));
+
+        let db = session.db();
+        let waiting = db_evaluation_support::read::proposals(&db, &uuid).unwrap();
+        assert_eq!(waiting.len(), 2);
+        assert!(waiting[0].quotes[0].found);
+        assert!(!waiting[1].quotes[0].found, "a made up heading is shown as such");
+        // Nothing enters the catalog before the evaluator accepts it.
+        assert!(db_oscal::read::catalog(&db, &uuid).unwrap().groups.is_empty());
+
+        // The question is in the journal of the AI.
+        assert_eq!(crate::db::ai::journal::read::last(&db, 5).unwrap()[0].task, "catalog_outline");
+    }
+
+    #[tokio::test]
+    async fn stop_ends_the_work_before_a_question() {
+        let service = FakeService::start(FakeAnswer::Stream(completions_events(&["{}"]))).await;
+        let (test, uuid, source) = ready(&service).await;
+        let session = test.state.session().unwrap();
+        let (events, channel) = collector();
+        let range = PageRange { document_id: source, first_page: 1, last_page: 3 };
+
+        let stop = test.state.start_work();
+        test.state.stop_work();
+        propose(&session, &uuid, &range, &stop, &channel).await.unwrap();
+
+        assert_eq!(events.lock().unwrap().last().unwrap(), &json!({ "event": "end", "stopped": true }));
+        assert!(service.received().is_empty());
+    }
+}

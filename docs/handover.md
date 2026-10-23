@@ -9,6 +9,7 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 - **Step 41 (NIST OSCAL, `docs/oscal.md`) is being built**, part by part (`docs/todo.md`, step 41): 41.1 to 41.3 are done. The evaluation plan works on documents of OSCAL 1.2.3 (import, export, deletion, every write checked against the schemas of NIST); catalogs are made in the program from the PDFs of a standard, with the AI proposing groups and controls and the evaluator accepting, correcting or rejecting them in the editor of a catalog (`src/views/evaluation_plan/catalog_editor/`, page `ui/src/views/evaluation_plan/catalog_editor/`). The quotes and the proposals are the evaluation support (`db/evaluation_support/`), linked to OSCAL by UUID and id.
 - **Step 42 (the views) is built** (2026-10-21): every function that joins the program with the page is a command of an element in `src/views/<view>/<element>/`; `business/` and the commands of `tauri_ui/` are removed (`docs/code_structure.md`, section 2.9).
 - **Step 43 (one vocabulary, views and components) is built** (2026-10-23): the names of the code follow the vocabulary of `docs/architecture.md`, section 10 (`start`, `shell`, `chat`, `evaluation_plan` with its editor of a catalog, `evaluation_lab`, `devices`, `settings`); `app/` (was `tauri_ui/`) holds what every view uses; the list of the commands is `src/routes.rs`; the elements used more than once are in `components/` (`pdf_viewer`, `part_rows`). The test of the architecture checks that a view never uses another view and a component never a view; a test checks that the ids of the pages agree with `Shell.svelte`.
+- **Step 44 (the tests in the file they test) is built** (2026-10-23): every unit test is the last item of the file whose functions it tests (`#[cfg(test)] mod tests { ... }`); the tests of a whole area of CRUD were split by the function each checks; `src/architecture_tests.rs` checks that the tests are the last item and refuses a new `*_tests.rs`. Next: step 45 (the tree of the modules in `main.rs`), then step 46 (the entry of a view), both in `docs/todo.md`.
 - **The review starts anew** on the code of step 40 (`review.md`): no approval moved with the code.
 
 ## What comes next
@@ -20,7 +21,7 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 
 ## Rules that are easy to forget
 
-- Concept first, approved by the user, then code; small steps, each with tests (in the file they test, its last item `#[cfg(test)] mod tests { ... }`; step 44 is moving the rest); `cargo fmt` before a commit.
+- Concept first, approved by the user, then code; small steps, each with tests (in the file they test, its last item `#[cfg(test)] mod tests { ... }`); `cargo fmt` before a commit.
 - The direction of the dependencies is checked by `src/architecture_tests.rs`; a new use against it is a finding, or an exception written there with its reason.
 - Every command of the window is listed in four places (the `commands.rs` of its element in `views/`, `routes.rs`, `build.rs`, `capabilities/default.json`); a test checks them.
 - Serialization only in the `view.rs` of the elements of `src/views/` and in `src/app/serializer/` (the error of a command); the core types carry no serde attributes.

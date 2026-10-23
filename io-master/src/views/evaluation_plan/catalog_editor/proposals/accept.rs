@@ -77,3 +77,95 @@ fn read<T: serde::de::DeserializeOwned>(content: Value) -> Result<T, OscalError>
         Err(error) => Err(OscalError::Invalid(format!("the object is not OSCAL: {error}"))),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of `accept.rs`: proposals stored as the AI leaves them,
+    //! accepted into a catalog made from the small standard.
+
+    use super::*;
+
+    use serde_json::json;
+
+    use crate::db::evaluation_support::create::NewProposal;
+    use crate::model::evaluation_support::QuoteDraft;
+    use crate::views::evaluation_plan::catalog_editor::test_support::{add_group, with_catalog};
+
+    /// Stores a proposal of `kind` with `content`, under `parent`, with one
+    /// quote of page 2 of `source`; returns its id.
+    fn proposed(
+        db: &UserDb,
+        uuid: &str,
+        kind: ProposalKind,
+        parent: Option<&str>,
+        content: &Value,
+        source: i64,
+    ) -> i64 {
+        let quotes = [QuoteDraft { source_document_id: source, page: 2, text: "ADV_FSP.4".to_owned(), found: true }];
+        let proposal = NewProposal {
+            document_uuid: uuid,
+            kind,
+            parent_id: parent,
+            content,
+            quotes: &quotes,
+            note: "",
+            model: "m",
+        };
+
+        db_evaluation_support::create::proposal(db, &proposal).unwrap()
+    }
+
+    #[test]
+    fn an_accepted_group_enters_the_catalog_with_its_quotes() {
+        let (window, uuid, source) = with_catalog();
+        let session = window.session();
+        let db = session.db();
+        let id = proposed(&db, &uuid, ProposalKind::Group, None, &json!({"id": "ADV", "title": "Development"}), source);
+
+        assert_eq!(accept(&db, id, None).unwrap(), "ADV");
+
+        assert_eq!(db_oscal::read::catalog(&db, &uuid).unwrap().groups.len(), 1);
+        assert_eq!(db_evaluation_support::read::quotes(&db, &uuid, Some("ADV")).unwrap().len(), 1);
+        assert!(db_evaluation_support::read::proposals(&db, &uuid).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_corrected_control_enters_the_catalog_as_corrected() {
+        let (window, uuid, source) = with_catalog();
+        add_group(&window, &uuid, "ADV");
+        let session = window.session();
+        let db = session.db();
+        let content = json!({"id": "ADV_FSP.4", "title": "Complete functional specification"});
+        let id = proposed(&db, &uuid, ProposalKind::Control, Some("ADV"), &content, source);
+
+        // The evaluator corrects the title before accepting.
+        let mut corrected = content.clone();
+        corrected["title"] = json!("Complete functional specification (corrected)");
+        accept(&db, id, Some(corrected)).unwrap();
+
+        let catalog = db_oscal::read::catalog(&db, &uuid).unwrap();
+        let all = catalog.all_controls().unwrap();
+        assert_eq!(all[0].0, ["Group ADV"]);
+        assert_eq!(all[0].1.title, "Complete functional specification (corrected)");
+        assert_eq!(db_evaluation_support::read::quotes(&db, &uuid, Some("ADV_FSP.4")).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_proposal_that_breaks_a_rule_stays_and_nothing_is_written() {
+        let (window, uuid, source) = with_catalog();
+        let session = window.session();
+        let db = session.db();
+        let id = proposed(
+            &db,
+            &uuid,
+            ProposalKind::Control,
+            Some("NOT_THERE"),
+            &json!({"id": "ADV_FSP.4", "title": "A"}),
+            source,
+        );
+
+        assert!(matches!(accept(&db, id, None), Err(OscalError::NoSuchObject(_))));
+        assert_eq!(db_evaluation_support::read::proposals(&db, &uuid).unwrap().len(), 1, "the proposal waits");
+        assert!(db_oscal::read::catalog(&db, &uuid).unwrap().all_controls().unwrap().is_empty());
+    }
+}

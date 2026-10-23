@@ -81,4 +81,15 @@ mod tests {
         of_document(&test.db, "doc").unwrap();
         assert!(read::proposals(&test.db, "doc").unwrap().is_empty());
     }
+
+    #[test]
+    fn one_proposal_is_deleted_once() {
+        let test = database();
+        let source = load(&test.db, b"%PDF proposals");
+        let id = stored_proposal(&test.db, source);
+
+        assert!(proposal(&test.db, id).unwrap());
+        assert!(read::proposals(&test.db, "doc").unwrap().is_empty());
+        assert!(!proposal(&test.db, id).unwrap());
+    }
 }

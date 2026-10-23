@@ -21,8 +21,9 @@
 //! ```
 //!
 //! A folder uses only itself and the folders below it, and never a
-//! folder above it: no cycle. The tests (`*_tests.rs`, `test_support.rs`)
-//! are not held to it: they set up data across the layers.
+//! folder above it: no cycle. The tests (the module `tests` at the end of
+//! a file, `test_support.rs`) are not held to it: they set up data across
+//! the layers.
 //!
 //! The tests of a file are its last item (step 44): only the part above
 //! them is held to the rule, and a test checks that nothing of the program
@@ -141,7 +142,7 @@ fn files(root: &Path, folder: &str) -> Vec<(String, String)> {
 
             if path.is_dir() {
                 pending.push(path);
-            } else if name.ends_with(".rs") && !name.ends_with("_tests.rs") && name != "test_support.rs" {
+            } else if name.ends_with(".rs") && name != "test_support.rs" {
                 let shown = path.strip_prefix(root).unwrap_or(&path).display().to_string();
                 found.push((shown, program_part(&fs::read_to_string(&path).unwrap_or_default())));
             }
@@ -359,4 +360,31 @@ fn the_tests_of_a_file_are_its_last_item() {
 
     assert!(with_tests > 0, "files with their tests are found");
     assert!(broken.is_empty(), "the tests are not the last item:\n{}", broken.join("\n"));
+}
+
+/// The files of tests of their own: the tests of the whole program, which
+/// test no one file (step 44).
+const FILES_OF_TESTS: [&str; 2] = ["architecture_tests.rs", "command_lists_tests.rs"];
+
+#[test]
+fn the_tests_of_a_file_are_never_in_a_file_of_their_own() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut found = Vec::new();
+
+    for (file, _) in all_rust_files(&root) {
+        let name = Path::new(&file).file_name().unwrap_or_default().to_string_lossy().into_owned();
+
+        // `hardware_tests.rs` declares the modules of the folder
+        // `hardware_tests/` and holds no tests; its name only ends so. It
+        // goes away in step 45 (the tree of the modules in main.rs).
+        if name.ends_with("_tests.rs") && !FILES_OF_TESTS.contains(&name.as_str()) && file != "hardware_tests.rs" {
+            found.push(file);
+        }
+    }
+
+    assert!(
+        found.is_empty(),
+        "tests in a file of their own (they belong at the end of the file they test):\n{}",
+        found.join("\n")
+    );
 }

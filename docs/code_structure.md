@@ -53,7 +53,7 @@ io-master/ui/        the page (Svelte 5), a separate project
 
 - A folder uses only itself and the folders below it: **no cycle**.
 - **The rule is checked by a test**, `src/architecture_tests.rs`: it reads the source of every folder (the tests aside) and fails on a use against the direction. `views/` may use every folder below it, `components/` every folder below `views/` and itself; **a view never uses another view**, by its name or by a chain of `super::` that leaves its folder, and **a component of the page never imports a view of the page** (both checked by the same test). `app/` uses `installation/` and `model/` (the state of the window) and, listed there with their reason, only the errors of the folders below (`AiError`, `ConnectionSaveError`, `ModelError`, the errors of `db/` and of `db/oscal/`, `ScanSettingsError`), which it turns into errors of the page; never a function of them.
-- The tests (the module `tests` at the end of a file, `test_support.rs`, the files `*_tests.rs` not moved yet) are not held to it: they set up data across the layers. The same test checks that the module of tests is the last item of its file, so that no code of the program hides below it.
+- The tests (the module `tests` at the end of a file, `test_support.rs`) are not held to it: they set up data across the layers. The same test checks that the module of tests is the last item of its file, so that no code of the program hides below it.
 
 ### 1.2 Where the information is
 
@@ -173,7 +173,6 @@ views/<view>/mod.rs                  the view: its elements, and the flow of dat
 views/<view>/<element>/mod.rs        the element: its actions, their parameters, the data back
 views/<view>/<element>/commands.rs   its commands: parameters -> work -> data
 views/<view>/<element>/view.rs       the data it gets (serde)
-views/<view>/<element>/commands_tests.rs
 views/<view>/<file>.rs               what the elements of one view share (Devices: stored_settings.rs, column_view.rs)
 ```
 
@@ -197,7 +196,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 | Modules | Every folder declares its modules in the file of the same name next to it (`db.rs` next to `db/`); `main.rs` lists only the top folders, so a new file never changes it. The views and their elements use `mod.rs` inside their folder (section 2.9). |
 | Rules of the code | CLAUDE.md, "The rules for Rust" (The Power of 10 adapted). A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error; never `assert!` outside the tests. |
 | Comments | Code comments and documentation in English, thorough; the head of every file says what it holds and, where it helps, draws the path of the data. |
-| Tests | In the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }` (step 44; the folders not moved yet still have `<file>_tests.rs`). Help for the tests in `test_support.rs` (of an area), `src/test_support.rs` (temporary folders) and `src/test_support/` (`db.rs`: the data of the tests of `db/`; `standards.rs`: a database with a small standard); a test of a whole area of CRUD is split by the function it checks, so that `read.rs` ends with the tests of reading; the tests of the whole program in `src/architecture_tests.rs` and `src/command_lists_tests.rs`. |
+| Tests | In the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }` (step 44; a file `*_tests.rs` besides the two tests of the whole program is refused by `architecture_tests.rs`). Help for the tests in `test_support.rs` (of an area), `src/test_support.rs` (temporary folders) and `src/test_support/` (`db.rs`: the data of the tests of `db/`; `standards.rs`: a database with a small standard); a test of a whole area of CRUD is split by the function it checks, so that `read.rs` ends with the tests of reading; the tests of the whole program in `src/architecture_tests.rs` and `src/command_lists_tests.rs`. |
 | Formatting | `rustfmt.toml` (120 characters); `cargo fmt --check` must be clean before a commit. |
 | Checks | `cargo test` (with the test of the architecture and the test of the command lists), `npm run check` (svelte-check, clean), clippy. |
 | Serialization | Only at the boundary to the page: `views/**/view.rs` and `app/serializer/`; the types of the core carry no serde attributes. **The one exception** (user, 2026-10-18, `docs/oscal.md`): the types of `model/oscal/` *are* the published format of NIST and carry serde with the names of OSCAL. |

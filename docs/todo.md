@@ -23,7 +23,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **concept in `docs/oscal.md`, approved 2026-10-18; 41.1 to 41.3 built, 41.4 next; before step 31** |
 | 14b | **42: The views: one folder per element of the window, instead of `business/` and the commands of `tauri_ui/`** | **built 2026-10-21: every view moved, `business/` and the commands of `tauri_ui/` removed** (below) |
 | 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **built 2026-10-23, in the phases 43.1 to 43.9** (below) |
-| 14d | **44: The tests in the file they test** | **approved 2026-10-23; built in phases 44.1 to 44.6** (below) |
+| 14d | **44: The tests in the file they test** | **built 2026-10-23, in the phases 44.1 to 44.6** (below) |
 | 14e | **45: The tree of the modules in `main.rs`** | **approved 2026-10-23; after step 44** (below) |
 | 14f | **46: The entry of a view** | **to be designed; after step 45** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
@@ -63,7 +63,7 @@ Legend: `[ ]` to do, `[x]` done.
 - [x] The comments of the removed files: a line that names a folder goes to its group in `main.rs`; a longer description of the architecture goes to `docs/` (Markdown, with schemes), never to the head of another file (`CLAUDE.md`, "Where the comments are").
 - [x] The `mod.rs` of the views and of the components (35 files) are not part of this step: step 46.
 
-**Tasks** (phases, one commit each, as in steps 43 and 44): the layers from the bottom (`model/`, `db/`, `security/`, `ai/`, `hardware_tests/`, `pdf/`, `installation/`, `app/`); `code_structure.md` (sections 3 and 4).
+**Tasks** (phases, one commit each, as in steps 43 and 44): the layers from the bottom (`model/`, `db/`, `security/`, `ai/`, `hardware_tests/`, `pdf/`, `installation/`, `app/`); `code_structure.md` (sections 3 and 4); the exception of `hardware_tests.rs` in `architecture_tests.rs` (`the_tests_of_a_file_are_never_in_a_file_of_their_own`) removed with the file.
 
 ---
 
@@ -75,7 +75,7 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 44: The tests in the file they test (2026-10-23)
 
-**State: approved by the user (2026-10-23); built phase by phase (below).**
+**State: built 2026-10-23, in the phases 44.1 to 44.6 (below).**
 
 The user (2026-10-23): the unit tests move from their own files (`<file>_tests.rs`, 85 files, about 6000 lines) into the file whose functions they test; fewer files, and a function and its tests read together. It replaces the rule of `CLAUDE.md` ("Way of working") and of `code_structure.md` (section 3, Tests).
 
@@ -94,7 +94,7 @@ The user (2026-10-23): the unit tests move from their own files (`<file>_tests.r
 - [x] 44.3 `ai/` (15 files; each tested one file).
 - [x] 44.4 `hardware_tests/` (3 files).
 - [x] 44.5 `views/`: `start`, `shell`, `chat`, `settings`, `devices`.
-- [ ] 44.6 `views/evaluation_plan/` with its editor of a catalog; `handover.md`, the state of this step.
+- [x] 44.6 `views/evaluation_plan/` with its editor of a catalog; `handover.md`, the state of this step. The acceptance of a proposal, tested so far inside the tests of the AI of the editor, has its own tests in `proposals/accept.rs`; the helpers of the tests of the AI (`ready`, `collector`) are in `catalog_editor/test_support.rs`; the test of the architecture no longer skips a file by its name, and refuses a new `*_tests.rs`.
 
 **Done when** no `<file>_tests.rs` is left besides the tests of the whole program, and the test of the architecture checks that every test module is the last item of its file.
 
