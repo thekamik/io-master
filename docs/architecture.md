@@ -94,10 +94,9 @@ The first start is the real moment of installation. **It is told by the keyring 
 - Pages of the workstation, in this order in the navigation:
   1. **Chat**: the AI assistant, over the active AI connection.
   2. **Evaluation plan**: the OSCAL documents of the standards (catalogs made in the program or loaded, mappings, profiles, assessment plans), and the documents of standards (PDF) they quote (section 7.1).
-  3. **Evaluation**: an evaluation plan carried out for one product (section 7.1; a placeholder until step 41.5).
-  4. **Manufacturer documentation**: a placeholder until step 30.
-  5. **Devices** (was Scan and permissions): the serial ports, a filter by port type, later the access rights to the ports and the work on a device (UART, Bluetooth).
-  6. **Settings**, in tabs: **User** (the password, later the factors of the person), **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
+  3. **Evaluation lab** (was Evaluation and Manufacturer documentation, step 43.8): an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
+  4. **Devices** (was Scan and permissions): the serial ports, a filter by port type, later the access rights to the ports and the work on a device (UART, Bluetooth).
+  5. **Settings**, in tabs: **User** (the password, later the factors of the person), **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
 - The master shows only its administration panel.
 - **Logging in** is built as a mock-up first; the real mechanism comes near the end of development. The design of the keys (section 5) is fixed now, because the encrypted database depends on it.
 

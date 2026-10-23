@@ -25,7 +25,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **approved 2026-10-23; built in phases 43.1 to 43.9** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
-| later | 30: Tool "Manufacturer documentation" | designed later (user); a placeholder in the sidebar; needed by steps 32 to 34 |
+| later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
 | later | 28: Reports in the LaTeX template of the laboratory | with or after step 23 |
 | 16 | 13: Start: keyring, secret of the application, one user per account | after the review |
 | 17 | 6: Port permissions | |
@@ -96,7 +96,7 @@ The user found, after step 42: `tauri_ui/` is left although the architecture was
 - [x] 43.5 `catalog_editor` moved into `evaluation_plan/catalog_editor/`: Rust, the page, `lib/api/`.
 - [x] 43.6 `components/` with its first component `pdf_viewer` (Rust and page); the rules of the components in the test of the architecture (a component never uses a view, a view never another view).
 - [x] 43.7 `part_rows` moved into `components/` (Rust and page).
-- [ ] 43.8 `evaluation_lab`: one placeholder view instead of the pages Evaluation and Manufacturer documentation; `ui/src/pages/` removed; the navigation. A test that the ids of the pages (`views/shell/program/view.rs`) and the page `Shell.svelte` agree (an icon, a subtitle, a view for each), as the commands are checked (found in 43.4: the subtitle of Devices was lost in 43.3 and no check saw it).
+- [x] 43.8 `evaluation_lab`: one placeholder view instead of the pages Evaluation and Manufacturer documentation; `ui/src/pages/` removed; the navigation. A test that the ids of the pages (`views/shell/program/view.rs`) and the page `Shell.svelte` agree (an icon, a subtitle, a view for each), as the commands are checked (found in 43.4: the subtitle of Devices was lost in 43.3 and no check saw it).
 - [ ] 43.9 The end: the notes "was ..." removed from `architecture.md` (sections 10 to 12) and `CLAUDE.md` ("Terms"), `handover.md`, the state of this step.
 
 **Done when** every name of the code is the one of the vocabulary, every element used more than once is in `components/`, and the test of the architecture checks it.
@@ -413,7 +413,7 @@ Built on 2026-10-17 on the test projects and removed with them in step 41.1; its
 
 ## Step 30: Tool "Manufacturer documentation" (later)
 
-Designed later (user, 2026-10-17); its place in the sidebar holds a placeholder (`ui/src/pages/Documentation.svelte`). The documents of the manufacturer (Security Target, guidance, design) are loaded and analysed in a way proper to them; in OSCAL they become the system security plan and the component definition (`oscal.md`, section 1), which an assessment plan imports and an evaluation reads. Steps 32 to 34 need it.
+Designed later (user, 2026-10-17); a part of the view Evaluation lab since step 43 (user, 2026-10-23), whose placeholder (`ui/src/views/evaluation_lab/`) names it. The documents of the manufacturer (Security Target, guidance, design) are loaded and analysed in a way proper to them; in OSCAL they become the system security plan and the component definition (`oscal.md`, section 1), which an assessment plan imports and an evaluation reads. Steps 32 to 34 need it.
 
 ## Step 31: The window of the evaluation
 

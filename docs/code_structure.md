@@ -155,7 +155,9 @@ ui/src/components/<component>/
                       it uses (pdf_viewer/: PdfViewer.svelte, and pdf.ts, the code of pdf.js)
 ui/src/lib/api/components/<component>.ts
                       the commands of one component, as those of an element
-ui/src/pages/         the pages that call no command yet: Evaluation, Documentation
+ui/src/views/evaluation_lab/
+                      the view Evaluation lab: a placeholder until step 41.5 (no folder in src/views/
+                      yet: it has no element and no command)
 ui/src/styles/        the style, one sheet per part of the window, in the order of the cascade
                       (style.css lists them)
 ```

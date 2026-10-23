@@ -10,6 +10,10 @@ use serde::Serialize;
 use crate::installation::accounts::Account;
 use crate::model::installation::Role;
 
+#[cfg(test)]
+#[path = "view_tests.rs"]
+mod tests;
+
 /// The state of the program, as the page sees it.
 #[derive(Debug, Serialize)]
 pub struct ProgramView {
@@ -52,9 +56,9 @@ fn pages(role: Role) -> Vec<PageView> {
         Role::Workstation => vec![
             PageView { id: "chat", title: "Chat" },
             PageView { id: "evaluation_plan", title: "Evaluation plan" },
-            PageView { id: "evaluation", title: "Evaluation" },
-            // A placeholder until step 30 of docs/todo.md is designed.
-            PageView { id: "documentation", title: "Manufacturer documentation" },
+            // A placeholder until step 41.5 of docs/todo.md; it holds the
+            // documentation of the manufacturer as well (step 30).
+            PageView { id: "evaluation_lab", title: "Evaluation lab" },
             PageView { id: "devices", title: "Devices" },
             PageView { id: "settings", title: "Settings" },
         ],

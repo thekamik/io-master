@@ -11,8 +11,7 @@
   import type { ProgramView } from "../../lib/api/shell/program";
   import Chat from "../chat/Chat.svelte";
   import Devices from "../devices/Devices.svelte";
-  import Documentation from "../../pages/Documentation.svelte";
-  import Evaluation from "../../pages/Evaluation.svelte";
+  import EvaluationLab from "../evaluation_lab/EvaluationLab.svelte";
   import EvaluationPlan from "../evaluation_plan/EvaluationPlan.svelte";
   import Settings from "../settings/Settings.svelte";
   import UserMenu from "./UserMenu.svelte";
@@ -30,9 +29,8 @@
   /** The line under the title of each page. */
   const subtitles: Record<string, string> = {
     chat: "Ask the model of your active AI connection.",
-    evaluation: "Carry out an evaluation scheme for a product.",
     evaluation_plan: "The standards in NIST OSCAL and the plan of an evaluation, with the documents of the standards they come from.",
-    documentation: "Load and analyse the documentation of the manufacturer for the evaluations.",
+    evaluation_lab: "Carry out an evaluation plan for a product, with what the manufacturer and the laboratory deliver.",
     devices: "The serial ports of this computer, and the access to them.",
     settings: "Your account, the connections to AI services, and this installation.",
     admin: "The password resets of the workstations.",
@@ -44,7 +42,7 @@
     {#if name === "chat"}
       <path d="M4 5.5h16v10.5H10l-5 4v-4H4z" />
       <path d="M8 9.5h8M8 12.5h5" />
-    {:else if name === "evaluation"}
+    {:else if name === "evaluation_lab"}
       <path d="M9 4h6v3H9z" />
       <path d="M7 5.5H5.5v14h13v-14H17" />
       <path d="M8.5 13l2.2 2.2 4.8-4.7" />
@@ -53,9 +51,6 @@
       <rect x="14.5" y="4" width="6" height="5" rx="1.2" />
       <rect x="9" y="15" width="6" height="5" rx="1.2" />
       <path d="M6.5 9v2.5h11V9M12 11.5V15" />
-    {:else if name === "documentation"}
-      <path d="M6 3.5h8l4 4v13H6z" />
-      <path d="M14 3.5v4h4M9 12h6M9 15h6M9 18h4" />
     {:else if name === "devices"}
       <rect x="4" y="8" width="16" height="9" rx="2" />
       <path d="M8 12h.01M12 12h.01M16 12h.01M9 4v4M15 4v4" />
@@ -105,17 +100,15 @@
 
     {#if active === "chat"}
       <Chat />
-    {:else if active === "evaluation"}
-      <Evaluation />
     {:else if active === "evaluation_plan"}
       <EvaluationPlan />
-    {:else if active === "documentation"}
-      <Documentation />
+    {:else if active === "evaluation_lab"}
+      <EvaluationLab />
     {:else if active === "devices"}
       <Devices />
     {:else if active === "settings"}
       <Settings {app} />
-    {:else}
+    {:else if active === "admin"}
       <!-- The panel of the master: not built yet (step 11 of docs/todo.md). -->
       <p class="note">Password reset requests are approved here (step 11).</p>
     {/if}
