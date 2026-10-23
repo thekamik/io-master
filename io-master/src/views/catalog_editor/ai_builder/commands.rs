@@ -3,8 +3,8 @@
 use tauri::State;
 use tauri::ipc::Channel;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::standards as db_standards;
 
 use super::view::{self, BuildEvent, PageRange, SourceView};
@@ -14,7 +14,7 @@ use super::{controls, groups};
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn ai_builder_sources(state: State<'_, UiState>) -> Result<Vec<SourceView>, UiError> {
+pub fn ai_builder_sources(state: State<'_, AppState>) -> Result<Vec<SourceView>, AppError> {
     let session = state.session()?;
 
     Ok(view::sources(&db_standards::read::documents(&session.db())?))
@@ -26,11 +26,11 @@ pub fn ai_builder_sources(state: State<'_, UiState>) -> Result<Vec<SourceView>, 
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
 pub async fn ai_builder_groups(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     range: PageRange,
     on_event: Channel<BuildEvent>,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let stop = state.start_work();
 
@@ -44,13 +44,13 @@ pub async fn ai_builder_groups(
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
 pub async fn ai_builder_controls(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     group: Option<String>,
     ranges: Vec<PageRange>,
     part_size: usize,
     on_event: Channel<BuildEvent>,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let stop = state.start_work();
 
@@ -61,7 +61,7 @@ pub async fn ai_builder_controls(
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn ai_builder_stop(state: State<'_, UiState>) {
+pub fn ai_builder_stop(state: State<'_, AppState>) {
     state.stop_work();
 }
 

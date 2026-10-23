@@ -12,12 +12,10 @@ use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_
 use tauri::webview::InvokeRequest;
 use tauri::{App, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
-use crate::app::state::UiState;
+use crate::app::state::AppState;
 use crate::app::test_support::{TestState, first_start, installed, logged_in};
 use crate::installation::session::Session;
 use crate::test_support::TempDir;
-
-use super::{catalog_editor, chat, plans, scan, settings, shell, start};
 
 /// A window, and what must live as long as it: the app and the folder
 /// of the installation.
@@ -32,7 +30,7 @@ impl TestWindow {
     /// The session of the logged-in evaluator, to prepare data the way
     /// another view would.
     pub fn session(&self) -> Arc<Session> {
-        self.app.state::<UiState>().session().expect("somebody is logged in")
+        self.app.state::<AppState>().session().expect("somebody is logged in")
     }
 
     /// Calls `command` with `arguments` (an object, the names as the page
@@ -81,72 +79,14 @@ pub fn logged_out_window() -> TestWindow {
     window(installed())
 }
 
-/// A window over the state of `test`, with every command of the views.
+/// A window over the state of `test`, with every command of the views
+/// (`routes.rs`, the list of the program itself).
 fn window(test: TestState) -> TestWindow {
     let TestState { directory, state } = test;
 
     let app = mock_builder()
         .manage(state)
-        .invoke_handler(tauri::generate_handler![
-            start::setup_form::commands::setup_form_install,
-            start::login_form::commands::login_form_log_in,
-            shell::program::commands::program_get,
-            shell::user_menu::commands::user_menu_log_out,
-            chat::connection_line::commands::connection_line_get,
-            chat::chat_list::commands::chat_list_get,
-            chat::conversation::commands::conversation_open,
-            chat::conversation::commands::conversation_send,
-            chat::conversation::commands::conversation_stop,
-            chat::conversation::commands::conversation_delete,
-            settings::password_form::commands::password_form_change,
-            settings::connection_list::commands::connection_list_get,
-            settings::connection_form::commands::connection_form_new,
-            settings::connection_form::commands::connection_form_get,
-            settings::connection_form::commands::connection_form_save,
-            settings::connection_form::commands::connection_form_delete,
-            settings::connection_form::commands::connection_form_activate,
-            settings::connection_form::commands::connection_form_field_help,
-            settings::api_key::commands::api_key_get,
-            settings::api_key::commands::api_key_store,
-            settings::api_key::commands::api_key_delete,
-            settings::connection_check::commands::connection_check_run,
-            plans::oscal_documents::commands::oscal_documents_get,
-            plans::oscal_documents::commands::oscal_documents_import,
-            plans::oscal_documents::commands::oscal_documents_export,
-            plans::oscal_documents::commands::oscal_documents_delete,
-            plans::new_catalog::commands::new_catalog_sources,
-            plans::new_catalog::commands::new_catalog_create,
-            plans::standard_documents::commands::standard_documents_get,
-            plans::standard_documents::commands::standard_documents_load,
-            plans::standard_documents::commands::standard_documents_stop,
-            plans::standard_documents::commands::standard_documents_update,
-            plans::standard_documents::commands::standard_documents_delete,
-            plans::document_search::commands::document_search_run,
-            plans::pdf_viewer::commands::pdf_viewer_documents,
-            plans::pdf_viewer::commands::pdf_viewer_get,
-            catalog_editor::catalog_tree::commands::catalog_tree_get,
-            catalog_editor::object_form::commands::object_form_get,
-            catalog_editor::object_form::commands::object_form_save_group,
-            catalog_editor::object_form::commands::object_form_save_control,
-            catalog_editor::object_form::commands::object_form_delete,
-            catalog_editor::new_object::commands::new_object_add_group,
-            catalog_editor::new_object::commands::new_object_add_control,
-            catalog_editor::object_quotes::commands::object_quotes_get,
-            catalog_editor::object_quotes::commands::object_quotes_add,
-            catalog_editor::object_quotes::commands::object_quotes_delete,
-            catalog_editor::proposals::commands::proposals_get,
-            catalog_editor::proposals::commands::proposals_accept,
-            catalog_editor::proposals::commands::proposals_reject,
-            catalog_editor::ai_builder::commands::ai_builder_sources,
-            catalog_editor::ai_builder::commands::ai_builder_groups,
-            catalog_editor::ai_builder::commands::ai_builder_controls,
-            catalog_editor::ai_builder::commands::ai_builder_stop,
-            catalog_editor::ai_instructions::commands::ai_instructions_get,
-            catalog_editor::ai_instructions::commands::ai_instructions_save,
-            scan::ports_table::commands::ports_table_scan,
-            scan::scanner_settings::commands::scanner_settings_get,
-            scan::scanner_settings::commands::scanner_settings_save,
-        ])
+        .invoke_handler(crate::routes::handler())
         .build(mock_context(noop_assets()))
         .expect("the mock app is built");
 

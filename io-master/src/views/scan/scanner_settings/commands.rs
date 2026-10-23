@@ -2,8 +2,8 @@
 
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::scan_settings as db_scan_settings;
 use crate::hardware_tests::devices::scan_settings::ScanSettings;
 
@@ -17,7 +17,7 @@ use super::view::ScannerSettingsView;
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn scanner_settings_get(state: State<'_, UiState>) -> Result<ScannerSettingsView, UiError> {
+pub fn scanner_settings_get(state: State<'_, AppState>) -> Result<ScannerSettingsView, AppError> {
     let session = state.session()?;
     let settings = stored_settings::read(&session.db())?;
 
@@ -27,17 +27,17 @@ pub fn scanner_settings_get(state: State<'_, UiState>) -> Result<ScannerSettings
 /// Stores the settings chosen in the form: all kinds of port, or the
 /// kinds named in `types` (base names: `"ttyACM"`); the columns named by
 /// their keys in `columns` (`"path"`). A name the page never offers is
-/// refused (`UiError::Invalid`) and nothing is stored. Gives back the
+/// refused (`AppError::Invalid`) and nothing is stored. Gives back the
 /// settings as they were stored.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn scanner_settings_save(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     all_types: bool,
     types: Vec<String>,
     columns: Vec<String>,
-) -> Result<ScannerSettingsView, UiError> {
+) -> Result<ScannerSettingsView, AppError> {
     let session = state.session()?;
     let settings = ScanSettings::from_form(all_types, &types, &columns)?;
 

@@ -5,8 +5,8 @@ use std::sync::Arc;
 use tauri::State;
 
 use crate::ai::api::{checks, connections};
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 
 use super::view::CheckView;
 
@@ -17,13 +17,13 @@ use super::view::CheckView;
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
-pub async fn connection_check_run(state: State<'_, UiState>, id: i64) -> Result<CheckView, UiError> {
+pub async fn connection_check_run(state: State<'_, AppState>, id: i64) -> Result<CheckView, AppError> {
     let session = state.session()?;
 
     let model = {
         let db = session.db();
 
-        ensure!(connections::get(&db, id)?.is_some(), UiError::Invalid("the connection does not exist".to_owned()));
+        ensure!(connections::get(&db, id)?.is_some(), AppError::Invalid("the connection does not exist".to_owned()));
         checks::target(&db, id)?
     };
 

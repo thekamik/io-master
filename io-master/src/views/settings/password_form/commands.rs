@@ -3,8 +3,8 @@
 use tauri::State;
 use zeroize::Zeroizing;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::installation::accounts::{self, AccountError};
 
 /// Changes the password of the logged-in evaluator. The current
@@ -16,17 +16,17 @@ use crate::installation::accounts::{self, AccountError};
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn password_form_change(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     current: String,
     password: String,
     password_repeat: String,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     // The passwords are wiped from memory when they are dropped.
     let current = Zeroizing::new(current);
     let password = Zeroizing::new(password);
     let password_repeat = Zeroizing::new(password_repeat);
 
-    ensure!(*password == *password_repeat, UiError::Invalid("the two new passwords differ".to_owned()));
+    ensure!(*password == *password_repeat, AppError::Invalid("the two new passwords differ".to_owned()));
 
     let running = state.installed()?;
     let session = state.session()?;
@@ -42,7 +42,7 @@ pub fn password_form_change(
     match changed {
         Ok(()) => Ok(()),
         // Here only the current password can be wrong.
-        Err(AccountError::WrongCredentials) => Err(UiError::Invalid("the current password is wrong".to_owned())),
+        Err(AccountError::WrongCredentials) => Err(AppError::Invalid("the current password is wrong".to_owned())),
         Err(other) => Err(other.into()),
     }
 }

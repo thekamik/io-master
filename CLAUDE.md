@@ -125,5 +125,5 @@ The user's guidelines, built in step 40 (the layout and its rules: `docs/code_st
 - Small steps, each tested on its own (unit tests in Rust, end-to-end tests where a front end is involved) before the next step starts.
 - Readability first: the user has to keep an overview of the code. Clear structure, one responsibility per file.
 - Unit tests live in their own file next to the module, named `<file>_tests.rs`, and are attached with `#[cfg(test)] #[path = "<file>_tests.rs"] mod tests;`. `cargo fmt` (`rustfmt.toml`, 120 characters) before every commit.
-- A command of the window is listed in four places (the `commands.rs` of its element in `views/`, `main.rs`, `build.rs`, `capabilities/default.json`); the tests check that they agree, and that no folder uses a folder above it (`src/architecture_tests.rs`).
+- A command of the window is listed in four places (the `commands.rs` of its element in `views/`, `routes.rs`, `build.rs`, `capabilities/default.json`); the tests check that they agree, and that no folder uses a folder above it (`src/architecture_tests.rs`).
 - Prefer few, well-known dependencies; explain each one when it is added.

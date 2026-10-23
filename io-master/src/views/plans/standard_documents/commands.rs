@@ -6,8 +6,8 @@ use tauri::ipc::Channel;
 use tauri::{AppHandle, Runtime, State};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::standards as db_standards;
 
 use super::load::{self, MAX_FILES};
@@ -18,7 +18,7 @@ use super::view::{self, DocumentForm, DocumentView, LoadEvent};
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn standard_documents_get(state: State<'_, UiState>) -> Result<Vec<DocumentView>, UiError> {
+pub fn standard_documents_get(state: State<'_, AppState>) -> Result<Vec<DocumentView>, AppError> {
     let session = state.session()?;
 
     Ok(view::all(db_standards::read::documents(&session.db())?))
@@ -31,13 +31,13 @@ pub fn standard_documents_get(state: State<'_, UiState>) -> Result<Vec<DocumentV
 #[tauri::command]
 pub async fn standard_documents_load<R: Runtime>(
     app: AppHandle<R>,
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     on_event: Channel<LoadEvent>,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let paths = choose_files(app).await?;
 
-    ensure!(paths.len() <= MAX_FILES, UiError::Invalid(format!("at most {MAX_FILES} files can be loaded at once")));
+    ensure!(paths.len() <= MAX_FILES, AppError::Invalid(format!("at most {MAX_FILES} files can be loaded at once")));
 
     if paths.is_empty() {
         return Ok(());
@@ -47,7 +47,7 @@ pub async fn standard_documents_load<R: Runtime>(
 
     ensure!(
         load::load(&session, &paths, &stop, &on_event).await,
-        UiError::Failed("the window can no longer be reached".to_owned())
+        AppError::Failed("the window can no longer be reached".to_owned())
     );
 
     Ok(())
@@ -56,7 +56,7 @@ pub async fn standard_documents_load<R: Runtime>(
 /// The PDFs the evaluator chose in the dialog of the system; none when
 /// the dialog was closed. The dialog waits for the evaluator, so it runs
 /// on a thread for blocking work (`spawn_blocking` takes a closure).
-async fn choose_files<R: Runtime>(app: AppHandle<R>) -> Result<Vec<PathBuf>, UiError> {
+async fn choose_files<R: Runtime>(app: AppHandle<R>) -> Result<Vec<PathBuf>, AppError> {
     let chosen = tokio::task::spawn_blocking(move || {
         app.dialog()
             .file()
@@ -67,7 +67,7 @@ async fn choose_files<R: Runtime>(app: AppHandle<R>) -> Result<Vec<PathBuf>, UiE
     .await;
 
     let Ok(chosen) = chosen else {
-        return Err(UiError::Failed("the dialog failed".to_owned()));
+        return Err(AppError::Failed("the dialog failed".to_owned()));
     };
 
     let mut paths = Vec::new();
@@ -85,7 +85,7 @@ async fn choose_files<R: Runtime>(app: AppHandle<R>) -> Result<Vec<PathBuf>, UiE
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn standard_documents_stop(state: State<'_, UiState>) {
+pub fn standard_documents_stop(state: State<'_, AppState>) {
     state.stop_work();
 }
 
@@ -94,10 +94,10 @@ pub fn standard_documents_stop(state: State<'_, UiState>) {
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn standard_documents_update(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     id: i64,
     document: DocumentForm,
-) -> Result<DocumentView, UiError> {
+) -> Result<DocumentView, AppError> {
     let session = state.session()?;
     let db = session.db();
 
@@ -114,7 +114,7 @@ pub fn standard_documents_update(
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn standard_documents_delete(state: State<'_, UiState>, id: i64) -> Result<(), UiError> {
+pub fn standard_documents_delete(state: State<'_, AppState>, id: i64) -> Result<(), AppError> {
     let session = state.session()?;
 
     stored::delete(&session.db(), id)?;

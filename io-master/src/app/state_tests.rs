@@ -8,8 +8,8 @@ use crate::installation::session::Session;
 use crate::security::random::fill_random;
 use crate::test_support::TempDir;
 
-fn state() -> UiState {
-    UiState::new(PathBuf::from("/nonexistent"), Opened::FirstRun)
+fn state() -> AppState {
+    AppState::new(PathBuf::from("/nonexistent"), Opened::FirstRun)
 }
 
 fn account() -> Account {
@@ -20,7 +20,7 @@ fn account() -> Account {
 fn a_session_starts_and_ends() {
     let state = state();
 
-    assert!(matches!(state.session(), Err(UiError::NotLoggedIn)));
+    assert!(matches!(state.session(), Err(AppError::NotLoggedIn)));
 
     // The database of the account, and its session.
     let directory = TempDir::new();
@@ -42,7 +42,7 @@ fn a_session_starts_and_ends() {
 
 #[test]
 fn nothing_is_installed_at_a_first_start() {
-    assert!(matches!(state().installed(), Err(UiError::NotInstalled)));
+    assert!(matches!(state().installed(), Err(AppError::NotInstalled)));
 }
 
 #[test]

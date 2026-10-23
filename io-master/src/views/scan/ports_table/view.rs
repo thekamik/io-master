@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::hardware_tests::devices::port_property::PortProperty;
 use crate::hardware_tests::devices::scan_settings::MAX_COLUMNS;
 use crate::hardware_tests::devices::serial_ports::{ScanError, SerialPortInfo};
@@ -34,9 +34,9 @@ impl PortsTableView {
     pub fn new(
         columns: &[PortProperty],
         outcome: Result<Vec<SerialPortInfo>, ScanError>,
-    ) -> Result<PortsTableView, UiError> {
-        ensure!(!columns.is_empty(), UiError::Failed("the table of ports has no columns".to_owned()));
-        ensure!(columns.len() <= MAX_COLUMNS, UiError::Failed("the table of ports has too many columns".to_owned()));
+    ) -> Result<PortsTableView, AppError> {
+        ensure!(!columns.is_empty(), AppError::Failed("the table of ports has no columns".to_owned()));
+        ensure!(columns.len() <= MAX_COLUMNS, AppError::Failed("the table of ports has too many columns".to_owned()));
 
         let ports = match outcome {
             Ok(ports) => ports,
@@ -47,7 +47,7 @@ impl PortsTableView {
             }
         };
 
-        ensure!(ports.len() <= MAX_PORTS, UiError::Failed(format!("the scan found {} ports", ports.len())));
+        ensure!(ports.len() <= MAX_PORTS, AppError::Failed(format!("the scan found {} ports", ports.len())));
 
         Ok(PortsTableView { columns: ColumnView::all(columns), rows: rows(&ports, columns), problem: None })
     }

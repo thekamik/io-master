@@ -2,8 +2,8 @@
 
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::hardware_tests::devices::serial_ports;
 
 use super::super::stored_settings;
@@ -20,7 +20,7 @@ use super::view::PortsTableView;
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn ports_table_scan(state: State<'_, UiState>) -> Result<PortsTableView, UiError> {
+pub fn ports_table_scan(state: State<'_, AppState>) -> Result<PortsTableView, AppError> {
     let session = state.session()?;
 
     // The database is held only while the settings are read, not

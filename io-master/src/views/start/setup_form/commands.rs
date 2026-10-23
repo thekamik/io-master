@@ -3,8 +3,8 @@
 use tauri::State;
 use zeroize::Zeroizing;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::installation::lifecycle;
 use crate::installation::{accounts, session::Session};
 use crate::model::installation::Role;
@@ -21,25 +21,25 @@ use crate::model::installation::Role;
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn setup_form_install(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     name: String,
     password: String,
     password_repeat: String,
     role: String,
     role_confirmed: bool,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     // The passwords are wiped from memory when they are dropped.
     let password = Zeroizing::new(password);
     let password_repeat = Zeroizing::new(password_repeat);
 
-    ensure!(state.running().is_none(), UiError::AlreadyInstalled);
-    ensure!(*password == *password_repeat, UiError::Invalid("the two passwords differ".to_owned()));
+    ensure!(state.running().is_none(), AppError::AlreadyInstalled);
+    ensure!(*password == *password_repeat, AppError::Invalid("the two passwords differ".to_owned()));
 
     let Some(role) = Role::from_name(&role) else {
-        return Err(UiError::Invalid("choose a role".to_owned()));
+        return Err(AppError::Invalid("choose a role".to_owned()));
     };
 
-    ensure!(role_confirmed, UiError::Invalid("confirm that the role cannot be changed later".to_owned()));
+    ensure!(role_confirmed, AppError::Invalid("confirm that the role cannot be changed later".to_owned()));
 
     let name = name.trim();
     let (running, _) = lifecycle::install(&state.data_dir, role, name, &password)?;

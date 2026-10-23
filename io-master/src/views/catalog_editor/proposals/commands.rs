@@ -3,8 +3,8 @@
 use serde_json::Value;
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::standards as db_standards;
 
@@ -15,7 +15,7 @@ use super::view::{self, ProposalView};
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn proposals_get(state: State<'_, UiState>, uuid: String) -> Result<Vec<ProposalView>, UiError> {
+pub fn proposals_get(state: State<'_, AppState>, uuid: String) -> Result<Vec<ProposalView>, AppError> {
     let session = state.session()?;
     let db = session.db();
 
@@ -26,7 +26,7 @@ pub fn proposals_get(state: State<'_, UiState>, uuid: String) -> Result<Vec<Prop
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn proposals_accept(state: State<'_, UiState>, id: i64, corrected: Option<Value>) -> Result<(), UiError> {
+pub fn proposals_accept(state: State<'_, AppState>, id: i64, corrected: Option<Value>) -> Result<(), AppError> {
     let session = state.session()?;
 
     accept::accept(&session.db(), id, corrected)?;
@@ -38,12 +38,12 @@ pub fn proposals_accept(state: State<'_, UiState>, id: i64, corrected: Option<Va
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn proposals_reject(state: State<'_, UiState>, id: i64) -> Result<(), UiError> {
+pub fn proposals_reject(state: State<'_, AppState>, id: i64) -> Result<(), AppError> {
     let session = state.session()?;
 
     ensure!(
         db_evaluation_support::delete::proposal(&session.db(), id)?,
-        UiError::Invalid("the proposal does not exist".to_owned())
+        AppError::Invalid("the proposal does not exist".to_owned())
     );
 
     Ok(())

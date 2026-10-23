@@ -3,8 +3,8 @@
 use serde_json::Value;
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
@@ -17,7 +17,7 @@ use super::view::ObjectView;
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn object_form_get(state: State<'_, UiState>, uuid: String, id: String) -> Result<ObjectView, UiError> {
+pub fn object_form_get(state: State<'_, AppState>, uuid: String, id: String) -> Result<ObjectView, AppError> {
     let session = state.session()?;
     let catalog = db_oscal::read::catalog(&session.db(), &uuid)?;
 
@@ -34,11 +34,11 @@ pub fn object_form_get(state: State<'_, UiState>, uuid: String, id: String) -> R
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn object_form_save_group(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     id: String,
     group: Value,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let group: Group = oscal_object::read(group)?;
     let db = session.db();
@@ -55,11 +55,11 @@ pub fn object_form_save_group(
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn object_form_save_control(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     id: String,
     control: Value,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let control: Control = oscal_object::read(control)?;
     let db = session.db();
@@ -76,7 +76,7 @@ pub fn object_form_save_control(
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn object_form_delete(state: State<'_, UiState>, uuid: String, id: String) -> Result<(), UiError> {
+pub fn object_form_delete(state: State<'_, AppState>, uuid: String, id: String) -> Result<(), AppError> {
     let session = state.session()?;
     let db = session.db();
 

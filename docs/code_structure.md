@@ -17,6 +17,7 @@ This document says **where** everything is in the code and **which rules keep it
 ```text
 io-master/src/
   main.rs            the list of the folders, main(), tauri_startup(); nothing else
+  routes.rs          the list of the commands the page may call (as urls.py of Django), above views/
   checks.rs          the macro ensure! (rule 5 of CLAUDE.md), known in the whole program
   model/             the data as plain Rust types and the rules of their validity; no I/O
   db/                every operation on a database, as CRUD; depends only on model/ and security/
@@ -124,7 +125,7 @@ Until step 42 the business logic was a folder of its own, as resources and opera
 
 ### 2.7 `app/`: what the whole window shares
 
-Named `tauri_ui/` until step 43 (2026-10-23): it is no interface, but what every view uses, as the session and the error handling of a web framework.
+Named `tauri_ui/` until step 43 (2026-10-23), its types `UiState` and `UiError` until 43.2: it is no interface, but what every view uses, as the session and the error handling of a web framework.
 
 ```text
 state.rs        the installation, the session of the evaluator, the stop signals; nothing else
@@ -133,7 +134,7 @@ serializer/     how an error reaches the page (serde)
 ```
 
 - **No command and no rule is here**: the commands are in the folders of the elements (`views/`).
-- A command is callable only when it is listed in **four places**: the `commands.rs` of an element of `views/`, `main.rs` (`generate_handler!`), `build.rs` (`AppManifest`), `capabilities/default.json`. A test (`src/command_lists_tests.rs`) reads the four lists and fails when they differ.
+- A command is callable only when it is listed in **four places**: the `commands.rs` of an element of `views/`, `routes.rs` (`generate_handler!`, used by the window and by the tests of the commands), `build.rs` (`AppManifest`), `capabilities/default.json`. A test (`src/command_lists_tests.rs`) reads the four lists and fails when they differ.
 
 ### 2.8 `ui/`: the page
 
@@ -195,6 +196,7 @@ Generated from the heads of the files (the tests left out):
 
 ```text
 main.rs                      Entry point of IO Master.
+routes.rs                  The routes of the window: the list of every command the page may
 checks.rs                  The checks of conditions that should never happen (rule 5 of
 model.rs/                  The data of the program as plain Rust types, and the rules of
   ai.rs                        The data of the communication with AI services: a connection as

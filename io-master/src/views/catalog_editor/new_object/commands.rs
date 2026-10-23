@@ -3,8 +3,8 @@
 use serde_json::Value;
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::oscal as db_oscal;
 use crate::model::oscal::catalog::{Control, Group};
 
@@ -16,11 +16,11 @@ use super::view::PlaceForm;
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn new_object_add_group(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     place: PlaceForm,
     group: Value,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let place = place.into_place()?;
     let group: Group = oscal_object::read(group)?;
@@ -38,11 +38,11 @@ pub fn new_object_add_group(
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn new_object_add_control(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     place: PlaceForm,
     control: Value,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let place = place.into_place()?;
     let control: Control = oscal_object::read(control)?;

@@ -4,7 +4,7 @@
 //! makes the permission `allow-<command>` for every command below.
 //! The window may call a command only when its capability
 //! (`capabilities/default.json`) lists that permission, so this
-//! list, the handler list in `src/main.rs` (`tauri_startup`) and the
+//! list, the handler list in `src/routes.rs` (`generate_handler!`) and the
 //! capability must name the same commands (each is defined in the
 //! `commands.rs` of its element, `src/views/<view>/<element>/`).
 

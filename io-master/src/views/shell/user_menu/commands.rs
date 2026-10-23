@@ -2,13 +2,13 @@
 
 use tauri::State;
 
-use crate::app::state::UiState;
+use crate::app::state::AppState;
 
 /// Logs out: ends the session of the evaluator.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn user_menu_log_out(state: State<'_, UiState>) {
+pub fn user_menu_log_out(state: State<'_, AppState>) {
     state.log_out();
 }
 

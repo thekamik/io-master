@@ -2,8 +2,8 @@
 
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::standards as db_standards;
 
 use super::super::oscal_documents::view::OscalDocumentView;
@@ -15,7 +15,7 @@ use super::view::{self, SourceView};
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn new_catalog_sources(state: State<'_, UiState>) -> Result<Vec<SourceView>, UiError> {
+pub fn new_catalog_sources(state: State<'_, AppState>) -> Result<Vec<SourceView>, AppError> {
     let session = state.session()?;
 
     Ok(view::all(db_standards::read::documents(&session.db())?))
@@ -27,11 +27,11 @@ pub fn new_catalog_sources(state: State<'_, UiState>) -> Result<Vec<SourceView>,
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn new_catalog_create(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     title: String,
     version: String,
     sources: Vec<i64>,
-) -> Result<OscalDocumentView, UiError> {
+) -> Result<OscalDocumentView, AppError> {
     let session = state.session()?;
 
     Ok(OscalDocumentView::new(made::create(&session.db(), &title, &version, &sources)?))

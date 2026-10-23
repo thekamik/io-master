@@ -3,7 +3,7 @@
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::model::oscal::catalog::tree::Location;
 use crate::model::oscal::catalog::{Catalog, Control, Group};
 
@@ -25,24 +25,24 @@ pub struct ObjectView {
 
 impl ObjectView {
     /// The object at `location` of `catalog`, whose id is `id`.
-    pub fn new(catalog: &Catalog, location: &Location, id: &str) -> Result<ObjectView, UiError> {
+    pub fn new(catalog: &Catalog, location: &Location, id: &str) -> Result<ObjectView, AppError> {
         if location.is_group() {
             let Some(group) = catalog.group_at(&location.groups) else {
-                return Err(UiError::Invalid(format!("the catalog has no group {id}")));
+                return Err(AppError::Invalid(format!("the catalog has no group {id}")));
             };
 
             return group_view(group, id);
         }
 
         let Some(control) = catalog.control_at(location) else {
-            return Err(UiError::Invalid(format!("the catalog has no control {id}")));
+            return Err(AppError::Invalid(format!("the catalog has no control {id}")));
         };
 
         control_view(control)
     }
 }
 
-fn group_view(group: &Group, id: &str) -> Result<ObjectView, UiError> {
+fn group_view(group: &Group, id: &str) -> Result<ObjectView, AppError> {
     let own = Group { groups: Vec::new(), controls: Vec::new(), ..group.clone() };
 
     Ok(ObjectView {
@@ -54,7 +54,7 @@ fn group_view(group: &Group, id: &str) -> Result<ObjectView, UiError> {
     })
 }
 
-fn control_view(control: &Control) -> Result<ObjectView, UiError> {
+fn control_view(control: &Control) -> Result<ObjectView, AppError> {
     let own = Control { controls: Vec::new(), ..control.clone() };
 
     Ok(ObjectView {
@@ -67,9 +67,9 @@ fn control_view(control: &Control) -> Result<ObjectView, UiError> {
 }
 
 /// An object as its JSON of OSCAL.
-fn json<T: Serialize>(object: &T) -> Result<Value, UiError> {
+fn json<T: Serialize>(object: &T) -> Result<Value, AppError> {
     match serde_json::to_value(object) {
         Ok(value) => Ok(value),
-        Err(error) => Err(UiError::Failed(error.to_string())),
+        Err(error) => Err(AppError::Failed(error.to_string())),
     }
 }

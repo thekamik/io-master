@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::model::oscal::catalog::tree::flat_parts;
 use crate::model::oscal::common::Part;
 
@@ -20,10 +20,10 @@ pub struct PartRowView {
 }
 
 /// The rows of `parts` and the parts in them, in the order of the document.
-pub fn rows(parts: &[Part]) -> Result<Vec<PartRowView>, UiError> {
+pub fn rows(parts: &[Part]) -> Result<Vec<PartRowView>, AppError> {
     let flat = match flat_parts(parts) {
         Ok(flat) => flat,
-        Err(error) => return Err(UiError::Invalid(error.to_string())),
+        Err(error) => return Err(AppError::Invalid(error.to_string())),
     };
 
     let mut rows = Vec::with_capacity(flat.len());

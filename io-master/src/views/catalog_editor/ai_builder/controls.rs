@@ -9,7 +9,7 @@ use tokio::sync::watch;
 use crate::ai::api::completions;
 use crate::ai::api::roles::Model;
 use crate::ai::tasks::catalog_section::{self, Section};
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::evaluation_support::create::NewProposal;
 use crate::db::oscal as db_oscal;
@@ -38,9 +38,9 @@ pub async fn propose(
     part_size: usize,
     stop: &watch::Receiver<bool>,
     events: &Channel<BuildEvent>,
-) -> Result<(), UiError> {
-    ensure!(!ranges.is_empty(), UiError::Invalid("choose the pages to read".to_owned()));
-    ensure!(ranges.len() <= MAX_RANGES, UiError::Invalid(format!("at most {MAX_RANGES} ranges of pages")));
+) -> Result<(), AppError> {
+    ensure!(!ranges.is_empty(), AppError::Invalid("choose the pages to read".to_owned()));
+    ensure!(ranges.len() <= MAX_RANGES, AppError::Invalid(format!("at most {MAX_RANGES} ranges of pages")));
 
     let Prepared { model, instructions, title, parts } = prepare(&session.db(), uuid, group, ranges, part_size)?;
     let model = Arc::new(model);
@@ -81,7 +81,7 @@ pub async fn propose(
 
     ensure!(
         events.send(BuildEvent::End { stopped }).is_ok(),
-        UiError::Failed("the window can no longer be reached".to_owned())
+        AppError::Failed("the window can no longer be reached".to_owned())
     );
 
     Ok(())
@@ -103,7 +103,7 @@ fn prepare(
     group: Option<&str>,
     ranges: &[PageRange],
     part_size: usize,
-) -> Result<Prepared, UiError> {
+) -> Result<Prepared, AppError> {
     let catalog = db_oscal::read::catalog(db, uuid)?;
 
     let title = match group {
@@ -123,7 +123,7 @@ fn prepare(
 }
 
 /// The title of group `id`.
-fn group_title(groups: &[(String, String)], id: &str) -> Result<String, UiError> {
+fn group_title(groups: &[(String, String)], id: &str) -> Result<String, AppError> {
     for (known, title) in groups {
         if known == id {
             return Ok(title.clone());
@@ -135,7 +135,7 @@ fn group_title(groups: &[(String, String)], id: &str) -> Result<String, UiError>
 
 /// The controls known (id, title): those of the catalog and those proposed
 /// already, so that a part does not propose them again.
-fn known_controls(db: &UserDb, uuid: &str) -> Result<Vec<(String, String)>, UiError> {
+fn known_controls(db: &UserDb, uuid: &str) -> Result<Vec<(String, String)>, AppError> {
     let catalog = db_oscal::read::catalog(db, uuid)?;
     let mut known = Vec::new();
 
@@ -164,13 +164,13 @@ fn store(
     model: &str,
     part: &Part,
     section: &Section,
-) -> Result<usize, UiError> {
+) -> Result<usize, AppError> {
     for proposed in &section.controls {
         let quotes = steps::checked_quotes(db, part, &proposed.quotes);
 
         let content = match serde_json::to_value(&proposed.control) {
             Ok(content) => content,
-            Err(error) => return Err(UiError::Failed(error.to_string())),
+            Err(error) => return Err(AppError::Failed(error.to_string())),
         };
 
         let proposal = NewProposal {

@@ -2,8 +2,8 @@
 
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::oscal as db_oscal;
 
 use super::view::CatalogTreeView;
@@ -12,7 +12,7 @@ use super::view::CatalogTreeView;
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn catalog_tree_get(state: State<'_, UiState>, uuid: String) -> Result<CatalogTreeView, UiError> {
+pub fn catalog_tree_get(state: State<'_, AppState>, uuid: String) -> Result<CatalogTreeView, AppError> {
     let session = state.session()?;
     let catalog = db_oscal::read::catalog(&session.db(), &uuid)?;
 

@@ -13,30 +13,30 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 use crate::ai::api::completions::AiError;
 
-use super::super::error::UiError;
+use super::super::error::AppError;
 
-impl UiError {
+impl AppError {
     /// The kind of the error as the page knows it.
     fn kind(&self) -> &'static str {
         match self {
-            UiError::NotInstalled => "not_installed",
-            UiError::AlreadyInstalled => "already_installed",
-            UiError::NotLoggedIn => "not_logged_in",
-            UiError::WrongCredentials => "wrong_credentials",
-            UiError::Invalid(_) | UiError::Connection(_) => "invalid",
-            UiError::Ai(AiError::NoConnection(_) | AiError::ServiceFailed(..)) => "ai_unavailable",
-            UiError::Ai(_) => "ai_refused",
-            UiError::Failed(_) => "failed",
+            AppError::NotInstalled => "not_installed",
+            AppError::AlreadyInstalled => "already_installed",
+            AppError::NotLoggedIn => "not_logged_in",
+            AppError::WrongCredentials => "wrong_credentials",
+            AppError::Invalid(_) | AppError::Connection(_) => "invalid",
+            AppError::Ai(AiError::NoConnection(_) | AiError::ServiceFailed(..)) => "ai_unavailable",
+            AppError::Ai(_) => "ai_refused",
+            AppError::Failed(_) => "failed",
         }
     }
 }
 
-impl Serialize for UiError {
+impl Serialize for AppError {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut error = serializer.serialize_struct("UiError", 3)?;
+        let mut error = serializer.serialize_struct("AppError", 3)?;
 
         let field = match self {
-            UiError::Connection(error) => Some(error.field.name()),
+            AppError::Connection(error) => Some(error.field.name()),
             _ => None,
         };
 

@@ -21,7 +21,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import { isUiError, sentence } from "../../lib/api/errors";
+  import { isAppError, sentence } from "../../lib/api/errors";
   import * as connectionForm from "../../lib/api/settings/connection_form";
 
   let {
@@ -175,7 +175,7 @@
       notice = { done: true, text: result.notice };
       onchanged(result.id);
     } catch (error) {
-      badField = isUiError(error) ? error.field : null;
+      badField = isAppError(error) ? error.field : null;
       notice = { done: false, text: `The connection was not saved: ${sentence(error)}` };
     } finally {
       busy = false;

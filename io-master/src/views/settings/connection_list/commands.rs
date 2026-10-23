@@ -3,8 +3,8 @@
 use tauri::State;
 
 use crate::ai::api::connections;
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 
 use super::view::ConnectionListView;
 
@@ -12,7 +12,7 @@ use super::view::ConnectionListView;
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn connection_list_get(state: State<'_, UiState>) -> Result<ConnectionListView, UiError> {
+pub fn connection_list_get(state: State<'_, AppState>) -> Result<ConnectionListView, AppError> {
     let session = state.session()?;
     let db = session.db();
 

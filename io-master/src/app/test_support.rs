@@ -5,7 +5,7 @@ use crate::installation::lifecycle::{self, Opened};
 use crate::model::installation::Role;
 use crate::test_support::TempDir;
 
-use super::state::UiState;
+use super::state::AppState;
 use crate::installation::{accounts, session::Session};
 
 /// The password of the user of the tests.
@@ -18,13 +18,13 @@ pub struct TestState {
     /// as long as the state that uses it.
     #[allow(dead_code)]
     pub directory: TempDir,
-    pub state: UiState,
+    pub state: AppState,
 }
 
 /// A state at the first start.
 pub fn first_start() -> TestState {
     let directory = TempDir::new();
-    let state = UiState::new(directory.path().to_owned(), Opened::FirstRun);
+    let state = AppState::new(directory.path().to_owned(), Opened::FirstRun);
 
     TestState { directory, state }
 }
@@ -33,7 +33,7 @@ pub fn first_start() -> TestState {
 pub fn installed() -> TestState {
     let directory = TempDir::new();
     let (running, _) = lifecycle::install(directory.path(), Role::Workstation, "anna", PASSWORD).unwrap();
-    let state = UiState::new(directory.path().to_owned(), Opened::Installed(running));
+    let state = AppState::new(directory.path().to_owned(), Opened::Installed(running));
 
     TestState { directory, state }
 }
@@ -47,7 +47,7 @@ pub async fn logged_in() -> TestState {
 }
 
 /// Logs "anna" in with `password`, as the login form does.
-pub fn log_in(state: &UiState, password: &str) {
+pub fn log_in(state: &AppState, password: &str) {
     let running = state.installed().unwrap();
     let (account, key) =
         accounts::log_in(&running.system_db, running.device_secret.as_ref(), &state.data_dir, "anna", password)

@@ -3,8 +3,8 @@
 use tauri::State;
 
 use crate::ai::api::{connections, roles};
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::model::ai::Role;
 
 use super::view::ConnectionLineView;
@@ -13,7 +13,7 @@ use super::view::ConnectionLineView;
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn connection_line_get(state: State<'_, UiState>) -> Result<Option<ConnectionLineView>, UiError> {
+pub fn connection_line_get(state: State<'_, AppState>) -> Result<Option<ConnectionLineView>, AppError> {
     let session = state.session()?;
     let db = session.db();
 

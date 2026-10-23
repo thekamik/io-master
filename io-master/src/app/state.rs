@@ -18,11 +18,11 @@ use crate::installation::lifecycle::{Opened, Running};
 use crate::installation::session::Session;
 use crate::model::installation::Role;
 
-use super::error::UiError;
+use super::error::AppError;
 
 /// Everything the commands reach. One for the whole program.
 #[derive(Debug)]
-pub struct UiState {
+pub struct AppState {
     /// The folder of the installation.
     pub data_dir: PathBuf,
     /// The running installation; `None` until the first start is
@@ -46,15 +46,15 @@ fn lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
     mutex.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
-impl UiState {
+impl AppState {
     /// The state at the start of the program.
-    pub fn new(data_dir: PathBuf, opened: Opened) -> UiState {
+    pub fn new(data_dir: PathBuf, opened: Opened) -> AppState {
         let running = match opened {
             Opened::FirstRun => None,
             Opened::Installed(running) => Some(Arc::new(running)),
         };
 
-        UiState {
+        AppState {
             data_dir,
             running: RwLock::new(running),
             session: Mutex::new(None),
@@ -77,8 +77,8 @@ impl UiState {
 
     /// The running installation, or the error that nothing is
     /// installed yet.
-    pub fn installed(&self) -> Result<Arc<Running>, UiError> {
-        self.running().ok_or(UiError::NotInstalled)
+    pub fn installed(&self) -> Result<Arc<Running>, AppError> {
+        self.running().ok_or(AppError::NotInstalled)
     }
 
     /// Records the installation made by the setup.
@@ -89,8 +89,8 @@ impl UiState {
     /// The session of the logged-in evaluator, or the error that
     /// nobody is logged in. Every command that reads or changes the
     /// data of the evaluator starts with this check.
-    pub fn session(&self) -> Result<Arc<Session>, UiError> {
-        lock(&self.session).clone().ok_or(UiError::NotLoggedIn)
+    pub fn session(&self) -> Result<Arc<Session>, AppError> {
+        lock(&self.session).clone().ok_or(AppError::NotLoggedIn)
     }
 
     /// Whether somebody is logged in, and who.

@@ -2,8 +2,8 @@
 
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
@@ -17,10 +17,10 @@ use super::view::ObjectQuotesView;
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn object_quotes_get(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     object_id: String,
-) -> Result<ObjectQuotesView, UiError> {
+) -> Result<ObjectQuotesView, AppError> {
     let session = state.session()?;
     let db = session.db();
 
@@ -35,13 +35,13 @@ pub fn object_quotes_get(
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn object_quotes_add(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     object_id: String,
     source: i64,
     page: u32,
     text: String,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let db = session.db();
 
@@ -58,12 +58,12 @@ pub fn object_quotes_add(
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn object_quotes_delete(state: State<'_, UiState>, id: i64) -> Result<(), UiError> {
+pub fn object_quotes_delete(state: State<'_, AppState>, id: i64) -> Result<(), AppError> {
     let session = state.session()?;
 
     ensure!(
         db_evaluation_support::delete::quote(&session.db(), id)?,
-        UiError::Invalid("the quote does not exist".to_owned())
+        AppError::Invalid("the quote does not exist".to_owned())
     );
 
     Ok(())

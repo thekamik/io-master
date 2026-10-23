@@ -57,7 +57,7 @@ The user found, after step 42: `tauri_ui/` is left although the architecture was
 **Decisions of the user**
 - [x] One vocabulary for Rust, the page, the navigation and the documents (`CLAUDE.md`, "Terms"): `start`, `shell`, `evaluation_plan`, `evaluation_lab`, `devices`, `settings`, `chat`.
 - [x] A view is a whole page (the high-level display); a component is a small element used more than once (several times in one view or in several views), kept in `components/` and imported by the views (`CLAUDE.md`, "Terms"). Example to come: the *requirement*, with its functions of the AI.
-- [x] `tauri_ui/` is renamed **`app/`** (user, 2026-10-23): `state.rs`, `error.rs`, and `routes.rs` with the list of the commands moved out of `main.rs` (as `urls.py` of Django). It holds the infrastructure every view uses, as the session and the error handling of a web framework; not `server/`, a name kept for the network server of the reset service (steps 4 and 11).
+- [x] `tauri_ui/` is renamed **`app/`** (user, 2026-10-23): `state.rs`, `error.rs`; the list of the commands moved out of `main.rs` into `src/routes.rs` (as `urls.py` of Django), above `views/`. It holds the infrastructure every view uses, as the session and the error handling of a web framework; not `server/`, a name kept for the network server of the reset service (steps 4 and 11).
 - [x] The vocabulary, the tasks of the folders and the flow of data in the views are in `architecture.md`, sections 10 to 12 (user, 2026-10-23).
 - [x] The Manufacturer documentation (step 30) is a part of `evaluation_lab` (user, 2026-10-23): during an evaluation the laboratory delivers the evidence there (quotes of the Security Target, ...). The placeholder page goes into the view.
 - [ ] **The tiles of the evidence (open, not part of this step):** the user has not thought them through yet (2026-10-23). The present idea (`architecture.md`, section 10.2): requirement ← input ← proof, the AI in the input checking whether a proof meets the criteria to be that input of the requirement. Settled in the concept of step 41.5.
@@ -67,7 +67,7 @@ The user found, after step 42: `tauri_ui/` is left although the architecture was
 
 | Old | New | Why |
 |---|---|---|
-| `src/tauri_ui/` | `src/app/`; the list of the commands of `main.rs` to `app/routes.rs` | infrastructure, not an interface |
+| `src/tauri_ui/` | `src/app/`; the list of the commands of `main.rs` to `src/routes.rs` | infrastructure, not an interface |
 | `src/views/plans/` | `src/views/evaluation_plan/` | vocabulary |
 | `src/views/catalog_editor/` | `src/views/evaluation_plan/catalog_editor/` | opened from the evaluation plan (`Plans.svelte`), a part of it |
 | `src/views/plans/pdf_viewer/` | `src/components/pdf_viewer/` | used by the evaluation plan and the editor of a catalog |
@@ -89,8 +89,8 @@ The user found, after step 42: `tauri_ui/` is left although the architecture was
 - A view uses `components/`; it never uses another view (a part of a view inside its folder, as the editor of a catalog, is not another view).
 
 **Phases** (user, 2026-10-23: short series, so that a session never runs out of its context in the middle of a change and the work always returns to a stable state). Each phase is one commit, pushed: it builds, every test passes, clippy and `npm run check` are as before, and the documentation of what it changed is in the same commit. A session does one phase, or two small ones; the next session starts at the first phase not ticked.
-- [x] 43.1 `src/tauri_ui/` renamed `src/app/` (the folder only; the names of the types `UiState`, `UiError` stay, a question for the user); every `use`, the test of the architecture, the comments, `code_structure.md`.
-- [ ] 43.2 The list of the commands moved out of `main.rs` into `app/routes.rs` (as `urls.py`); `command_lists_tests.rs` reads it there.
+- [x] 43.1 `src/tauri_ui/` renamed `src/app/` (the folder only; its types renamed in 43.2); every `use`, the test of the architecture, the comments, `code_structure.md`.
+- [x] 43.2 The list of the commands moved out of `main.rs` into **`src/routes.rs`** (as `urls.py`; user, 2026-10-23: not `app/routes.rs`, which would name `views/` from below them, a cycle); the window and the tests of the commands use the one list (the copy in `views/test_support.rs` removed); `command_lists_tests.rs` reads it there. The types `UiState`, `UiError` renamed `AppState`, `AppError` (also `AppError` and `isAppError` of the page).
 - [ ] 43.3 `scan` renamed `devices`: Rust (`views/devices/`), the page (`ui/src/views/devices/`, `lib/api/devices/`), the navigation "Devices".
 - [ ] 43.4 `plans` renamed `evaluation_plan`: Rust, the page, `lib/api/`, the navigation.
 - [ ] 43.5 `catalog_editor` moved into `evaluation_plan/catalog_editor/`: Rust, the page, `lib/api/`.

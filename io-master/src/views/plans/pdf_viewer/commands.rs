@@ -3,8 +3,8 @@
 use tauri::State;
 use tauri::ipc::Response;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::standards as db_standards;
 
 use super::view::{self, ViewerDocumentView};
@@ -13,7 +13,7 @@ use super::view::{self, ViewerDocumentView};
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn pdf_viewer_documents(state: State<'_, UiState>) -> Result<Vec<ViewerDocumentView>, UiError> {
+pub fn pdf_viewer_documents(state: State<'_, AppState>) -> Result<Vec<ViewerDocumentView>, AppError> {
     let session = state.session()?;
 
     Ok(view::all(db_standards::read::documents(&session.db())?))
@@ -23,11 +23,11 @@ pub fn pdf_viewer_documents(state: State<'_, UiState>) -> Result<Vec<ViewerDocum
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn pdf_viewer_get(state: State<'_, UiState>, id: i64) -> Result<Response, UiError> {
+pub fn pdf_viewer_get(state: State<'_, AppState>, id: i64) -> Result<Response, AppError> {
     let session = state.session()?;
 
     let Some(pdf) = db_standards::read::pdf(&session.db(), id)? else {
-        return Err(UiError::Invalid("the document does not exist".to_owned()));
+        return Err(AppError::Invalid("the document does not exist".to_owned()));
     };
 
     Ok(Response::new(pdf))

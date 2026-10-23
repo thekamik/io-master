@@ -2,15 +2,15 @@
 //!
 //! A reply runs while `conversation_send` waits for it; its pieces go to
 //! the page through the channel `on_event` as they arrive. "Stop"
-//! (`conversation_stop`, through `UiState::stop_reply`) stops it
+//! (`conversation_stop`, through `AppState::stop_reply`) stops it
 //! (`ai/api/completions.rs`); what was written up to then is stored, like
 //! every reply, with how it ended (`turn.rs`).
 
 use tauri::State;
 use tauri::ipc::Channel;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::ai::chats as db_chats;
 
 use super::turn;
@@ -20,12 +20,12 @@ use super::view::{ChatView, ReplyEvent};
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn conversation_open(state: State<'_, UiState>, chat_id: i64) -> Result<ChatView, UiError> {
+pub fn conversation_open(state: State<'_, AppState>, chat_id: i64) -> Result<ChatView, AppError> {
     let session = state.session()?;
     let db = session.db();
 
     let Some(title) = db_chats::read::chat_title(&db, chat_id)? else {
-        return Err(UiError::Invalid("the chat does not exist".to_owned()));
+        return Err(AppError::Invalid("the chat does not exist".to_owned()));
     };
 
     Ok(ChatView::new(chat_id, title, db_chats::read::messages(&db, chat_id)?))
@@ -39,11 +39,11 @@ pub fn conversation_open(state: State<'_, UiState>, chat_id: i64) -> Result<Chat
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
 pub async fn conversation_send(
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     chat_id: Option<i64>,
     text: String,
     on_event: Channel<ReplyEvent>,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let session = state.session()?;
     let stop = state.start_reply();
 
@@ -56,7 +56,7 @@ pub async fn conversation_send(
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn conversation_stop(state: State<'_, UiState>) {
+pub fn conversation_stop(state: State<'_, AppState>) {
     state.stop_reply();
 }
 
@@ -65,10 +65,10 @@ pub fn conversation_stop(state: State<'_, UiState>) {
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn conversation_delete(state: State<'_, UiState>, chat_id: i64) -> Result<(), UiError> {
+pub fn conversation_delete(state: State<'_, AppState>, chat_id: i64) -> Result<(), AppError> {
     let session = state.session()?;
 
-    ensure!(db_chats::delete::chat(&session.db(), chat_id)?, UiError::Invalid("the chat does not exist".to_owned()));
+    ensure!(db_chats::delete::chat(&session.db(), chat_id)?, AppError::Invalid("the chat does not exist".to_owned()));
 
     Ok(())
 }

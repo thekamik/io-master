@@ -10,7 +10,7 @@ use tokio::sync::watch;
 use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
@@ -36,7 +36,7 @@ pub enum Asked {
 }
 
 /// The model of the role of `task`, and the instructions of the task.
-pub fn model_and_instructions(db: &UserDb, task: Task) -> Result<(Model, String), UiError> {
+pub fn model_and_instructions(db: &UserDb, task: Task) -> Result<(Model, String), AppError> {
     let role = match task.role() {
         Some(role) => role,
         None => Role::TextAnalysis,
@@ -54,12 +54,12 @@ pub fn parts_with_documents(
     db: &UserDb,
     ranges: &[(i64, u32, u32)],
     part_size: usize,
-) -> Result<Vec<(Part, Document)>, UiError> {
+) -> Result<Vec<(Part, Document)>, AppError> {
     let mut found = Vec::new();
 
     for part in parts::parts(db, ranges, part_size)? {
         let Some(document) = db_standards::read::document(db, part.document_id)? else {
-            return Err(UiError::Invalid("the document of the standard does not exist".to_owned()));
+            return Err(AppError::Invalid("the document of the standard does not exist".to_owned()));
         };
 
         found.push((part, document));

@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::model::oscal::catalog::Catalog;
 
 /// A row of the tree: a group or a control.
@@ -28,10 +28,10 @@ pub struct CatalogTreeView {
 }
 
 impl CatalogTreeView {
-    pub fn new(catalog: &Catalog) -> Result<CatalogTreeView, UiError> {
+    pub fn new(catalog: &Catalog) -> Result<CatalogTreeView, AppError> {
         let locations = match catalog.locations() {
             Ok(locations) => locations,
-            Err(error) => return Err(UiError::Invalid(error.to_string())),
+            Err(error) => return Err(AppError::Invalid(error.to_string())),
         };
 
         let mut rows = Vec::with_capacity(locations.len());

@@ -23,7 +23,7 @@ use tokio::sync::watch;
 use crate::ai::api::completions;
 use crate::ai::api::roles::{self, Model, ModelError};
 use crate::ai::tasks::chat as memory;
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::db::ai::chats as db_chats;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -115,11 +115,11 @@ impl From<ModelError> for SendError {
     }
 }
 
-impl From<SendError> for UiError {
-    fn from(error: SendError) -> UiError {
+impl From<SendError> for AppError {
+    fn from(error: SendError) -> AppError {
         match error {
-            SendError::Db(_) | SendError::PageGone => UiError::Failed(error.to_string()),
-            other => UiError::Invalid(other.to_string()),
+            SendError::Db(_) | SendError::PageGone => AppError::Failed(error.to_string()),
+            other => AppError::Invalid(other.to_string()),
         }
     }
 }

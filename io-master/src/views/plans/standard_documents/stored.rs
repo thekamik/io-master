@@ -6,7 +6,7 @@
 
 use std::fmt;
 
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::db::error::DbError;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::standards as db_standards;
@@ -56,11 +56,11 @@ impl From<Invalid> for DocumentError {
     }
 }
 
-impl From<DocumentError> for UiError {
-    fn from(error: DocumentError) -> UiError {
+impl From<DocumentError> for AppError {
+    fn from(error: DocumentError) -> AppError {
         match error {
-            DocumentError::Db(error) => UiError::Failed(error.to_string()),
-            other => UiError::Invalid(other.to_string()),
+            DocumentError::Db(error) => AppError::Failed(error.to_string()),
+            other => AppError::Invalid(other.to_string()),
         }
     }
 }

@@ -3,17 +3,17 @@
 use tauri::State;
 
 use crate::ai::api::connections;
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::user::database::UserDb;
 use crate::model::api_key::ApiKey;
 
 use super::view::ApiKeyView;
 
 /// What the page may know of the key of connection `id`.
-fn view(db: &UserDb, id: i64) -> Result<ApiKeyView, UiError> {
+fn view(db: &UserDb, id: i64) -> Result<ApiKeyView, AppError> {
     let Some(stored) = connections::get(db, id)? else {
-        return Err(UiError::Invalid("the connection does not exist".to_owned()));
+        return Err(AppError::Invalid("the connection does not exist".to_owned()));
     };
 
     Ok(ApiKeyView::new(&stored))
@@ -23,7 +23,7 @@ fn view(db: &UserDb, id: i64) -> Result<ApiKeyView, UiError> {
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn api_key_get(state: State<'_, UiState>, id: i64) -> Result<ApiKeyView, UiError> {
+pub fn api_key_get(state: State<'_, AppState>, id: i64) -> Result<ApiKeyView, AppError> {
     let session = state.session()?;
 
     view(&session.db(), id)
@@ -34,17 +34,17 @@ pub fn api_key_get(state: State<'_, UiState>, id: i64) -> Result<ApiKeyView, UiE
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn api_key_store(state: State<'_, UiState>, id: i64, api_key: String) -> Result<ApiKeyView, UiError> {
+pub fn api_key_store(state: State<'_, AppState>, id: i64, api_key: String) -> Result<ApiKeyView, AppError> {
     let session = state.session()?;
 
     let api_key = match ApiKey::new(api_key) {
         Ok(api_key) => api_key,
-        Err(error) => return Err(UiError::Invalid(format!("the key was not stored: {error}"))),
+        Err(error) => return Err(AppError::Invalid(format!("the key was not stored: {error}"))),
     };
 
     let db = session.db();
 
-    ensure!(connections::set_key(&db, id, &api_key)?, UiError::Invalid("the connection does not exist".to_owned()));
+    ensure!(connections::set_key(&db, id, &api_key)?, AppError::Invalid("the connection does not exist".to_owned()));
 
     view(&db, id)
 }
@@ -53,7 +53,7 @@ pub fn api_key_store(state: State<'_, UiState>, id: i64, api_key: String) -> Res
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn api_key_delete(state: State<'_, UiState>, id: i64) -> Result<ApiKeyView, UiError> {
+pub fn api_key_delete(state: State<'_, AppState>, id: i64) -> Result<ApiKeyView, AppError> {
     let session = state.session()?;
     let db = session.db();
 

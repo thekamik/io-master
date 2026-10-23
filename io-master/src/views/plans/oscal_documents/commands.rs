@@ -8,8 +8,8 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Runtime, State};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::oscal as db_oscal;
 
 use super::file::{self, MAX_FILE};
@@ -19,7 +19,7 @@ use super::view::{self, OscalDocumentView};
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn oscal_documents_get(state: State<'_, UiState>) -> Result<Vec<OscalDocumentView>, UiError> {
+pub fn oscal_documents_get(state: State<'_, AppState>) -> Result<Vec<OscalDocumentView>, AppError> {
     let session = state.session()?;
 
     Ok(view::all(db_oscal::read::summaries(&session.db())?))
@@ -32,8 +32,8 @@ pub fn oscal_documents_get(state: State<'_, UiState>) -> Result<Vec<OscalDocumen
 #[tauri::command]
 pub async fn oscal_documents_import<R: Runtime>(
     app: AppHandle<R>,
-    state: State<'_, UiState>,
-) -> Result<Option<OscalDocumentView>, UiError> {
+    state: State<'_, AppState>,
+) -> Result<Option<OscalDocumentView>, AppError> {
     let session = state.session()?;
 
     let Some(path) = choose_file(app).await? else {
@@ -54,10 +54,10 @@ pub async fn oscal_documents_import<R: Runtime>(
 #[tauri::command]
 pub async fn oscal_documents_export<R: Runtime>(
     app: AppHandle<R>,
-    state: State<'_, UiState>,
+    state: State<'_, AppState>,
     uuid: String,
     file_name: String,
-) -> Result<bool, UiError> {
+) -> Result<bool, AppError> {
     let session = state.session()?;
     let text = file::export(&session.db(), &uuid)?;
 
@@ -67,7 +67,7 @@ pub async fn oscal_documents_export<R: Runtime>(
 
     match tokio::fs::write(&path, text).await {
         Ok(()) => Ok(true),
-        Err(error) => Err(UiError::Failed(format!("the file was not written: {error}"))),
+        Err(error) => Err(AppError::Failed(format!("the file was not written: {error}"))),
     }
 }
 
@@ -75,16 +75,16 @@ pub async fn oscal_documents_export<R: Runtime>(
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn oscal_documents_delete(state: State<'_, UiState>, uuid: String) -> Result<(), UiError> {
+pub fn oscal_documents_delete(state: State<'_, AppState>, uuid: String) -> Result<(), AppError> {
     let session = state.session()?;
 
-    ensure!(file::delete(&session.db(), &uuid)?, UiError::Invalid("the OSCAL document does not exist".to_owned()));
+    ensure!(file::delete(&session.db(), &uuid)?, AppError::Invalid("the OSCAL document does not exist".to_owned()));
 
     Ok(())
 }
 
 /// The file the evaluator chose; `None` when the dialog was closed.
-async fn choose_file<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>, UiError> {
+async fn choose_file<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>, AppError> {
     let chosen = tokio::task::spawn_blocking(move || {
         app.dialog()
             .file()
@@ -97,13 +97,13 @@ async fn choose_file<R: Runtime>(app: AppHandle<R>) -> Result<Option<PathBuf>, U
     match chosen {
         Ok(Some(file)) => Ok(file.into_path().ok()),
         Ok(None) => Ok(None),
-        Err(_) => Err(UiError::Failed("the dialog failed".to_owned())),
+        Err(_) => Err(AppError::Failed("the dialog failed".to_owned())),
     }
 }
 
 /// The place the evaluator chose for a file named `name`; `None` when the
 /// dialog was closed.
-async fn choose_place<R: Runtime>(app: AppHandle<R>, name: String) -> Result<Option<PathBuf>, UiError> {
+async fn choose_place<R: Runtime>(app: AppHandle<R>, name: String) -> Result<Option<PathBuf>, AppError> {
     let chosen = tokio::task::spawn_blocking(move || {
         app.dialog()
             .file()
@@ -117,23 +117,23 @@ async fn choose_place<R: Runtime>(app: AppHandle<R>, name: String) -> Result<Opt
     match chosen {
         Ok(Some(file)) => Ok(file.into_path().ok()),
         Ok(None) => Ok(None),
-        Err(_) => Err(UiError::Failed("the dialog failed".to_owned())),
+        Err(_) => Err(AppError::Failed("the dialog failed".to_owned())),
     }
 }
 
 /// The text of the file at `path`, refused when it is larger than
 /// [`MAX_FILE`].
-async fn read_file(path: PathBuf) -> Result<String, UiError> {
+async fn read_file(path: PathBuf) -> Result<String, AppError> {
     let size = match tokio::fs::metadata(&path).await {
         Ok(metadata) => metadata.len(),
-        Err(error) => return Err(UiError::Invalid(format!("the file was not read: {error}"))),
+        Err(error) => return Err(AppError::Invalid(format!("the file was not read: {error}"))),
     };
 
-    ensure!(size <= MAX_FILE, UiError::Invalid(format!("the file is larger than {} MiB", MAX_FILE / 1024 / 1024)));
+    ensure!(size <= MAX_FILE, AppError::Invalid(format!("the file is larger than {} MiB", MAX_FILE / 1024 / 1024)));
 
     match tokio::fs::read_to_string(&path).await {
         Ok(text) => Ok(text),
-        Err(error) => Err(UiError::Invalid(format!("the file was not read: {error}"))),
+        Err(error) => Err(AppError::Invalid(format!("the file was not read: {error}"))),
     }
 }
 

@@ -273,7 +273,8 @@ A **component** is a small element used more than once: several times in one vie
 | Name | The user's words | What it is |
 |---|---|---|
 | the page | strona, front end | `io-master/ui/`, Svelte and TypeScript: a separate project |
-| `app/` (was `tauri_ui/`) | app | what every view uses: the state of the window, the errors of the commands, the list of the commands |
+| `app/` (was `tauri_ui/`) | app | what every view uses: the state of the window (`AppState`), the errors of the commands (`AppError`) |
+| `routes.rs` | routes | the list of every command the page may call, as `urls.py` of Django; above the views it names |
 | command | komenda | a function of Rust the page calls through Tauri, named `<element>_<action>` |
 | evaluation support | wsparcie ewaluacji | what the program adds to OSCAL (quotes, proposals of the AI, instructions, the layout of the graph), linked to OSCAL by UUID and id (section 7.1) |
 
@@ -285,7 +286,8 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 |---|---|---|
 | `views/` | the views of section 10.1: one folder per view, with the elements of its page used only there; a command takes the parameters from the page, does the work with the folders below and gives the data back | `components/`, everything below |
 | `components/` (planned, step 43) | the components of section 10.2, built as an element: its commands and its data | everything below `views/` |
-| `app/` (was `tauri_ui/`) | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart, the list of the commands | `installation/`, `model/`, the errors of the folders below |
+| `routes.rs` (a file, not a folder) | the list of every command the page may call; the window of the program and the window of the tests use it | `views/` |
+| `app/` (was `tauri_ui/`) | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart | `installation/`, `model/`, the errors of the folders below |
 | `installation/` | the installation of the Linux account, its one account and the session of the logged-in evaluator: the core of the protection | `db/`, `security/`, `model/` |
 | `ai/` | the whole communication with AI services: `ai/api/` the only way to a model, `ai/tasks/` the questions and the reading of the answers | `db/`, `model/` |
 | `hardware_tests/` | everything that talks to hardware: the scan of the serial ports, later UART, Bluetooth, the permissions of the ports | `model/` |

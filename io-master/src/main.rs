@@ -44,6 +44,10 @@ mod security;
 mod test_support;
 mod views;
 
+// The routes of the window: the list of the commands the page may call,
+// above the views it names.
+mod routes;
+
 // The direction of the dependencies between the folders, and the four
 // lists of the commands, checked on the source.
 #[cfg(test)]
@@ -54,7 +58,7 @@ mod command_lists_tests;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
-use app::state::UiState;
+use app::state::AppState;
 use installation::lifecycle::Opened;
 use installation::verify::{InstallationState, verify_installation};
 
@@ -128,79 +132,9 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         .plugin(tauri_plugin_dialog::init())
         // The state shared by all commands: the installation, the
         // session, the work in progress (app/state.rs).
-        .manage(UiState::new(data_dir, opened))
-        // The commands the page may call: those of the views, each in
-        // the folder of its element (views/<view>/<element>/commands.rs).
-        // A command must also be listed in build.rs and
-        // capabilities/default.json, or the page is refused when it
-        // calls it.
-        .invoke_handler(tauri::generate_handler![
-            // The view Start (views/start/) and the frame of the window
-            // (views/shell/).
-            views::start::setup_form::commands::setup_form_install,
-            views::start::login_form::commands::login_form_log_in,
-            views::shell::program::commands::program_get,
-            views::shell::user_menu::commands::user_menu_log_out,
-            // The view Settings (views/settings/).
-            views::settings::password_form::commands::password_form_change,
-            views::settings::connection_list::commands::connection_list_get,
-            views::settings::connection_form::commands::connection_form_new,
-            views::settings::connection_form::commands::connection_form_get,
-            views::settings::connection_form::commands::connection_form_save,
-            views::settings::connection_form::commands::connection_form_delete,
-            views::settings::connection_form::commands::connection_form_activate,
-            views::settings::connection_form::commands::connection_form_field_help,
-            views::settings::api_key::commands::api_key_get,
-            views::settings::api_key::commands::api_key_store,
-            views::settings::api_key::commands::api_key_delete,
-            views::settings::connection_check::commands::connection_check_run,
-            // The view Scan (views/scan/).
-            views::scan::ports_table::commands::ports_table_scan,
-            views::scan::scanner_settings::commands::scanner_settings_get,
-            views::scan::scanner_settings::commands::scanner_settings_save,
-            // The view Chat (views/chat/).
-            views::chat::connection_line::commands::connection_line_get,
-            views::chat::chat_list::commands::chat_list_get,
-            views::chat::conversation::commands::conversation_open,
-            views::chat::conversation::commands::conversation_send,
-            views::chat::conversation::commands::conversation_stop,
-            views::chat::conversation::commands::conversation_delete,
-            // The view Evaluation plan (views/plans/).
-            views::plans::oscal_documents::commands::oscal_documents_get,
-            views::plans::oscal_documents::commands::oscal_documents_import,
-            views::plans::oscal_documents::commands::oscal_documents_export,
-            views::plans::oscal_documents::commands::oscal_documents_delete,
-            views::plans::new_catalog::commands::new_catalog_sources,
-            views::plans::new_catalog::commands::new_catalog_create,
-            views::plans::standard_documents::commands::standard_documents_get,
-            views::plans::standard_documents::commands::standard_documents_load,
-            views::plans::standard_documents::commands::standard_documents_stop,
-            views::plans::standard_documents::commands::standard_documents_update,
-            views::plans::standard_documents::commands::standard_documents_delete,
-            views::plans::document_search::commands::document_search_run,
-            views::plans::pdf_viewer::commands::pdf_viewer_documents,
-            views::plans::pdf_viewer::commands::pdf_viewer_get,
-            // The view editor of a catalog (views/catalog_editor/).
-            views::catalog_editor::catalog_tree::commands::catalog_tree_get,
-            views::catalog_editor::object_form::commands::object_form_get,
-            views::catalog_editor::object_form::commands::object_form_save_group,
-            views::catalog_editor::object_form::commands::object_form_save_control,
-            views::catalog_editor::object_form::commands::object_form_delete,
-            views::catalog_editor::new_object::commands::new_object_add_group,
-            views::catalog_editor::new_object::commands::new_object_add_control,
-            views::catalog_editor::object_quotes::commands::object_quotes_get,
-            views::catalog_editor::object_quotes::commands::object_quotes_add,
-            views::catalog_editor::object_quotes::commands::object_quotes_delete,
-            views::catalog_editor::proposals::commands::proposals_get,
-            views::catalog_editor::proposals::commands::proposals_accept,
-            views::catalog_editor::proposals::commands::proposals_reject,
-            views::catalog_editor::ai_builder::commands::ai_builder_sources,
-            views::catalog_editor::ai_builder::commands::ai_builder_groups,
-            views::catalog_editor::ai_builder::commands::ai_builder_controls,
-            views::catalog_editor::ai_builder::commands::ai_builder_stop,
-            views::catalog_editor::ai_instructions::commands::ai_instructions_get,
-            views::catalog_editor::ai_instructions::commands::ai_instructions_save,
-        ])
+        .manage(AppState::new(data_dir, opened))
+        // The commands the page may call (routes.rs).
+        .invoke_handler(routes::handler())
         .run(tauri::generate_context!());
 
     match result {

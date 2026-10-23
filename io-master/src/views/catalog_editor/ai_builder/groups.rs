@@ -8,7 +8,7 @@ use tokio::sync::watch;
 
 use crate::ai::api::completions;
 use crate::ai::tasks::catalog_outline::{self, Outline};
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::evaluation_support::create::NewProposal;
 use crate::db::oscal as db_oscal;
@@ -30,7 +30,7 @@ pub async fn propose(
     range: &PageRange,
     stop: &watch::Receiver<bool>,
     events: &Channel<BuildEvent>,
-) -> Result<(), UiError> {
+) -> Result<(), AppError> {
     let (model, instructions, parts) = {
         let db = session.db();
         db_oscal::read::catalog(&db, uuid)?;
@@ -79,7 +79,7 @@ pub async fn propose(
 
     ensure!(
         events.send(BuildEvent::End { stopped }).is_ok(),
-        UiError::Failed("the window can no longer be reached".to_owned())
+        AppError::Failed("the window can no longer be reached".to_owned())
     );
 
     Ok(())
@@ -87,13 +87,13 @@ pub async fn propose(
 
 /// Stores the groups of `outline` as proposals of `model` for catalog
 /// `uuid`; returns how many.
-fn store(db: &UserDb, uuid: &str, model: &str, part: &Part, outline: &Outline) -> Result<usize, UiError> {
+fn store(db: &UserDb, uuid: &str, model: &str, part: &Part, outline: &Outline) -> Result<usize, AppError> {
     for proposed in &outline.groups {
         let quotes = steps::checked_quotes(db, part, proposed.quote.as_slice());
 
         let content = match serde_json::to_value(&proposed.group) {
             Ok(content) => content,
-            Err(error) => return Err(UiError::Failed(error.to_string())),
+            Err(error) => return Err(AppError::Failed(error.to_string())),
         };
 
         let proposal = NewProposal {

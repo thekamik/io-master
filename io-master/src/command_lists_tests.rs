@@ -1,5 +1,5 @@
 //! The commands of the window are callable only when they are listed in
-//! four places: the `commands.rs` of an element of `views/`, `main.rs`
+//! four places: the `commands.rs` of an element of `views/`, `routes.rs`
 //! (`generate_handler!`), `build.rs` (`AppManifest`) and
 //! `capabilities/default.json`; a mistake there closes the door, but it
 //! is a mistake. This test reads the four lists
@@ -69,11 +69,11 @@ fn defined() -> BTreeSet<String> {
     names
 }
 
-/// The commands registered with Tauri in `main.rs`: the last name of each
+/// The commands registered with Tauri in `routes.rs`: the last name of each
 /// path inside `generate_handler!`.
 fn registered() -> BTreeSet<String> {
-    let source = include_str!("main.rs");
-    let start = source.find("generate_handler![").expect("main.rs registers the commands");
+    let source = include_str!("routes.rs");
+    let start = source.find("generate_handler![").expect("routes.rs registers the commands");
     let end = start + source[start..].find(']').expect("the list ends");
 
     source[start..end]
@@ -120,7 +120,7 @@ fn the_four_lists_of_the_commands_agree() {
     assert!(!defined.is_empty());
 
     for (place, list) in [
-        ("main.rs (generate_handler!)", registered()),
+        ("routes.rs (generate_handler!)", registered()),
         ("build.rs (AppManifest)", in_manifest()),
         ("capabilities/default.json", allowed()),
     ] {

@@ -2,7 +2,7 @@
 
 use tauri::State;
 
-use crate::app::state::UiState;
+use crate::app::state::AppState;
 
 use super::view::ProgramView;
 
@@ -11,7 +11,7 @@ use super::view::ProgramView;
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn program_get(state: State<'_, UiState>) -> ProgramView {
+pub fn program_get(state: State<'_, AppState>) -> ProgramView {
     ProgramView::new(state.role(), state.current_user(), &state.data_dir)
 }
 

@@ -9,7 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::ai::presets::Preset;
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::model::ai::{AnswerMode, Connection};
 
 /// A connection as the page shows it.
@@ -146,9 +146,9 @@ pub struct ConnectionForm {
 impl ConnectionForm {
     /// The connection of the core; only the kind of answer can be wrong
     /// here, every other rule is checked by the core (`model/ai.rs`).
-    pub fn into_connection(self) -> Result<Connection, UiError> {
+    pub fn into_connection(self) -> Result<Connection, AppError> {
         let Some(answer) = AnswerMode::from_name(&self.answer) else {
-            return Err(UiError::Invalid("the answer is either a stream or one JSON".to_owned()));
+            return Err(AppError::Invalid("the answer is either a stream or one JSON".to_owned()));
         };
 
         Ok(Connection {

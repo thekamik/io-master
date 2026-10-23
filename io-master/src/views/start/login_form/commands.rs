@@ -3,12 +3,12 @@
 use tauri::State;
 use zeroize::Zeroizing;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::installation::{accounts, session::Session};
 
 /// Logs in with the name and the password. A wrong password and an
-/// unknown name give the same error (`UiError::WrongCredentials`), so
+/// unknown name give the same error (`AppError::WrongCredentials`), so
 /// that the window does not tell which names exist.
 ///
 /// `async`: on a thread of the runtime of Tauri, not of the window,
@@ -16,7 +16,7 @@ use crate::installation::{accounts, session::Session};
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn login_form_log_in(state: State<'_, UiState>, name: String, password: String) -> Result<(), UiError> {
+pub fn login_form_log_in(state: State<'_, AppState>, name: String, password: String) -> Result<(), AppError> {
     let password = Zeroizing::new(password);
     let running = state.installed()?;
 

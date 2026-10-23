@@ -2,8 +2,8 @@
 
 use tauri::State;
 
-use crate::app::error::UiError;
-use crate::app::state::UiState;
+use crate::app::error::AppError;
+use crate::app::state::AppState;
 use crate::db::ai::chats as db_chats;
 
 use super::view::ChatSummaryView;
@@ -12,7 +12,7 @@ use super::view::ChatSummaryView;
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn chat_list_get(state: State<'_, UiState>) -> Result<Vec<ChatSummaryView>, UiError> {
+pub fn chat_list_get(state: State<'_, AppState>) -> Result<Vec<ChatSummaryView>, AppError> {
     let session = state.session()?;
     let chats = db_chats::read::chats(&session.db())?;
 

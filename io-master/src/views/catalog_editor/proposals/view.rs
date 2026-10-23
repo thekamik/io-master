@@ -3,7 +3,7 @@
 use serde::Serialize;
 use serde_json::Value;
 
-use crate::app::error::UiError;
+use crate::app::error::AppError;
 use crate::model::evaluation_support::{Proposal, ProposalKind, QuoteDraft};
 use crate::model::oscal::catalog::{Control, Group};
 use crate::model::standards::Document;
@@ -44,7 +44,7 @@ pub struct ProposalView {
 
 /// The views of `proposals`, in their order; the quotes with the titles of
 /// their `documents`.
-pub fn all(proposals: Vec<Proposal>, documents: &[Document]) -> Result<Vec<ProposalView>, UiError> {
+pub fn all(proposals: Vec<Proposal>, documents: &[Document]) -> Result<Vec<ProposalView>, AppError> {
     let mut views = Vec::with_capacity(proposals.len());
 
     for proposal in proposals {
@@ -54,7 +54,7 @@ pub fn all(proposals: Vec<Proposal>, documents: &[Document]) -> Result<Vec<Propo
     Ok(views)
 }
 
-fn view(proposal: Proposal, documents: &[Document]) -> Result<ProposalView, UiError> {
+fn view(proposal: Proposal, documents: &[Document]) -> Result<ProposalView, AppError> {
     let (object_id, title, parts) = object(proposal.kind, &proposal.content)?;
     let mut quotes = Vec::with_capacity(proposal.quotes.len());
 
@@ -77,20 +77,20 @@ fn view(proposal: Proposal, documents: &[Document]) -> Result<ProposalView, UiEr
 }
 
 /// The id, the title and the parts of the object of a proposal.
-fn object(kind: ProposalKind, content: &Value) -> Result<(String, String, Vec<PartRowView>), UiError> {
+fn object(kind: ProposalKind, content: &Value) -> Result<(String, String, Vec<PartRowView>), AppError> {
     let unreadable = "a proposal holds an object that is not OSCAL";
 
     match kind {
         ProposalKind::Group => {
             let Ok(group) = serde_json::from_value::<Group>(content.clone()) else {
-                return Err(UiError::Failed(unreadable.to_owned()));
+                return Err(AppError::Failed(unreadable.to_owned()));
             };
 
             Ok((group.id.clone().unwrap_or_default(), group.title.clone(), part_rows::rows(&group.parts)?))
         }
         ProposalKind::Control => {
             let Ok(control) = serde_json::from_value::<Control>(content.clone()) else {
-                return Err(UiError::Failed(unreadable.to_owned()));
+                return Err(AppError::Failed(unreadable.to_owned()));
             };
 
             Ok((control.id.clone(), control.title.clone(), part_rows::rows(&control.parts)?))

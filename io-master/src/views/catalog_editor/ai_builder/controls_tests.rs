@@ -91,6 +91,6 @@ async fn a_group_that_does_not_exist_and_no_pages_are_refused() {
     let missing = propose(&session, &uuid, Some("NOT_THERE"), &ranges, 0, &test.state.start_work(), &channel).await;
     let none = propose(&session, &uuid, None, &[], 0, &test.state.start_work(), &channel).await;
 
-    assert!(matches!(missing, Err(UiError::Invalid(_))));
-    assert!(matches!(none, Err(UiError::Invalid(_))));
+    assert!(matches!(missing, Err(AppError::Invalid(_))));
+    assert!(matches!(none, Err(AppError::Invalid(_))));
 }
