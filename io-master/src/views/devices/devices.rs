@@ -14,8 +14,8 @@ use crate::hardware_tests::devices::scan_settings::ScanSettings;
 use crate::hardware_tests::devices::serial_ports;
 
 use super::ports_table::view::PortsTableView;
+use super::scanner_settings::stored;
 use super::scanner_settings::view::ScannerSettingsView;
-use super::stored_settings;
 
 // ── When the view opens ──────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ use super::stored_settings;
 ///
 /// Called by the page: `ScannerSettings.svelte`, when the view opens
 /// (`devices.scannerSettingsGet()`).
-/// Calls: `stored_settings::read` (the texts of the database, read into
+/// Calls: `stored::read` (the texts of the database, read into
 /// settings), `ScannerSettingsView::new`.
 ///
 /// `async`: on a thread of the runtime of Tauri, not of the window, which
@@ -33,7 +33,7 @@ use super::stored_settings;
 #[tauri::command(async)]
 pub fn scanner_settings_get(state: State<'_, AppState>) -> Result<ScannerSettingsView, AppError> {
     let session = state.session()?;
-    let settings = stored_settings::read(&session.db())?;
+    let settings = stored::read(&session.db())?;
 
     Ok(ScannerSettingsView::new(&settings))
 }
@@ -46,7 +46,7 @@ pub fn scanner_settings_get(state: State<'_, AppState>) -> Result<ScannerSetting
 /// Called by the page: `PortsTable.svelte`, when the view opens, when
 /// "Scan again" is pressed, and after the settings are saved
 /// (`devices.portsTableScan()`).
-/// Calls: `stored_settings::read`, `serial_ports::scan` (the descriptions
+/// Calls: `stored::read`, `serial_ports::scan` (the descriptions
 /// of the ports), `PortsTableView::new`.
 ///
 /// `async`: as `scanner_settings_get`; the database is held only while the
@@ -56,7 +56,7 @@ pub fn scanner_settings_get(state: State<'_, AppState>) -> Result<ScannerSetting
 #[tauri::command(async)]
 pub fn ports_table_scan(state: State<'_, AppState>) -> Result<PortsTableView, AppError> {
     let session = state.session()?;
-    let settings = stored_settings::read(&session.db())?;
+    let settings = stored::read(&session.db())?;
     let outcome = serial_ports::scan(&settings.filter);
 
     PortsTableView::new(&settings.columns, outcome)

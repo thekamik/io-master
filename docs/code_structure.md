@@ -175,12 +175,12 @@ views/<view>/<view>.rs               the entry of the view: every command the pa
                                      what it does, where the page calls it, what it calls; its tests at the end
 views/<view>/<element>/view.rs       the data an element gets (serde); its logic beside it (turn.rs, ...); an
                                      element with no data of its own has no folder, only its component on the page
-views/<view>/<file>.rs               what the elements of one view share (Devices: stored_settings.rs, column_view.rs)
 ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
 ```
 
 The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12.
 
+- **The entry is the only file of the program in the folder of a view** (user, 2026-10-23), so that it is seen at once: what the elements of the view share belongs to the element that owns it (Devices: the stored settings in `scanner_settings/stored.rs`, the column in `ports_table/view.rs`; the editor of a catalog: the checked quote in `object_quotes/`, the object read from the page in `object_form/`); what several views share goes down to the folders below. Only the help of the tests may stand beside it (`test_support.rs`).
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
 - **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `hardware_tests/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
@@ -378,12 +378,11 @@ views/                     The views of the window, one folder per view and one 
       view.rs                      The data of the conversation as the page gets it: an open chat, and
   devices/                     The view Devices: the serial ports of the computer and the settings of
     devices.rs                   The entry of the view Devices: every command the page calls for it
-    column_view.rs               A column of the table of ports, as both elements of the view show
     ports_table/                 The element "table of ports" of the view Devices
       view.rs                      The data of the table of ports, as the page gets it: a ready table
     scanner_settings/            The element "scanner settings" of the view Devices
+      stored.rs                    The settings of the scanner as they are stored, read for the element
       view.rs                      The data of the settings of the scanner, as the page gets it: the
-    stored_settings.rs           The settings of the scanner as they are stored: read by both
   evaluation_plan/             The view Evaluation plan: the documents of the standards in NIST OSCAL
     evaluation_plan.rs           The entry of the view Evaluation plan: every command the page calls
     catalog_editor/              The editor of a catalog, a part of the view Evaluation plan: a catalog
@@ -396,14 +395,14 @@ views/                     The views of the window, one folder per view and one 
         view.rs                      The data of the AI of the editor, as the page gets and sends it, and
       catalog_tree/                The element "tree" of the editor of a catalog: its groups and controls
         view.rs                      The data of the tree, as the page gets it.
-      checked_quote.rs             A quote of a document of a standard, looked for on the page it names
       new_object/                  The element "new object" of the editor of a catalog: a dialog that adds
         view.rs                      The place of a new object, as the page sends it.
       object_form/                 The element "object" of the editor of a catalog: the group or control
+        oscal_object.rs              A group or a control of OSCAL sent by the page as JSON, read into the
         view.rs                      The data of the object chosen, as the page gets it.
       object_quotes/               The element "quotes" of the editor of a catalog: the passages of the
+        checked_quote.rs             A quote of a document of a standard, looked for on the page it names
         view.rs                      The data of the quotes of an object, as the page gets it.
-      oscal_object.rs              A group or a control of OSCAL sent by the page as JSON, read into the
       proposals/                   The element "proposals" of the editor of a catalog: what the AI
         accept.rs                    A proposal of the AI accepted into its catalog.
         view.rs                      The data of the proposals, as the page gets it.
