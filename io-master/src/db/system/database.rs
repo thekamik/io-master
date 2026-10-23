@@ -103,9 +103,47 @@ impl SystemDb {
     }
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// are part of this module, so they can use its private items. They
-// cover the whole folder (create, read, update, delete).
 #[cfg(test)]
-#[path = "database_tests.rs"]
-mod tests;
+mod tests {
+    //! Tests of the system database: made, opened again, private, removed.
+
+    use super::*;
+
+    use crate::db::system::{create, read};
+    use crate::test_support::TempDir;
+    use crate::test_support::db::{installation, system_db, wrapped_key};
+
+    #[test]
+    fn the_installation_is_kept() {
+        let directory = TempDir::new();
+        system_db(&directory);
+
+        let reopened = SystemDb::open(directory.path()).unwrap();
+        assert_eq!(read::installation(&reopened).unwrap(), installation());
+    }
+
+    #[test]
+    fn it_holds_no_secret_and_is_private() {
+        use std::os::unix::fs::PermissionsExt;
+
+        let directory = TempDir::new();
+        let db = system_db(&directory);
+        create::add_user(&db, "anna", &wrapped_key()).unwrap();
+
+        // A plain SQLite file, readable only by the user.
+        let bytes = fs::read(path(directory.path())).unwrap();
+        assert!(bytes.starts_with(b"SQLite format 3"));
+        assert_eq!(fs::metadata(path(directory.path())).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn removing_the_database_leaves_nothing() {
+        let directory = TempDir::new();
+        system_db(&directory);
+
+        SystemDb::remove(directory.path()).unwrap();
+
+        assert!(!path(directory.path()).exists());
+        SystemDb::remove(directory.path()).unwrap();
+    }
+}

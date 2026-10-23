@@ -25,3 +25,24 @@ pub fn remove_secret(db: &UserDb, name: &str) -> Result<(), DbError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of removing the secrets of an evaluator.
+
+    use super::*;
+
+    use crate::db::user::{read, update};
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_secret_is_removed_and_removing_it_again_is_no_error() {
+        let test = database();
+        update::set_secret(&test.db, "api", "first").unwrap();
+
+        remove_secret(&test.db, "api").unwrap();
+        remove_secret(&test.db, "api").unwrap();
+
+        assert_eq!(read::secret(&test.db, "api").unwrap(), None);
+    }
+}

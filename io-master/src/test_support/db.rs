@@ -1,15 +1,21 @@
 //! Help for the tests of `db/`: an AI connection that keeps the rules,
 //! the API key of the tests, an entry of the journal of the AI, and a
-//! quote and a proposal of the evaluation support.
+//! quote and a proposal of the evaluation support, a catalog of NIST, and
+//! the system database with an installation and the key of an account.
 
 use serde_json::{Value, json};
 
 use crate::db::ai::journal::rows::Entry;
+use crate::db::encryption::keys::WrappedKey;
 use crate::db::evaluation_support::create::{self, NewProposal};
+use crate::db::system::database::SystemDb;
 use crate::db::user::database::UserDb;
 use crate::model::ai::Connection;
 use crate::model::api_key::ApiKey;
 use crate::model::evaluation_support::{ProposalKind, QuoteDraft};
+use crate::model::installation::{ID_LENGTH, Installation, Role};
+use crate::model::oscal::OscalDocument;
+use crate::test_support::TempDir;
 
 /// The API key of the tests; it must never be found in the file of the
 /// database.
@@ -72,4 +78,32 @@ pub fn stored_proposal(db: &UserDb, source: i64) -> i64 {
         },
     )
     .unwrap()
+}
+
+/// The basic catalog of the examples of NIST (`oscal/examples/`).
+pub fn basic_catalog() -> OscalDocument {
+    OscalDocument::from_json(include_str!("../../oscal/examples/basic-catalog.json")).unwrap()
+}
+
+/// The installation of the tests: a workstation.
+pub fn installation() -> Installation {
+    Installation { id: [5; ID_LENGTH], role: Role::Workstation }
+}
+
+/// A wrapped key of an account, as the system database keeps it.
+pub fn wrapped_key() -> WrappedKey {
+    WrappedKey {
+        salt: vec![1; 16],
+        memory_kib: 256,
+        iterations: 1,
+        with_device_secret: false,
+        nonce: vec![2; 12],
+        ciphertext: vec![3; 32],
+        tag: vec![4; 16],
+    }
+}
+
+/// A new system database of the installation of the tests in `directory`.
+pub fn system_db(directory: &TempDir) -> SystemDb {
+    SystemDb::create(directory.path(), &installation()).unwrap()
 }

@@ -43,3 +43,28 @@ pub fn catalog(db: &UserDb, mut catalog: Catalog) -> Result<(), OscalError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of replacing a document of OSCAL by its new version.
+
+    use super::*;
+
+    use crate::db::oscal::{create, read};
+    use crate::test_support::db::basic_catalog;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_changed_document_replaces_the_stored_one() {
+        let test = database();
+        let mut stored = basic_catalog();
+        create::document(&test.db, &stored).unwrap();
+
+        if let OscalDocument::Catalog(catalog) = &mut stored {
+            catalog.metadata.title = "Changed".to_owned();
+        }
+        document(&test.db, &stored).unwrap();
+
+        assert_eq!(read::summary(&test.db, stored.uuid()).unwrap().unwrap().title, "Changed");
+    }
+}

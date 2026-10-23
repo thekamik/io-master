@@ -29,3 +29,33 @@ pub fn set_secret(db: &UserDb, name: &str, value: &str) -> Result<(), DbError> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of storing the settings and secrets of an evaluator.
+
+    use super::*;
+
+    use crate::db::user::read;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_setting_is_stored_and_replaced() {
+        let test = database();
+
+        set_setting(&test.db, "scan.columns", "path,type").unwrap();
+        set_setting(&test.db, "scan.columns", "path").unwrap();
+
+        assert_eq!(read::setting(&test.db, "scan.columns").unwrap().as_deref(), Some("path"));
+    }
+
+    #[test]
+    fn a_secret_is_stored_and_replaced() {
+        let test = database();
+
+        set_secret(&test.db, "api", "first").unwrap();
+        set_secret(&test.db, "api", "second").unwrap();
+
+        assert_eq!(read::secret(&test.db, "api").unwrap().as_deref().map(String::as_str), Some("second"));
+    }
+}

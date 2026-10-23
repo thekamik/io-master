@@ -32,8 +32,48 @@ pub fn document(db: &UserDb, document: &OscalDocument) -> Result<(), DbError> {
     Ok(())
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// cover the whole folder (create, read, update, delete).
 #[cfg(test)]
-#[path = "create_tests.rs"]
-mod tests;
+mod tests {
+    //! Tests of storing a new document of OSCAL.
+
+    use super::*;
+
+    use crate::db::oscal::read;
+    use crate::test_support::db::basic_catalog;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_document_is_stored_as_it_was_given() {
+        let test = database();
+        let stored = basic_catalog();
+
+        document(&test.db, &stored).unwrap();
+
+        assert_eq!(read::document(&test.db, stored.uuid()).unwrap().unwrap(), stored);
+    }
+
+    #[test]
+    fn the_same_uuid_twice_is_refused() {
+        let test = database();
+        document(&test.db, &basic_catalog()).unwrap();
+
+        // The key of the table refuses it.
+        assert!(document(&test.db, &basic_catalog()).is_err());
+    }
+
+    #[test]
+    fn a_document_that_breaks_the_schema_is_never_stored() {
+        let test = database();
+        let mut broken = basic_catalog();
+
+        // An empty list where OSCAL wants at least one item would be left
+        // out; a title of the metadata that is not a string is not possible
+        // in the types; so the UUID is broken.
+        if let OscalDocument::Catalog(catalog) = &mut broken {
+            catalog.uuid = "not a uuid".to_owned();
+        }
+
+        assert!(matches!(document(&test.db, &broken), Err(DbError::NotOscal(_))));
+        assert!(read::summaries(&test.db).unwrap().is_empty());
+    }
+}

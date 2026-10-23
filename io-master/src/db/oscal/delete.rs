@@ -18,3 +18,26 @@ pub fn document(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
 
     Ok(deleted)
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of deleting a document of OSCAL.
+
+    use super::*;
+
+    use crate::db::oscal::{create, read};
+    use crate::test_support::db::basic_catalog;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_document_is_deleted_once() {
+        let test = database();
+        let stored = basic_catalog();
+        let uuid = stored.uuid().to_owned();
+        create::document(&test.db, &stored).unwrap();
+
+        assert!(document(&test.db, &uuid).unwrap());
+        assert!(read::document(&test.db, &uuid).unwrap().is_none());
+        assert!(!document(&test.db, &uuid).unwrap());
+    }
+}

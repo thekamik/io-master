@@ -19,3 +19,36 @@ pub fn replace_user_key(db: &SystemDb, id: i64, key: &WrappedKey) -> Result<(), 
 
     if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "users", id }) }
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of replacing the key of an account.
+
+    use super::*;
+
+    use crate::db::system::{create, read};
+    use crate::test_support::TempDir;
+    use crate::test_support::db::{system_db, wrapped_key};
+
+    #[test]
+    fn the_key_of_an_account_is_replaced() {
+        let directory = TempDir::new();
+        let db = system_db(&directory);
+        let id = create::add_user(&db, "anna", &wrapped_key()).unwrap();
+
+        let mut new_key = wrapped_key();
+        new_key.nonce = vec![9; 12];
+        replace_user_key(&db, id, &new_key).unwrap();
+
+        assert_eq!(read::user(&db, "anna").unwrap().unwrap().key, new_key);
+    }
+
+    #[test]
+    fn the_key_of_an_account_that_does_not_exist_is_refused() {
+        let directory = TempDir::new();
+        let db = system_db(&directory);
+        let id = create::add_user(&db, "anna", &wrapped_key()).unwrap();
+
+        assert!(replace_user_key(&db, id + 1, &wrapped_key()).is_err());
+    }
+}
