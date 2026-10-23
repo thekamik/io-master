@@ -67,7 +67,7 @@ The user (2026-10-24): the project tried to catch too many magpies by the tail. 
 - [x] **No TPM factor and no passkeys** (steps 8 and 9 dropped): OpenPGP makes them unnecessary.
 - [x] **No git in the program** (`architecture.md`, section 6): the laboratory manages its documents itself; not every laboratory uses git, and the configurations would hold the work up.
 - [x] **The export to LaTeX stays** (step 28): the results go straight into the report template of the laboratory.
-- [ ] **Open (to be considered):** the login with the OpenPGP key of the evaluator instead of the password (the key of the database encrypted for that key; the keyring and the password possibly gone). Its concept comes before 48.3.
+- [x] **The protection is built on GnuPG** (user, 2026-10-24): the key of the database is encrypted for the OpenPGP key of the evaluator instead of the password; it simplifies the project and makes many mechanisms unnecessary. The details (the keyring, a recovery key of the laboratory, the cards) are settled in the concept of 48.3.
 
 **Phases** (one commit each, pushed, every test passing; the documents with each)
 - [x] 48.1 The devices removed: `hardware_tests/`, `views/devices/`, `db/scan_settings/` (the version 4 of the database of the evaluator removes its two settings), the three commands in their four lists, the page (`ui/src/views/devices/`, `lib/api/devices.ts`, `styles/09-devices.css`, the navigation), the feature `fs` of `rustix`; the documents.
