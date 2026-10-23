@@ -24,6 +24,8 @@ The number of a step is its name and never changes, so that references in the co
 | 14b | **42: The views: one folder per element of the window, instead of `business/` and the commands of `tauri_ui/`** | **built 2026-10-21: every view moved, `business/` and the commands of `tauri_ui/` removed** (below) |
 | 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **built 2026-10-23, in the phases 43.1 to 43.9** (below) |
 | 14d | **44: The tests in the file they test** | **approved 2026-10-23; built in phases 44.1 to 44.6** (below) |
+| 14e | **45: The tree of the modules in `main.rs`** | **approved 2026-10-23; after step 44** (below) |
+| 14f | **46: The entry of a view** | **to be designed; after step 45** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -46,6 +48,28 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 45: The tree of the modules in `main.rs` (2026-10-23)
+
+**State: approved by the user (2026-10-23); built after step 44. No code changed yet.**
+
+27 files of the layers hold no code, only declarations of modules (`db.rs`, `db/ai.rs`, `db/ai/chats.rs`, `security.rs`, `security/tpm.rs`, ...). The user: they are moved into `main.rs`, but not as a heap: in the order of the layers (`model/` up to `views/`), each group with a comment that says which part of the project it is and what it does, and each module with its line; `main.rs` becomes the map of the program. Rust allows it: `mod security { pub mod random; pub mod tpm { pub mod chip; } }` in `main.rs` finds `src/security/random.rs` and `src/security/tpm/chip.rs`.
+
+**Decisions of the user**
+- [x] The declarations of the layers go into `main.rs`, grouped and commented; the files that only declared them are removed.
+- [x] The rule "`main.rs` lists only the top folders, so a new file never changes it" (`code_structure.md`, section 3) is replaced: every file of the program is named in `main.rs`, so the map is always complete.
+- [x] The comments of the removed files: a line that names a folder goes to its group in `main.rs`; a longer description of the architecture goes to `docs/` (Markdown, with schemes), never to the head of another file (`CLAUDE.md`, "Where the comments are").
+- [x] The `mod.rs` of the views and of the components (35 files) are not part of this step: step 46.
+
+**Tasks** (phases, one commit each, as in steps 43 and 44): the layers from the bottom (`model/`, `db/`, `security/`, `ai/`, `hardware_tests/`, `pdf/`, `installation/`, `app/`); `code_structure.md` (sections 3 and 4).
+
+---
+
+## Step 46: The entry of a view (to be designed)
+
+**State: the wish of the user (2026-10-23); its concept is made after step 45.** When the folder of a view is opened, one must see at once where the view begins: the file the page calls to open it, and the functions the page calls to refresh its elements. The 35 `mod.rs` of the views and the components go with it; their descriptions of the flow of data move to `docs/` (`architecture.md`, section 12, and `code_structure.md`), and every function gets the comment of `CLAUDE.md` ("Where the comments are"). Proposed in the chat (2026-10-23), not decided: one file per view, named after it, with all its commands.
 
 ---
 
