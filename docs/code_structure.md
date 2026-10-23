@@ -234,48 +234,48 @@ model/  (main.rs)           The data of the program as plain Rust types, and the
     quote.rs                     Finding a quote in the text of a page of a standard.
   text.rs                      The rules every text field of the program follows, the error when
   time.rs                      The time stamps of the program: seconds since 1970 (UTC), as the
-db.rs/                     Every operation on a database (CLAUDE.md, "Database code").
-  ai.rs/                       The data of the AI, in the database of the evaluator.
-    chats.rs/                    The chats with the AI.
+db/                        Every operation on a database (CLAUDE.md, "Database code").
+  ai/                          The data of the AI, in the database of the evaluator.
+    chats/                       The chats with the AI.
       create.rs                    Storing chats and their messages. What a chat keeps of a reply
       delete.rs                    Deleting chats.
       read.rs                      Reading chats and their messages.
       rows.rs                      The rows of the chats and their messages, and the Rust types they
       schema.rs                    The tables of the memory of the chat: the conversations with an AI
-    connection.rs/               The AI connections.
+    connection/                  The AI connections.
       create.rs                    Storing a new AI connection. Its fields are checked by
       delete.rs                    Deleting an AI connection and its API key.
       read.rs                      Reading the AI connections, the active one, and the API key of a
       rows.rs                      The rows of the AI connections and the Rust types they become
       schema.rs                    The table of the AI connections, in the database of an evaluator.
       update.rs                    Changing an AI connection, the active one, and the API key.
-    instructions.rs/             The instructions of the tasks of the AI.
+    instructions/                The instructions of the tasks of the AI.
       delete.rs                    Removing the instructions of a task: it uses the default ones again.
       read.rs                      Reading the instructions of a task, as the evaluator changed them.
       schema.rs                    The table of the instructions of the tasks of the AI, as the
       update.rs                    Storing the instructions of a task (made or replaced).
-    journal.rs/                  The journal of the AI.
+    journal/                     The journal of the AI.
       create.rs                    Adding an entry to the journal of the AI (the only way an entry
       read.rs                      Reading the journal of the AI.
       rows.rs                      An entry of the journal of the AI and its row.
       schema.rs                    The journal of the questions to the AI (P3 of `architecture.md`:
-    roles.rs/                    The connection each role of the AI uses.
+    roles/                       The connection each role of the AI uses.
       read.rs                      Reading which connection a role of the AI uses.
       schema.rs                    The table of the roles of the AI, in the database of an evaluator:
       update.rs                    Giving a role of the AI a connection of its own, or taking it away.
-  encryption.rs/               All code of encryption of the databases.
+  encryption/                  All code of encryption of the databases.
     database_key.rs              The key that encrypts a database of the program.
     generate_key.rs              Generating the key that encrypts the database.
     keys.rs                      The keys of the databases of the evaluators
     sqlcipher.rs                 Opening and creating encrypted databases.
   error.rs                     The error of every function of the database layer (`db/`).
-  evaluation_support.rs/       The evaluation support (step 41): what the program adds to the
+  evaluation_support/          The evaluation support (step 41): what the program adds to the
     create.rs                    Storing quotes and proposals of the evaluation support.
     delete.rs                    Deleting from the evaluation support.
     read.rs                      Reading the evaluation support.
     rows.rs                      The rows of the evaluation support and the types they become
     schema.rs                    The tables of the evaluation support (`model/evaluation_support.rs`),
-  oscal.rs/                    The documents of NIST OSCAL (step 41): catalogs, mappings, profiles,
+  oscal/                       The documents of NIST OSCAL (step 41): catalogs, mappings, profiles,
     create.rs                    Storing a new document of OSCAL, checked against the schema of NIST.
     delete.rs                    Deleting a document of OSCAL. Its text is overwritten in the file,
     error.rs                     The error of an operation on a stored document of OSCAL: the rules of
@@ -287,14 +287,14 @@ db.rs/                     Every operation on a database (CLAUDE.md, "Database c
   scan_settings.rs/            The settings of the scanner of serial ports, as two texts
     read.rs                      Reading the settings of the scanner.
     update.rs                    Storing the settings of the scanner.
-  standards.rs/                The documents of standards.
+  standards/                   The documents of standards.
     create.rs                    Storing a document of a standard: the file and the text of its
     delete.rs                    Removing a document of a standard. Whether a project still uses it
     read.rs                      Reading the documents of standards, their pages and PDFs.
     rows.rs                      The rows of the documents of standards and the Rust type they
     schema.rs                    The tables of the documents of standards, in the database of an
     update.rs                    Changing what the user told about a document of a standard.
-  system.rs/                   The system database (not encrypted).
+  system/                      The system database (not encrypted).
     create.rs                    Creating rows of the system database: the record of the
     database.rs                  The system database: `system.db` in the data directory.
     delete.rs                    Removing rows of the system database: an account. (Removing the
@@ -302,7 +302,7 @@ db.rs/                     Every operation on a database (CLAUDE.md, "Database c
     rows.rs                      The rows of the system database and the Rust types they become.
     schema.rs                    The tables of the system database (`database.rs`). They are made
     update.rs                    Changing rows of the system database: the key of an account.
-  user.rs/                     The database of one evaluator (encrypted).
+  user/                        The database of one evaluator (encrypted).
     database.rs                  The database of one evaluator: `users/<id>.db` in the data
     delete.rs                    Removing settings and secrets of an evaluator.
     migrations.rs                The changes of the layout of the database of an evaluator, by its
@@ -344,9 +344,9 @@ installation.rs/           The installation of this Linux account, its one user 
   session.rs                   The logged-in evaluator (step 40): their account, their database,
   uninstall.rs                 (not compiled: "DO NOT USE: TO BE REWORKED", step 12)
   verify.rs                    The check of the installation at the start of the program.
-security.rs/               The building blocks of protection: random numbers from the system,
+security/                  The building blocks of protection: random numbers from the system,
   random.rs                    Random bytes from the kernel.
-  tpm.rs/                      The TPM 2.0, the optional further factor (`docs/architecture.md`,
+  tpm/                         The TPM 2.0, the optional further factor (`docs/architecture.md`,
     chip.rs                      Talking to the TPM 2.0.
     device_secret.rs             The secret of the device (`docs/architecture.md`, section 5.2).
     emulator.rs                  The TPM 2.0 emulator used until the beta version.

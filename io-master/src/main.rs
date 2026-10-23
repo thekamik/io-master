@@ -51,11 +51,128 @@ mod model {
     pub mod time;
 }
 
-// security/: the building blocks of protection: random numbers, the TPM.
-mod security;
+// security/: the building blocks of protection: random numbers from the
+// system, and the TPM 2.0, the optional further factor. The encryption of
+// the databases is in db/encryption/.
+mod security {
+    pub mod random;
+    // security/tpm/: the TPM 2.0 (docs/architecture.md, section 5.1).
+    pub mod tpm {
+        pub mod chip;
+        pub mod device_secret;
+        pub mod emulator;
+        #[cfg(test)]
+        pub mod test_support;
+    }
+}
 
-// db/: every operation on a database, as CRUD, one folder per area of data.
-mod db;
+// db/: every operation on a database, as CRUD, one folder per area of data
+// (CLAUDE.md, "Database code"). The schema.rs of an area says in which
+// database its data lives and how it is protected.
+mod db {
+    pub mod error;
+    // db/encryption/: all code of encryption of the databases.
+    pub mod encryption {
+        pub mod database_key;
+        pub mod generate_key;
+        pub mod keys;
+        pub mod sqlcipher;
+    }
+    // db/system/: the system database of the installation (not encrypted).
+    pub mod system {
+        pub mod create;
+        pub mod database;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/user/: the database of one evaluator (encrypted), its settings
+    // and secrets.
+    pub mod user {
+        pub mod database;
+        pub mod delete;
+        pub mod migrations;
+        pub mod read;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/ai/: the data of the AI (the database of the evaluator).
+    pub mod ai {
+        // db/ai/chats/: the chats with the AI.
+        pub mod chats {
+            pub mod create;
+            pub mod delete;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+        }
+        // db/ai/connection/: the AI connections and their API keys.
+        pub mod connection {
+            pub mod create;
+            pub mod delete;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+            pub mod update;
+        }
+        // db/ai/instructions/: the instructions of the tasks of the AI.
+        pub mod instructions {
+            pub mod delete;
+            pub mod read;
+            pub mod schema;
+            pub mod update;
+        }
+        // db/ai/journal/: the journal of the AI, never changed.
+        pub mod journal {
+            pub mod create;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+        }
+        // db/ai/roles/: the connection each role of the AI uses.
+        pub mod roles {
+            pub mod read;
+            pub mod schema;
+            pub mod update;
+        }
+    }
+    // db/standards/: the documents of standards, their PDFs and the text of
+    // their pages (the database of the evaluator).
+    pub mod standards {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/oscal/: the documents of NIST OSCAL (the database of the evaluator).
+    pub mod oscal {
+        pub mod create;
+        pub mod delete;
+        pub mod error;
+        pub mod ids;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/evaluation_support/: what the program adds to OSCAL, linked by
+    // UUIDs and ids (the database of the evaluator).
+    pub mod evaluation_support {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+    }
+    // db/scan_settings/: the settings of the scanner of serial ports, as two
+    // texts in the settings of the evaluator (its file has the names of the
+    // settings, so it declares its own modules).
+    pub mod scan_settings;
+}
 
 // ai/: the whole communication with AI services.
 mod ai;
