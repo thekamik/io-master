@@ -1,12 +1,13 @@
 <!--
-  The element "user menu" of the view Shell (its command user_menu_log_out in src/views/shell/shell.rs):
+  The element "user menu" of the view Users, shown in the frame of the window (its command
+  user_menu_log_out in src/views/users/users.rs):
   the logged-in evaluator at the foot of the sidebar, and the logout. When
   the evaluator is logged out it tells the application (onloggedout),
   which reads the state of the program again.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import { userMenuLogOut } from "../../lib/api/shell";
+  import { userMenuLogOut } from "../../lib/api/users";
 
   let { user, onloggedout }: { user: string | null; onloggedout: () => void } = $props();
 

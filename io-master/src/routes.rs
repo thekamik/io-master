@@ -21,14 +21,15 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         // The components (components/), used by several views.
         crate::components::pdf_viewer::pdf_viewer::pdf_viewer_documents,
         crate::components::pdf_viewer::pdf_viewer::pdf_viewer_get,
-        // The view Start (views/start/) and the frame of the window
-        // (views/shell/).
-        crate::views::start::start::setup_form_install,
-        crate::views::start::start::login_form_log_in,
+        // The view Users (views/users/): the account, the session and the
+        // encryption of its database.
+        crate::views::users::users::setup_form_install,
+        crate::views::users::users::login_form_log_in,
+        crate::views::users::users::password_form_change,
+        crate::views::users::users::user_menu_log_out,
+        // The frame of the window (views/shell/).
         crate::views::shell::shell::program_get,
-        crate::views::shell::shell::user_menu_log_out,
-        // The view Settings (views/settings/).
-        crate::views::settings::settings::password_form_change,
+        // The view Settings (views/settings/): the settings of the program.
         crate::views::settings::settings::connection_list_get,
         crate::views::settings::settings::connection_form_new,
         crate::views::settings::settings::connection_form_get,

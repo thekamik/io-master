@@ -29,18 +29,6 @@ pub fn program_get(state: State<'_, AppState>) -> ProgramView {
 
 // ── The actions of the elements ───────────────────────────────────────
 
-/// Logs out: ends the session of the evaluator.
-///
-/// Called by the page: `UserMenu.svelte`, "Log out" (`shell.userMenuLogOut()`).
-/// Calls: `AppState::log_out` (the session ends, the key of the database is
-/// wiped).
-// Tauri hands a command its state by value.
-#[allow(clippy::needless_pass_by_value)]
-#[tauri::command(async)]
-pub fn user_menu_log_out(state: State<'_, AppState>) {
-    state.log_out();
-}
-
 #[cfg(test)]
 mod tests {
     //! Tests of the commands of the view Shell, called as the page calls
@@ -65,21 +53,12 @@ mod tests {
         let program = logged_in_window().call("program_get", json!({})).unwrap();
 
         assert_eq!(program["user"], "anna");
-        assert_eq!(program["pages"].as_array().unwrap().len(), 5);
+        assert_eq!(program["pages"].as_array().unwrap().len(), 6);
+        assert_eq!(program["pages"][4], json!({ "id": "users", "title": "User" }));
         assert_eq!(program["pages"][1], json!({ "id": "evaluation_plan", "title": "Evaluation plan" }));
         assert_eq!(program["pages"][2], json!({ "id": "evaluation_lab", "title": "Evaluation lab" }));
         assert_eq!(program["pages"][3], json!({ "id": "devices", "title": "Devices" }));
         assert_eq!(program["warnings"].as_array().unwrap().len(), 2);
         assert_ne!(program["version"], "");
-    }
-
-    #[test]
-    fn the_logout_ends_the_session() {
-        let window = logged_in_window();
-
-        window.call("user_menu_log_out", json!({})).unwrap();
-
-        assert_eq!(window.call("program_get", json!({})).unwrap()["user"], json!(null));
-        assert_eq!(window.call("ports_table_scan", json!({})).unwrap_err()["kind"], "not_logged_in");
     }
 }

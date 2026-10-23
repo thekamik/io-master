@@ -56,6 +56,7 @@ fn pages(role: Role) -> Vec<PageView> {
             // documentation of the manufacturer as well (step 30).
             PageView { id: "evaluation_lab", title: "Evaluation lab" },
             PageView { id: "devices", title: "Devices" },
+            PageView { id: "users", title: "User" },
             PageView { id: "settings", title: "Settings" },
         ],
         Role::Master => vec![PageView { id: "admin", title: "Password reset" }],

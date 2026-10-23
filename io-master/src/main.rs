@@ -301,11 +301,12 @@ mod views {
         }
     }
 
-    // views/start/: the view Start: the setup at the first start and the
-    // login, before anybody is logged in.
-    pub mod start {
+    // views/users/: the view Users: the account of the evaluator, its session
+    // and the encryption of its database in one place: the setup, the login,
+    // the password, the logout.
+    pub mod users {
         #[allow(clippy::module_inception)]
-        pub mod start;
+        pub mod users;
     }
 
     // views/shell/: the view Shell: the frame of the window around every page,

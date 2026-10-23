@@ -421,7 +421,7 @@ views/                     The views of the window, one folder per view and one 
       load.rs                      The loading of documents of standards from PDF files: a long work.
       stored.rs                    What is stored of a document of a standard, with its rules: a file is
       view.rs                      The data of the list of documents of standards, as the page gets and
-  settings/                    The view Settings: the password of the evaluator, the connections to
+  settings/                    The view Settings: the settings of the program, the connections to
     settings.rs                  The entry of the view Settings: every command the page calls for it
     api_key/                     The element "API key" of the view Settings, tab AI: the key of one
       view.rs                      The data of the API key, as the page gets it: never the key itself.
@@ -432,9 +432,9 @@ views/                     The views of the window, one folder per view and one 
     connection_list/             The element "list of connections" of the view Settings, tab AI
       view.rs                      The data of the list of connections, as the page gets it.
   shell/                       The view Shell: the frame of the window around every page of a
-    shell.rs                     The entry of the view Shell: the state of the program, the logout
+    shell.rs                     The entry of the view Shell: the state of the program
     program/                     The element "program" of the view Shell: the state of the program the
       view.rs                      The state of the program as the page gets it: whether the program
-  start/                       The view Start: what the window shows before anybody is logged in
-    start.rs                     The entry of the view Start: the setup and the login
+  users/                       The view Users: the account, the session and the encryption of its database
+    users.rs                     The entry of the view Users: the setup, the login, the password, the logout
 ```

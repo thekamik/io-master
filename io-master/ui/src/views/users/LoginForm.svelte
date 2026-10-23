@@ -1,11 +1,11 @@
 <!--
-  The element "login form" of the view Start (its command login_form_log_in in src/views/start/start.rs).
+  The element "login form" of the view Users (its command login_form_log_in in src/views/users/users.rs).
   When the evaluator is logged in it tells the application (ondone), which
   reads the state of the program again.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import { loginFormLogIn } from "../../lib/api/start";
+  import { loginFormLogIn } from "../../lib/api/users";
 
   let { ondone }: { ondone: () => void } = $props();
 

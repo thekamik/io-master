@@ -108,15 +108,6 @@ export function connectionFormNew(): Promise<NewConnectionView> {
 
 // ── The actions of the elements ──────────────────────────────────────
 
-/** Changes the password of the logged-in evaluator. Called by PasswordForm.svelte. */
-export function passwordFormChange(
-  current: string,
-  password: string,
-  passwordRepeat: string,
-): Promise<void> {
-  return invoke("password_form_change", { current, password, passwordRepeat });
-}
-
 /** A stored connection. Called by ConnectionForm.svelte when a connection is chosen. */
 export function connectionFormGet(id: number): Promise<ConnectionView> {
   return invoke("connection_form_get", { id });

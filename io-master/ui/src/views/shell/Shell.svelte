@@ -14,7 +14,8 @@
   import EvaluationLab from "../evaluation_lab/EvaluationLab.svelte";
   import EvaluationPlan from "../evaluation_plan/EvaluationPlan.svelte";
   import Settings from "../settings/Settings.svelte";
-  import UserMenu from "./UserMenu.svelte";
+  import UserMenu from "../users/UserMenu.svelte";
+  import Users from "../users/Users.svelte";
 
   let { app, onloggedout }: { app: ProgramView; onloggedout: () => void } = $props();
 
@@ -32,7 +33,8 @@
     evaluation_plan: "The standards in NIST OSCAL and the plan of an evaluation, with the documents of the standards they come from.",
     evaluation_lab: "Carry out an evaluation plan for a product, with what the manufacturer and the laboratory deliver.",
     devices: "The serial ports of this computer, and the access to them.",
-    settings: "Your account, the connections to AI services, and this installation.",
+    users: "Your account: the password that opens your encrypted database.",
+    settings: "The connections to AI services, and this installation.",
     admin: "The password resets of the workstations.",
   };
 </script>
@@ -54,6 +56,9 @@
     {:else if name === "devices"}
       <rect x="4" y="8" width="16" height="9" rx="2" />
       <path d="M8 12h.01M12 12h.01M16 12h.01M9 4v4M15 4v4" />
+    {:else if name === "users"}
+      <circle cx="12" cy="8" r="3.5" />
+      <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
     {:else if name === "settings"}
       <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
       <circle cx="15" cy="7" r="2" />
@@ -106,6 +111,8 @@
       <EvaluationLab />
     {:else if active === "devices"}
       <Devices />
+    {:else if active === "users"}
+      <Users user={app.user} />
     {:else if active === "settings"}
       <Settings {app} />
     {:else if active === "admin"}

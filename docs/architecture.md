@@ -96,7 +96,8 @@ The first start is the real moment of installation. **It is told by the keyring 
   2. **Evaluation plan**: the OSCAL documents of the standards (catalogs made in the program or loaded, mappings, profiles, assessment plans), and the documents of standards (PDF) they quote (section 7.1).
   3. **Evaluation lab**: an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
   4. **Devices**: the serial ports, a filter by port type, later the access rights to the ports and the work on a device (UART, Bluetooth).
-  5. **Settings**, in tabs: **User** (the password, later the factors of the person), **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
+  5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password; later the recovery code (section 5.6), the factors of the person and the removal of the installation.
+  6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
 - The master shows only its administration panel.
 - **Logging in** is built as a mock-up first; the real mechanism comes near the end of development. The design of the keys (section 5) is fixed now, because the encrypted database depends on it.
 
@@ -245,7 +246,7 @@ A **view** is a whole page of the window, the high-level display.
 
 | Name | The user's words | What it is |
 |---|---|---|
-| `start` | ekran logowania | the login and the first installation, before anybody is logged in |
+| `users` (was `start`) | użytkownicy | the account of the evaluator, its session and the encryption of its database in one place (step 47): the setup that makes the user, the login, the page User (the password), the user menu (the logout) |
 | `shell` | shell | the frame of the window around every view: the navigation, the user menu |
 | `chat` | chat | the panel with the chatbot (the AI in the role *consultation*) |
 | `evaluation_plan` | plan ewaluacji | everything from the PDFs of a standard to OSCAL: the documents of standards, catalogs made from them (the editor of a catalog), OSCAL documents loaded, the scheme of the evaluation (profile, assessment plan) |
@@ -317,13 +318,14 @@ the page: the element shows it; "changed" ──► the view ──► the other
 
 The flow inside each view, as it is now (the entry of each view, `views/<view>/<view>.rs`, holds its commands in this order):
 
-**`start` and `shell`** (entries `views/start/start.rs` and `views/shell/shell.rs`). The page asks for the state of the program when the window opens and after each of its changes, and shows the setup, the login or the frame:
+**`users` and `shell`** (entries `views/users/users.rs` and `views/shell/shell.rs`). Everything that touches the key of the database is in `users`; the page asks for the state of the program when the window opens and after each of its changes, and shows the setup, the login or the frame:
 
 ```text
-SetupForm ──setup_form_install(name, password, role)──► installation/: made, logged in ─┐
-LoginForm ──login_form_log_in(name, password)─────────► installation/: logged in ───────┤
-UserMenu  ──user_menu_log_out()───────────────────────► installation/: the session ends ┤
-                                                                                         ▼
+SetupForm    ──setup_form_install(name, password, role)──► installation/: made, logged in ─┐
+LoginForm    ──login_form_log_in(name, password)─────────► installation/: logged in ───────┤
+UserMenu     ──user_menu_log_out()───────────────────────► installation/: the session ends ┤
+PasswordForm ──password_form_change(old, new, new)──► installation/: the key of the database encrypted again
+                                                                                            ▼
 App.svelte ──program_get()──► ProgramView: installed, the role, who is logged in, the pages, the warnings
 ```
 
@@ -387,7 +389,7 @@ ScannerSettings ──scanner_settings_save(all_types, types, columns)──► 
   └── "saved" ──► the view ──► PortsTable ──ports_table_scan()──► the table again
 ```
 
-**`settings`** (entry `views/settings/settings.rs`, page `ui/src/views/settings/`).
+**`settings`** (entry `views/settings/settings.rs`, page `ui/src/views/settings/`): the settings of the program; those of the user are in `users`.
 
 ```text
 the tab AI opens
@@ -400,7 +402,6 @@ ConnectionForm ──connection_form_save / _delete / _activate──► db/ai/c
   └── "changed" ──► the view ──► ConnectionList ──connection_list_get()──►; ApiKey ──api_key_get(id)──►
 ApiKey ──api_key_store(id, key) / api_key_delete(id)──► the key in the encrypted database, bound to the address
 ConnectionCheck ──connection_check_run(id)──► ai/api/checks: one short question, written into the journal ──► the report
-PasswordForm ──password_form_change(old, new, new)──► installation/: the key of the database encrypted again
 ```
 
 **`evaluation_lab` (planned, step 41.5; open).** Its flow is drawn when its concept is settled; the tiles of the evidence are still open (section 10.2). What stands: the plan is handed over from `evaluation_plan`, what the AI proposes becomes a result of the assessment (OSCAL) only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3).

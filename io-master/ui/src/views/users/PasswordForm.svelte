@@ -1,11 +1,11 @@
 <!--
-  The element "password form" of the view Settings, tab User
-  (its commands in src/views/settings/settings.rs). The passwords are cleared from the
+  The element "password form" of the view Users, on the page User (its
+  command password_form_change in src/views/users/users.rs). The passwords are cleared from the
   page as soon as they were sent.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import { passwordFormChange } from "../../lib/api/settings";
+  import { passwordFormChange } from "../../lib/api/users";
 
   let { user }: { user: string | null } = $props();
 

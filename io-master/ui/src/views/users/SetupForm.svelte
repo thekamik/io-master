@@ -1,5 +1,5 @@
 <!--
-  The element "setup form" of the view Start (its command setup_form_install in src/views/start/start.rs):
+  The element "setup form" of the view Users (its command setup_form_install in src/views/users/users.rs):
   the first start, the user and the role of the installation. When it is
   done it tells the application (ondone), which reads the state of the
   program again.
@@ -9,7 +9,7 @@
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import { setupFormInstall } from "../../lib/api/start";
+  import { setupFormInstall } from "../../lib/api/users";
 
   let { ondone }: { ondone: () => void } = $props();
 

@@ -39,10 +39,3 @@ export interface ProgramView {
 export function programGet(): Promise<ProgramView> {
   return invoke("program_get");
 }
-
-// ── The actions of the elements ──────────────────────────────────────
-
-/** Logs out. Called by UserMenu.svelte, "Log out". */
-export function userMenuLogOut(): Promise<void> {
-  return invoke("user_menu_log_out");
-}
