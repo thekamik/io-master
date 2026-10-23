@@ -73,7 +73,7 @@ impl Document {
 }
 
 /// A part of the text of one document of a standard, sent in one
-/// question to the AI (`views/catalog_editor/ai_builder/parts.rs`).
+/// question to the AI (`views/evaluation_plan/catalog_editor/ai_builder/parts.rs`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Part {
     pub document_id: i64,

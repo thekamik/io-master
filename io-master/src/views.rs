@@ -22,7 +22,6 @@
 //! `app/`, which keeps only what the whole window shares) in step 42
 //! of docs/todo.md.
 
-pub mod catalog_editor;
 pub mod chat;
 pub mod devices;
 pub mod evaluation_plan;

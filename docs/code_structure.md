@@ -101,7 +101,7 @@ ai/presets/      the ready settings of known services, and the help for the fiel
 
 - **Every question is in the journal of the AI**: `completions::ask` asks and writes the entry itself, also when the reply was stopped or failed; the caller learns only whether the entry could be written. The check of a connection writes its entry the same way.
 - A key is given out only for the address it was entered for (`db/ai/connection/read.rs`, checked at every use).
-- A task works on plain data of `model/` and gives back plain data (`ai/tasks/catalog_outline.rs`, `catalog_section.rs`: groups and controls of OSCAL); applying a proposal is the work of the view editor of a catalog (`views/catalog_editor/proposals/accept.rs`).
+- A task works on plain data of `model/` and gives back plain data (`ai/tasks/catalog_outline.rs`, `catalog_section.rs`: groups and controls of OSCAL); applying a proposal is the work of the view editor of a catalog (`views/evaluation_plan/catalog_editor/proposals/accept.rs`).
 
 ### 2.4 `hardware_tests/`: hardware
 
@@ -121,7 +121,7 @@ The core of the protection (moved from `business/` in step 42, unchanged): the f
 
 ### 2.6 `business/` (removed in step 42)
 
-Until step 42 the business logic was a folder of its own, as resources and operations named after REST verbs; the commands of `tauri_ui/` called it. Both are replaced by the commands of the elements (section 2.9). Where its parts went: the catalogs and their editor to `views/catalog_editor/` (the changes of a catalog in memory to `model/oscal/catalog/`, the new UUIDs and times to `db/oscal/ids.rs`, a new catalog to `views/evaluation_plan/new_catalog/made.rs`), the loading of PDFs to `views/evaluation_plan/standard_documents/`, the chat to `views/chat/conversation/`, the installation and the session to `installation/`.
+Until step 42 the business logic was a folder of its own, as resources and operations named after REST verbs; the commands of `tauri_ui/` called it. Both are replaced by the commands of the elements (section 2.9). Where its parts went: the catalogs and their editor to `views/evaluation_plan/catalog_editor/` (the changes of a catalog in memory to `model/oscal/catalog/`, the new UUIDs and times to `db/oscal/ids.rs`, a new catalog to `views/evaluation_plan/new_catalog/made.rs`), the loading of PDFs to `views/evaluation_plan/standard_documents/`, the chat to `views/chat/conversation/`, the installation and the session to `installation/`.
 
 ### 2.7 `app/`: what the whole window shares
 
@@ -341,35 +341,6 @@ app.rs/                    What the whole window shares (Tauri 2): the state the
     error_view.rs                How an error of a command reaches the page:
   state.rs                     The state of the desktop interface, kept in Rust and never in
 views.rs/                  The views of the window, one folder per view and one folder per
-  catalog_editor/              The view "editor of a catalog": a catalog of OSCAL made in the program
-    ai_builder/                  The element "the AI" of the editor of a catalog: the AI reads a table
-      commands.rs                  The commands of the AI of the editor.
-      controls.rs                  The controls of a group of a catalog proposed by the AI from the pages
-      groups.rs                    The groups of a catalog proposed by the AI from a table of contents
-      parts.rs                     The pages of a standard cut into parts that fit the context of a
-      steps.rs                     The steps both works of the AI share: the model and the instructions
-      view.rs                      The data of the AI of the editor, as the page gets and sends it, and
-    ai_instructions/             The element "instructions to the AI" of the editor of a catalog: the
-      commands.rs                  The commands of the instructions to the AI.
-    catalog_tree/                The element "tree" of the editor of a catalog: its groups and controls
-      commands.rs                  The command of the tree.
-      view.rs                      The data of the tree, as the page gets it.
-    checked_quote.rs             A quote of a document of a standard, looked for on the page it names
-    new_object/                  The element "new object" of the editor of a catalog: a dialog that adds
-      commands.rs                  The commands of a new object.
-      view.rs                      The place of a new object, as the page sends it.
-    object_form/                 The element "object" of the editor of a catalog: the group or control
-      commands.rs                  The commands of the object chosen.
-      view.rs                      The data of the object chosen, as the page gets it.
-    object_quotes/               The element "quotes" of the editor of a catalog: the passages of the
-      commands.rs                  The commands of the quotes of an object.
-      view.rs                      The data of the quotes of an object, as the page gets it.
-    oscal_object.rs              A group or a control of OSCAL sent by the page as JSON, read into the
-    part_rows.rs                 The parts of a group or a control (statement, items, guidance, ...) as
-    proposals/                   The element "proposals" of the editor of a catalog: what the AI
-      accept.rs                    A proposal of the AI accepted into its catalog.
-      commands.rs                  The commands of the proposals.
-      view.rs                      The data of the proposals, as the page gets it.
   chat/                        The view Chat: the chats of the evaluator with the model of the role
     chat_list/                   The element "list of chats" of the view Chat
       commands.rs                  The command of the list of chats.
@@ -392,6 +363,35 @@ views.rs/                  The views of the window, one folder per view and one 
       view.rs                      The data of the settings of the scanner, as the page gets it: the
     stored_settings.rs           The settings of the scanner as they are stored: read by both
   evaluation_plan/             The view Evaluation plan: the documents of the standards in NIST OSCAL
+    catalog_editor/              The editor of a catalog, a part of the view Evaluation plan: a catalog
+      ai_builder/                  The element "the AI" of the editor of a catalog: the AI reads a table
+        commands.rs                  The commands of the AI of the editor.
+        controls.rs                  The controls of a group of a catalog proposed by the AI from the pages
+        groups.rs                    The groups of a catalog proposed by the AI from a table of contents
+        parts.rs                     The pages of a standard cut into parts that fit the context of a
+        steps.rs                     The steps both works of the AI share: the model and the instructions
+        view.rs                      The data of the AI of the editor, as the page gets and sends it, and
+      ai_instructions/             The element "instructions to the AI" of the editor of a catalog: the
+        commands.rs                  The commands of the instructions to the AI.
+      catalog_tree/                The element "tree" of the editor of a catalog: its groups and controls
+        commands.rs                  The command of the tree.
+        view.rs                      The data of the tree, as the page gets it.
+      checked_quote.rs             A quote of a document of a standard, looked for on the page it names
+      new_object/                  The element "new object" of the editor of a catalog: a dialog that adds
+        commands.rs                  The commands of a new object.
+        view.rs                      The place of a new object, as the page sends it.
+      object_form/                 The element "object" of the editor of a catalog: the group or control
+        commands.rs                  The commands of the object chosen.
+        view.rs                      The data of the object chosen, as the page gets it.
+      object_quotes/               The element "quotes" of the editor of a catalog: the passages of the
+        commands.rs                  The commands of the quotes of an object.
+        view.rs                      The data of the quotes of an object, as the page gets it.
+      oscal_object.rs              A group or a control of OSCAL sent by the page as JSON, read into the
+      part_rows.rs                 The parts of a group or a control (statement, items, guidance, ...) as
+      proposals/                   The element "proposals" of the editor of a catalog: what the AI
+        accept.rs                    A proposal of the AI accepted into its catalog.
+        commands.rs                  The commands of the proposals.
+        view.rs                      The data of the proposals, as the page gets it.
     document_search/             The element "search" of the view Evaluation plan: the text of the
       commands.rs                  The command of the search.
       search.rs                    The search of the text of the documents of standards: in the one form
