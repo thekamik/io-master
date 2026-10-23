@@ -173,12 +173,13 @@ A component is a small element used more than once: by several views, or many ti
 views/<view>/<view>.rs               the entry of the view: every command the page calls for it, first those
                                      called when the view opens, then the actions of its elements; each with
                                      what it does, where the page calls it, what it calls; its tests at the end
-views/<view>/<element>/view.rs       the data an element gets (serde); its logic beside it (turn.rs, ...)
+views/<view>/<element>/view.rs       the data an element gets (serde); its logic beside it (turn.rs, ...); an
+                                     element with no data of its own has no folder, only its component on the page
 views/<view>/<file>.rs               what the elements of one view share (Devices: stored_settings.rs, column_view.rs)
 ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
 ```
 
-The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** only Devices is built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
+The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** Devices, Start and Shell are built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
 
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
@@ -447,14 +448,9 @@ views.rs/                  The views of the window, one folder per view and one 
     password_form/               The element "password form" of the view Settings, tab User
       commands.rs                  The command of the password form.
   shell/                       The view Shell: the frame of the window around every page of a
+    shell.rs                     The entry of the view Shell: the state of the program, the logout
     program/                     The element "program" of the view Shell: the state of the program the
-      commands.rs                  The command of the state of the program.
       view.rs                      The state of the program as the page gets it: whether the program
-    user_menu/                   The element "user menu" of the view Shell: the logged-in evaluator at
-      commands.rs                  The command of the user menu.
   start/                       The view Start: what the window shows before anybody is logged in
-    login_form/                  The element "login form" of the view Start
-      commands.rs                  The command of the login form.
-    setup_form/                  The element "setup form" of the view Start
-      commands.rs                  The command of the setup form.
+    start.rs                     The entry of the view Start: the setup and the login
 ```

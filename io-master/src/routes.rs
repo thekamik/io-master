@@ -23,10 +23,10 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::components::pdf_viewer::commands::pdf_viewer_get,
         // The view Start (views/start/) and the frame of the window
         // (views/shell/).
-        crate::views::start::setup_form::commands::setup_form_install,
-        crate::views::start::login_form::commands::login_form_log_in,
-        crate::views::shell::program::commands::program_get,
-        crate::views::shell::user_menu::commands::user_menu_log_out,
+        crate::views::start::start::setup_form_install,
+        crate::views::start::start::login_form_log_in,
+        crate::views::shell::shell::program_get,
+        crate::views::shell::shell::user_menu_log_out,
         // The view Settings (views/settings/).
         crate::views::settings::password_form::commands::password_form_change,
         crate::views::settings::connection_list::commands::connection_list_get,

@@ -9,18 +9,18 @@
   import { onMount } from "svelte";
 
   import { sentence } from "./lib/api/errors";
-  import * as program from "./lib/api/shell/program";
+  import * as shell from "./lib/api/shell";
   import Shell from "./views/shell/Shell.svelte";
   import LoginForm from "./views/start/LoginForm.svelte";
   import SetupForm from "./views/start/SetupForm.svelte";
 
   /** The state of the program; null until it is read. */
-  let app: program.ProgramView | null = $state(null);
+  let app: shell.ProgramView | null = $state(null);
   let problem = $state("");
 
   async function reload() {
     try {
-      app = await program.get();
+      app = await shell.programGet();
     } catch (error) {
       problem = sentence(error);
     }

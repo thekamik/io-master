@@ -68,12 +68,47 @@ fn element_files() -> Vec<(Vec<String>, String)> {
             if name == "commands.rs" {
                 found.push((vec![folder.clone()], fs::read_to_string(&path).expect("the file is read")));
             } else if name == format!("{folder}.rs") {
-                found.push((elements.clone(), fs::read_to_string(&path).expect("the file is read")));
+                let mut names = elements.clone();
+                names.extend(page_elements(&directory));
+                found.push((names, fs::read_to_string(&path).expect("the file is read")));
             }
         }
     }
 
     found
+}
+
+/// The elements of a view on the page: its components
+/// (`ui/src/views/<view>/LoginForm.svelte` is the element `login_form`), for
+/// the elements that have no folder in the program (no data of their own).
+fn page_elements(directory: &Path) -> Vec<String> {
+    let relative = directory.strip_prefix(src()).unwrap_or(directory);
+    let page = Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("src").join(relative);
+    let mut names = Vec::new();
+
+    for entry in fs::read_dir(page).into_iter().flatten().flatten() {
+        let file = entry.file_name().to_string_lossy().into_owned();
+
+        if let Some(component) = file.strip_suffix(".svelte") {
+            names.push(snake_case(component));
+        }
+    }
+
+    names
+}
+
+/// `LoginForm` as `login_form`.
+fn snake_case(name: &str) -> String {
+    let mut snake = String::new();
+
+    for (index, letter) in name.chars().enumerate() {
+        if letter.is_uppercase() && index > 0 {
+            snake.push('_');
+        }
+        snake.extend(letter.to_lowercase());
+    }
+
+    snake
 }
 
 /// The commands defined in the views and the components: since step 42

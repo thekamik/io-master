@@ -1,11 +1,11 @@
 <!--
-  The element "login form" of the view Start (src/views/start/login_form/).
+  The element "login form" of the view Start (its command login_form_log_in in src/views/start/start.rs).
   When the evaluator is logged in it tells the application (ondone), which
   reads the state of the program again.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import { logIn } from "../../lib/api/start/login_form";
+  import { loginFormLogIn } from "../../lib/api/start";
 
   let { ondone }: { ondone: () => void } = $props();
 
@@ -20,7 +20,7 @@
     busy = true;
 
     try {
-      await logIn(name, password);
+      await loginFormLogIn(name, password);
       ondone();
     } catch (error) {
       problem = sentence(error);

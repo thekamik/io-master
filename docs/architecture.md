@@ -317,14 +317,14 @@ the page: the element shows it; "changed" ──► the view ──► the other
 
 The flow inside each view, as it is now (the head of each `views/<view>/mod.rs` names its commands):
 
-**`start` and `shell`.** The page asks for the state of the program at the start and after each of its changes, and shows the setup, the login or the frame:
+**`start` and `shell`** (entries `views/start/start.rs` and `views/shell/shell.rs`). The page asks for the state of the program when the window opens and after each of its changes, and shows the setup, the login or the frame:
 
 ```text
-setup form ──install(name, password, role)──► installation/: made, logged in ─┐
-login form ──log_in(name, password)─────────► installation/: logged in ───────┤
-user menu ──log_out()───────────────────────► installation/: the session ends ┤
-                                                                              ▼
-the page ──program_get()──► ProgramView: installed, the role, who is logged in, the pages
+SetupForm ──setup_form_install(name, password, role)──► installation/: made, logged in ─┐
+LoginForm ──login_form_log_in(name, password)─────────► installation/: logged in ───────┤
+UserMenu  ──user_menu_log_out()───────────────────────► installation/: the session ends ┤
+                                                                                         ▼
+App.svelte ──program_get()──► ProgramView: installed, the role, who is logged in, the pages, the warnings
 ```
 
 **`chat`.**

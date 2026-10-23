@@ -1,5 +1,5 @@
 <!--
-  The element "setup form" of the view Start (src/views/start/setup_form/):
+  The element "setup form" of the view Start (its command setup_form_install in src/views/start/start.rs):
   the first start, the user and the role of the installation. When it is
   done it tells the application (ondone), which reads the state of the
   program again.
@@ -9,7 +9,7 @@
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import { install } from "../../lib/api/start/setup_form";
+  import { setupFormInstall } from "../../lib/api/start";
 
   let { ondone }: { ondone: () => void } = $props();
 
@@ -27,7 +27,7 @@
     busy = true;
 
     try {
-      await install({ name, password, passwordRepeat, role, roleConfirmed });
+      await setupFormInstall({ name, password, passwordRepeat, role, roleConfirmed });
       ondone();
     } catch (error) {
       problem = sentence(error);

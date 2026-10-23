@@ -284,13 +284,29 @@ mod views {
         }
     }
 
+    // views/start/: the view Start: the setup at the first start and the
+    // login, before anybody is logged in.
+    pub mod start {
+        #[allow(clippy::module_inception)]
+        pub mod start;
+    }
+
+    // views/shell/: the view Shell: the frame of the window around every page,
+    // and the state of the program.
+    pub mod shell {
+        #[allow(clippy::module_inception)]
+        pub mod shell;
+
+        pub mod program {
+            pub mod view;
+        }
+    }
+
     // The views not written here yet declare their modules in their mod.rs
     // (step 46).
     pub mod chat;
     pub mod evaluation_plan;
     pub mod settings;
-    pub mod shell;
-    pub mod start;
 
     // Help for the tests of the views: a window of the mock runtime of Tauri.
     #[cfg(test)]
