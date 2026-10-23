@@ -72,7 +72,41 @@ The user (2026-10-24): the project tried to catch too many magpies by the tail. 
 **Phases** (one commit each, pushed, every test passing; the documents with each)
 - [x] 48.1 The devices removed: `hardware_tests/`, `views/devices/`, `db/scan_settings/` (the version 4 of the database of the evaluator removes its two settings), the three commands in their four lists, the page (`ui/src/views/devices/`, `lib/api/devices.ts`, `styles/09-devices.css`, the navigation), the feature `fs` of `rustix`; the documents.
 - [ ] 48.2 The documents describe the framework: `README.md`, `architecture.md` (sections 1, 3, 5, 6, 8), `CLAUDE.md`; the steps dropped marked so in this file; `v0.2_functionality.md`.
-- [ ] 48.3 The role master removed (the choice of the role at the setup, the panel, `Role`), and the TPM factor (`security/tpm/`, `tss-esapi`, `swtpm`): concept first, together with the decision on OpenPGP.
+- [ ] 48.3 The protection on GnuPG, the role master and the TPM removed: **concept proposed 2026-10-24 (below), waiting for the decisions of the user** (the user decides them the next day).
+
+### The concept of 48.3 (proposed by Claude 2026-10-24; not approved yet)
+
+Found in the code: the keyring was never built (step 13): only two unused constants in `main.rs`. `accounts::add` (more users) is dead code. The TPM factor is half built (`device_secret` always `None`). GnuPG 2.4.7 and `pinentry-gnome3` are on Debian 13.
+
+```text
+SETUP
+  gpg --list-secret-keys ──► the keys of the evaluator (fingerprint, UID, on a card or not)
+  the evaluator chooses their key [+ optionally the recovery key of the laboratory]
+  32 random bytes = the key of the database (RAM)
+    ──► gpg --encrypt -r <evaluator> [-r <recovery>] ──► an OpenPGP message ──► system.db
+    ──► SQLCipher makes users/<id>.db with the key; the key wiped
+
+OPENING (instead of the login)
+  the button "Open" ──► gpg --decrypt (the message on its standard input)
+    gpg-agent ──► pinentry asks for the passphrase of the key / the PIN of the card
+                  (the window of the program never sees the secret)
+    the key of the database on its standard output (RAM) ──► SQLCipher opens the database ──► the key wiped
+```
+
+- **`security/openpgp/gpg.rs`**: the only place that starts `gpg` (as `pdf/` with Poppler; uses nothing of the program): the secret keys, the public keys, encrypt for recipients, decrypt. A fixed path `/usr/bin/gpg`, never `PATH`; its output read in the machine format (`--with-colons`, `--status-fd`) up to a constant number of bytes; the decrypted key in `Zeroizing`. The tests use a temporary home of GnuPG (`--homedir`) with a key without passphrase made in the test; `~/.gnupg` is never touched.
+- **`db/encryption/keys.rs`** rewritten: `WrappedKey` = the OpenPGP message and the fingerprints of its recipients. Argon2id, HKDF, AES-GCM and the rules of the password go.
+- **`views/users/users.rs`** stays the one place of the key: `setup_form_keys` (the list of keys), `setup_form_install(name, key, recovery)`, `login_form_open` instead of `login_form_log_in`; the change of the password is replaced by the change of the recipients (a new key after a rotation, a recovery key added).
+- **Removed:** `Role` and the choice of the role, the panel of the master in `Shell.svelte`; `accounts::add`; `security/tpm/` whole, `device_secret`, `tss-esapi`, `swtpm`, `libtss2-dev`; `PasswordForm`, `password_form_change`, `argon2`, `aes-gcm`, `hkdf`; the constants of the keyring, section 5.6; `base64` (used by nothing any more).
+- **The warnings at the top of the window:** instead of "no password reset" and "no factor", one: "No recovery key: losing your OpenPGP key means losing the data", while the key of the database has one recipient.
+- **Phases:** 48.3a the master, more users and the TPM removed (only deletion; the password still works); 48.3b `security/openpgp/` with its tests; 48.3c the setup and the opening with OpenPGP instead of the password (`keys.rs`, the new layout of `system.db`, the forms of the page, the dependencies of cryptography removed); 48.3d the change of the recipients on the page User; then 48.2, the documents of the framework. The backup, encrypted for the same recipients, is a step after 48.
+- **Risks accepted knowingly:** gpg-agent keeps the passphrase for a while (meanwhile other programs of the account may use the key; a card with touch lessens it); a key without passphrase cannot be forbidden by the program (a requirement of the laboratory; the list shows which key is on a card); a graphical pinentry is needed (README, requirements).
+
+**Decisions for the user** (Claude's proposal after each):
+- [ ] The recovery key of the laboratory: required, recommended or not offered? *Proposed: optional, with a lasting warning while it is missing.*
+- [ ] The keyring of GNOME: dropped entirely? *Proposed: yes; the private key of OpenPGP is outside the files of the installation anyway, so it does the work of the secret of the application, and the trouble with PAM on XFCE goes.*
+- [ ] The name of the user: from the UID of the key? *Proposed: yes by default, editable.*
+- [ ] The installations of the tests: migrated? *Proposed: no (as in step 41): the program recognises an old `system.db` and asks to remove `~/.local/share/io-master` and install anew.*
+- [ ] An OpenPGP card (YubiKey, Nitrokey) to test with? Otherwise the tests use keys in software.
 
 ---
 

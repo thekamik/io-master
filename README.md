@@ -47,19 +47,19 @@ These are requirements of the design, not preferences (`docs/architecture.md`, s
 ## Requirements
 
 - Linux with a graphical desktop session and a keyring through the Secret Service interface (GNOME Keyring; GNOME and XFCE are the supported desktops).
-- **Systems:** Debian 13 (trixie) is the target system; Arch Linux is tested as well. Other distributions may work but are not tested.
+- **System:** Debian 13 (trixie), the target system and the only one tested. Other distributions may work but are not tested.
 - Poppler (`pdfinfo`, `pdftotext`) to load the documents of standards.
 - For building: Rust (stable, edition 2024) from rustup, Node.js 20.19 or newer with npm, and the libraries of Tauri 2 on Linux (WebKitGTK 4.1 and its companions), OpenSSL (used by SQLCipher), D-Bus (the keyring) and tpm2-tss (the TPM library; needed to build even without a TPM).
 
 The packages, in three groups: to run the program, to build it, and for the tests (the window on a private display and the emulator of the TPM).
 
-| Needed for | Debian 13 (`apt`) | Arch Linux (`pacman`) |
-|---|---|---|
-| running | `poppler-utils gnome-keyring libpam-gnome-keyring` | `poppler gnome-keyring` |
-| building | `build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libdbus-1-dev libtss2-dev nodejs npm` | `base-devel pkgconf glib2 gtk3 webkit2gtk-4.1 libayatana-appindicator librsvg xdotool openssl dbus tpm2-tss nodejs npm` |
-| tests | `xvfb xclip imagemagick x11-utils libxtst6 libsecret-tools swtpm swtpm-tools python3` | `xorg-server-xvfb xclip imagemagick xorg-xwininfo libxtst libsecret swtpm python` |
+| Needed for | Debian 13 (`apt`) |
+|---|---|
+| running | `poppler-utils gnome-keyring libpam-gnome-keyring` |
+| building | `build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libdbus-1-dev libtss2-dev nodejs npm` |
+| tests | `xvfb xclip imagemagick x11-utils libxtst6 libsecret-tools swtpm swtpm-tools python3` |
 
-Debian 13:
+All at once (the plain repositories of Debian, no backports):
 
 ```bash
 sudo apt install poppler-utils gnome-keyring libpam-gnome-keyring \
@@ -68,17 +68,9 @@ sudo apt install poppler-utils gnome-keyring libpam-gnome-keyring \
     xvfb xclip imagemagick x11-utils libxtst6 libsecret-tools swtpm swtpm-tools python3
 ```
 
-Arch Linux:
+Rust comes from rustup (the installer of https://rustup.rs), then `rustup default stable`. Do not install the `rustc` and `cargo` packages of the system beside it: two compilers in `PATH` build with one and run clippy with the other, which fails (E0514). After a change of compiler, run `cargo clean` once.
 
-```bash
-sudo pacman -S --needed poppler gnome-keyring \
-    base-devel pkgconf glib2 gtk3 webkit2gtk-4.1 libayatana-appindicator librsvg xdotool openssl dbus tpm2-tss nodejs npm \
-    xorg-server-xvfb xclip imagemagick xorg-xwininfo libxtst libsecret swtpm python
-```
-
-Rust comes from rustup on both systems (the installer of https://rustup.rs, or the package `rustup`), then `rustup default stable`. Do not install the `rustc` and `cargo` packages of the system beside it: two compilers in `PATH` build with one and run clippy with the other, which fails (E0514). After a change of compiler, run `cargo clean` once.
-
-On XFCE the keyring is unlocked at the login only with its PAM module (`libpam-gnome-keyring` on Debian; on Arch the lines of `pam_gnome_keyring.so` in `/etc/pam.d/lightdm`, see the Arch wiki "GNOME/Keyring"), a display manager that calls it (LightDM does), and "Launch GNOME services on startup" switched on in the settings of the session; otherwise it asks for its password at the first use.
+On XFCE the keyring is unlocked at the login only with its PAM module (`libpam-gnome-keyring`), a display manager that calls it (LightDM does), and "Launch GNOME services on startup" switched on in the settings of the session; otherwise it asks for its password at the first use.
 
 ## Building and testing
 

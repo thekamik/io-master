@@ -229,9 +229,9 @@ The work is planned step by step in `todo.md`. Two items must not be forgotten w
 
 ## 9. System requirements (agreed 2026-10-15)
 
-- **Debian 13 (trixie) is the target system; Arch Linux is tested as well** (user, 2026-10-21), with the newest packages, so that the code stays future proof for the next versions of Debian. The packages for running, building and testing on both are listed in `README.md`, section "Requirements".
-- **Few resources are the measure** (user, 2026-10-21): the virtual machines of a laboratory usually get little of the hardware, so the program must work well on a machine like a ThinkPad T480 (Intel Core i5 of 2018, 8 GB RAM) or weaker. Later also on a Raspberry Pi 5 (ARM64 architecture, no TPM): the code must not depend on x86_64.
-- Poppler (**`poppler-utils`** on Debian, `poppler` on Arch: `pdfinfo`, `pdftotext`) for loading the documents of standards (section 7.1).
+- **Debian 13 (trixie) is the target system and the only one tested** (user, 2026-10-24). The packages for running, building and testing are listed in `README.md`, section "Requirements".
+- **Few resources are the measure** (user, 2026-10-21): the virtual machines of a laboratory usually get little of the hardware (a processor of some years ago, 8 GB RAM or less), so the program must work well on them.
+- Poppler (**`poppler-utils`**: `pdfinfo`, `pdftotext`) for loading the documents of standards (section 7.1).
 - Linux with a **graphical desktop session and a keyring through the Secret Service interface** (the freedesktop.org standard on D-Bus, `org.freedesktop.secrets`). The program does not start without it, also not over SSH or as a system service (section 5.6).
 - **Supported and tested desktops: GNOME and XFCE**, both with GNOME Keyring as the provider of the Secret Service. On XFCE the keyring is unlocked at login only with its PAM module (`libpam-gnome-keyring`) and a display manager that calls it (LightDM does), and with "Launch GNOME services on startup" switched on; otherwise it asks for its password at the first use. The installation guide describes this. Other desktops (KDE with KWallet, KeePassXC as the provider) may work but are not supported until they are tested.
 - A virtual machine needs a desktop and a logged-in session as well.
