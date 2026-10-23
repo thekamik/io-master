@@ -19,8 +19,8 @@ use tauri::ipc::Invoke;
 pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         // The components (components/), used by several views.
-        crate::components::pdf_viewer::commands::pdf_viewer_documents,
-        crate::components::pdf_viewer::commands::pdf_viewer_get,
+        crate::components::pdf_viewer::pdf_viewer::pdf_viewer_documents,
+        crate::components::pdf_viewer::pdf_viewer::pdf_viewer_get,
         // The view Start (views/start/) and the frame of the window
         // (views/shell/).
         crate::views::start::start::setup_form_install,

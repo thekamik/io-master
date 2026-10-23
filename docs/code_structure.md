@@ -140,7 +140,7 @@ serializer/     how an error reaches the page (serde)
 ```
 
 - **No command and no rule is here**: the commands are in the folders of the elements (`views/`).
-- A command is callable only when it is listed in **four places**: the entry of its view (`views/<view>/<view>.rs`; a `commands.rs` of an element in the views not moved yet), `routes.rs` (`generate_handler!`, used by the window and by the tests of the commands), `build.rs` (`AppManifest`), `capabilities/default.json`. A test (`src/command_lists_tests.rs`) reads the four lists and fails when they differ.
+- A command is callable only when it is listed in **four places**: the entry of its view or component (`views/<view>/<view>.rs`, `components/<component>/<component>.rs`), `routes.rs` (`generate_handler!`, used by the window and by the tests of the commands), `build.rs` (`AppManifest`), `capabilities/default.json`. A test (`src/command_lists_tests.rs`) reads the four lists and fails when they differ.
 
 ### 2.8 `ui/`: the page
 
@@ -165,7 +165,7 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 
 ### 2.8a `components/`: the components (step 43)
 
-A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as an element of a view (`mod.rs`, `commands.rs`, `view.rs`, its tests), its commands are named `<component>_<action>`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog, and the parts of an object (`part_rows/`), shown twice by the editor of a catalog; a component that only shows data the elements give it has no `commands.rs`.
+A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog, and the parts of an object (`part_rows/`), shown twice by the editor of a catalog; a component that only shows data the elements give it has no entry, only its `view.rs`.
 
 ### 2.9 `views/`: the views of the window (steps 42 and 46)
 
@@ -179,7 +179,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
 ```
 
-The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** every view is built so (the components follow in 46.7); the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
+The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12.
 
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
@@ -189,7 +189,7 @@ The modules of a view are declared in the map of `main.rs`; its flow of data is 
 - **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`) through a `Channel` of Tauri, stop on the stop signal of `app/state.rs`, and hold no lock of the session while they wait for files or for the model.
 - **Documents of OSCAL** (step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction (`db/oscal/`); the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
 - **Tests call a command as the page does**: by name, with JSON, through the IPC of Tauri, in a window of its mock runtime (`views/test_support.rs`, the feature `test` of Tauri), on a real installation in a temporary folder.
-- `mod.rs` in the folder of a view and of an element (user, 2026-10-21), so that an element is one folder; the other folders keep `<folder>.rs` next to `<folder>/`.
+- No `mod.rs` and no file that only declares modules: the modules of the views and their elements are written in the map of `main.rs` (steps 45 and 46).
 
 ---
 
@@ -198,7 +198,7 @@ The modules of a view are declared in the map of `main.rs`; its flow of data is 
 | Topic | Rule |
 |---|---|
 | Names | No file repeats the name of its folder (`security/tpm/chip.rs`, not `tpm/tpm.rs`). Functions of a resource are verbs. |
-| Modules | **`main.rs` is the map of the program** (step 45, user 2026-10-23): every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment that says which part of the project it is; a file that would only declare modules does not exist. A file with code that has modules of its own (`model/oscal.rs`) declares them itself. **A plan:** `components/` and `views/` still declare their modules in their `mod.rs` (section 2.9) until step 46. |
+| Modules | **`main.rs` is the map of the program** (step 45, user 2026-10-23): every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment that says which part of the project it is; a file that would only declare modules does not exist. A file with code that has modules of its own (`model/oscal.rs`) declares them itself. |
 | Rules of the code | CLAUDE.md, "The rules for Rust" (The Power of 10 adapted). A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error; never `assert!` outside the tests. |
 | Comments | Code comments and documentation in English, thorough; the head of every file says what it holds and, where it helps, draws the path of the data. |
 | Tests | In the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }` (step 44; a file `*_tests.rs` besides the two tests of the whole program is refused by `architecture_tests.rs`). Help for the tests in `test_support.rs` (of an area), `src/test_support.rs` (temporary folders) and `src/test_support/` (`db.rs`: the data of the tests of `db/`; `standards.rs`: a database with a small standard); a test of a whole area of CRUD is split by the function it checks, so that `read.rs` ends with the tests of reading; the tests of the whole program in `src/architecture_tests.rs` and `src/command_lists_tests.rs`. |
@@ -359,13 +359,13 @@ app/                       What the whole window shares (Tauri 2): the state the
   serializer/                  How an error of a command reaches the page (serde). The data of the
     error_view.rs                How an error of a command reaches the page:
   state.rs                     The state of the desktop interface, kept in Rust and never in
-components.rs/             The components of the window: small elements used more than once,
+components/                The components of the window: small elements used more than once,
   part_rows/                   The component "parts of an object": the parts of a group or a control
     view.rs                      The data of the component "parts of an object": the parts of a group or
   pdf_viewer/                  The component "viewer of a standard": the original page of a PDF, with a
-    commands.rs                  The command of the viewer of a standard.
+    pdf_viewer.rs                The entry of the viewer of a standard: its two commands
     view.rs                      The data of the viewer, as the page gets it: the documents it can
-views.rs/                  The views of the window, one folder per view and one folder per
+views/                     The views of the window, one folder per view and one folder per
   chat/                        The view Chat: the chats of the evaluator with the model of the role
     chat.rs                      The entry of the view Chat: every command the page calls for it
     chat_list/                   The element "list of chats" of the view Chat

@@ -6,8 +6,7 @@
 //! what one of them lacks. It also checks that a command is named after an
 //! element of its view (`ports_table_scan` in `views/devices/devices.rs`,
 //! the element `views/devices/ports_table/`) or after its component
-//! (`pdf_viewer_get`). Until step 46 is done, the views not moved yet keep
-//! a `commands.rs` per element.
+//! (`pdf_viewer_get`).
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -36,12 +35,11 @@ fn commands_in(source: &str) -> Vec<String> {
     names
 }
 
-/// The files that define commands, under `views/` and `components/`, each
-/// with the names its commands may begin with: a `commands.rs` of an
-/// element (the name of its folder), or the entry of a view or a
-/// component, the file named after its folder (step 46: the names of the
-/// elements of the view, the folders beside it, and the name of the folder
-/// itself, for a component).
+/// The files that define commands, under `views/` and `components/`: the
+/// entry of a view or a component, the file named after its folder (step
+/// 46), each with the names its commands may begin with: the names of the
+/// elements of the view (the folders beside the entry, and the components
+/// of its page) and the name of the folder itself, for a component.
 fn element_files() -> Vec<(Vec<String>, String)> {
     let mut found = Vec::new();
     let mut pending = vec![src().join("views"), src().join("components")];
@@ -65,9 +63,7 @@ fn element_files() -> Vec<(Vec<String>, String)> {
         for path in files {
             let name = path.file_name().unwrap_or_default().to_string_lossy().into_owned();
 
-            if name == "commands.rs" {
-                found.push((vec![folder.clone()], fs::read_to_string(&path).expect("the file is read")));
-            } else if name == format!("{folder}.rs") {
+            if name == format!("{folder}.rs") {
                 let mut names = elements.clone();
                 names.extend(page_elements(&directory));
                 found.push((names, fs::read_to_string(&path).expect("the file is read")));

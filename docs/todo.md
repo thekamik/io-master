@@ -25,7 +25,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **built 2026-10-23, in the phases 43.1 to 43.9** (below) |
 | 14d | **44: The tests in the file they test** | **built 2026-10-23, in the phases 44.1 to 44.6** (below) |
 | 14e | **45: The tree of the modules in `main.rs`** | **built 2026-10-23, in the phases 45.1 to 45.4** (below) |
-| 14f | **46: The entry of a view** | **approved 2026-10-23; built in phases 46.1 to 46.7** (below) |
+| 14f | **46: The entry of a view** | **built 2026-10-23, in the phases 46.1 to 46.7** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -73,7 +73,7 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 46: The entry of a view (2026-10-23)
 
-**State: approved by the user (2026-10-23); built phase by phase (below).**
+**State: built 2026-10-23, in the phases 46.1 to 46.7 (below).**
 
 When the folder of a view is opened, one must see at once where the view begins: the file the page calls to open it, and the functions the page calls to refresh its elements (user, 2026-10-23). The functions are right already; the fault is readability.
 
@@ -93,7 +93,7 @@ When the folder of a view is opened, one must see at once where the view begins:
 - [x] 46.4 `settings` (its two helpers, `api_key_view` and `no_such_connection`, at the end of the entry, commented as the commands).
 - [x] 46.5 `evaluation_plan`. What the commands of its elements did beside the commands went into the elements: the dialogs of the system into `oscal_documents/dialog.rs` and `standard_documents/dialog.rs`, the reading of a file and the safe name of a file into `oscal_documents/file.rs`, the limit of a search into `document_search/search.rs`.
 - [x] 46.6 the editor of a catalog (its helper `instructions_task` at the end of the entry; the description of the pipeline of the AI, in `ai_builder/mod.rs` so far, is in `architecture.md`, section 12).
-- [ ] 46.7 the components (`pdf_viewer`, `part_rows`); `components.rs` in the map; the state of this step.
+- [x] 46.7 the components (`pdf_viewer` with its entry `pdf_viewer.rs`; `part_rows`, without commands, only its `view.rs`); `components.rs` in the map; the test of the command lists no longer reads a `commands.rs`.
 
 ---
 

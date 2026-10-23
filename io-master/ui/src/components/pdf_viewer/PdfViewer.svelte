@@ -61,7 +61,7 @@
       return known;
     }
 
-    const pdf = await openPdf(await pdfViewer.pdf(id));
+    const pdf = await openPdf(await pdfViewer.pdfViewerGet(id));
     open.set(id, pdf);
 
     return pdf;
@@ -91,7 +91,7 @@
   }
 
   onMount(() => {
-    pdfViewer.documents().then(
+    pdfViewer.pdfViewerDocuments().then(
       (read) => (documents = read),
       (error) => (problem = `The documents cannot be read: ${sentence(error)}`),
     );

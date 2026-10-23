@@ -33,10 +33,9 @@ mod checks;
 // up: a folder uses only the folders above it in this list
 // (docs/code_structure.md, section 1; checked by architecture_tests.rs).
 // The comment of a group says which part of the project it is; what each
-// file holds is said at its functions. Since step 45 of docs/todo.md the
-// modules of every layer are written here; components/ and views/ still
-// declare theirs in their mod.rs (step 46), and a file with code that has
-// modules of its own (model/oscal.rs) declares them itself.
+// file holds is said at its functions. Since steps 45 and 46 of
+// docs/todo.md every module is written here, except those of a file with code
+// that has modules of its own (model/oscal.rs), which declares them itself.
 
 // model/: the data of the program as plain Rust types and the rules of
 // their validity; no I/O (no database, no network, no file).
@@ -258,8 +257,27 @@ mod app {
     }
 }
 
-// components/: the elements of the window used more than once.
-mod components;
+// components/: the elements of the window used more than once, several times
+// in one view or in several views (docs/architecture.md, section 10.2). A
+// component is built as an element of a view; one with commands has an entry,
+// the file of its name. The views use the components; a component never uses
+// a view (checked by architecture_tests.rs).
+mod components {
+    // components/part_rows/: the parts of a group or a control as rows with
+    // their level; the object chosen and the proposals of the editor of a
+    // catalog. No command: the elements give its rows with their data.
+    pub mod part_rows {
+        pub mod view;
+    }
+    // components/pdf_viewer/: the viewer of a standard, a quote highlighted on
+    // its page; the evaluation plan and the editor of a catalog.
+    pub mod pdf_viewer {
+        #[allow(clippy::module_inception)]
+        pub mod pdf_viewer;
+
+        pub mod view;
+    }
+}
 
 // views/: the views of the window, one folder per view. The entry of a view
 // is the file of its name in its folder: every command the page calls for

@@ -1,4 +1,10 @@
-//! The command of the viewer of a standard.
+//! The entry of the component "viewer of a standard": the original page of
+//! a PDF, with a quote highlighted in it, drawn by pdf.js in the page (page:
+//! `ui/src/components/pdf_viewer/`, its commands in
+//! `ui/src/lib/api/components/pdf_viewer.ts`). Used by the view Evaluation
+//! plan and by its editor of a catalog. The PDF comes from the encrypted
+//! database; the page, the zoom and the selection of a quote are
+//! presentation.
 
 use tauri::State;
 use tauri::ipc::Response;
@@ -9,7 +15,13 @@ use crate::db::standards as db_standards;
 
 use super::view::{self, ViewerDocumentView};
 
+// ── When the component opens ──────────────────────────────────────────
+
 /// The documents the viewer can show, by title and part.
+///
+/// Called by the page: `PdfViewer.svelte`, when it opens
+/// (`pdfViewer.pdfViewerDocuments()`).
+/// Calls: `db_standards::read::documents`, `view::all`.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
@@ -20,6 +32,10 @@ pub fn pdf_viewer_documents(state: State<'_, AppState>) -> Result<Vec<ViewerDocu
 }
 
 /// The PDF of document `id`, as raw bytes.
+///
+/// Called by the page: `PdfViewer.svelte`, when it opens and when another
+/// document is chosen in it (`pdfViewer.pdfViewerGet(id)`).
+/// Calls: `db_standards::read::pdf` (the file from the encrypted database).
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
@@ -35,7 +51,8 @@ pub fn pdf_viewer_get(state: State<'_, AppState>, id: i64) -> Result<Response, A
 
 #[cfg(test)]
 mod tests {
-    //! Unit tests of `pdf_viewer/commands.rs`, through the IPC of Tauri.
+    //! Tests of the commands of the viewer of a standard, called as the page
+    //! calls them: by name, through the IPC of Tauri.
 
     use serde_json::json;
 

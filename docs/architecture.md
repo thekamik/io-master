@@ -315,7 +315,7 @@ views/<view>/<element>/view.rs                    the data the element gets back
 the page: the element shows it; "changed" ──► the view ──► the other elements read again
 ```
 
-The flow inside each view, as it is now (the head of each `views/<view>/mod.rs` names its commands):
+The flow inside each view, as it is now (the entry of each view, `views/<view>/<view>.rs`, holds its commands in this order):
 
 **`start` and `shell`** (entries `views/start/start.rs` and `views/shell/shell.rs`). The page asks for the state of the program when the window opens and after each of its changes, and shows the setup, the login or the frame:
 
