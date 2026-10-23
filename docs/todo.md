@@ -23,6 +23,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **concept in `docs/oscal.md`, approved 2026-10-18; 41.1 to 41.3 built, 41.4 next; before step 31** |
 | 14b | **42: The views: one folder per element of the window, instead of `business/` and the commands of `tauri_ui/`** | **built 2026-10-21: every view moved, `business/` and the commands of `tauri_ui/` removed** (below) |
 | 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **built 2026-10-23, in the phases 43.1 to 43.9** (below) |
+| 14d | **44: The tests in the file they test** | **concept, waiting for the user's approval** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -45,6 +46,33 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 44: The tests in the file they test (2026-10-23)
+
+**State: concept, waiting for the user's approval; no code changed yet.**
+
+The user (2026-10-23): the unit tests move from their own files (`<file>_tests.rs`, 85 files, about 6000 lines) into the file whose functions they test; fewer files, and a function and its tests read together. It replaces the rule of `CLAUDE.md` ("Way of working") and of `code_structure.md` (section 3, Tests).
+
+**The rule (proposed)**
+- The tests of a file are its **last item**: `#[cfg(test)] mod tests { use super::*; ... }`, after all the code of the program, so that the file is read from the top as the program and ends with its tests. The head of the module says what the tests cover.
+- What stays in files of its own: the help of the tests shared by several files (`test_support.rs`), and the tests of the whole program, which test no one file (`architecture_tests.rs`, `command_lists_tests.rs`).
+- `// ok kk` is unchanged: it marks a function of the program; the tests below it may still be changed.
+
+**What the checks need**
+- `architecture_tests.rs` reads a file only up to its test module, and checks that the module is the last item (after the line `mod tests {` only indented lines, empty lines and the closing `}`), so that no code of the program can hide below it. A file named `*_tests.rs` is no longer skipped by its name (the module `hardware_tests.rs` was skipped so far only by luck of its contents).
+- The other checks (clippy, rustfmt, the test of the command lists) see the same code as before.
+
+**Phases** (one commit each, pushed; every test passing after it; the move is mechanical: the content of `<file>_tests.rs` is put into `mod tests { }` at the end of `<file>.rs`, rustfmt indents it, the `#[path]` lines are removed)
+- [ ] 44.1 The rule in `CLAUDE.md` and `code_structure.md`; `architecture_tests.rs` as above; the small folders: `checks`, `model/`, `pdf/`, `security/`, `app/`, `components/`, `installation/`.
+- [ ] 44.2 `db/` (13 files).
+- [ ] 44.3 `ai/` (15 files).
+- [ ] 44.4 `hardware_tests/` (3 files).
+- [ ] 44.5 `views/`: `start`, `shell`, `chat`, `settings`, `devices`.
+- [ ] 44.6 `views/evaluation_plan/` with its editor of a catalog; `handover.md`, the state of this step.
+
+**Done when** no `<file>_tests.rs` is left besides the tests of the whole program, and the test of the architecture checks that every test module is the last item of its file.
 
 ---
 
