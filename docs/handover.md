@@ -20,7 +20,7 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 
 ## Rules that are easy to forget
 
-- Concept first, approved by the user, then code; small steps, each with tests (`<file>_tests.rs`, attached with `#[cfg(test)] #[path = "..."] mod tests;`); `cargo fmt` before a commit.
+- Concept first, approved by the user, then code; small steps, each with tests (in the file they test, its last item `#[cfg(test)] mod tests { ... }`; step 44 is moving the rest); `cargo fmt` before a commit.
 - The direction of the dependencies is checked by `src/architecture_tests.rs`; a new use against it is a finding, or an exception written there with its reason.
 - Every command of the window is listed in four places (the `commands.rs` of its element in `views/`, `routes.rs`, `build.rs`, `capabilities/default.json`); a test checks them.
 - Serialization only in the `view.rs` of the elements of `src/views/` and in `src/app/serializer/` (the error of a command); the core types carry no serde attributes.

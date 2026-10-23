@@ -24,8 +24,10 @@
 //! folder above it: no cycle. The tests (`*_tests.rs`, `test_support.rs`)
 //! are not held to it: they set up data across the layers.
 //!
-//! Two rules of step 43 (docs/architecture.md, section 10.2) are checked
-//! as well: a view never uses another view (what two views need is a
+//! The tests of a file are its last item (step 44): only the part above
+//! them is held to the rule, and a test checks that nothing of the program
+//! follows them. Two rules of step 43 (docs/architecture.md, section 10.2)
+//! are checked as well: a view never uses another view (what two views need is a
 //! component), and a component of the page never imports a view of the
 //! page.
 
@@ -109,6 +111,17 @@ fn paths(text: &str) -> Vec<String> {
     found
 }
 
+/// The line that opens the tests of a file, its last item (step 44).
+const TESTS_START: &str = "\n#[cfg(test)]\nmod tests {\n";
+
+/// The part of a file that is the program: all of it up to its tests.
+fn program_part(text: &str) -> String {
+    match text.find(TESTS_START) {
+        Some(at) => text[..at].to_owned(),
+        None => text.to_owned(),
+    }
+}
+
 /// The files of `folder` that are held to the rule (the folder and the
 /// file of the same name next to it).
 fn files(root: &Path, folder: &str) -> Vec<(String, String)> {
@@ -116,7 +129,7 @@ fn files(root: &Path, folder: &str) -> Vec<(String, String)> {
     let mut pending = vec![root.join(folder)];
 
     if let Ok(text) = fs::read_to_string(root.join(format!("{folder}.rs"))) {
-        found.push((format!("{folder}.rs"), text));
+        found.push((format!("{folder}.rs"), program_part(&text)));
     }
 
     while let Some(directory) = pending.pop() {
@@ -130,7 +143,7 @@ fn files(root: &Path, folder: &str) -> Vec<(String, String)> {
                 pending.push(path);
             } else if name.ends_with(".rs") && !name.ends_with("_tests.rs") && name != "test_support.rs" {
                 let shown = path.strip_prefix(root).unwrap_or(&path).display().to_string();
-                found.push((shown, fs::read_to_string(&path).unwrap_or_default()));
+                found.push((shown, program_part(&fs::read_to_string(&path).unwrap_or_default())));
             }
         }
     }
@@ -270,4 +283,80 @@ fn a_component_of_the_page_never_imports_a_view() {
 
     assert!(checked > 0, "the components of the page are found");
     assert!(broken.is_empty(), "a component imports a view:\n{}", broken.join("\n"));
+}
+
+/// Every `.rs` file under `root`.
+fn all_rust_files(root: &Path) -> Vec<(String, String)> {
+    let mut found = Vec::new();
+    let mut pending = vec![root.to_path_buf()];
+
+    while let Some(directory) = pending.pop() {
+        for entry in fs::read_dir(&directory).expect("the folder is read").flatten() {
+            let path = entry.path();
+
+            if path.is_dir() {
+                pending.push(path);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                let shown = path.strip_prefix(root).unwrap_or(&path).display().to_string();
+                found.push((shown, fs::read_to_string(&path).unwrap_or_default()));
+            }
+        }
+    }
+
+    found
+}
+
+/// The words that begin an item of Rust at the left edge of a line.
+const ITEM_STARTS: [&str; 13] = [
+    "fn ",
+    "pub ",
+    "use ",
+    "impl",
+    "struct ",
+    "enum ",
+    "const ",
+    "static ",
+    "mod ",
+    "#[",
+    "type ",
+    "trait ",
+    "macro_rules!",
+];
+
+#[test]
+fn the_tests_of_a_file_are_its_last_item() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut broken = Vec::new();
+    let mut with_tests = 0;
+
+    for (file, text) in all_rust_files(&root) {
+        let starts = text.matches(TESTS_START).count();
+
+        if starts == 0 {
+            continue;
+        }
+
+        with_tests += 1;
+
+        if starts > 1 {
+            broken.push(format!("{file}: more than one module of tests"));
+            continue;
+        }
+
+        let after = text.split_once(TESTS_START).map(|(_, rest)| rest).unwrap_or_default();
+        let last = after.lines().filter(|line| !line.trim().is_empty()).next_back().unwrap_or_default();
+
+        if last != "}" {
+            broken.push(format!("{file}: the file does not end with the module of tests"));
+        }
+
+        for line in after.lines() {
+            if ITEM_STARTS.iter().any(|start| line.starts_with(start)) {
+                broken.push(format!("{file}: code of the program after the tests: {line}"));
+            }
+        }
+    }
+
+    assert!(with_tests > 0, "files with their tests are found");
+    assert!(broken.is_empty(), "the tests are not the last item:\n{}", broken.join("\n"));
 }
