@@ -1,9 +1,9 @@
 <!--
-  The element "viewer of a standard" of the view Evaluation plan
-  (src/views/evaluation_plan/pdf_viewer/): the original page of a PDF, with a
-  quote highlighted in it, so that every source, also one the AI
-  proposed, is checked against the standard itself. The editor of a
-  catalog uses it too.
+  The component "viewer of a standard" (src/components/pdf_viewer/): the
+  original page of a PDF, with a quote highlighted in it, so that every
+  source, also one the AI proposed, is checked against the standard
+  itself. Used by the view Evaluation plan and by its editor of a
+  catalog.
 
   With `onquote`, text selected in the page can be taken as a quote
   (document, page and the selected text).
@@ -17,8 +17,8 @@
   import type { PDFDocumentProxy } from "pdfjs-dist";
 
   import { sentence } from "../../lib/api/errors";
-  import * as pdfViewer from "../../lib/api/evaluation_plan/pdf_viewer";
-  import { drawPage, highlight, openPdf, type DrawnPage } from "../../lib/pdf";
+  import * as pdfViewer from "../../lib/api/components/pdf_viewer";
+  import { drawPage, highlight, openPdf, type DrawnPage } from "./pdf";
 
   let {
     documentId,

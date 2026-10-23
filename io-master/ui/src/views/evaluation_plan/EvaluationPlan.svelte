@@ -16,7 +16,7 @@
   import DocumentSearch from "./DocumentSearch.svelte";
   import NewCatalog from "./NewCatalog.svelte";
   import OscalDocuments from "./OscalDocuments.svelte";
-  import PdfViewer from "./PdfViewer.svelte";
+  import PdfViewer from "../../components/pdf_viewer/PdfViewer.svelte";
   import StandardDocuments from "./StandardDocuments.svelte";
 
   type Tab = "oscal" | "documents";

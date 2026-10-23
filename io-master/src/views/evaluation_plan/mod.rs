@@ -9,8 +9,10 @@
 //! a new catalog            new_catalog/          new_catalog_sources, new_catalog_create
 //! the documents (PDF)      standard_documents/   standard_documents_get, _load, _stop, _update, _delete
 //! the search               document_search/      document_search_run
-//! the viewer               pdf_viewer/           pdf_viewer_documents, pdf_viewer_get
 //! ```
+//!
+//! The viewer of a standard is a component (`components/pdf_viewer/`),
+//! shown by this view and by its editor of a catalog.
 //!
 //! The flow of data. Which tab is open, which catalog is open and what the
 //! viewer shows are presentation, kept by the page of the view. When an
@@ -29,5 +31,4 @@ pub mod catalog_editor;
 pub mod document_search;
 pub mod new_catalog;
 pub mod oscal_documents;
-pub mod pdf_viewer;
 pub mod standard_documents;

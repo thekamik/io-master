@@ -285,7 +285,7 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 | Folder | Its task | Uses |
 |---|---|---|
 | `views/` | the views of section 10.1: one folder per view, with the elements of its page used only there; a command takes the parameters from the page, does the work with the folders below and gives the data back | `components/`, everything below |
-| `components/` (planned, step 43) | the components of section 10.2, built as an element: its commands and its data | everything below `views/` |
+| `components/` | the components of section 10.2, built as an element: its commands and its data | everything below `views/` |
 | `routes.rs` (a file, not a folder) | the list of every command the page may call; the window of the program and the window of the tests use it | `views/` |
 | `app/` (was `tauri_ui/`) | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart | `installation/`, `model/`, the errors of the folders below |
 | `installation/` | the installation of the Linux account, its one account and the session of the logged-in evaluator: the core of the protection | `db/`, `security/`, `model/` |

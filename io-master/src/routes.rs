@@ -18,6 +18,9 @@ use tauri::ipc::Invoke;
 /// CLAUDE.md): it finds a command by the name the page calls.
 pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
+        // The components (components/), used by several views.
+        crate::components::pdf_viewer::commands::pdf_viewer_documents,
+        crate::components::pdf_viewer::commands::pdf_viewer_get,
         // The view Start (views/start/) and the frame of the window
         // (views/shell/).
         crate::views::start::setup_form::commands::setup_form_install,
@@ -61,8 +64,6 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::evaluation_plan::standard_documents::commands::standard_documents_update,
         crate::views::evaluation_plan::standard_documents::commands::standard_documents_delete,
         crate::views::evaluation_plan::document_search::commands::document_search_run,
-        crate::views::evaluation_plan::pdf_viewer::commands::pdf_viewer_documents,
-        crate::views::evaluation_plan::pdf_viewer::commands::pdf_viewer_get,
         // The editor of a catalog, a part of the view Evaluation plan
         // (views/evaluation_plan/catalog_editor/).
         crate::views::evaluation_plan::catalog_editor::catalog_tree::commands::catalog_tree_get,

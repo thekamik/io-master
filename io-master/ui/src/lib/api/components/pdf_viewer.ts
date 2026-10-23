@@ -1,7 +1,7 @@
-// The element "viewer of a standard" of the view Evaluation plan: its
-// commands and its data (src/views/evaluation_plan/pdf_viewer/).
+// The component "viewer of a standard": its commands and its data
+// (src/components/pdf_viewer/).
 //
-// The types mirror src/views/evaluation_plan/pdf_viewer/view.rs.
+// The types mirror src/components/pdf_viewer/view.rs.
 
 import { invoke } from "@tauri-apps/api/core";
 

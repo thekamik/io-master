@@ -34,6 +34,7 @@ mod checks;
 // docs/code_structure.md.
 mod ai;
 mod app;
+mod components;
 mod db;
 mod hardware_tests;
 mod installation;

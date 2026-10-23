@@ -27,6 +27,7 @@ io-master/src/
   security/          the building blocks of protection: random numbers, the TPM
   installation/      the installation, its one account and the session: the core of the protection
   app/               what the whole window shares: the state, the errors of the commands
+  components/        the elements used more than once (by several views, or many times in one)
   views/             one folder per view and per element: its commands and the data it gets
 io-master/ui/        the page (Svelte 5), a separate project
 ```
@@ -35,7 +36,11 @@ io-master/ui/        the page (Svelte 5), a separate project
 
 ```text
                          views/
-                  (one folder per element of the window)
+                  (one folder per view of the window)
+                            │
+                            ▼
+                       components/
+                  (the elements used more than once)
         ┌──────────┬────────┼─────────┬──────────────┬───────────┐
         ▼          ▼        ▼         ▼              ▼           ▼
       app/        ai/   hardware_  installation/    pdf/      (model/,
@@ -47,7 +52,7 @@ io-master/ui/        the page (Svelte 5), a separate project
 ```
 
 - A folder uses only itself and the folders below it: **no cycle**.
-- **The rule is checked by a test**, `src/architecture_tests.rs`: it reads the source of every folder (the tests aside) and fails on a use against the direction. `views/` may use every folder below it. `app/` uses `installation/` and `model/` (the state of the window) and, listed there with their reason, only the errors of the folders below (`AiError`, `ConnectionSaveError`, `ModelError`, the errors of `db/` and of `db/oscal/`, `ScanSettingsError`), which it turns into errors of the page; never a function of them.
+- **The rule is checked by a test**, `src/architecture_tests.rs`: it reads the source of every folder (the tests aside) and fails on a use against the direction. `views/` may use every folder below it, `components/` every folder below `views/` and itself; **a view never uses another view**, by its name or by a chain of `super::` that leaves its folder, and **a component of the page never imports a view of the page** (both checked by the same test). `app/` uses `installation/` and `model/` (the state of the window) and, listed there with their reason, only the errors of the folders below (`AiError`, `ConnectionSaveError`, `ModelError`, the errors of `db/` and of `db/oscal/`, `ScanSettingsError`), which it turns into errors of the page; never a function of them.
 - The tests (`*_tests.rs`, `test_support.rs`) are not held to it: they set up data across the layers.
 
 ### 1.2 Where the information is
@@ -145,11 +150,19 @@ ui/src/lib/api/<view>/<element>.ts
                       the commands of one element as typed functions; the types mirror its view.rs
 ui/src/lib/api/errors.ts
                       the error of a command, as app/serializer/error_view.rs sends it
+ui/src/components/<component>/
+                      the components: one folder each, with its Svelte component and what only
+                      it uses (pdf_viewer/: PdfViewer.svelte, and pdf.ts, the code of pdf.js)
+ui/src/lib/api/components/<component>.ts
+                      the commands of one component, as those of an element
 ui/src/pages/         the pages that call no command yet: Evaluation, Documentation
-ui/src/lib/pdf.ts     the viewer of a standard (pdf.js)
 ui/src/styles/        the style, one sheet per part of the window, in the order of the cascade
                       (style.css lists them)
 ```
+
+### 2.8a `components/`: the components (step 43)
+
+A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as an element of a view (`mod.rs`, `commands.rs`, `view.rs`, its tests), its commands are named `<component>_<action>`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first one is the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog.
 
 ### 2.9 `views/`: the views of the window (step 42)
 
@@ -340,6 +353,10 @@ app.rs/                    What the whole window shares (Tauri 2): the state the
   serializer.rs/               How an error of a command reaches the page (serde). The data of the
     error_view.rs                How an error of a command reaches the page:
   state.rs                     The state of the desktop interface, kept in Rust and never in
+components.rs/             The components of the window: small elements used more than once,
+  pdf_viewer/                  The component "viewer of a standard": the original page of a PDF, with a
+    commands.rs                  The command of the viewer of a standard.
+    view.rs                      The data of the viewer, as the page gets it: the documents it can
 views.rs/                  The views of the window, one folder per view and one folder per
   chat/                        The view Chat: the chats of the evaluator with the model of the role
     chat_list/                   The element "list of chats" of the view Chat
@@ -404,9 +421,6 @@ views.rs/                  The views of the window, one folder per view and one 
       commands.rs                  The commands of the documents of OSCAL. The files are chosen in the
       file.rs                      A file of OSCAL (JSON) read into the database, and written from it:
       view.rs                      The data of the list of documents of OSCAL, as the page gets it.
-    pdf_viewer/                  The element "viewer of a standard" of the view Evaluation plan: the
-      commands.rs                  The command of the viewer of a standard.
-      view.rs                      The data of the viewer, as the page gets it: the documents it can
     standard_documents/          The element "documents of standards" of the view Evaluation plan: the
       commands.rs                  The commands of the documents of standards.
       load.rs                      The loading of documents of standards from PDF files: a long work.

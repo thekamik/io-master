@@ -1,12 +1,14 @@
 //! The commands of the window are callable only when they are listed in
-//! four places: the `commands.rs` of an element of `views/`, `routes.rs`
+//! four places: the `commands.rs` of an element of `views/` or of a
+//! component of `components/`, `routes.rs`
 //! (`generate_handler!`), `build.rs` (`AppManifest`) and
 //! `capabilities/default.json`; a mistake there closes the door, but it
 //! is a mistake. This test reads the four lists
 //! and says what one of them lacks. It also checks the rule of the views
-//! (`views.rs`): a command of an element lives in the folder of that
-//! element and is named after it (`ports_table_scan` in
-//! `views/devices/ports_table/commands.rs`).
+//! (`views.rs`) and of the components (`components.rs`): a command lives in
+//! the folder of its element or component and is named after it
+//! (`ports_table_scan` in `views/devices/ports_table/commands.rs`,
+//! `pdf_viewer_get` in `components/pdf_viewer/commands.rs`).
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -35,11 +37,11 @@ fn commands_in(source: &str) -> Vec<String> {
     names
 }
 
-/// Every `commands.rs` under `views/`, with the name of the folder of its
-/// element.
+/// Every `commands.rs` under `views/` and `components/`, with the name of
+/// the folder of its element or component.
 fn element_files() -> Vec<(String, String)> {
     let mut found = Vec::new();
-    let mut pending = vec![src().join("views")];
+    let mut pending = vec![src().join("views"), src().join("components")];
 
     while let Some(directory) = pending.pop() {
         for entry in fs::read_dir(&directory).expect("the folder is read").flatten() {
@@ -57,8 +59,8 @@ fn element_files() -> Vec<(String, String)> {
     found
 }
 
-/// The commands defined in the views: since step 42 every command is in
-/// the folder of its element.
+/// The commands defined in the views and the components: since step 42
+/// every command is in the folder of its element (or component, step 43).
 fn defined() -> BTreeSet<String> {
     let mut names = BTreeSet::new();
 
