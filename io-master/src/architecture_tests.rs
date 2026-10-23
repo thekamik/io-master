@@ -37,10 +37,9 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-const ALLOWED: [(&str, &[&str]); 10] = [
+const ALLOWED: [(&str, &[&str]); 9] = [
     ("model", &[]),
     ("security", &[]),
-    ("hardware_tests", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
     ("db", &["model", "security"]),
@@ -60,17 +59,16 @@ const ALLOWED: [(&str, &[&str]); 10] = [
             "ai::api::roles::ModelError",
             "db::error",
             "db::oscal::error::OscalError",
-            "hardware_tests::devices::scan_settings::ScanSettingsError",
         ],
     ),
     // The components (components.rs): the elements used more than once,
     // built as the elements of a view; never a view.
-    ("components", &["app", "ai", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
+    ("components", &["app", "ai", "db", "installation", "model", "pdf", "security"]),
     // The views (views.rs): the commands of the elements of the window,
     // on top of everything. They use the state and the errors of the
     // window (app/) and the components, and do their work with the folders
     // below. A view never uses another view (checked below).
-    ("views", &["app", "ai", "components", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
+    ("views", &["app", "ai", "components", "db", "installation", "model", "pdf", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

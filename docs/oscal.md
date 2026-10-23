@@ -93,7 +93,7 @@ Catalogs published in OSCAL (SP 800-53, ...) are imported as they are; they are 
 - **Assessment results:** the observations (`observation`: method examine / interview / test, the evidence in `relevant-evidence`), the findings per objective (`finding` with `target` and its status), the risks (vulnerabilities), and the **log of the assessment** (`assessment-log`): the journal of today.
 - **The decision stays with the evaluator (P1):** what the AI proposes (fragments, an assessment) is evaluation support until the evaluator accepts it; only then it becomes an observation or a finding of the results.
 - **The four text results of a requirement** (findings; analysis; assessment and verdict proposition; vulnerabilities and notes, user 2026-10-17) map onto the finding (`description`, `remarks`), its observations and its risks; **the status** of a finding (satisfied / not satisfied) is set by the evaluator. *To be checked: the verdict "inconclusive" of CC, which OSCAL has no status for (a property).*
-- **Functional tests:** the tools are assessment assets of the plan; what a test on a device gives (`hardware_tests/`) becomes an observation with the method test.
+- **Functional tests:** the tools are assessment assets of the plan; the result of a test the laboratory carried out, delivered by the evaluator, becomes an observation with the method test (the program does not run tests on a device, step 48).
 
 ## 6. The evaluation support (own standard)
 

@@ -99,6 +99,8 @@ The steps of `todo.md` that are built, moved here on 2026-10-17 (step 40) so tha
 
 ## Step 5: Scan page
 
+**Removed 2026-10-24 (step 48 of `todo.md`):** the program no longer works with devices. The last state of the scan (`hardware_tests/`, `views/devices/`, `db/scan_settings/`, the page `ui/src/views/devices/`) is in commit `bdde117`.
+
 Done before step 4, at the request of the user.
 
 **Decisions**

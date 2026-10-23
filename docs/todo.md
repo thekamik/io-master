@@ -27,12 +27,13 @@ The number of a step is its name and never changes, so that references in the co
 | 14e | **45: The tree of the modules in `main.rs`** | **built 2026-10-23, in the phases 45.1 to 45.4** (below) |
 | 14f | **46: The entry of a view** | **built 2026-10-23, in the phases 46.1 to 46.7** (below) |
 | 14g | **47: The view `users`: the account, the session and the encryption in one place** | **built 2026-10-23, in the phases 47.1 to 47.3** (below) |
+| 14h | **48: The evaluation with AI as the only aim: devices, the master and the extra factors removed** | **decided 2026-10-24; 48.1 built** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
 | later | 28: Reports in the LaTeX template of the laboratory | with or after step 23 |
 | 16 | 13: Start: keyring, secret of the application, one user per account | after the review |
-| 17 | 6: Port permissions | |
+| 17 | 6: Port permissions | dropped 2026-10-24 (step 48) |
 | 18 | 8: The TPM as an optional factor | |
 | 19 | 9: Passkeys as an optional factor | |
 | 20 | 10: Before release of the workstation | |
@@ -49,6 +50,29 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 48: The evaluation with AI as the only aim (2026-10-24)
+
+**State: decided 2026-10-24; 48.1 built, the rest needs its concept.**
+
+The user (2026-10-24): the project tried to catch too many magpies by the tail. **IO Master is a framework for the evaluation with the help of AI**: it works with the documentation of the client and the inputs of the evaluator, and its output is the report. The name stays: IO is the input and the output, and the flow of the data between them is to be done masterfully.
+
+**Decisions of the user**
+- [x] **No work with devices.** The scan of the serial ports, the view Devices, `hardware_tests/` and `db/scan_settings/` are removed; step 6 (port permissions), UART and Bluetooth are dropped. The results of tests on a device are inputs of the evaluator.
+- [x] **P2 removed** ("no command reaches a device without an action of the evaluator"); its number stays so that P3 to P5 keep theirs. That the AI only proposes is P1.
+- [x] **The name IO Master stays.**
+- [x] **No role master and no password reset through a master** (steps 4 and 11 dropped): it is architecturally overcomplicated. The evaluator exports backups instead (section 5.5 of `architecture.md`), encrypted with **OpenPGP** keys, a standard of the laboratories.
+- [x] **No TPM factor and no passkeys** (steps 8 and 9 dropped): OpenPGP makes them unnecessary.
+- [x] **No git in the program** (`architecture.md`, section 6): the laboratory manages its documents itself; not every laboratory uses git, and the configurations would hold the work up.
+- [x] **The export to LaTeX stays** (step 28): the results go straight into the report template of the laboratory.
+- [ ] **Open (to be considered):** the login with the OpenPGP key of the evaluator instead of the password (the key of the database encrypted for that key; the keyring and the password possibly gone). Its concept comes before 48.3.
+
+**Phases** (one commit each, pushed, every test passing; the documents with each)
+- [x] 48.1 The devices removed: `hardware_tests/`, `views/devices/`, `db/scan_settings/` (the version 4 of the database of the evaluator removes its two settings), the three commands in their four lists, the page (`ui/src/views/devices/`, `lib/api/devices.ts`, `styles/09-devices.css`, the navigation), the feature `fs` of `rustix`; the documents.
+- [ ] 48.2 The documents describe the framework: `README.md`, `architecture.md` (sections 1, 3, 5, 6, 8), `CLAUDE.md`; the steps dropped marked so in this file; `v0.2_functionality.md`.
+- [ ] 48.3 The role master removed (the choice of the role at the setup, the panel, `Role`), and the TPM factor (`security/tpm/`, `tss-esapi`, `swtpm`): concept first, together with the decision on OpenPGP.
 
 ---
 
@@ -296,6 +320,8 @@ Built on the analysis of the code of 2026-10-17 and the guidelines of the user. 
 ---
 
 ## Step 6: Port permissions
+
+**Dropped 2026-10-24 (step 48): the program no longer works with devices.** Kept below as it was.
 
 **Decisions**
 - [ ] How access to a port is granted from the browser: (a) a button that runs `pkexec` (system password dialog), or (b) the command shown for the user to copy and run. Proposed: (b) first.
@@ -547,11 +573,9 @@ Designed later (user, 2026-10-17); a part of the view Evaluation lab since step 
 
 Not planned in detail yet; to be designed once the steps above are done:
 
-- AI on the data of the devices (any provider and local models are configurable since step 15).
 - Backup of the databases with its own encryption, independent of the TPM; also the way to move to a new computer (`architecture.md`, section 5.5).
 - Git of the laboratory over a secure connection, with checks of its configuration (`architecture.md`, section 6).
 - Filling the LaTeX report templates of the laboratory and committing the result.
 - Git panel in the window.
-- The other functions of version 0.2 (`v0.2_functionality.md`): UART read and write with the confirmation of every command (P2), Bluetooth.
 - A build variant without the code of the master (`architecture.md`, section 3.2).
-- Beyond the evaluation (steps 41 and 31 to 36): guided execution of functional tests on the device, their results as observations of the OSCAL assessment results. (The documentation of the product is step 30.)
+- The results of functional tests delivered by the evaluator, as observations of the OSCAL assessment results (the program does not run tests itself, step 48). (The documentation of the product is step 30.)

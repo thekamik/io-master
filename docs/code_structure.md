@@ -6,7 +6,7 @@ This document says **where** everything is in the code and **which rules keep it
 2. The business logic is in a folder of its own (`business/`), reached by the interface in the form of a REST API: no server, but the functions are designed as resources and operations.
 3. Every operation on a database is in `db/`, ordered as CRUD.
 4. All communication with AI is in `ai/`, the intermediary between the external services and the program: one folder for the whole integration, for the audit.
-5. Everything that talks to hardware is in `hardware_tests/`.
+5. Everything that talks to hardware is in `hardware_tests/` (removed in step 48, 2026-10-24: the program no longer works with devices).
 
 **Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Every view is moved** (Scan, the pilot; Start, Shell, Chat, Settings, Evaluation plan, the editor of a catalog): `business/` and the commands of `tauri_ui/` are removed.
 
@@ -23,7 +23,6 @@ io-master/src/
   model/             the data as plain Rust types and the rules of their validity; no I/O
   db/                every operation on a database, as CRUD; depends only on model/ and security/
   ai/                the whole communication with AI services
-  hardware_tests/    the whole communication with hardware
   pdf/               reading PDFs with Poppler (pdfinfo, pdftotext): another program, in one place
   security/          the building blocks of protection: random numbers, the TPM
   installation/      the installation, its one account and the session: the core of the protection
@@ -42,18 +41,18 @@ io-master/ui/        the page (Svelte 5), a separate project
                             ▼
                        components/
                   (the elements used more than once)
-        ┌──────────┬────────┼─────────┬──────────────┬───────────┐
-        ▼          ▼        ▼         ▼              ▼           ▼
-      app/        ai/   hardware_  installation/    pdf/      (model/,
-  (state, errors)  │     tests/        │                       security/)
-        │          │                   │
-        └──────────┴──────► db/ ◄──────┘
+        ┌──────────┬────────┼──────────────┬───────────┐
+        ▼          ▼        ▼              ▼           ▼
+      app/        ai/  installation/      pdf/      (model/,
+  (state, errors)  │        │                       security/)
+        │          │        │
+        └──────────┴──► db/ ◄┘
                             │
           all of them ───► model/, security/
 ```
 
 - A folder uses only itself and the folders below it: **no cycle**.
-- **The rule is checked by a test**, `src/architecture_tests.rs`: it reads the source of every folder (the tests aside) and fails on a use against the direction. `views/` may use every folder below it, `components/` every folder below `views/` and itself; **a view never uses another view**, by its name or by a chain of `super::` that leaves its folder, and **a component of the page never imports a view of the page** (both checked by the same test). `app/` uses `installation/` and `model/` (the state of the window) and, listed there with their reason, only the errors of the folders below (`AiError`, `ConnectionSaveError`, `ModelError`, the errors of `db/` and of `db/oscal/`, `ScanSettingsError`), which it turns into errors of the page; never a function of them.
+- **The rule is checked by a test**, `src/architecture_tests.rs`: it reads the source of every folder (the tests aside) and fails on a use against the direction. `views/` may use every folder below it, `components/` every folder below `views/` and itself; **a view never uses another view**, by its name or by a chain of `super::` that leaves its folder, and **a component of the page never imports a view of the page** (both checked by the same test). `app/` uses `installation/` and `model/` (the state of the window) and, listed there with their reason, only the errors of the folders below (`AiError`, `ConnectionSaveError`, `ModelError`, the errors of `db/` and of `db/oscal/`), which it turns into errors of the page; never a function of them.
 - The tests (the module `tests` at the end of a file, `test_support.rs`) are not held to it: they set up data across the layers. The same test checks that the module of tests is the last item of its file, so that no code of the program hides below it.
 
 ### 1.2 Where the information is
@@ -65,9 +64,9 @@ the page (ui/src/views/<view>/<Element>.svelte)   what it shows; no secret, no s
   │  a command of the element (ui/src/lib/api/<view>/<element>.ts), its arguments as JSON
   ▼
 views/<view>/<view>.rs               the entry of the view: its command, the parameters checked, the work done:
-  ├──► model/, hardware_tests/       the rules of the data
+  ├──► model/                        the rules of the data
   ├──► db/                           written through at once, in one transaction
-  └──► ai/api/, hardware_tests/      the only ways to a model and to a device
+  └──► ai/api/, pdf/                 the only ways to a model and to a PDF
   │
   ▼
 views/<view>/<element>/view.rs       the data the element gets back
@@ -88,7 +87,7 @@ Plain types of every area, their rules of validity (`check`) and their normal fo
 ### 2.2 `db/`: the databases
 
 - **SQL lives only here** (the connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile).
-- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `oscal/`, `evaluation_support/`, `scan_settings/`; the last keeps its two texts in the table `settings` of `user/`, so it has no `schema.rs`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
+- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `oscal/`, `evaluation_support/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
 - **Free functions everywhere:** `db::<area>::<operation>::<object>(db, ...)`. A caller imports the area as `db_<area>` and calls `db_<area>::<operation>::<object>`, so that every call shows which operation on which data it is.
 - **Columns are read by their names; statements with more than one parameter name them** (`:title`); every statement is in the function that runs it.
 - **A value the program never writes is an error**, `DbError::Corrupt { table, column, value }`, never replaced in silence. `DbError::Sql` is SQLite only; `NoRow` for a change of a row that does not exist; `Inconsistent` for input that does not hold together.
@@ -109,9 +108,9 @@ ai/presets/      the ready settings of known services, and the help for the fiel
 - A key is given out only for the address it was entered for (`db/ai/connection/read.rs`, checked at every use).
 - A task works on plain data of `model/` and gives back plain data (`ai/tasks/catalog_outline.rs`, `catalog_section.rs`: groups and controls of OSCAL); applying a proposal is the work of the view editor of a catalog (`views/evaluation_plan/catalog_editor/proposals/accept.rs`).
 
-### 2.4 `hardware_tests/`: hardware
+### 2.4 `hardware_tests/` (removed in step 48)
 
-The scan of the serial ports (`devices/`) and the settings of the scanner (`devices/scan_settings.rs`: plain data and its rules, no I/O, stored by `db/scan_settings/`); later the access rights (`permissions/`, step 6), UART and Bluetooth. No function here sends to a device without a command started by an action of the evaluator (P2).
+Until 2026-10-24 the scan of the serial ports and the settings of the scanner, with the view Devices and `db/scan_settings/`. The program no longer works with devices (`architecture.md`, section 7); the code is in the history of git (`history.md`, step 48).
 
 ### 2.4a `pdf/`: reading PDFs
 
@@ -146,7 +145,7 @@ serializer/     how an error reaches the page (serde)
 
 ```text
 ui/src/views/<view>/  the views: the view and one component per element, named as the folders
-                      of src/views/ (Devices.svelte, PortsTable.svelte, ScannerSettings.svelte)
+                      of src/views/ (Chat.svelte, ChatList.svelte, Conversation.svelte)
 ui/src/lib/api/<view>/<element>.ts
                       the commands of one element as typed functions; the types mirror its view.rs
 ui/src/lib/api/errors.ts
@@ -175,17 +174,17 @@ views/<view>/<view>.rs               the entry of the view: every command the pa
                                      what it does, where the page calls it, what it calls; its tests at the end
 views/<view>/<element>/view.rs       the data an element gets (serde); its logic beside it (turn.rs, ...); an
                                      element with no data of its own has no folder, only its component on the page
-ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
+ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (chatListGet)
 ```
 
 The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12.
 
-- **The entry is the only file of the program in the folder of a view** (user, 2026-10-23), so that it is seen at once: what the elements of the view share belongs to the element that owns it (Devices: the stored settings in `scanner_settings/stored.rs`, the column in `ports_table/view.rs`; the editor of a catalog: the checked quote in `object_quotes/`, the object read from the page in `object_form/`); what several views share goes down to the folders below. Only the help of the tests may stand beside it (`test_support.rs`).
+- **The entry is the only file of the program in the folder of a view** (user, 2026-10-23), so that it is seen at once: what the elements of the view share belongs to the element that owns it (the editor of a catalog: the checked quote in `object_quotes/`, the object read from the page in `object_form/`); what several views share goes down to the folders below. Only the help of the tests may stand beside it (`test_support.rs`).
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
-- **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
-- **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `hardware_tests/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
-- **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Devices: the settings are saved, the table scans again).
-- **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database, the scan) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/evaluation_plan/standard_documents/load.rs`).
+- **A command is named `<element>_<action>`** (`chat_list_get`, `connection_form_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
+- **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `pdf/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
+- **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Settings: a connection is saved, the list of connections reads again).
+- **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/evaluation_plan/standard_documents/load.rs`).
 - **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`) through a `Channel` of Tauri, stop on the stop signal of `app/state.rs`, and hold no lock of the session while they wait for files or for the model.
 - **Documents of OSCAL** (step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction (`db/oscal/`); the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
 - **Tests call a command as the page does**: by name, with JSON, through the IPC of Tauri, in a window of its mock runtime (`views/test_support.rs`, the feature `test` of Tauri), on a real installation in a temporary folder.
@@ -288,9 +287,6 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     rows.rs                      The rows of the documents of OSCAL and the types they become
     schema.rs                    The table of the documents of OSCAL, in the database of an
     update.rs                    Replacing a document of OSCAL by its new version, checked against
-  scan_settings.rs/            The settings of the scanner of serial ports, as two texts
-    read.rs                      Reading the settings of the scanner.
-    update.rs                    Storing the settings of the scanner.
   standards/                   The documents of standards.
     create.rs                    Storing a document of a standard: the file and the text of its
     delete.rs                    Removing a document of a standard. Whether a project still uses it
@@ -335,11 +331,6 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
     catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a
     json.rs                      The JSON object in an answer of a model, and its texts.
-hardware_tests/            Everything that talks to hardware (step 40 of docs/todo.md).
-  devices/                     The scan of the serial ports, and the settings of the scanner.
-    port_property.rs             The properties of a serial port that can be shown, one per
-    scan_settings.rs             The settings of the scanner: which kinds of port a scan looks for,
-    serial_ports.rs              Discovery of serial ports.
 pdf/                       Reading PDFs with the tools of Poppler (`pdfinfo`, `pdftotext`): the
   poppler.rs                   Reading the text of a PDF, page by page, with the tools of
 installation/              The installation of this Linux account, its one user and the
@@ -377,13 +368,6 @@ views/                     The views of the window, one folder per view and one 
       stored.rs                    What a chat keeps (`db/ai/chats/`, tables `chats` and `messages`, in
       turn.rs                      One turn of a chat: the message of the evaluator is checked and
       view.rs                      The data of the conversation as the page gets it: an open chat, and
-  devices/                     The view Devices: the serial ports of the computer and the settings of
-    devices.rs                   The entry of the view Devices: every command the page calls for it
-    ports_table/                 The element "table of ports" of the view Devices
-      view.rs                      The data of the table of ports, as the page gets it: a ready table
-    scanner_settings/            The element "scanner settings" of the view Devices
-      stored.rs                    The settings of the scanner as they are stored, read for the element
-      view.rs                      The data of the settings of the scanner, as the page gets it: the
   evaluation_plan/             The view Evaluation plan: the documents of the standards in NIST OSCAL
     evaluation_plan.rs           The entry of the view Evaluation plan: every command the page calls
     catalog_editor/              The editor of a catalog, a part of the view Evaluation plan: a catalog

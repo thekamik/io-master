@@ -14,6 +14,8 @@
 //!         names unique whatever their letter case
 //! 2 → 3   the test projects and the evaluations of the model before
 //!         OSCAL removed (step 41; the user decided: no migration)
+//! 3 → 4   the settings of the scanner of serial ports removed (step 48:
+//!         the program no longer works with devices)
 //! ```
 //!
 //! TODO (step 10 of docs/todo.md): before the release, the steps that
@@ -25,7 +27,7 @@ use rusqlite::Connection;
 use crate::db::error::DbError;
 
 /// The version of the layout this program writes.
-pub const VERSION: i64 = 3;
+pub const VERSION: i64 = 4;
 
 /// Brings the database to [`VERSION`].
 pub(super) fn run(connection: &Connection) -> Result<(), DbError> {
@@ -43,6 +45,10 @@ pub(super) fn run(connection: &Connection) -> Result<(), DbError> {
 
     if version < 3 {
         to_3(&transaction)?;
+    }
+
+    if version < 4 {
+        to_4(&transaction)?;
     }
 
     transaction.execute_batch(&format!("PRAGMA user_version = {VERSION}"))?;
@@ -116,6 +122,14 @@ fn to_3(connection: &Connection) -> Result<(), DbError> {
          DROP TABLE IF EXISTS project_documents;
          DROP TABLE IF EXISTS projects;",
     )?;
+
+    Ok(())
+}
+
+/// Version 4: the settings of the scanner of serial ports, whose view
+/// was removed when the program left the work with devices (step 48).
+fn to_4(connection: &Connection) -> Result<(), DbError> {
+    connection.execute_batch("DELETE FROM settings WHERE name IN ('scan.port_types', 'scan.columns');")?;
 
     Ok(())
 }
@@ -227,6 +241,22 @@ mod tests {
             .unwrap();
 
         assert_eq!(left, 0);
+        assert_eq!(version(&db), VERSION);
+    }
+
+    #[test]
+    fn version_4_removes_the_settings_of_the_scanner() {
+        let directory = TempDir::new();
+        let (db, key) = database(&directory);
+
+        crate::db::user::update::set_setting(&db, "scan.port_types", "usb").unwrap();
+        crate::db::user::update::set_setting(&db, "scan.columns", "path").unwrap();
+        db.connection_for_tests().execute_batch("PRAGMA user_version = 3").unwrap();
+        drop(db);
+
+        let db = user_db::open(directory.path(), 1, &key).unwrap();
+        assert!(crate::db::user::read::setting(&db, "scan.port_types").unwrap().is_none());
+        assert!(crate::db::user::read::setting(&db, "scan.columns").unwrap().is_none());
         assert_eq!(version(&db), VERSION);
     }
 

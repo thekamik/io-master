@@ -62,7 +62,7 @@
       <legend>Role of this installation</legend>
       <label class="choice">
         <input type="radio" bind:group={role} value="workstation" />
-        <strong>Workstation</strong>: the computer of an evaluator. AI, chats, devices, evaluations.
+        <strong>Workstation</strong>: the computer of an evaluator. AI, chats, evaluations.
       </label>
       <label class="choice">
         <input type="radio" bind:group={role} value="master" />

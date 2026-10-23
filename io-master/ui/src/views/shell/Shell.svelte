@@ -10,7 +10,6 @@
 <script lang="ts">
   import type { ProgramView } from "../../lib/api/shell";
   import Chat from "../chat/Chat.svelte";
-  import Devices from "../devices/Devices.svelte";
   import EvaluationLab from "../evaluation_lab/EvaluationLab.svelte";
   import EvaluationPlan from "../evaluation_plan/EvaluationPlan.svelte";
   import Settings from "../settings/Settings.svelte";
@@ -32,7 +31,6 @@
     chat: "Ask the model of your active AI connection.",
     evaluation_plan: "The standards in NIST OSCAL and the plan of an evaluation, with the documents of the standards they come from.",
     evaluation_lab: "Carry out an evaluation plan for a product, with what the manufacturer and the laboratory deliver.",
-    devices: "The serial ports of this computer, and the access to them.",
     users: "Your account: the password that opens your encrypted database.",
     settings: "The connections to AI services, and this installation.",
     admin: "The password resets of the workstations.",
@@ -53,9 +51,6 @@
       <rect x="14.5" y="4" width="6" height="5" rx="1.2" />
       <rect x="9" y="15" width="6" height="5" rx="1.2" />
       <path d="M6.5 9v2.5h11V9M12 11.5V15" />
-    {:else if name === "devices"}
-      <rect x="4" y="8" width="16" height="9" rx="2" />
-      <path d="M8 12h.01M12 12h.01M16 12h.01M9 4v4M15 4v4" />
     {:else if name === "users"}
       <circle cx="12" cy="8" r="3.5" />
       <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
@@ -109,8 +104,6 @@
       <EvaluationPlan />
     {:else if active === "evaluation_lab"}
       <EvaluationLab />
-    {:else if active === "devices"}
-      <Devices />
     {:else if active === "users"}
       <Users user={app.user} />
     {:else if active === "settings"}

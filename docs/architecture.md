@@ -10,7 +10,9 @@ Status markers: **agreed** is decided; **open** still needs a decision; **TODO**
 
 ## 1. Purpose
 
-IO Master is a tool for evaluators of security laboratories, who evaluate products against standards: first of all Common Criteria (ISO/IEC 15408, CEM ISO/IEC 18045) and ETSI EN 303 645, and any other standard in the same way. The requirements of a standard, the plan of their evaluation and its results are kept in **NIST OSCAL** (section 7.1). The program brings together the evaluation plan and the evaluation with AI assistance, the work on the device under evaluation (serial ports, Bluetooth), and the record of everything that was done.
+IO Master is a tool for evaluators of security laboratories, who evaluate products against standards: first of all Common Criteria (ISO/IEC 15408, CEM ISO/IEC 18045) and ETSI EN 303 645, and any other standard in the same way. The requirements of a standard, the plan of their evaluation and its results are kept in **NIST OSCAL** (section 7.1). The program brings together the evaluation plan and the evaluation with AI assistance, and the record of everything that was done. **It is a framework for the evaluation with the help of AI and nothing else** (user, 2026-10-24, step 48): it works with the documentation of the client and with the work of the evaluator, and it does not talk to the device under evaluation.
+
+**The name.** IO stands for input and output: the inputs are the documentation of the client and the results of the work of the evaluator (tests, notes, assessments), the output is the report. The flow of the data from the input to the output is what the program does, and it has to do it masterfully.
 
 The program is installed **locally, on the computer of the evaluator**, in their own Linux account: **one Linux account holds one installation with one user of the program** (section 3). It is used through a **desktop window** (section 4). There is no console interface.
 
@@ -21,8 +23,8 @@ Carried over from the design of v0.2; they are requirements, not preferences.
 | # | Principle | Consequence |
 |---|---|---|
 | P1 | **The evaluator decides.** | The program never issues a verdict. It offers an estimate with its reasons. |
-| P2 | **No command reaches a device without an action of the evaluator for that command.** | The program proposes; the evaluator executes. Acting on a device carries legal responsibility. |
-| P3 | **Everything is traceable.** | Every passage used, every proposal of the model, every approval, every command and every answer of the device is recorded. |
+| P2 | *Removed (user, 2026-10-24, step 48).* It read: no command reaches a device without an action of the evaluator. The program no longer works with devices; that the AI only proposes and the evaluator decides is P1. The number stays, so that P3 to P5 keep theirs. | |
+| P3 | **Everything is traceable.** | Every passage used, every proposal of the model, and every approval is recorded. |
 | P4 | **The norm is data, not code.** | Every standard is kept as OSCAL documents (catalogs, profiles, mappings), made or loaded; nothing about a standard is written into the program (section 7.1). |
 | P5 | **The model reads; it does not invent sources.** | Passages of the norm are found by the identifiers of their OSCAL objects and the quotes kept with them; every quote the AI proposes is checked on its page. The model works on the text it is given. |
 
@@ -34,7 +36,7 @@ There is one program. Its **role is chosen once, at the first start, in the wind
 
 | Role | Where | What it can do | What is blocked |
 |---|---|---|---|
-| **Workstation** | the Linux account of an evaluator | everything: the window, AI, chats, device scan and tests, evaluations. **One user only**: the evaluator who installed it | the master panel; adding users |
+| **Workstation** | the Linux account of an evaluator | everything: the window, AI, chats, evaluations. **One user only**: the evaluator who installed it | the master panel; adding users |
 | **Master** | a separate, dedicated machine | only the password reset service: an API for workstations and a panel where its administrator approves requests. **One user only**: the one who installed it | everything else; adding users |
 
 ```text
@@ -42,14 +44,14 @@ There is one program. Its **role is chosen once, at the first start, in the wind
 ┌──────────────────────────┐        ┌──────────────────────────┐
 │ the window (Tauri)       │        │ the window (Tauri)       │
 │ io-master (workstation)  │        │ io-master (workstation)  │
-│  data, AI, devices       │        │  data, AI, devices       │
+│  data, AI, evaluations   │        │  data, AI, evaluations   │
 └────────────┬─────────────┘        └────────────┬─────────────┘
              │  password reset only (optional)   │
              └──────────────► master ◄───────────┘
                           (admin approves)
 ```
 
-All the work and all the data stay on the workstation. The master never commands a device and never sees the data of an evaluator.
+All the work and all the data stay on the workstation. The master never sees the data of an evaluator.
 
 ### 3.1 Never on one computer (agreed)
 
@@ -95,9 +97,8 @@ The first start is the real moment of installation. **It is told by the keyring 
   1. **Chat**: the AI assistant, over the active AI connection.
   2. **Evaluation plan**: the OSCAL documents of the standards (catalogs made in the program or loaded, mappings, profiles, assessment plans), and the documents of standards (PDF) they quote (section 7.1).
   3. **Evaluation lab**: an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
-  4. **Devices**: the serial ports, a filter by port type, later the access rights to the ports and the work on a device (UART, Bluetooth).
-  5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password; later the recovery code (section 5.6), the factors of the person and the removal of the installation.
-  6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
+  4. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password; later the recovery code (section 5.6), the factors of the person and the removal of the installation.
+  5. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version, the role and the folder of the installation, its protection; later the TPM factor, the secret of the application (section 5.6) and the removal of the installation).
 - The master shows only its administration panel.
 - **Logging in** is built as a mock-up first; the real mechanism comes near the end of development. The design of the keys (section 5) is fixed now, because the encrypted database depends on it.
 
@@ -201,15 +202,15 @@ The program does not share data between evaluators itself. The laboratory uses i
 - **What goes to git (agreed): only the filled-in report template of the laboratory.** The laboratory writes its own report template in LaTeX with markers; the program fills the markers with parts of the evaluation and the result is committed. Everything else (API keys, chats, working results) stays in the encrypted database of the workstation. This comes in a later stage (see section 8).
 - Planned later as well: a small git panel in the window.
 
-## 7. Work on devices and on standards
+## 7. Work on standards
 
-Devices are reached from the workstation only. The first function is the scan of serial ports (`hardware_tests/devices/serial_ports.rs`); it reads only the description of the ports and never opens one. Sending to a device follows P2: proposed by the program, executed by an action of the evaluator.
+The program works on documents: the standards, the documentation of the client and what the evaluator delivers. **It does not talk to devices** (user, 2026-10-24, step 48): the scan of the serial ports and the planned work on UART and Bluetooth were removed; the results of the tests the laboratory carries out on a device are inputs of the evaluator, which the program reads but does not produce. The code of the scan is in the history of git (`history.md`, step 48).
 
 ### 7.1 Standards: the evaluation plan and the evaluation on NIST OSCAL (agreed 2026-10-18, step 41 of `todo.md`)
 
 The program works against any **standard**, not only Common Criteria. **The data of the standards is stored in NIST OSCAL 1.2.3** (Open Security Controls Assessment Language), the published, machine-readable format of NIST for requirements and their assessment; every OSCAL document is checked against the JSON schemas of NIST (kept in the repository, `io-master/oscal/`) whenever it is written. The whole concept, with the decisions of the user and the examples of how Common Criteria and ETSI EN 303 645 are represented, is in **`oscal.md`**; this section gives its frame.
 
-- **Two functions.** The **evaluation plan** makes or loads the OSCAL scheme of a standard, shows it as a graph and hands it over; the **evaluation** takes a plan and, with the AI, provides the evidence, checks whether the requirements are met and makes the report. Besides them, the program integrates the tools with which the laboratory carries out the functional tests (section 7). It supports the laboratory; it is not the whole process of certification.
+- **Two functions.** The **evaluation plan** makes or loads the OSCAL scheme of a standard, shows it as a graph and hands it over; the **evaluation** takes a plan and, with the AI, provides the evidence, checks whether the requirements are met and makes the report. The results of the functional tests the laboratory carries out are inputs of the evaluation, not functions of the program (section 7). It supports the laboratory; it is not the whole process of certification.
 - **The models of OSCAL in use:** catalog (the requirements of a standard), mapping (relations between requirements, also of two standards), profile (the requirements chosen for one evaluation, their parameters set), assessment plan (the plan: tasks, activities, subjects, tools) and assessment results (observations, findings, risks, the log of the assessment). The system security plan and the component definition come with the documentation of the manufacturer (step 30).
 - **No solution of its own for one standard.** Every document that defines the work is an OSCAL document and can be taken into a plan: the criteria (CC Parts 1 to 5, ETSI EN 303 645), the methodology with its work units (the CEM), the Protection Profiles, test specifications (ETSI TS 103 701). Catalogs published in OSCAL (NIST SP 800-53, ...) are imported as they are; the others are made in the program.
 - **Documents of a standard.** Its PDFs are loaded, read page by page (`pdftotext` of Poppler, the PDF on its standard input) and kept with their text in the encrypted database of the evaluator; a catalog names the PDFs it comes from as resources of its back matter, by the SHA-256 of the file. The viewer (pdf.js, built in) shows a quoted passage highlighted on its page.
@@ -252,7 +253,6 @@ A **view** is a whole page of the window, the high-level display.
 | `chat` | chat | the panel with the chatbot (the AI in the role *consultation*) |
 | `evaluation_plan` | plan ewaluacji | everything from the PDFs of a standard to OSCAL: the documents of standards, catalogs made from them (the editor of a catalog), OSCAL documents loaded, the scheme of the evaluation (profile, assessment plan) |
 | `evaluation_lab` | evaluation lab | the structure of a standard joined with what the client and the laboratory deliver (the documentation of the manufacturer, the Security Target, the results of the tests), and the evidence assessed with the AI |
-| `devices` | urządzenia | the serial ports: the scan now, later UART, Bluetooth |
 | `settings` | ustawienia | the settings panel |
 
 The view `evaluation_plan` is wider than the OSCAL document *assessment plan* it makes; the two are never called by the same name.
@@ -291,7 +291,6 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 | `app/` | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart | `installation/`, `model/`, the errors of the folders below |
 | `installation/` | the installation of the Linux account, its one account and the session of the logged-in evaluator: the core of the protection | `db/`, `security/`, `model/` |
 | `ai/` | the whole communication with AI services: `ai/api/` the only way to a model, `ai/tasks/` the questions and the reading of the answers | `db/`, `model/` |
-| `hardware_tests/` | everything that talks to hardware: the scan of the serial ports, later UART, Bluetooth, the permissions of the ports | `model/` |
 | `pdf/` | reading PDFs with Poppler: the only place where the program starts another program on a document | nothing of the program |
 | `db/` | every operation on a database, as CRUD, one folder per area of data; all SQL and all encryption of the databases | `model/`, `security/` |
 | `security/` | the building blocks of protection: random numbers, the TPM | nothing of the program |
@@ -309,7 +308,7 @@ the page: a view, its elements and components     what it shows; no secret, no s
 views/<view>/<view>.rs (the entry of the view)   its command: the session taken, the parameters checked
   ├──► model/                                     the rules of the data
   ├──► db/                                        written through at once, in one transaction
-  └──► ai/api/, hardware_tests/, pdf/             the only ways to a model, a device, a PDF
+  └──► ai/api/, pdf/                              the only ways to a model, a PDF
   ▼
 views/<view>/<element>/view.rs                    the data the element gets back (JSON)
   │  a long work: its events through a channel of Tauri (progress, Stop)
@@ -411,18 +410,6 @@ the catalog and the pages (db/) ──prompt (ai/tasks/catalog_*.rs)──► th
   ──ai/api/completions::ask──► the model, and the journal of the AI
   ──read (ai/tasks/catalog_*.rs)──► groups or controls of OSCAL
   ──quotes checked on their pages, proposals stored (db/evaluation_support/)
-```
-
-**`devices`** (entry `views/devices/devices.rs`, page `ui/src/views/devices/`).
-
-```text
-the view opens
-  ├─► ScannerSettings ──scanner_settings_get()──► db/scan_settings/: the texts ──► ScannerSettingsView
-  └─► PortsTable ──ports_table_scan()──► db/scan_settings/: the texts ──► hardware_tests/: the descriptions
-                                          of the ports (a port is never opened) ──► PortsTableView
-ScannerSettings ──scanner_settings_save(all_types, types, columns)──► the rules of the settings
-  │                    (hardware_tests/devices/scan_settings.rs) ──► db/scan_settings/ ──► ScannerSettingsView
-  └── "saved" ──► the view ──► PortsTable ──ports_table_scan()──► the table again
 ```
 
 **`settings`** (entry `views/settings/settings.rs`, page `ui/src/views/settings/`): the settings of the program; those of the user are in `users`.

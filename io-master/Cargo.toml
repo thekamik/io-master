@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-# System calls without unsafe code: asking whether the current
-# user may read and write a device file (access(2), "fs"),
-# reading random bytes from the kernel (getrandom(2), "rand"),
-# and stopping a leftover TPM emulator (kill(2), "process").
-rustix = { version = "1.1.5", default-features = false, features = ["std", "fs", "rand", "process"] }
+# System calls without unsafe code: reading random bytes from the
+# kernel (getrandom(2), "rand"), forbidding the memory dumps of the
+# process (prctl(2), "process") and stopping a leftover TPM emulator
+# (kill(2), "process").
+rustix = { version = "1.1.5", default-features = false, features = ["std", "rand", "process"] }
 
 # Overwriting secrets in memory with zeros when they are no
 # longer needed, in a way the compiler cannot optimize away.

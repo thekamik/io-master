@@ -291,7 +291,7 @@ mod tests {
         window.call("user_menu_log_out", json!({})).unwrap();
 
         assert_eq!(window.call("program_get", json!({})).unwrap()["user"], json!(null));
-        assert_eq!(window.call("ports_table_scan", json!({})).unwrap_err()["kind"], "not_logged_in");
+        assert_eq!(window.call("chat_list_get", json!({})).unwrap_err()["kind"], "not_logged_in");
     }
     // `user_menu_close` is not called here: the mock runtime of Tauri does
     // not implement the exit of the program. Its logout is the one tested

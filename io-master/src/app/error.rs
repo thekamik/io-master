@@ -13,7 +13,6 @@ use crate::ai::api::connections::ConnectionSaveError;
 use crate::ai::api::roles::ModelError;
 use crate::db::error::DbError;
 use crate::db::oscal::error::OscalError;
-use crate::hardware_tests::devices::scan_settings::ScanSettingsError;
 use crate::installation::accounts::AccountError;
 use crate::installation::lifecycle::LifecycleError;
 use crate::model::ai::{ConnectionError, Field};
@@ -124,12 +123,6 @@ impl From<OscalError> for AppError {
             OscalError::Db(error) => AppError::Failed(error.to_string()),
             other => AppError::Invalid(other.to_string()),
         }
-    }
-}
-
-impl From<ScanSettingsError> for AppError {
-    fn from(error: ScanSettingsError) -> AppError {
-        AppError::Invalid(error.to_string())
     }
 }
 

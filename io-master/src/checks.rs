@@ -12,7 +12,7 @@
 /// Returns `Err(error)` from the function when `condition` is false.
 ///
 /// ```text
-/// ensure!(columns.len() <= MAX_COLUMNS, ScanSettingsError::TooManyColumns(columns.len()));
+/// ensure!(level <= MAX_DEPTH, CatalogError::TooDeep);
 /// ```
 ///
 /// It expands into one `if` statement and nothing else (rule 8): the

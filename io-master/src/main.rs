@@ -169,10 +169,6 @@ mod db {
         pub mod rows;
         pub mod schema;
     }
-    // db/scan_settings/: the settings of the scanner of serial ports, as two
-    // texts in the settings of the evaluator (its file has the names of the
-    // settings, so it declares its own modules).
-    pub mod scan_settings;
 }
 
 // ai/: the whole communication with AI services (CLAUDE.md, "AI layer").
@@ -211,20 +207,6 @@ mod ai {
     // ai/presets/: the ready settings of well-known AI services (its file has
     // the presets themselves, so it declares its own module).
     pub mod presets;
-}
-
-// hardware_tests/: everything that talks to hardware. No command reaches a
-// device without an action of the evaluator for it (P2 of
-// docs/architecture.md). permissions/permission.rs is empty until step 6 of
-// docs/todo.md and not compiled.
-mod hardware_tests {
-    // hardware_tests/devices/: the scan of the serial ports, and the
-    // settings of the scanner.
-    pub mod devices {
-        pub mod port_property;
-        pub mod scan_settings;
-        pub mod serial_ports;
-    }
 }
 
 // pdf/: reading PDFs with the tools of Poppler (pdfinfo, pdftotext): the only
@@ -287,21 +269,6 @@ mod components {
 // module has the name of its parent: clippy's `module_inception` is
 // allowed there, on purpose.
 mod views {
-    // views/devices/: the view Devices: the serial ports of the computer and
-    // the settings of the scanner.
-    pub mod devices {
-        #[allow(clippy::module_inception)]
-        pub mod devices;
-
-        pub mod ports_table {
-            pub mod view;
-        }
-        pub mod scanner_settings {
-            pub mod stored;
-            pub mod view;
-        }
-    }
-
     // views/users/: the view Users: the account of the evaluator, its session
     // and the encryption of its database in one place: the setup, the login,
     // the password, the logout.

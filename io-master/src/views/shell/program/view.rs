@@ -33,7 +33,7 @@ pub struct ProgramView {
 /// A page in the navigation.
 #[derive(Debug, Serialize)]
 pub struct PageView {
-    /// What the page calls it: `"chat"`, `"devices"`, ...
+    /// What the page calls it: `"chat"`, `"settings"`, ...
     pub id: &'static str,
     pub title: &'static str,
 }
@@ -55,7 +55,6 @@ fn pages(role: Role) -> Vec<PageView> {
             // A placeholder until step 41.5 of docs/todo.md; it holds the
             // documentation of the manufacturer as well (step 30).
             PageView { id: "evaluation_lab", title: "Evaluation lab" },
-            PageView { id: "devices", title: "Devices" },
             PageView { id: "users", title: "User" },
             PageView { id: "settings", title: "Settings" },
         ],
@@ -125,7 +124,7 @@ mod tests {
     //! that does not exist. The ids are the contract between the two projects,
     //! as the names of the commands are (`command_lists_tests.rs`); a page
     //! renamed on one side only loses its icon, subtitle or view in silence
-    //! (found in step 43.4: the subtitle of Devices).
+    //! (found in step 43.4: the subtitle of a page).
 
     use super::*;
 
