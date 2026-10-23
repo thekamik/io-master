@@ -90,7 +90,7 @@ The first start is the real moment of installation. **It is told by the keyring 
   - The API key only where `{{api_key}}` stands in a header, never in the URL or the body; never shown back; masked in the report of a check; bound to the scheme, host and port it was entered for (a changed address removes it).
   - Placeholders of the body are whole JSON values, replaced as values: a message can never change the structure of the request.
   - **The AI layer (steps 38 and 40, 2026-10-17):** the rest of the program asks the AI only through `ai/api/`, in the form of REST (connections, roles, tasks, completions, checks); the communication with the provider (`ai/api/provider/`) is reachable only from there, and the text of every question and the reading of every answer are in `ai/tasks/`. Every question is asked in a task and a role (analysis of a text and its fragments, summary, consultation, formal analysis) and written into the journal of the AI by `ai/api/` itself (`completions::ask`), which is never changed. The connections, the roles, the instructions, the chats and the journal are stored by `db/ai/`.
-- Minimal layout: **navigation on the left**, the selected page on the right.
+- Minimal layout: **navigation on the left**, the selected page on the right. **One theme only, dark** (user, 2026-10-23): it does not follow the preference of the system; no light theme is planned.
 - Pages of the workstation, in this order in the navigation:
   1. **Chat**: the AI assistant, over the active AI connection.
   2. **Evaluation plan**: the OSCAL documents of the standards (catalogs made in the program or loaded, mappings, profiles, assessment plans), and the documents of standards (PDF) they quote (section 7.1).

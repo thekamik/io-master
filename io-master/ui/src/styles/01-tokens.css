@@ -1,74 +1,44 @@
 /* ---------------------------------------------------------------
  * 1. Tokens
+ *
+ * One theme only, dark (user, 2026-10-23): it does not follow the
+ * preference of the system, and there is no light one.
  * ------------------------------------------------------------- */
 
 :root {
-    --bg: #f3f5f9;
-    --surface: #ffffff;
-    --surface-2: #f7f8fb;
-    --border: #e1e5ec;
-    --border-strong: #c9d0dc;
-    --text: #1b2230;
-    --text-muted: #5d6779;
+    --bg: #0e121a;
+    --surface: #161c27;
+    --surface-2: #1b2230;
+    --border: #283142;
+    --border-strong: #364153;
+    --text: #e5e9f0;
+    --text-muted: #98a2b4;
 
-    --accent: #3b5bdb;
-    --accent-hover: #2f4bc4;
-    --accent-soft: #e9eeff;
-    --accent-text: #ffffff;
+    --accent: #6d8bff;
+    --accent-hover: #849dff;
+    --accent-soft: #1f2a4b;
+    --accent-text: #0e121a;
 
-    --danger: #c92a2a;
-    --danger-soft: #fdeeee;
-    --warning: #a85d00;
-    --warning-soft: #fff4e3;
-    --success: #2b8a5c;
-    --success-soft: #e7f6ee;
+    --danger: #ff7b7b;
+    --danger-soft: #3a1d21;
+    --warning: #f0b45a;
+    --warning-soft: #36291a;
+    --success: #5fd39b;
+    --success-soft: #16322a;
 
-    --sidebar: #141a25;
-    --sidebar-hover: #1f2735;
+    --sidebar: #0a0e15;
+    --sidebar-hover: #161c27;
     --sidebar-text: #a9b2c4;
     --sidebar-strong: #ffffff;
 
     --radius: 12px;
     --radius-sm: 8px;
-    --shadow: 0 1px 2px rgb(16 24 40 / 5%), 0 2px 6px rgb(16 24 40 / 6%);
-    --shadow-raised: 0 8px 28px rgb(16 24 40 / 14%);
-    --focus: 0 0 0 3px rgb(59 91 219 / 25%);
+    --shadow: 0 1px 2px rgb(0 0 0 / 30%);
+    --shadow-raised: 0 8px 28px rgb(0 0 0 / 45%);
+    --focus: 0 0 0 3px rgb(109 139 255 / 30%);
 
     --font: "Inter", "Noto Sans", Cantarell, "Segoe UI", system-ui, sans-serif;
     --mono: "JetBrains Mono", "Fira Code", "DejaVu Sans Mono", ui-monospace, monospace;
 
-    color-scheme: light;
-}
-
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #0e121a;
-        --surface: #161c27;
-        --surface-2: #1b2230;
-        --border: #283142;
-        --border-strong: #364153;
-        --text: #e5e9f0;
-        --text-muted: #98a2b4;
-
-        --accent: #6d8bff;
-        --accent-hover: #849dff;
-        --accent-soft: #1f2a4b;
-        --accent-text: #0e121a;
-
-        --danger: #ff7b7b;
-        --danger-soft: #3a1d21;
-        --warning: #f0b45a;
-        --warning-soft: #36291a;
-        --success: #5fd39b;
-        --success-soft: #16322a;
-
-        --sidebar: #0a0e15;
-        --sidebar-hover: #161c27;
-
-        --shadow: 0 1px 2px rgb(0 0 0 / 30%);
-        --shadow-raised: 0 8px 28px rgb(0 0 0 / 45%);
-        --focus: 0 0 0 3px rgb(109 139 255 / 30%);
-
-        color-scheme: dark;
-    }
+    color-scheme: dark;
 }
