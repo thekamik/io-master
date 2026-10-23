@@ -264,8 +264,9 @@ A **component** is a small element used more than once: several times in one vie
 |---|---|---|
 | `pdf_viewer` (was in `plans/`) | podgląd normy | a document of a standard, a quote highlighted on its page; in the evaluation plan and in the editor of a catalog |
 | `part_rows` (was in `catalog_editor/`) | części obiektu | the parts of a group or a control as rows; the object chosen and the proposals of the AI |
-| `requirement` (planned, step 41.5) | wymaganie | a tile that describes one requirement of a standard; many times in a view and in several views; functions of the AI: the analysis of the requirement and of the proofs linked to it |
-| `proof` (planned, step 41.5) | dowód | a tile with an input of the laboratory: a result of a test, or quotes of a standard or of the Security Target; it is linked into the input of a requirement |
+| `requirement` (planned, step 41.5) | wymaganie | a tile that describes one requirement of a standard; many times in a view and in several views; functions of the AI, such as the analysis of the requirement |
+
+**Open (user, 2026-10-23): the tiles of the evidence.** Not thought through yet, so nothing is decided and nothing is built. The user's present idea: a requirement is linked to its **input** tiles, which say what is needed to satisfy it; a **proof** tile (dowód: a result of a test, quotes of a standard or of the Security Target) is linked to an input, and the AI in the input checks whether the proof meets the criteria to be that input of the requirement.
 
 ### 10.3 Other terms
 
@@ -366,10 +367,4 @@ check ──run(id)──► ai/api/checks: one short question, written into the
 password form ──change(old, new)──► installation/: the key of the database encrypted again
 ```
 
-**`evaluation_lab` (planned, step 41.5; the concept is settled there).** A proposal of the user (2026-10-23), to be confirmed: the laboratory delivers its inputs as **proof** tiles, which are linked into the input of a **requirement** tile; the AI analyses a requirement on the proofs linked to it, and the evaluator decides (P1):
-
-```text
-plan (OSCAL, from evaluation_plan) ──handed over──► the requirements, each a requirement tile
-proof (result of a test, quotes of the standard or of the Security Target) ──linked──► requirement
-requirement ──analysis(proofs)──► ai/api/ ──► a proposal ──accepted by the evaluator──► the assessment results (OSCAL)
-```
+**`evaluation_lab` (planned, step 41.5; open).** Its flow is drawn when its concept is settled; the tiles of the evidence are still open (section 10.2). What stands: the plan is handed over from `evaluation_plan`, what the AI proposes becomes a result of the assessment (OSCAL) only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3).
