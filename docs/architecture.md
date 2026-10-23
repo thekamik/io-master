@@ -341,13 +341,18 @@ Conversation ──conversation_stop() / conversation_delete(id)
 Conversation ──"changed"──► the view ──► ChatList ──chat_list_get()──► the list again
 ```
 
-**`evaluation_plan`.** The documents of standards (PDF), the documents of OSCAL, and the editor of a catalog:
+**`evaluation_plan`** (entry `views/evaluation_plan/evaluation_plan.rs`, page `ui/src/views/evaluation_plan/`). The documents of standards (PDF), the documents of OSCAL, and the editor of a catalog:
 
 ```text
-documents (PDF) ──load()──► pdf/: the text, part by part ──► db/standards/   (events: file, pages, end; Stop)
-documents of OSCAL ──import / export / delete──► checked against the schema of NIST ──► db/oscal/
-new catalog ──create(title, sources)──► db/oscal/ ──► the view opens it in the editor
-search ──run(text)──► the hits ──► the view ──► viewer (component) ──► the PDF, the quote on its page
+the view opens ──► OscalDocuments ──oscal_documents_get()──► the documents of OSCAL by model and title
+the tab Documents of standards ──► StandardDocuments ──standard_documents_get()──► the PDFs by title and part
+StandardDocuments ──standard_documents_load()──► the dialog ──► pdf/: the text, part by part ──► db/standards/
+                     (events LoadEvent: file, pages, end; standard_documents_stop())
+StandardDocuments ──standard_documents_update / _delete──► db/standards/ (refused while a catalog quotes it)
+OscalDocuments ──oscal_documents_import / _export / _delete──► the dialog ──► checked against the schema of NIST ──► db/oscal/
+NewCatalog ──new_catalog_sources()──► the PDFs it can come from; ──new_catalog_create(title, sources)──► db/oscal/
+     └── "made" ──► the view opens it in the editor
+DocumentSearch ──document_search_run(text)──► the hits ──► the view ──► the viewer (component) ──► the PDF, the quote on its page
 
 the editor of a catalog:
 tree ──"chosen"──► the view ──► object form, quotes: each reads its own data

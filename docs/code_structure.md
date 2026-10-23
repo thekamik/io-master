@@ -179,7 +179,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
 ```
 
-The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** Devices, Start, Shell, Chat and Settings are built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
+The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** Devices, Start, Shell, Chat, Settings and Evaluation plan are built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
 
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
@@ -385,6 +385,7 @@ views.rs/                  The views of the window, one folder per view and one 
       view.rs                      The data of the settings of the scanner, as the page gets it: the
     stored_settings.rs           The settings of the scanner as they are stored: read by both
   evaluation_plan/             The view Evaluation plan: the documents of the standards in NIST OSCAL
+    evaluation_plan.rs           The entry of the view Evaluation plan: every command the page calls
     catalog_editor/              The editor of a catalog, a part of the view Evaluation plan: a catalog
       ai_builder/                  The element "the AI" of the editor of a catalog: the AI reads a table
         commands.rs                  The commands of the AI of the editor.
@@ -414,19 +415,17 @@ views.rs/                  The views of the window, one folder per view and one 
         commands.rs                  The commands of the proposals.
         view.rs                      The data of the proposals, as the page gets it.
     document_search/             The element "search" of the view Evaluation plan: the text of the
-      commands.rs                  The command of the search.
       search.rs                    The search of the text of the documents of standards: in the one form
       view.rs                      The data of the search, as the page gets it.
     new_catalog/                 The element "new catalog" of the view Evaluation plan: a catalog of
-      commands.rs                  The command of a new catalog.
       made.rs                      A new, empty catalog of OSCAL: its metadata, and the documents of the
       view.rs                      The data of a new catalog, as the page gets it: the documents it can
     oscal_documents/             The element "documents of OSCAL" of the view Evaluation plan: the
-      commands.rs                  The commands of the documents of OSCAL. The files are chosen in the
+      dialog.rs                    The dialogs of the system for a file of OSCAL: import, export.
       file.rs                      A file of OSCAL (JSON) read into the database, and written from it:
       view.rs                      The data of the list of documents of OSCAL, as the page gets it.
     standard_documents/          The element "documents of standards" of the view Evaluation plan: the
-      commands.rs                  The commands of the documents of standards.
+      dialog.rs                    The dialog of the system for the PDFs of a standard.
       load.rs                      The loading of documents of standards from PDF files: a long work.
       stored.rs                    What is stored of a document of a standard, with its rules: a file is
       view.rs                      The data of the list of documents of standards, as the page gets and

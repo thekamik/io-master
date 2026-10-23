@@ -2,6 +2,9 @@
 //! the document checked against the schema of NIST both ways, a UUID
 //! stored once.
 
+use std::path::PathBuf;
+
+use crate::app::error::AppError;
 use crate::db::error::DbError;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
@@ -56,6 +59,44 @@ pub fn delete(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
     db_oscal::delete::document(db, uuid)
 }
 
+/// The text of the file at `path`, refused when it is larger than
+/// [`MAX_FILE`].
+///
+/// Called by: `oscal_documents_import` (`evaluation_plan.rs`).
+/// Calls: `tokio::fs::metadata`, `tokio::fs::read_to_string`.
+pub async fn read_file(path: PathBuf) -> Result<String, AppError> {
+    let size = match tokio::fs::metadata(&path).await {
+        Ok(metadata) => metadata.len(),
+        Err(error) => return Err(AppError::Invalid(format!("the file was not read: {error}"))),
+    };
+
+    ensure!(size <= MAX_FILE, AppError::Invalid(format!("the file is larger than {} MiB", MAX_FILE / 1024 / 1024)));
+
+    match tokio::fs::read_to_string(&path).await {
+        Ok(text) => Ok(text),
+        Err(error) => Err(AppError::Invalid(format!("the file was not read: {error}"))),
+    }
+}
+
+/// A name for a file proposed from the title of a document: letters,
+/// digits, `-`, `_`, `.` and spaces kept, everything else `_`; at most
+/// 100 characters.
+///
+/// Called by: `oscal_documents_export` (`evaluation_plan.rs`).
+pub fn safe_name(title: &str) -> String {
+    let mut name = String::new();
+
+    for character in title.trim().chars().take(100) {
+        if character.is_alphanumeric() || "-_ .".contains(character) {
+            name.push(character);
+        } else {
+            name.push('_');
+        }
+    }
+
+    if name.is_empty() { "oscal".to_owned() } else { name }
+}
+
 #[cfg(test)]
 mod tests {
     //! Unit tests of `file.rs`, on the examples of NIST.
@@ -98,5 +139,12 @@ mod tests {
         assert!(matches!(import(&test.db, "{\"catalog\": {}}"), Err(OscalError::NotOscal(NotOscal::Schema(_)))));
         assert!(matches!(import(&test.db, "%PDF-1.4"), Err(OscalError::NotOscal(NotOscal::NotJson(_)))));
         assert!(db_oscal::read::summaries(&test.db).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_name_for_a_file_keeps_only_safe_characters() {
+        assert_eq!(safe_name(" CC Part 2: SFR / v1.0 "), "CC Part 2_ SFR _ v1.0");
+        assert_eq!(safe_name("../../etc"), ".._.._etc");
+        assert_eq!(safe_name("   "), "oscal");
     }
 }

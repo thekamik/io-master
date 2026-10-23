@@ -9,6 +9,9 @@ use crate::db::user::database::UserDb;
 use crate::model::standards::quote::{normalize, normalize_with_places};
 use crate::model::standards::{Hit, MAX_HITS};
 
+/// The longest text searched for, in characters.
+pub const MAX_SEARCH: usize = 1000;
+
 /// The characters of text around a hit of a search, on each side.
 const SNIPPET: usize = 80;
 

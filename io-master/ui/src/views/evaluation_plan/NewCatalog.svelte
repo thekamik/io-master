@@ -1,6 +1,6 @@
 <!--
   The element "new catalog" of the view Evaluation plan
-  (src/views/evaluation_plan/new_catalog/): a dialog that makes an empty catalog
+  (its commands in src/views/evaluation_plan/evaluation_plan.rs): a dialog that makes an empty catalog
   from documents of a standard. When it is made it tells the view
   (onmade), which opens it in its editor.
 -->
@@ -8,11 +8,11 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as newCatalog from "../../lib/api/evaluation_plan/new_catalog";
+  import * as evaluationPlan from "../../lib/api/evaluation_plan";
 
   let { onmade, onclose }: { onmade: (uuid: string) => void; onclose: () => void } = $props();
 
-  let sources: newCatalog.SourceView[] = $state([]);
+  let sources: evaluationPlan.SourceView[] = $state([]);
   let title = $state("");
   let version = $state("");
   let chosen: number[] = $state([]);
@@ -20,7 +20,7 @@
 
   onMount(async () => {
     try {
-      sources = await newCatalog.sources();
+      sources = await evaluationPlan.newCatalogSources();
     } catch (error) {
       problem = sentence(error);
     }
@@ -30,7 +30,7 @@
     event.preventDefault();
 
     try {
-      const made = await newCatalog.create(title, version, chosen);
+      const made = await evaluationPlan.newCatalogCreate(title, version, chosen);
       onmade(made.uuid);
     } catch (error) {
       problem = `The catalog was not made: ${sentence(error)}`;

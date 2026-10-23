@@ -341,9 +341,36 @@ mod views {
         }
     }
 
-    // The views not written here yet declare their modules in their mod.rs
-    // (step 46).
-    pub mod evaluation_plan;
+    // views/evaluation_plan/: the view Evaluation plan: the documents of the
+    // standards in NIST OSCAL and the documents of standards (PDF) they quote.
+    pub mod evaluation_plan {
+        #[allow(clippy::module_inception)]
+        pub mod evaluation_plan;
+
+        pub mod document_search {
+            pub mod search;
+            pub mod view;
+        }
+        pub mod new_catalog {
+            pub mod made;
+            pub mod view;
+        }
+        pub mod oscal_documents {
+            pub mod dialog;
+            pub mod file;
+            pub mod view;
+        }
+        pub mod standard_documents {
+            pub mod dialog;
+            pub mod load;
+            pub mod stored;
+            pub mod view;
+        }
+
+        // The editor of a catalog, a screen of the view; it declares its
+        // modules in its mod.rs until step 46.6.
+        pub mod catalog_editor;
+    }
 
     // Help for the tests of the views: a window of the mock runtime of Tauri.
     #[cfg(test)]

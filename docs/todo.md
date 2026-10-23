@@ -91,7 +91,7 @@ When the folder of a view is opened, one must see at once where the view begins:
 - [x] 46.2 `start` and `shell`. An element with no data of its own (the login form) has no folder in the program; the test of the names takes the elements also from the components of the page (`LoginForm.svelte` is `login_form`).
 - [x] 46.3 `chat`.
 - [x] 46.4 `settings` (its two helpers, `api_key_view` and `no_such_connection`, at the end of the entry, commented as the commands).
-- [ ] 46.5 `evaluation_plan`.
+- [x] 46.5 `evaluation_plan`. What the commands of its elements did beside the commands went into the elements: the dialogs of the system into `oscal_documents/dialog.rs` and `standard_documents/dialog.rs`, the reading of a file and the safe name of a file into `oscal_documents/file.rs`, the limit of a search into `document_search/search.rs`.
 - [ ] 46.6 the editor of a catalog.
 - [ ] 46.7 the components (`pdf_viewer`, `part_rows`); `components.rs` in the map; the state of this step.
 

@@ -1,6 +1,6 @@
 <!--
   The element "documents of OSCAL" of the view Evaluation plan
-  (src/views/evaluation_plan/oscal_documents/): the catalogs, mappings, profiles and
+  (its commands in src/views/evaluation_plan/evaluation_plan.rs): the catalogs, mappings, profiles and
   plans, imported, exported and deleted here. "Open" and "New catalog…"
   only tell the view (onopen, onnew). The view asks it to read the list
   again after a catalog was made or closed (reload(), below).
@@ -9,11 +9,11 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as oscalDocuments from "../../lib/api/evaluation_plan/oscal_documents";
+  import * as evaluationPlan from "../../lib/api/evaluation_plan";
 
   let { onopen, onnew }: { onopen: (uuid: string) => void; onnew: () => void } = $props();
 
-  let documents: oscalDocuments.OscalDocumentView[] = $state([]);
+  let documents: evaluationPlan.OscalDocumentView[] = $state([]);
   let confirmDelete: string | null = $state(null);
   let problem = $state("");
   let notice = $state("");
@@ -21,7 +21,7 @@
   /** Reads the documents again; called by the view after a change. */
   export async function reload() {
     try {
-      documents = await oscalDocuments.get();
+      documents = await evaluationPlan.oscalDocumentsGet();
     } catch (error) {
       problem = sentence(error);
     }
@@ -33,7 +33,7 @@
     problem = notice = "";
 
     try {
-      const imported = await oscalDocuments.importFile();
+      const imported = await evaluationPlan.oscalDocumentsImport();
 
       if (imported) {
         notice = `Imported: ${imported.model_title} "${imported.title}".`;
@@ -44,11 +44,11 @@
     }
   }
 
-  async function exportFile(document: oscalDocuments.OscalDocumentView) {
+  async function exportFile(document: evaluationPlan.OscalDocumentView) {
     problem = notice = "";
 
     try {
-      if (await oscalDocuments.exportFile(document.uuid, document.title)) {
+      if (await evaluationPlan.oscalDocumentsExport(document.uuid, document.title)) {
         notice = `Exported: ${document.title}.`;
       }
     } catch (error) {
@@ -58,7 +58,7 @@
 
   async function remove(uuid: string) {
     try {
-      await oscalDocuments.remove(uuid);
+      await evaluationPlan.oscalDocumentsDelete(uuid);
       confirmDelete = null;
       await reload();
     } catch (error) {
