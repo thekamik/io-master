@@ -109,7 +109,7 @@ The scan of the serial ports (`devices/`) and the settings of the scanner (`devi
 
 ### 2.4a `pdf/`: reading PDFs
 
-`poppler.rs`: the number of pages and the title of a PDF (`pdfinfo`), and the text of a range of pages (`pdftotext`), the PDF given on the standard input, never through a shell. It uses nothing of the program; the loading of the documents of a standard (`views/plans/standard_documents/load.rs`) reads a document part by part with it, reports every part and can stop between them.
+`poppler.rs`: the number of pages and the title of a PDF (`pdfinfo`), and the text of a range of pages (`pdftotext`), the PDF given on the standard input, never through a shell. It uses nothing of the program; the loading of the documents of a standard (`views/evaluation_plan/standard_documents/load.rs`) reads a document part by part with it, reports every part and can stop between them.
 
 ### 2.5 `security/`
 
@@ -121,7 +121,7 @@ The core of the protection (moved from `business/` in step 42, unchanged): the f
 
 ### 2.6 `business/` (removed in step 42)
 
-Until step 42 the business logic was a folder of its own, as resources and operations named after REST verbs; the commands of `tauri_ui/` called it. Both are replaced by the commands of the elements (section 2.9). Where its parts went: the catalogs and their editor to `views/catalog_editor/` (the changes of a catalog in memory to `model/oscal/catalog/`, the new UUIDs and times to `db/oscal/ids.rs`, a new catalog to `views/plans/new_catalog/made.rs`), the loading of PDFs to `views/plans/standard_documents/`, the chat to `views/chat/conversation/`, the installation and the session to `installation/`.
+Until step 42 the business logic was a folder of its own, as resources and operations named after REST verbs; the commands of `tauri_ui/` called it. Both are replaced by the commands of the elements (section 2.9). Where its parts went: the catalogs and their editor to `views/catalog_editor/` (the changes of a catalog in memory to `model/oscal/catalog/`, the new UUIDs and times to `db/oscal/ids.rs`, a new catalog to `views/evaluation_plan/new_catalog/made.rs`), the loading of PDFs to `views/evaluation_plan/standard_documents/`, the chat to `views/chat/conversation/`, the installation and the session to `installation/`.
 
 ### 2.7 `app/`: what the whole window shares
 
@@ -166,7 +166,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the folder of its element; a test (`src/command_lists_tests.rs`) checks both.
 - **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `hardware_tests/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
 - **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Devices: the settings are saved, the table scans again).
-- **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database, the scan) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/plans/standard_documents/load.rs`).
+- **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database, the scan) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/evaluation_plan/standard_documents/load.rs`).
 - **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`) through a `Channel` of Tauri, stop on the stop signal of `app/state.rs`, and hold no lock of the session while they wait for files or for the model.
 - **Documents of OSCAL** (step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction (`db/oscal/`); the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
 - **Tests call a command as the page does**: by name, with JSON, through the IPC of Tauri, in a window of its mock runtime (`views/test_support.rs`, the feature `test` of Tauri), on a real installation in a temporary folder.
@@ -391,7 +391,7 @@ views.rs/                  The views of the window, one folder per view and one 
       commands.rs                  The commands of the settings of the scanner.
       view.rs                      The data of the settings of the scanner, as the page gets it: the
     stored_settings.rs           The settings of the scanner as they are stored: read by both
-  plans/                       The view Evaluation plan: the documents of the standards in NIST OSCAL
+  evaluation_plan/             The view Evaluation plan: the documents of the standards in NIST OSCAL
     document_search/             The element "search" of the view Evaluation plan: the text of the
       commands.rs                  The command of the search.
       search.rs                    The search of the text of the documents of standards: in the one form

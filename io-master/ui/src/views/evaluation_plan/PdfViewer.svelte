@@ -1,6 +1,6 @@
 <!--
   The element "viewer of a standard" of the view Evaluation plan
-  (src/views/plans/pdf_viewer/): the original page of a PDF, with a
+  (src/views/evaluation_plan/pdf_viewer/): the original page of a PDF, with a
   quote highlighted in it, so that every source, also one the AI
   proposed, is checked against the standard itself. The editor of a
   catalog uses it too.
@@ -17,7 +17,7 @@
   import type { PDFDocumentProxy } from "pdfjs-dist";
 
   import { sentence } from "../../lib/api/errors";
-  import * as pdfViewer from "../../lib/api/plans/pdf_viewer";
+  import * as pdfViewer from "../../lib/api/evaluation_plan/pdf_viewer";
   import { drawPage, highlight, openPdf, type DrawnPage } from "../../lib/pdf";
 
   let {

@@ -1,5 +1,5 @@
 //! The rows of the documents of standards and the Rust type they
-//! become (`views/plans/standard_documents/stored.rs`).
+//! become (`views/evaluation_plan/standard_documents/stored.rs`).
 
 use rusqlite::Row;
 

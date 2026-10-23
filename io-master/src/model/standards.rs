@@ -6,8 +6,8 @@
 //! model/standards.rs                       the types, the rules of the fields (this file)
 //! model/standards/quote.rs                 one normal form of text; is a quote on its page
 //! pdf/poppler.rs                           the text of a PDF page by page (Poppler)
-//! views/plans/standard_documents/          the list, the loading of PDFs, a change, the deletion
-//! views/plans/document_search/             the search of their text
+//! views/evaluation_plan/standard_documents/          the list, the loading of PDFs, a change, the deletion
+//! views/evaluation_plan/document_search/             the search of their text
 //! ```
 //!
 //! A standard often comes in several documents (CC Part 1 to 5 and

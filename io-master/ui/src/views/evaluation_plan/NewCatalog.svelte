@@ -1,6 +1,6 @@
 <!--
   The element "new catalog" of the view Evaluation plan
-  (src/views/plans/new_catalog/): a dialog that makes an empty catalog
+  (src/views/evaluation_plan/new_catalog/): a dialog that makes an empty catalog
   from documents of a standard. When it is made it tells the view
   (onmade), which opens it in its editor.
 -->
@@ -8,7 +8,7 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as newCatalog from "../../lib/api/plans/new_catalog";
+  import * as newCatalog from "../../lib/api/evaluation_plan/new_catalog";
 
   let { onmade, onclose }: { onmade: (uuid: string) => void; onclose: () => void } = $props();
 

@@ -13,7 +13,7 @@
   import Devices from "../devices/Devices.svelte";
   import Documentation from "../../pages/Documentation.svelte";
   import Evaluation from "../../pages/Evaluation.svelte";
-  import Plans from "../plans/Plans.svelte";
+  import EvaluationPlan from "../evaluation_plan/EvaluationPlan.svelte";
   import Settings from "../settings/Settings.svelte";
   import UserMenu from "./UserMenu.svelte";
 
@@ -31,9 +31,9 @@
   const subtitles: Record<string, string> = {
     chat: "Ask the model of your active AI connection.",
     evaluation: "Carry out an evaluation scheme for a product.",
-    plans: "The standards in NIST OSCAL and the plan of an evaluation, with the documents of the standards they come from.",
+    evaluation_plan: "The standards in NIST OSCAL and the plan of an evaluation, with the documents of the standards they come from.",
     documentation: "Load and analyse the documentation of the manufacturer for the evaluations.",
-    scan: "The serial ports of this computer, and the access to them.",
+    devices: "The serial ports of this computer, and the access to them.",
     settings: "Your account, the connections to AI services, and this installation.",
     admin: "The password resets of the workstations.",
   };
@@ -48,7 +48,7 @@
       <path d="M9 4h6v3H9z" />
       <path d="M7 5.5H5.5v14h13v-14H17" />
       <path d="M8.5 13l2.2 2.2 4.8-4.7" />
-    {:else if name === "plans"}
+    {:else if name === "evaluation_plan"}
       <rect x="3.5" y="4" width="6" height="5" rx="1.2" />
       <rect x="14.5" y="4" width="6" height="5" rx="1.2" />
       <rect x="9" y="15" width="6" height="5" rx="1.2" />
@@ -107,8 +107,8 @@
       <Chat />
     {:else if active === "evaluation"}
       <Evaluation />
-    {:else if active === "plans"}
-      <Plans />
+    {:else if active === "evaluation_plan"}
+      <EvaluationPlan />
     {:else if active === "documentation"}
       <Documentation />
     {:else if active === "devices"}

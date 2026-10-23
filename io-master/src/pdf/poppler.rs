@@ -17,7 +17,7 @@
 //! parts of [`PART`] pages ([`text_of_pages`]): after every part it
 //! reports the progress and can stop the work (CLAUDE.md, "Long
 //! operations report progress", "Operations can be cancelled";
-//! `views/plans/standard_documents/load.rs`).
+//! `views/evaluation_plan/standard_documents/load.rs`).
 
 use std::fmt;
 use std::io::Write;

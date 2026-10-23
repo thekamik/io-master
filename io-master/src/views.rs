@@ -25,7 +25,7 @@
 pub mod catalog_editor;
 pub mod chat;
 pub mod devices;
-pub mod plans;
+pub mod evaluation_plan;
 pub mod settings;
 pub mod shell;
 pub mod start;

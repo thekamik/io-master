@@ -1,7 +1,7 @@
 // The element "documents of standards" of the view Evaluation plan: its
-// commands and its data (src/views/plans/standard_documents/).
+// commands and its data (src/views/evaluation_plan/standard_documents/).
 //
-// The types mirror src/views/plans/standard_documents/view.rs.
+// The types mirror src/views/evaluation_plan/standard_documents/view.rs.
 
 import { Channel, invoke } from "@tauri-apps/api/core";
 

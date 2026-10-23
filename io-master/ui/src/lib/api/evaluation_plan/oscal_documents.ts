@@ -1,7 +1,7 @@
 // The element "documents of OSCAL" of the view Evaluation plan: its
-// commands and its data (src/views/plans/oscal_documents/).
+// commands and its data (src/views/evaluation_plan/oscal_documents/).
 //
-// The types mirror src/views/plans/oscal_documents/view.rs.
+// The types mirror src/views/evaluation_plan/oscal_documents/view.rs.
 
 import { invoke } from "@tauri-apps/api/core";
 

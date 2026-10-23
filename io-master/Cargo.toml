@@ -89,7 +89,7 @@ tauri = { version = "2.12.4", features = ["custom-protocol"] }
 base64 = "0.22.1"
 
 # The dialogs of the system to choose files (the PDFs of a standard,
-# the files of OSCAL; src/views/plans/). The
+# the files of OSCAL; src/views/evaluation_plan/). The
 # official plugin of Tauri; it is called only from Rust, so the page
 # never gets a way to the files of the computer itself.
 tauri-plugin-dialog = "2.8.3"

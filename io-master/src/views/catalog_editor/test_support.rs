@@ -4,7 +4,7 @@
 use serde_json::{Value, json};
 
 use crate::test_support::standards::load;
-use crate::views::plans::new_catalog::made;
+use crate::views::evaluation_plan::new_catalog::made;
 use crate::views::test_support::{TestWindow, logged_in_window};
 
 /// A window with "anna" logged in, the small standard and an empty

@@ -1,6 +1,6 @@
 //! The element "documents of OSCAL" of the view Evaluation plan: the
 //! catalogs, mappings, profiles and plans of the evaluator, made in the
-//! program or imported (page: `ui/src/views/plans/OscalDocuments.svelte`).
+//! program or imported (page: `ui/src/views/evaluation_plan/OscalDocuments.svelte`).
 //!
 //! ```text
 //! action   command                  parameters         data back

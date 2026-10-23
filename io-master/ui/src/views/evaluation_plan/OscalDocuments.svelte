@@ -1,6 +1,6 @@
 <!--
   The element "documents of OSCAL" of the view Evaluation plan
-  (src/views/plans/oscal_documents/): the catalogs, mappings, profiles and
+  (src/views/evaluation_plan/oscal_documents/): the catalogs, mappings, profiles and
   plans, imported, exported and deleted here. "Open" and "New catalog…"
   only tell the view (onopen, onnew). The view asks it to read the list
   again after a catalog was made or closed (reload(), below).
@@ -9,7 +9,7 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as oscalDocuments from "../../lib/api/plans/oscal_documents";
+  import * as oscalDocuments from "../../lib/api/evaluation_plan/oscal_documents";
 
   let { onopen, onnew }: { onopen: (uuid: string) => void; onnew: () => void } = $props();
 

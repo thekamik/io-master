@@ -1,6 +1,6 @@
 //! The element "documents of standards" of the view Evaluation plan: the
 //! PDFs of the standards, loaded into the encrypted database with the
-//! text of their pages (page: `ui/src/views/plans/StandardDocuments.svelte`).
+//! text of their pages (page: `ui/src/views/evaluation_plan/StandardDocuments.svelte`).
 //!
 //! ```text
 //! action   command                      parameters           data back

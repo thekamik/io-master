@@ -1,7 +1,7 @@
 // The element "search" of the view Evaluation plan: its command and its
-// data (src/views/plans/document_search/).
+// data (src/views/evaluation_plan/document_search/).
 //
-// The types mirror src/views/plans/document_search/view.rs.
+// The types mirror src/views/evaluation_plan/document_search/view.rs.
 
 import { invoke } from "@tauri-apps/api/core";
 

@@ -18,7 +18,7 @@
   import type { Which } from "../../lib/api/catalog_editor/ai_instructions";
   import type { CatalogTreeView } from "../../lib/api/catalog_editor/catalog_tree";
   import type { Place } from "../../lib/api/catalog_editor/new_object";
-  import PdfViewer from "../plans/PdfViewer.svelte";
+  import PdfViewer from "../evaluation_plan/PdfViewer.svelte";
   import AiBuilder from "./AiBuilder.svelte";
   import AiInstructions from "./AiInstructions.svelte";
   import CatalogTree from "./CatalogTree.svelte";

@@ -1,6 +1,6 @@
 //! The element "viewer of a standard" of the view Evaluation plan: the
 //! original page of a PDF, with a quote highlighted in it, drawn by pdf.js
-//! in the page (page: `ui/src/views/plans/PdfViewer.svelte`; the editor of
+//! in the page (page: `ui/src/views/evaluation_plan/PdfViewer.svelte`; the editor of
 //! a catalog uses it too).
 //!
 //! ```text

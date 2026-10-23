@@ -1,5 +1,5 @@
 <!--
-  The view Evaluation plan (src/views/plans/), in two tabs:
+  The view Evaluation plan (src/views/evaluation_plan/), in two tabs:
 
   - OSCAL: the documents of the standards in NIST OSCAL (catalogs,
     mappings, profiles, assessment plans), made or imported; a catalog

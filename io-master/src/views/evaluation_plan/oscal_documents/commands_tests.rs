@@ -5,7 +5,7 @@
 use serde_json::json;
 
 use super::safe_name;
-use crate::views::plans::oscal_documents::file;
+use crate::views::evaluation_plan::oscal_documents::file;
 use crate::views::test_support::logged_in_window;
 
 #[test]

@@ -6,6 +6,6 @@
 //! poppler.rs   the number of pages and the title, the text of a range of pages
 //! ```
 //!
-//! It uses nothing of the program; the views call it (`views/plans/`).
+//! It uses nothing of the program; the views call it (`views/evaluation_plan/`).
 
 pub mod poppler;

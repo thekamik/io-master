@@ -1,6 +1,6 @@
 //! The element "new catalog" of the view Evaluation plan: a catalog of
 //! OSCAL made from documents of a standard (page:
-//! `ui/src/views/plans/NewCatalog.svelte`).
+//! `ui/src/views/evaluation_plan/NewCatalog.svelte`).
 //!
 //! ```text
 //! action    command               parameters                 data back

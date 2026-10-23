@@ -92,7 +92,7 @@ The user found, after step 42: `tauri_ui/` is left although the architecture was
 - [x] 43.1 `src/tauri_ui/` renamed `src/app/` (the folder only; its types renamed in 43.2); every `use`, the test of the architecture, the comments, `code_structure.md`.
 - [x] 43.2 The list of the commands moved out of `main.rs` into **`src/routes.rs`** (as `urls.py`; user, 2026-10-23: not `app/routes.rs`, which would name `views/` from below them, a cycle); the window and the tests of the commands use the one list (the copy in `views/test_support.rs` removed); `command_lists_tests.rs` reads it there. The types `UiState`, `UiError` renamed `AppState`, `AppError` (also `AppError` and `isAppError` of the page).
 - [x] 43.3 `scan` renamed `devices`: Rust (`views/devices/`), the page (`ui/src/views/devices/`, `lib/api/devices/`), the navigation "Devices".
-- [ ] 43.4 `plans` renamed `evaluation_plan`: Rust, the page, `lib/api/`, the navigation.
+- [x] 43.4 `plans` renamed `evaluation_plan`: Rust, the page, `lib/api/`, the navigation.
 - [ ] 43.5 `catalog_editor` moved into `evaluation_plan/catalog_editor/`: Rust, the page, `lib/api/`.
 - [ ] 43.6 `components/` with its first component `pdf_viewer` (Rust and page); the rules of the components in the test of the architecture (a component never uses a view, a view never another view).
 - [ ] 43.7 `part_rows` moved into `components/` (Rust and page).

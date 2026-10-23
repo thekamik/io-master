@@ -1,6 +1,6 @@
 //! The view Evaluation plan: the documents of the standards in NIST OSCAL
 //! and the documents of standards (PDF) they quote (page:
-//! `ui/src/views/plans/`). A catalog opens in its editor (`catalog_editor/`).
+//! `ui/src/views/evaluation_plan/`). A catalog opens in its editor (`catalog_editor/`).
 //!
 //! ```text
 //! element                  folder                commands

@@ -16,7 +16,7 @@ use crate::app::test_support::{TestState, logged_in};
 use crate::model::api_key::ApiKey;
 use crate::test_support::standards::load;
 use crate::views::catalog_editor::proposals::accept::accept;
-use crate::views::plans::new_catalog::made;
+use crate::views::evaluation_plan::new_catalog::made;
 
 /// "anna" logged in, her AI the fake `service`, the small standard loaded
 /// and an empty catalog made from it; returns the state, the catalog and

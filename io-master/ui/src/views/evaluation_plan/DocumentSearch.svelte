@@ -1,12 +1,12 @@
 <!--
   The element "search" of the view Evaluation plan
-  (src/views/plans/document_search/): the text of the documents of
+  (src/views/evaluation_plan/document_search/): the text of the documents of
   standards searched. Opening a hit only tells the view (onopen), which
   shows it in the viewer.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import * as documentSearch from "../../lib/api/plans/document_search";
+  import * as documentSearch from "../../lib/api/evaluation_plan/document_search";
 
   let { onopen }: { onopen: (documentId: number, page: number, quote: string) => void } = $props();
 

@@ -1,6 +1,6 @@
 <!--
   The element "documents of standards" of the view Evaluation plan
-  (src/views/plans/standard_documents/): the PDFs of the standards, loaded
+  (src/views/evaluation_plan/standard_documents/): the PDFs of the standards, loaded
   into the encrypted database with the text of their pages, their fields
   changed and deleted here. "View" only tells the view (onview), which
   shows the document in the viewer.
@@ -12,7 +12,7 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as standardDocuments from "../../lib/api/plans/standard_documents";
+  import * as standardDocuments from "../../lib/api/evaluation_plan/standard_documents";
 
   let { onview }: { onview: (documentId: number) => void } = $props();
 

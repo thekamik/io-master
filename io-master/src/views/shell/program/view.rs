@@ -51,7 +51,7 @@ fn pages(role: Role) -> Vec<PageView> {
     match role {
         Role::Workstation => vec![
             PageView { id: "chat", title: "Chat" },
-            PageView { id: "plans", title: "Evaluation plan" },
+            PageView { id: "evaluation_plan", title: "Evaluation plan" },
             PageView { id: "evaluation", title: "Evaluation" },
             // A placeholder until step 30 of docs/todo.md is designed.
             PageView { id: "documentation", title: "Manufacturer documentation" },

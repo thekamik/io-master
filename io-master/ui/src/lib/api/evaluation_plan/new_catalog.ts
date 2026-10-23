@@ -1,7 +1,7 @@
 // The element "new catalog" of the view Evaluation plan: its commands and
-// its data (src/views/plans/new_catalog/).
+// its data (src/views/evaluation_plan/new_catalog/).
 //
-// The types mirror src/views/plans/new_catalog/view.rs.
+// The types mirror src/views/evaluation_plan/new_catalog/view.rs.
 
 import { invoke } from "@tauri-apps/api/core";
 

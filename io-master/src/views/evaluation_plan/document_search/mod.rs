@@ -1,5 +1,5 @@
 //! The element "search" of the view Evaluation plan: the text of the
-//! documents of standards searched (page: `ui/src/views/plans/DocumentSearch.svelte`).
+//! documents of standards searched (page: `ui/src/views/evaluation_plan/DocumentSearch.svelte`).
 //!
 //! ```text
 //! action   command               parameters                 data back
