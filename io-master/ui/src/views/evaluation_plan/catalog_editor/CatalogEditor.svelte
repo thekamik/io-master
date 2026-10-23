@@ -15,9 +15,9 @@
   element reads its data again.
 -->
 <script lang="ts">
-  import type { Which } from "../../../lib/api/evaluation_plan/catalog_editor/ai_instructions";
-  import type { CatalogTreeView } from "../../../lib/api/evaluation_plan/catalog_editor/catalog_tree";
-  import type { Place } from "../../../lib/api/evaluation_plan/catalog_editor/new_object";
+  import type { Which } from "../../../lib/api/evaluation_plan/catalog_editor";
+  import type { CatalogTreeView } from "../../../lib/api/evaluation_plan/catalog_editor";
+  import type { Place } from "../../../lib/api/evaluation_plan/catalog_editor";
   import PdfViewer from "../../../components/pdf_viewer/PdfViewer.svelte";
   import AiBuilder from "./AiBuilder.svelte";
   import AiInstructions from "./AiInstructions.svelte";

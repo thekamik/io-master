@@ -179,7 +179,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
 ```
 
-The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** Devices, Start, Shell, Chat, Settings and Evaluation plan are built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
+The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** every view is built so (the components follow in 46.7); the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
 
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
@@ -387,32 +387,25 @@ views.rs/                  The views of the window, one folder per view and one 
   evaluation_plan/             The view Evaluation plan: the documents of the standards in NIST OSCAL
     evaluation_plan.rs           The entry of the view Evaluation plan: every command the page calls
     catalog_editor/              The editor of a catalog, a part of the view Evaluation plan: a catalog
+      catalog_editor.rs            The entry of the editor of a catalog: every command the page calls
       ai_builder/                  The element "the AI" of the editor of a catalog: the AI reads a table
-        commands.rs                  The commands of the AI of the editor.
         controls.rs                  The controls of a group of a catalog proposed by the AI from the pages
         groups.rs                    The groups of a catalog proposed by the AI from a table of contents
         parts.rs                     The pages of a standard cut into parts that fit the context of a
         steps.rs                     The steps both works of the AI share: the model and the instructions
         view.rs                      The data of the AI of the editor, as the page gets and sends it, and
-      ai_instructions/             The element "instructions to the AI" of the editor of a catalog: the
-        commands.rs                  The commands of the instructions to the AI.
       catalog_tree/                The element "tree" of the editor of a catalog: its groups and controls
-        commands.rs                  The command of the tree.
         view.rs                      The data of the tree, as the page gets it.
       checked_quote.rs             A quote of a document of a standard, looked for on the page it names
       new_object/                  The element "new object" of the editor of a catalog: a dialog that adds
-        commands.rs                  The commands of a new object.
         view.rs                      The place of a new object, as the page sends it.
       object_form/                 The element "object" of the editor of a catalog: the group or control
-        commands.rs                  The commands of the object chosen.
         view.rs                      The data of the object chosen, as the page gets it.
       object_quotes/               The element "quotes" of the editor of a catalog: the passages of the
-        commands.rs                  The commands of the quotes of an object.
         view.rs                      The data of the quotes of an object, as the page gets it.
       oscal_object.rs              A group or a control of OSCAL sent by the page as JSON, read into the
       proposals/                   The element "proposals" of the editor of a catalog: what the AI
         accept.rs                    A proposal of the AI accepted into its catalog.
-        commands.rs                  The commands of the proposals.
         view.rs                      The data of the proposals, as the page gets it.
     document_search/             The element "search" of the view Evaluation plan: the text of the
       search.rs                    The search of the text of the documents of standards: in the one form

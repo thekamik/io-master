@@ -1,6 +1,6 @@
 <!--
   The element "object" of the editor of a catalog
-  (src/views/evaluation_plan/catalog_editor/object_form/): the group or control chosen,
+  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): the group or control chosen,
   its parts as the standard reads, and its own fields as JSON of OSCAL,
   changed and saved here (what it holds stays). Its quotes come in
   between (children, the element "quotes"). A change tells the view
@@ -11,8 +11,8 @@
   import type { Snippet } from "svelte";
 
   import { sentence } from "../../../lib/api/errors";
-  import * as objectForm from "../../../lib/api/evaluation_plan/catalog_editor/object_form";
-  import type { Place } from "../../../lib/api/evaluation_plan/catalog_editor/new_object";
+  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
+  import type { Place } from "../../../lib/api/evaluation_plan/catalog_editor";
   import PartRows from "../../../components/part_rows/PartRows.svelte";
 
   let {
@@ -31,7 +31,7 @@
     children: Snippet;
   } = $props();
 
-  let object: objectForm.ObjectView | null = $state(null);
+  let object: catalogEditor.ObjectView | null = $state(null);
   let fields = $state("");
   let problem = $state("");
   let notice = $state("");
@@ -43,7 +43,7 @@
 
   async function load(catalog: string, chosen: string) {
     try {
-      object = await objectForm.get(catalog, chosen);
+      object = await catalogEditor.objectFormGet(catalog, chosen);
       fields = JSON.stringify(object.fields, null, 2);
       problem = "";
     } catch (error) {
@@ -63,9 +63,9 @@
       const changed = JSON.parse(fields) as { id?: string };
 
       if (object.kind === "group") {
-        await objectForm.saveGroup(uuid, id, changed);
+        await catalogEditor.objectFormSaveGroup(uuid, id, changed);
       } else {
-        await objectForm.saveControl(uuid, id, changed);
+        await catalogEditor.objectFormSaveControl(uuid, id, changed);
       }
 
       notice = "Saved.";
@@ -77,7 +77,7 @@
 
   async function remove() {
     try {
-      await objectForm.remove(uuid, id);
+      await catalogEditor.objectFormDelete(uuid, id);
       onchanged(null);
     } catch (error) {
       problem = sentence(error);

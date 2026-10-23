@@ -367,9 +367,40 @@ mod views {
             pub mod view;
         }
 
-        // The editor of a catalog, a screen of the view; it declares its
-        // modules in its mod.rs until step 46.6.
-        pub mod catalog_editor;
+        // views/evaluation_plan/catalog_editor/: the editor of a catalog, a
+        // screen of the view, with an entry of its own.
+        pub mod catalog_editor {
+            #[allow(clippy::module_inception)]
+            pub mod catalog_editor;
+
+            pub mod checked_quote;
+            pub mod oscal_object;
+            #[cfg(test)]
+            pub mod test_support;
+            pub mod ai_builder {
+                pub mod controls;
+                pub mod groups;
+                pub mod parts;
+                pub mod steps;
+                pub mod view;
+            }
+            pub mod catalog_tree {
+                pub mod view;
+            }
+            pub mod new_object {
+                pub mod view;
+            }
+            pub mod object_form {
+                pub mod view;
+            }
+            pub mod object_quotes {
+                pub mod view;
+            }
+            pub mod proposals {
+                pub mod accept;
+                pub mod view;
+            }
+        }
     }
 
     // Help for the tests of the views: a window of the mock runtime of Tauri.

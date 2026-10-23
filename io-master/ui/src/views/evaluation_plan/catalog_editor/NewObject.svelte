@@ -1,12 +1,12 @@
 <!--
   The element "new object" of the editor of a catalog
-  (src/views/evaluation_plan/catalog_editor/new_object/): a dialog that adds a group or a
+  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): a dialog that adds a group or a
   control, written as JSON of OSCAL, at a place of the catalog. When it is
   added it tells the view (ondone, with its id).
 -->
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
-  import * as newObject from "../../../lib/api/evaluation_plan/catalog_editor/new_object";
+  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
 
   let {
     uuid,
@@ -17,7 +17,7 @@
   }: {
     uuid: string;
     kind: "group" | "control";
-    place: newObject.Place;
+    place: catalogEditor.Place;
     ondone: (id: string | null) => void;
     onclose: () => void;
   } = $props();
@@ -37,9 +37,9 @@
       const object = JSON.parse(text) as { id?: string };
 
       if (kind === "group") {
-        await newObject.addGroup(uuid, place, object);
+        await catalogEditor.newObjectAddGroup(uuid, place, object);
       } else {
-        await newObject.addControl(uuid, place, object);
+        await catalogEditor.newObjectAddControl(uuid, place, object);
       }
 
       ondone(object.id ?? null);

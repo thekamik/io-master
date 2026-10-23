@@ -354,11 +354,25 @@ NewCatalog ──new_catalog_sources()──► the PDFs it can come from; ─�
      └── "made" ──► the view opens it in the editor
 DocumentSearch ──document_search_run(text)──► the hits ──► the view ──► the viewer (component) ──► the PDF, the quote on its page
 
-the editor of a catalog:
-tree ──"chosen"──► the view ──► object form, quotes: each reads its own data
-object form, new object, quotes, proposals ──a change──► db/oscal/ (checked) ──"changed"──► every element reads again
-AI ──groups / controls(pages)──► ai/api/: the model, part by part ──► proposals in db/evaluation_support/
-proposal ──accepted by the evaluator (P1)──► the catalog in db/oscal/
+the editor of a catalog (entry views/evaluation_plan/catalog_editor/catalog_editor.rs):
+the editor opens ──► CatalogTree ──catalog_tree_get(uuid)──► the rows of the tree (no recursion in the page)
+                 ├─► Proposals ──proposals_get(uuid)──► what the AI proposed, waiting
+                 └─► AiBuilder ──ai_builder_sources()──► the documents the AI can read
+CatalogTree ──"chosen"──► the editor ──► ObjectForm ──object_form_get(uuid, id)──►; ObjectQuotes ──object_quotes_get──►
+ObjectForm, NewObject, ObjectQuotes, Proposals ──a change──► the catalog in db/oscal/ (checked against the schema of NIST)
+  └── "changed" ──► the editor ──► every element reads again
+AiBuilder ──ai_builder_groups / ai_builder_controls(pages)──► ai/api/: the model, part by part ──► proposals in db/
+  └── BuildEvent (part, writing, proposed, failed, end) while it works; ai_builder_stop(); "changed" at the end
+Proposals ──proposals_accept(id, corrected)──► the object in the catalog, its quotes kept (P1)
+```
+
+Every question of the AI of the editor follows one pipeline (`ai_builder/`: `groups.rs` from a table of contents, `controls.rs` from the pages of a group, `steps.rs` what both share, `parts.rs` the pages cut into parts that fit the context of a model); the database is held for each step only, never while the model writes:
+
+```text
+the catalog and the pages (db/) ──prompt (ai/tasks/catalog_*.rs)──► the question
+  ──ai/api/completions::ask──► the model, and the journal of the AI
+  ──read (ai/tasks/catalog_*.rs)──► groups or controls of OSCAL
+  ──quotes checked on their pages, proposals stored (db/evaluation_support/)
 ```
 
 **`devices`** (entry `views/devices/devices.rs`, page `ui/src/views/devices/`).

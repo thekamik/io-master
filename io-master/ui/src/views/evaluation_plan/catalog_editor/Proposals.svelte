@@ -1,13 +1,13 @@
 <!--
   The element "proposals" of the editor of a catalog
-  (src/views/evaluation_plan/catalog_editor/proposals/): what the AI proposed, waiting for
+  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): what the AI proposed, waiting for
   the evaluator, who accepts it (as it is, or corrected as JSON of OSCAL)
   or rejects it (P1: the evaluator decides). A change tells the view
   (onchanged); showing a quote only tells the view (onview).
 -->
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
-  import * as proposals from "../../../lib/api/evaluation_plan/catalog_editor/proposals";
+  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
   import PartRows from "../../../components/part_rows/PartRows.svelte";
 
   let {
@@ -22,7 +22,7 @@
     onchanged: () => void;
   } = $props();
 
-  let waiting: proposals.ProposalView[] = $state([]);
+  let waiting: catalogEditor.ProposalView[] = $state([]);
   let correcting: { id: number; text: string } | null = $state(null);
   let problem = $state("");
 
@@ -33,7 +33,7 @@
 
   async function load(catalog: string) {
     try {
-      waiting = await proposals.get(catalog);
+      waiting = await catalogEditor.proposalsGet(catalog);
       problem = "";
     } catch (error) {
       problem = sentence(error);
@@ -42,7 +42,7 @@
 
   async function accept(id: number, corrected: unknown | null) {
     try {
-      await proposals.accept(id, corrected);
+      await catalogEditor.proposalsAccept(id, corrected);
       correcting = null;
       onchanged();
     } catch (error) {
@@ -64,7 +64,7 @@
 
   async function reject(id: number) {
     try {
-      await proposals.reject(id);
+      await catalogEditor.proposalsReject(id);
       onchanged();
     } catch (error) {
       problem = sentence(error);
