@@ -2,7 +2,7 @@
 
 This document says **where** everything is in the code and **which rules keep it in order**. *What* the program is and *why* it is built so is in `architecture.md`; the plan of the work in `todo.md`. The structure was set by step 40 of `todo.md` (2026-10-17), on the guidelines of the user:
 
-1. `tauri_ui/` is a minimal intermediate layer that only joins the back end and the front end.
+1. `tauri_ui/` is a minimal intermediate layer that only joins the back end and the front end (renamed `app/` in step 43, 2026-10-23).
 2. The business logic is in a folder of its own (`business/`), reached by the interface in the form of a REST API: no server, but the functions are designed as resources and operations.
 3. Every operation on a database is in `db/`, ordered as CRUD.
 4. All communication with AI is in `ai/`, the intermediary between the external services and the program: one folder for the whole integration, for the audit.
@@ -25,7 +25,7 @@ io-master/src/
   pdf/               reading PDFs with Poppler (pdfinfo, pdftotext): another program, in one place
   security/          the building blocks of protection: random numbers, the TPM
   installation/      the installation, its one account and the session: the core of the protection
-  tauri_ui/          what the whole window shares: the state, the errors of the commands
+  app/               what the whole window shares: the state, the errors of the commands
   views/             one folder per view and per element: its commands and the data it gets
 io-master/ui/        the page (Svelte 5), a separate project
 ```
@@ -37,7 +37,7 @@ io-master/ui/        the page (Svelte 5), a separate project
                   (one folder per element of the window)
         ┌──────────┬────────┼─────────┬──────────────┬───────────┐
         ▼          ▼        ▼         ▼              ▼           ▼
-    tauri_ui/     ai/   hardware_  installation/    pdf/      (model/,
+      app/        ai/   hardware_  installation/    pdf/      (model/,
   (state, errors)  │     tests/        │                       security/)
         │          │                   │
         └──────────┴──────► db/ ◄──────┘
@@ -46,7 +46,7 @@ io-master/ui/        the page (Svelte 5), a separate project
 ```
 
 - A folder uses only itself and the folders below it: **no cycle**.
-- **The rule is checked by a test**, `src/architecture_tests.rs`: it reads the source of every folder (the tests aside) and fails on a use against the direction. `views/` may use every folder below it. `tauri_ui/` uses `installation/` and `model/` (the state of the window) and, listed there with their reason, only the errors of the folders below (`AiError`, `ConnectionSaveError`, `ModelError`, the errors of `db/` and of `db/oscal/`, `ScanSettingsError`), which it turns into errors of the page; never a function of them.
+- **The rule is checked by a test**, `src/architecture_tests.rs`: it reads the source of every folder (the tests aside) and fails on a use against the direction. `views/` may use every folder below it. `app/` uses `installation/` and `model/` (the state of the window) and, listed there with their reason, only the errors of the folders below (`AiError`, `ConnectionSaveError`, `ModelError`, the errors of `db/` and of `db/oscal/`, `ScanSettingsError`), which it turns into errors of the page; never a function of them.
 - The tests (`*_tests.rs`, `test_support.rs`) are not held to it: they set up data across the layers.
 
 ### 1.2 Where the information is
@@ -116,13 +116,15 @@ The scan of the serial ports (`devices/`) and the settings of the scanner (`devi
 
 ### 2.5a `installation/`: the installation, the account, the session
 
-The core of the protection (moved from `business/` in step 42, unchanged): the first start and every later start (`lifecycle.rs`), the check before the window opens (`verify.rs`, called by `main.rs`), the account with the keys of its database (`accounts.rs`: Argon2id, the TPM factor), and the session of the logged-in evaluator (`session.rs`: the account and the database opened once at the login). It uses `db/`, `security/` and `model/`; the window (`tauri_ui/state.rs`) and the views use it.
+The core of the protection (moved from `business/` in step 42, unchanged): the first start and every later start (`lifecycle.rs`), the check before the window opens (`verify.rs`, called by `main.rs`), the account with the keys of its database (`accounts.rs`: Argon2id, the TPM factor), and the session of the logged-in evaluator (`session.rs`: the account and the database opened once at the login). It uses `db/`, `security/` and `model/`; the window (`app/state.rs`) and the views use it.
 
 ### 2.6 `business/` (removed in step 42)
 
 Until step 42 the business logic was a folder of its own, as resources and operations named after REST verbs; the commands of `tauri_ui/` called it. Both are replaced by the commands of the elements (section 2.9). Where its parts went: the catalogs and their editor to `views/catalog_editor/` (the changes of a catalog in memory to `model/oscal/catalog/`, the new UUIDs and times to `db/oscal/ids.rs`, a new catalog to `views/plans/new_catalog/made.rs`), the loading of PDFs to `views/plans/standard_documents/`, the chat to `views/chat/conversation/`, the installation and the session to `installation/`.
 
-### 2.7 `tauri_ui/`: what the whole window shares
+### 2.7 `app/`: what the whole window shares
+
+Named `tauri_ui/` until step 43 (2026-10-23): it is no interface, but what every view uses, as the session and the error handling of a web framework.
 
 ```text
 state.rs        the installation, the session of the evaluator, the stop signals; nothing else
@@ -141,7 +143,7 @@ ui/src/views/<view>/  the views: the view and one component per element, named a
 ui/src/lib/api/<view>/<element>.ts
                       the commands of one element as typed functions; the types mirror its view.rs
 ui/src/lib/api/errors.ts
-                      the error of a command, as tauri_ui/serializer/error_view.rs sends it
+                      the error of a command, as app/serializer/error_view.rs sends it
 ui/src/pages/         the pages that call no command yet: Evaluation, Documentation
 ui/src/lib/pdf.ts     the viewer of a standard (pdf.js)
 ui/src/styles/        the style, one sheet per part of the window, in the order of the cascade
@@ -164,7 +166,7 @@ views/<view>/<file>.rs               what the elements of one view share (Scan: 
 - **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `hardware_tests/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
 - **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Scan: the settings are saved, the table scans again).
 - **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database, the scan) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/plans/standard_documents/load.rs`).
-- **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`) through a `Channel` of Tauri, stop on the stop signal of `tauri_ui/state.rs`, and hold no lock of the session while they wait for files or for the model.
+- **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`) through a `Channel` of Tauri, stop on the stop signal of `app/state.rs`, and hold no lock of the session while they wait for files or for the model.
 - **Documents of OSCAL** (step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction (`db/oscal/`); the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
 - **Tests call a command as the page does**: by name, with JSON, through the IPC of Tauri, in a window of its mock runtime (`views/test_support.rs`, the feature `test` of Tauri), on a real installation in a temporary folder.
 - `mod.rs` in the folder of a view and of an element (user, 2026-10-21), so that an element is one folder; the other folders keep `<folder>.rs` next to `<folder>/`.
@@ -182,7 +184,7 @@ views/<view>/<file>.rs               what the elements of one view share (Scan: 
 | Tests | `<file>_tests.rs` next to the file, attached with `#[cfg(test)] #[path = "<file>_tests.rs"] mod tests;`. A file of tests that covers a whole resource is named after the resource. Help for the tests in `test_support.rs` (of an area) and `src/test_support.rs` (temporary folders). |
 | Formatting | `rustfmt.toml` (120 characters); `cargo fmt --check` must be clean before a commit. |
 | Checks | `cargo test` (with the test of the architecture and the test of the command lists), `npm run check` (svelte-check, clean), clippy. |
-| Serialization | Only at the boundary to the page: `views/**/view.rs` and `tauri_ui/serializer/`; the types of the core carry no serde attributes. **The one exception** (user, 2026-10-18, `docs/oscal.md`): the types of `model/oscal/` *are* the published format of NIST and carry serde with the names of OSCAL. |
+| Serialization | Only at the boundary to the page: `views/**/view.rs` and `app/serializer/`; the types of the core carry no serde attributes. **The one exception** (user, 2026-10-18, `docs/oscal.md`): the types of `model/oscal/` *are* the published format of NIST and carry serde with the names of OSCAL. |
 | Secrets | Only in the encrypted database of the evaluator; never shown back, never printed, never in the page. |
 
 ---
@@ -331,7 +333,7 @@ security.rs/               The building blocks of protection: random numbers fro
     chip.rs                      Talking to the TPM 2.0.
     device_secret.rs             The secret of the device (`docs/architecture.md`, section 5.2).
     emulator.rs                  The TPM 2.0 emulator used until the beta version.
-tauri_ui.rs/               What the whole window shares (Tauri 2): the state the commands of the
+app.rs/                    What the whole window shares (Tauri 2): the state the commands of the
   error.rs                     The errors the commands give back to the page, in kinds the page
   serializer.rs/               How an error of a command reaches the page (serde). The data of the
     error_view.rs                How an error of a command reaches the page:

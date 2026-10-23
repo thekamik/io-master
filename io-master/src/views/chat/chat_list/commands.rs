@@ -2,9 +2,9 @@
 
 use tauri::State;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::db::ai::chats as db_chats;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 use super::view::ChatSummaryView;
 

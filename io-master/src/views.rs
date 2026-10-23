@@ -9,7 +9,7 @@
 //! views/<view>/mod.rs              the view: its elements and the flow of data between them
 //! views/<view>/<element>/mod.rs    the element: its actions, their parameters, their data
 //!                     commands.rs  the commands of the element: parameters -> work -> data
-//!                     view.rs      the data the element gets (serde: only here and in tauri_ui/)
+//!                     view.rs      the data the element gets (serde: only here and in app/)
 //! ```
 //!
 //! The page has the element of the same name (`ui/src/views/<view>/`).
@@ -18,9 +18,9 @@
 //! elements need goes down to those folders, or, when it only joins
 //! them, to a file of the view.
 //!
-//! The views replace `business/` and the commands of `tauri_ui/`
-//! (step 42 of docs/todo.md); until every view is moved, both live
-//! beside this folder.
+//! The views replaced `business/` and the commands of `tauri_ui/` (now
+//! `app/`, which keeps only what the whole window shares) in step 42
+//! of docs/todo.md.
 
 pub mod catalog_editor;
 pub mod chat;

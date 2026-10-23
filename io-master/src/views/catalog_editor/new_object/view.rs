@@ -2,8 +2,8 @@
 
 use serde::Deserialize;
 
+use crate::app::error::UiError;
 use crate::model::oscal::catalog::edit::Place;
-use crate::tauri_ui::error::UiError;
 
 /// Where a new object goes: `{"kind": "top"}`, `{"kind": "group", "id":
 /// "ADV"}`, `{"kind": "control", "id": "ADV_FSP.1"}`.

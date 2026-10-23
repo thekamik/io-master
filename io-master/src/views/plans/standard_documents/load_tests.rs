@@ -8,7 +8,7 @@ use std::sync::Mutex;
 use serde_json::Value;
 use tauri::ipc::InvokeResponseBody;
 
-use crate::tauri_ui::test_support::{TestState, logged_in};
+use crate::app::test_support::{TestState, logged_in};
 use crate::test_support::TempDir;
 use crate::test_support::standards::pdf;
 

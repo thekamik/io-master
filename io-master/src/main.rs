@@ -33,13 +33,13 @@ mod checks;
 // a new file never changes this one; the whole tree is described in
 // docs/code_structure.md.
 mod ai;
+mod app;
 mod db;
 mod hardware_tests;
 mod installation;
 mod model;
 mod pdf;
 mod security;
-mod tauri_ui;
 #[cfg(test)]
 mod test_support;
 mod views;
@@ -54,9 +54,9 @@ mod command_lists_tests;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
+use app::state::UiState;
 use installation::lifecycle::Opened;
 use installation::verify::{InstallationState, verify_installation};
-use tauri_ui::state::UiState;
 
 // The two entries of the installation in the keyring of the Linux
 // account (docs/architecture.md, section 5.6). These constants are
@@ -127,13 +127,11 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         // The dialogs of the system, used only from Rust (commands.rs).
         .plugin(tauri_plugin_dialog::init())
         // The state shared by all commands: the installation, the
-        // session, the work in progress (tauri_ui/state.rs).
+        // session, the work in progress (app/state.rs).
         .manage(UiState::new(data_dir, opened))
         // The commands the page may call: those of the views, each in
-        // the folder of its element (views/<view>/<element>/commands.rs),
-        // and those not moved yet, thin functions in
-        // tauri_ui/commands.rs that hand over to the file named in
-        // their group. A command must also be listed in build.rs and
+        // the folder of its element (views/<view>/<element>/commands.rs).
+        // A command must also be listed in build.rs and
         // capabilities/default.json, or the page is refused when it
         // calls it.
         .invoke_handler(tauri::generate_handler![

@@ -1,7 +1,7 @@
 // The errors of the commands (serializer/error_view.rs), and the sentence
 // to show for one.
 //
-// The types mirror the views of src/tauri_ui/serializer/; a change
+// The types mirror the views of src/app/serializer/; a change
 // there needs the same change here.
 
 /** An error of a command (serializer/error_view.rs). */

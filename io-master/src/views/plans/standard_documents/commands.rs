@@ -6,9 +6,9 @@ use tauri::ipc::Channel;
 use tauri::{AppHandle, Runtime, State};
 use tauri_plugin_dialog::DialogExt;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::db::standards as db_standards;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 use super::load::{self, MAX_FILES};
 use super::stored::{self, DocumentError};

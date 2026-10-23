@@ -4,10 +4,10 @@
 
 use serde::Serialize;
 
+use crate::app::error::UiError;
 use crate::hardware_tests::devices::port_property::PortProperty;
 use crate::hardware_tests::devices::scan_settings::MAX_COLUMNS;
 use crate::hardware_tests::devices::serial_ports::{ScanError, SerialPortInfo};
-use crate::tauri_ui::error::UiError;
 
 use super::super::column_view::ColumnView;
 

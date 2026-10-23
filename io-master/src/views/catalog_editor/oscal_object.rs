@@ -5,7 +5,7 @@
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
-use crate::tauri_ui::error::UiError;
+use crate::app::error::UiError;
 
 /// `value` read as a `T` of OSCAL (a group or a control).
 pub fn read<T: DeserializeOwned>(value: Value) -> Result<T, UiError> {

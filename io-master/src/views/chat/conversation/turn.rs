@@ -23,12 +23,12 @@ use tokio::sync::watch;
 use crate::ai::api::completions;
 use crate::ai::api::roles::{self, Model, ModelError};
 use crate::ai::tasks::chat as memory;
+use crate::app::error::UiError;
 use crate::db::ai::chats as db_chats;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::{ConnectionError, Role, Task, Turn};
-use crate::tauri_ui::error::UiError;
 
 use super::stored;
 use super::view::{ReplyEvent, ending_notice};

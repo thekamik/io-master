@@ -2,7 +2,7 @@
 
 use tauri::State;
 
-use crate::tauri_ui::state::UiState;
+use crate::app::state::UiState;
 
 /// Logs out: ends the session of the evaluator.
 // Tauri hands a command its state by value.

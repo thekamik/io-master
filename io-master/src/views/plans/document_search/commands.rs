@@ -2,9 +2,9 @@
 
 use tauri::State;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::db::standards as db_standards;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 use super::search;
 use super::view::{self, HitView};

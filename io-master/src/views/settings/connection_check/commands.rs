@@ -5,8 +5,8 @@ use std::sync::Arc;
 use tauri::State;
 
 use crate::ai::api::{checks, connections};
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 
 use super::view::CheckView;
 

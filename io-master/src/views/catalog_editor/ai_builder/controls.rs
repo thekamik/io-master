@@ -9,6 +9,7 @@ use tokio::sync::watch;
 use crate::ai::api::completions;
 use crate::ai::api::roles::Model;
 use crate::ai::tasks::catalog_section::{self, Section};
+use crate::app::error::UiError;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::evaluation_support::create::NewProposal;
 use crate::db::oscal as db_oscal;
@@ -18,7 +19,6 @@ use crate::installation::session::Session;
 use crate::model::ai::Task;
 use crate::model::evaluation_support::ProposalKind;
 use crate::model::standards::{Document, Part};
-use crate::tauri_ui::error::UiError;
 
 use super::steps::{self, Asked};
 use super::view::{BuildEvent, PageRange};

@@ -3,12 +3,12 @@
 use serde_json::Value;
 use tauri::State;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
 use crate::model::oscal::catalog::{Control, Group};
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 use super::super::oscal_object;
 use super::view::ObjectView;

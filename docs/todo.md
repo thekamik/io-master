@@ -22,7 +22,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14 | **40: The cleanup of the architecture** | **built 2026-10-17; waiting for the user's review** (below) |
 | 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **concept in `docs/oscal.md`, approved 2026-10-18; 41.1 to 41.3 built, 41.4 next; before step 31** |
 | 14b | **42: The views: one folder per element of the window, instead of `business/` and the commands of `tauri_ui/`** | **built 2026-10-21: every view moved, `business/` and the commands of `tauri_ui/` removed** (below) |
-| 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **concept, waiting for the user's approval** (below) |
+| 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **approved 2026-10-23; built in phases 43.1 to 43.9** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a placeholder in the sidebar; needed by steps 32 to 34 |
@@ -50,7 +50,7 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 43: One vocabulary, views and components, `tauri_ui/` renamed (2026-10-23)
 
-**State: concept, its questions answered by the user (2026-10-23); waiting for the approval to build it. No code changed yet.**
+**State: approved by the user (2026-10-23); built phase by phase (below).**
 
 The user found, after step 42: `tauri_ui/` is left although the architecture was agreed in the style of a web server; the names of the code and of the window differ from the words the user prompts in; and the views are mixed with the elements several of them use (the viewer of a standard lives in the view Evaluation plan and is used by the editor of a catalog as well).
 
@@ -88,11 +88,16 @@ The user found, after step 42: `tauri_ui/` is left although the architecture was
 - `components/` uses the folders below (`model/`, `db/`, `ai/`, ...) like a view; it never uses `views/`.
 - A view uses `components/`; it never uses another view (a part of a view inside its folder, as the editor of a catalog, is not another view).
 
-**Tasks** (one commit each, every test passing after it)
-- [ ] `tauri_ui/` renamed `app/`, the list of the commands in `app/routes.rs`; the test of the command lists.
-- [ ] `devices`, then `evaluation_plan` with the editor of a catalog, then `components/` (`pdf_viewer`, `part_rows`), then `evaluation_lab`; Rust and the page together.
-- [ ] The rules of the components in the test of the architecture.
-- [ ] The documentation: `code_structure.md` (sections 1, 2.7 to 2.9, the tree), `architecture.md` (section 4, the pages; sections 10 to 12: the old names removed), `handover.md`, `CLAUDE.md` ("Terms": the old names removed).
+**Phases** (user, 2026-10-23: short series, so that a session never runs out of its context in the middle of a change and the work always returns to a stable state). Each phase is one commit, pushed: it builds, every test passes, clippy and `npm run check` are as before, and the documentation of what it changed is in the same commit. A session does one phase, or two small ones; the next session starts at the first phase not ticked.
+- [x] 43.1 `src/tauri_ui/` renamed `src/app/` (the folder only; the names of the types `UiState`, `UiError` stay, a question for the user); every `use`, the test of the architecture, the comments, `code_structure.md`.
+- [ ] 43.2 The list of the commands moved out of `main.rs` into `app/routes.rs` (as `urls.py`); `command_lists_tests.rs` reads it there.
+- [ ] 43.3 `scan` renamed `devices`: Rust (`views/devices/`), the page (`ui/src/views/devices/`, `lib/api/devices/`), the navigation "Devices".
+- [ ] 43.4 `plans` renamed `evaluation_plan`: Rust, the page, `lib/api/`, the navigation.
+- [ ] 43.5 `catalog_editor` moved into `evaluation_plan/catalog_editor/`: Rust, the page, `lib/api/`.
+- [ ] 43.6 `components/` with its first component `pdf_viewer` (Rust and page); the rules of the components in the test of the architecture (a component never uses a view, a view never another view).
+- [ ] 43.7 `part_rows` moved into `components/` (Rust and page).
+- [ ] 43.8 `evaluation_lab`: one placeholder view instead of the pages Evaluation and Manufacturer documentation; `ui/src/pages/` removed; the navigation.
+- [ ] 43.9 The end: the notes "was ..." removed from `architecture.md` (sections 10 to 12) and `CLAUDE.md` ("Terms"), `handover.md`, the state of this step.
 
 **Done when** every name of the code is the one of the vocabulary, every element used more than once is in `components/`, and the test of the architecture checks it.
 

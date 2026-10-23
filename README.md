@@ -102,7 +102,7 @@ The program is started without parameters; everything is set in its window.
 ```text
 io-master/          the program (Rust, Tauri 2 + Svelte 5)
   src/              the core and the window, in layers: model, db, ai, hardware_tests,
-                    security, pdf, installation, tauri_ui, views (docs/code_structure.md);
+                    security, pdf, installation, app, views (docs/code_structure.md);
                     one folder per view and per element of the window in views
   ui/               the page of the window, a separate project
   oscal/            the JSON schemas of OSCAL 1.2.3 and example documents of NIST

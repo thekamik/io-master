@@ -7,7 +7,7 @@
 //! log out   user_menu_log_out   (none)       (none)
 //! ```
 //!
-//! The logout ends the session (`tauri_ui/state.rs`): a reply being
+//! The logout ends the session (`app/state.rs`): a reply being
 //! written and a long work are stopped, and the database closes and the
 //! key is gone when the last work lets the session go.
 

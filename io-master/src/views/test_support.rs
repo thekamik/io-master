@@ -12,9 +12,9 @@ use tauri::test::{INVOKE_KEY, MockRuntime, get_ipc_response, mock_builder, mock_
 use tauri::webview::InvokeRequest;
 use tauri::{App, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder};
 
+use crate::app::state::UiState;
+use crate::app::test_support::{TestState, first_start, installed, logged_in};
 use crate::installation::session::Session;
-use crate::tauri_ui::state::UiState;
-use crate::tauri_ui::test_support::{TestState, first_start, installed, logged_in};
 use crate::test_support::TempDir;
 
 use super::{catalog_editor, chat, plans, scan, settings, shell, start};

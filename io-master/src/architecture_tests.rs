@@ -8,7 +8,7 @@
 //!                  (one folder per element of the window)
 //!        ┌──────────┬────────┼─────────┬──────────────┬───────────┐
 //!        ▼          ▼        ▼         ▼              ▼           ▼
-//!    tauri_ui/     ai/   hardware_  installation/    pdf/      (model/,
+//!      app/        ai/   hardware_  installation/    pdf/      (model/,
 //!  (state, errors)  │     tests/        │                       security/)
 //!        │          │                   │
 //!        └──────────┴──────► db/ ◄──────┘
@@ -37,7 +37,7 @@ const ALLOWED: [(&str, &[&str]); 9] = [
     // protection, below the window and the views.
     ("installation", &["db", "model", "security"]),
     (
-        "tauri_ui",
+        "app",
         &[
             "installation",
             "model",
@@ -53,8 +53,8 @@ const ALLOWED: [(&str, &[&str]); 9] = [
     ),
     // The views (views.rs): the commands of the elements of the window,
     // on top of everything. They use the state and the errors of the
-    // window (tauri_ui/) and do their work with the folders below.
-    ("views", &["tauri_ui", "ai", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
+    // window (app/) and do their work with the folders below.
+    ("views", &["app", "ai", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

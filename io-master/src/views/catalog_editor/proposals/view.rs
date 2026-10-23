@@ -3,10 +3,10 @@
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::app::error::UiError;
 use crate::model::evaluation_support::{Proposal, ProposalKind, QuoteDraft};
 use crate::model::oscal::catalog::{Control, Group};
 use crate::model::standards::Document;
-use crate::tauri_ui::error::UiError;
 
 use super::super::part_rows::{self, PartRowView};
 

@@ -8,9 +8,9 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Runtime, State};
 use tauri_plugin_dialog::DialogExt;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::db::oscal as db_oscal;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 use super::file::{self, MAX_FILE};
 use super::view::{self, OscalDocumentView};

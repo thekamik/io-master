@@ -3,10 +3,10 @@
 use tauri::State;
 
 use crate::ai::api::connections;
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::db::user::database::UserDb;
 use crate::model::api_key::ApiKey;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 use super::view::ApiKeyView;
 

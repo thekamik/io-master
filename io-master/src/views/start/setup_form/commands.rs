@@ -3,11 +3,11 @@
 use tauri::State;
 use zeroize::Zeroizing;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::installation::lifecycle;
 use crate::installation::{accounts, session::Session};
 use crate::model::installation::Role;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 /// The first start: makes the installation with `role` (`"workstation"`
 /// or `"master"`) and its user `name`, and logs that user in. Refused

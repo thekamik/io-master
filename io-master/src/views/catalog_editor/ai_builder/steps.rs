@@ -10,13 +10,13 @@ use tokio::sync::watch;
 use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
+use crate::app::error::UiError;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::{Role, Task, Turn};
 use crate::model::evaluation_support::QuoteDraft;
 use crate::model::standards::{Document, Part};
-use crate::tauri_ui::error::UiError;
 
 use super::super::checked_quote;
 use super::parts;

@@ -2,8 +2,8 @@
 
 use serde::Serialize;
 
+use crate::app::error::UiError;
 use crate::model::oscal::catalog::Catalog;
-use crate::tauri_ui::error::UiError;
 
 /// A row of the tree: a group or a control.
 #[derive(Debug, Serialize)]

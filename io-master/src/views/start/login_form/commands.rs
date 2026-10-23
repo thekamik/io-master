@@ -3,9 +3,9 @@
 use tauri::State;
 use zeroize::Zeroizing;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::installation::{accounts, session::Session};
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 /// Logs in with the name and the password. A wrong password and an
 /// unknown name give the same error (`UiError::WrongCredentials`), so

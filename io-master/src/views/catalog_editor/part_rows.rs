@@ -4,9 +4,9 @@
 
 use serde::Serialize;
 
+use crate::app::error::UiError;
 use crate::model::oscal::catalog::tree::flat_parts;
 use crate::model::oscal::common::Part;
-use crate::tauri_ui::error::UiError;
 
 /// A part, as a row.
 #[derive(Debug, Serialize)]

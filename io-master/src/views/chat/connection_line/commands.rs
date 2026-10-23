@@ -3,9 +3,9 @@
 use tauri::State;
 
 use crate::ai::api::{connections, roles};
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::model::ai::Role;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 use super::view::ConnectionLineView;
 

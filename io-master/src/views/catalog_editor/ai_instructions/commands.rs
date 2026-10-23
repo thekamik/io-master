@@ -3,9 +3,9 @@
 use tauri::State;
 
 use crate::ai::api::tasks;
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::model::ai::Task;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 /// The task of the instructions `which`, one of those that build a
 /// catalog.

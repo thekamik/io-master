@@ -2,9 +2,9 @@
 
 use tauri::State;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::hardware_tests::devices::serial_ports;
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 use super::super::stored_settings;
 use super::view::PortsTableView;

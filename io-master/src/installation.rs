@@ -1,7 +1,7 @@
 //! The installation of this Linux account, its one user and the
 //! session of that user: the core of the protection of the program,
 //! used by `main.rs` at the start, by the state of the window
-//! (`tauri_ui/state.rs`) and by the views that log in, install and
+//! (`app/state.rs`) and by the views that log in, install and
 //! change the password. What an installation is (its identifier and
 //! role) is in `model/installation.rs`.
 //!

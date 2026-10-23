@@ -12,8 +12,8 @@ use tauri::ipc::InvokeResponseBody;
 
 use crate::ai::api::connections;
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions as connection_to, completions_events};
+use crate::app::test_support::{TestState, logged_in};
 use crate::model::api_key::ApiKey;
-use crate::tauri_ui::test_support::{TestState, logged_in};
 use crate::test_support::standards::load;
 use crate::views::catalog_editor::proposals::accept::accept;
 use crate::views::plans::new_catalog::made;

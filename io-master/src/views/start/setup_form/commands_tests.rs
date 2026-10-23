@@ -2,7 +2,7 @@
 
 use serde_json::{Value, json};
 
-use crate::tauri_ui::test_support::PASSWORD;
+use crate::app::test_support::PASSWORD;
 use crate::views::test_support::first_start_window;
 
 /// The form of the setup.

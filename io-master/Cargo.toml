@@ -38,7 +38,7 @@ serde_json = { version = "1.0.154", features = ["preserve_order"] }
 tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "net", "signal", "sync"] }
 
 # The views and forms of the page as JSON, at the boundary to the
-# window only (src/tauri_ui/serializer/).
+# window only (src/app/serializer/).
 serde = { version = "1.0", features = ["derive"] }
 
 # The databases: SQLite with SQLCipher, which encrypts the whole
@@ -76,7 +76,7 @@ reqwest = { version = "0.13.5", default-features = false, features = ["rustls", 
 # network or read from files to resolve them.
 jsonschema = { version = "=0.58.5", default-features = false }
 
-# The desktop interface (src/tauri_ui/, ui/): a window of the
+# The desktop interface (src/app/, ui/): a window of the
 # system with a web view (WebKitGTK on Linux) that shows the page of
 # ui/, and calls into Rust through commands, without a network port.
 # "custom-protocol" serves the page built into the program also in
@@ -89,7 +89,7 @@ tauri = { version = "2.12.4", features = ["custom-protocol"] }
 base64 = "0.22.1"
 
 # The dialogs of the system to choose files (the PDFs of a standard,
-# the files of projects; src/tauri_ui/commands.rs). The
+# the files of OSCAL; src/views/plans/). The
 # official plugin of Tauri; it is called only from Rust, so the page
 # never gets a way to the files of the computer itself.
 tauri-plugin-dialog = "2.8.3"

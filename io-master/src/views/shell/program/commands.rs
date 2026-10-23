@@ -2,7 +2,7 @@
 
 use tauri::State;
 
-use crate::tauri_ui::state::UiState;
+use crate::app::state::UiState;
 
 use super::view::ProgramView;
 

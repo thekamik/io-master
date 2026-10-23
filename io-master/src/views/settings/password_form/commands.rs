@@ -3,9 +3,9 @@
 use tauri::State;
 use zeroize::Zeroizing;
 
+use crate::app::error::UiError;
+use crate::app::state::UiState;
 use crate::installation::accounts::{self, AccountError};
-use crate::tauri_ui::error::UiError;
-use crate::tauri_ui::state::UiState;
 
 /// Changes the password of the logged-in evaluator. The current
 /// password is needed; the two new ones must agree.

@@ -10,7 +10,7 @@ use serde_json::Value;
 use tauri::ipc::InvokeResponseBody;
 
 use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
-use crate::tauri_ui::test_support::{TestState, logged_in};
+use crate::app::test_support::{TestState, logged_in};
 
 use crate::db::ai::connection::{create as connections_create, update as connections_update};
 use crate::db::encryption::database_key::DatabaseKey;

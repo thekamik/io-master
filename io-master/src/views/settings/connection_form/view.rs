@@ -9,8 +9,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::ai::presets::Preset;
+use crate::app::error::UiError;
 use crate::model::ai::{AnswerMode, Connection};
-use crate::tauri_ui::error::UiError;
 
 /// A connection as the page shows it.
 #[derive(Debug, Serialize)]

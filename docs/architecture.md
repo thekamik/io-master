@@ -285,7 +285,7 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 |---|---|---|
 | `views/` | the views of section 10.1: one folder per view, with the elements of its page used only there; a command takes the parameters from the page, does the work with the folders below and gives the data back | `components/`, everything below |
 | `components/` (planned, step 43) | the components of section 10.2, built as an element: its commands and its data | everything below `views/` |
-| `app/` (now `tauri_ui/`) | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart, the list of the commands | `installation/`, `model/`, the errors of the folders below |
+| `app/` (was `tauri_ui/`) | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart, the list of the commands | `installation/`, `model/`, the errors of the folders below |
 | `installation/` | the installation of the Linux account, its one account and the session of the logged-in evaluator: the core of the protection | `db/`, `security/`, `model/` |
 | `ai/` | the whole communication with AI services: `ai/api/` the only way to a model, `ai/tasks/` the questions and the reading of the answers | `db/`, `model/` |
 | `hardware_tests/` | everything that talks to hardware: the scan of the serial ports, later UART, Bluetooth, the permissions of the ports | `model/` |

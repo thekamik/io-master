@@ -1,7 +1,7 @@
 //! The error of every function of the database layer (`db/`).
 //!
 //! The functions of `db/` return plain Rust types and this error;
-//! the interface tells its kinds apart (`tauri_ui/error.rs`).
+//! the interface tells its kinds apart (`app/error.rs`).
 
 use std::fmt;
 use std::io;

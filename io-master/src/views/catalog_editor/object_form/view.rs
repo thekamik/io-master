@@ -3,9 +3,9 @@
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::app::error::UiError;
 use crate::model::oscal::catalog::tree::Location;
 use crate::model::oscal::catalog::{Catalog, Control, Group};
-use crate::tauri_ui::error::UiError;
 
 use super::super::part_rows::{self, PartRowView};
 
