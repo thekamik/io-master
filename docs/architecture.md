@@ -327,14 +327,18 @@ UserMenu  ──user_menu_log_out()───────────────
 App.svelte ──program_get()──► ProgramView: installed, the role, who is logged in, the pages, the warnings
 ```
 
-**`chat`.**
+**`chat`** (entry `views/chat/chat.rs`, page `ui/src/views/chat/`).
 
 ```text
-list ──choose(id)──► the view ──► conversation ──open(id)──► the chat from db/
-conversation ──send(chat, text)──► db: the message ──► ai/api/: the reply, piece by piece ──► db: the reply
-     ▲                                                     │
-     └──────────── events: the text as it comes, the end ◄─┘
-conversation ──"changed"──► the view ──► list reads again
+the view opens
+  ├─► ConnectionLine ──connection_line_get()──► the connection of the role consultation (ai/api/)
+  └─► ChatList ──chat_list_get()──► db/ai/chats/: the chats, the newest first
+ChatList ──"chosen"(id)──► the view ──► Conversation ──conversation_open(id)──► the chat from db/
+Conversation ──conversation_send(chat, text)──► db: the message ──► ai/api/: the reply, piece by piece ──► db: the reply
+     ▲                                                                   │
+     └──────────── events (ReplyEvent): the text as it comes, the end ◄──┘
+Conversation ──conversation_stop() / conversation_delete(id)
+Conversation ──"changed"──► the view ──► ChatList ──chat_list_get()──► the list again
 ```
 
 **`evaluation_plan`.** The documents of standards (PDF), the documents of OSCAL, and the editor of a catalog:

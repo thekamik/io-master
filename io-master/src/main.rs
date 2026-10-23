@@ -302,9 +302,27 @@ mod views {
         }
     }
 
+    // views/chat/: the view Chat: the chats of the evaluator with the model of
+    // the role consultation.
+    pub mod chat {
+        #[allow(clippy::module_inception)]
+        pub mod chat;
+
+        pub mod chat_list {
+            pub mod view;
+        }
+        pub mod connection_line {
+            pub mod view;
+        }
+        pub mod conversation {
+            pub mod stored;
+            pub mod turn;
+            pub mod view;
+        }
+    }
+
     // The views not written here yet declare their modules in their mod.rs
     // (step 46).
-    pub mod chat;
     pub mod evaluation_plan;
     pub mod settings;
 

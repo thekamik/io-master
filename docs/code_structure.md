@@ -179,7 +179,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
 ```
 
-The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** Devices, Start and Shell are built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
+The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** Devices, Start, Shell and Chat are built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
 
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
@@ -367,14 +367,12 @@ components.rs/             The components of the window: small elements used mor
     view.rs                      The data of the viewer, as the page gets it: the documents it can
 views.rs/                  The views of the window, one folder per view and one folder per
   chat/                        The view Chat: the chats of the evaluator with the model of the role
+    chat.rs                      The entry of the view Chat: every command the page calls for it
     chat_list/                   The element "list of chats" of the view Chat
-      commands.rs                  The command of the list of chats.
       view.rs                      The data of the list of chats, as the page gets it.
     connection_line/             The element "connection line" of the view Chat: which AI connection
-      commands.rs                  The command of the connection line.
       view.rs                      The data of the connection line, as the page gets it.
     conversation/                The element "conversation" of the view Chat: the open chat, a new
-      commands.rs                  The commands of the conversation.
       stored.rs                    What a chat keeps (`db/ai/chats/`, tables `chats` and `messages`, in
       turn.rs                      One turn of a chat: the message of the evaluator is checked and
       view.rs                      The data of the conversation as the page gets it: an open chat, and

@@ -1,5 +1,5 @@
 <!--
-  The element "list of chats" of the view Chat (src/views/chat/chat_list/).
+  The element "list of chats" of the view Chat (its command chat_list_get in src/views/chat/chat.rs).
   Choosing a chat and "New chat" only tell the view (onchoose); the view
   opens the chat in the conversation. The view asks for the list again
   when the conversation changed the chats (reload(), below).
@@ -8,7 +8,7 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as chatList from "../../lib/api/chat/chat_list";
+  import * as chat from "../../lib/api/chat";
 
   let {
     chosen,
@@ -16,13 +16,13 @@
     onchoose,
   }: { chosen: number | null; busy: boolean; onchoose: (chatId: number | null) => void } = $props();
 
-  let chats: chatList.ChatSummaryView[] = $state([]);
+  let chats: chat.ChatSummaryView[] = $state([]);
   let problem = $state("");
 
   /** Reads the chats again; called by the view after a change. */
   export async function reload() {
     try {
-      chats = await chatList.get();
+      chats = await chat.chatListGet();
       problem = "";
     } catch (error) {
       problem = `Your chats cannot be read: ${sentence(error)}`;

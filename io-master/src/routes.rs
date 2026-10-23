@@ -45,12 +45,12 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::devices::devices::scanner_settings_get,
         crate::views::devices::devices::scanner_settings_save,
         // The view Chat (views/chat/).
-        crate::views::chat::connection_line::commands::connection_line_get,
-        crate::views::chat::chat_list::commands::chat_list_get,
-        crate::views::chat::conversation::commands::conversation_open,
-        crate::views::chat::conversation::commands::conversation_send,
-        crate::views::chat::conversation::commands::conversation_stop,
-        crate::views::chat::conversation::commands::conversation_delete,
+        crate::views::chat::chat::connection_line_get,
+        crate::views::chat::chat::chat_list_get,
+        crate::views::chat::chat::conversation_open,
+        crate::views::chat::chat::conversation_send,
+        crate::views::chat::chat::conversation_stop,
+        crate::views::chat::chat::conversation_delete,
         // The view Evaluation plan (views/evaluation_plan/).
         crate::views::evaluation_plan::oscal_documents::commands::oscal_documents_get,
         crate::views::evaluation_plan::oscal_documents::commands::oscal_documents_import,

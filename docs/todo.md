@@ -89,7 +89,7 @@ When the folder of a view is opened, one must see at once where the view begins:
 **Phases** (one commit each, pushed, every test passing; the documents with each)
 - [x] 46.1 `devices`, the pilot; `views.rs` written in the map of `main.rs`; the test of the command lists for entry files.
 - [x] 46.2 `start` and `shell`. An element with no data of its own (the login form) has no folder in the program; the test of the names takes the elements also from the components of the page (`LoginForm.svelte` is `login_form`).
-- [ ] 46.3 `chat`.
+- [x] 46.3 `chat`.
 - [ ] 46.4 `settings`.
 - [ ] 46.5 `evaluation_plan`.
 - [ ] 46.6 the editor of a catalog.
