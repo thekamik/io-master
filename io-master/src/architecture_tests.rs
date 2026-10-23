@@ -4,60 +4,70 @@
 //! in one place:
 //!
 //! ```text
-//!               tauri_ui/
-//!                  │
-//!                  ▼
-//!               business/
-//!          ┌───────┼──────────────┐
-//!          ▼       ▼              ▼
-//!         ai/   hardware_tests/   │
-//!          │       │              │
-//!          └───────┴──────► db/ ◄─┘
-//!                           │
+//!                         views/
+//!                  (one folder per view of the window)
+//!                            │
+//!                            ▼
+//!                       components/
+//!                  (the elements used more than once)
+//!        ┌──────────┬────────┼─────────┬──────────────┬───────────┐
+//!        ▼          ▼        ▼         ▼              ▼           ▼
+//!      app/        ai/   hardware_  installation/    pdf/      (model/,
+//!  (state, errors)  │     tests/        │                       security/)
+//!        │          │                   │
+//!        └──────────┴──────► db/ ◄──────┘
+//!                            │
 //!          all of them ───► model/, security/
 //! ```
 //!
 //! A folder uses only itself and the folders below it, and never a
 //! folder above it: no cycle. The tests (`*_tests.rs`, `test_support.rs`)
 //! are not held to it: they set up data across the layers.
+//!
+//! Two rules of step 43 (docs/architecture.md, section 10.2) are checked
+//! as well: a view never uses another view (what two views need is a
+//! component), and a component of the page never imports a view of the
+//! page.
 
 use std::fs;
 use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-const ALLOWED: [(&str, &[&str]); 7] = [
+const ALLOWED: [(&str, &[&str]); 10] = [
     ("model", &[]),
     ("security", &[]),
     ("hardware_tests", &[]),
+    // Reading PDFs with Poppler: another program, nothing of ours.
+    ("pdf", &[]),
     ("db", &["model", "security"]),
     ("ai", &["db", "model", "security"]),
-    ("business", &["ai", "db", "hardware_tests", "model", "security"]),
+    // The installation, its account and the session: the core of the
+    // protection, below the window and the views.
+    ("installation", &["db", "model", "security"]),
     (
-        "tauri_ui",
+        "app",
         &[
-            "business",
+            "installation",
             "model",
-            // The settings of the AI are resources of ai/api/ already
-            // (connections, roles, checks): the tab AI shows them as
-            // they are; and the presets of known services.
-            "ai::api",
-            "ai::presets",
-            // The type of the open database, passed from the session to
-            // the business, and the error of a database, turned into an
-            // error of the page. Never a function of the CRUD of db/.
-            "db::user::database::UserDb",
+            // The errors of the folders below, turned into errors of the
+            // page; never a function of them.
+            "ai::api::completions::AiError",
+            "ai::api::connections::ConnectionSaveError",
+            "ai::api::roles::ModelError",
             "db::error",
-            // The types of a port, shown in the page of the scan; the
-            // scan itself goes through business/hardware/.
-            "hardware_tests::devices::serial_ports::PortFilter",
-            "hardware_tests::devices::serial_ports::PortType",
-            "hardware_tests::devices::serial_ports::SerialPortInfo",
-            "hardware_tests::devices::serial_ports::UsbInfo",
-            "hardware_tests::devices::serial_ports::AccessInfo",
-            "hardware_tests::devices::port_property",
+            "db::oscal::error::OscalError",
+            "hardware_tests::devices::scan_settings::ScanSettingsError",
         ],
     ),
+    // The components (components.rs): the elements used more than once,
+    // built as the elements of a view; never a view.
+    ("components", &["app", "ai", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
+    // The views (views.rs): the commands of the elements of the window,
+    // on top of everything. They use the state and the errors of the
+    // window (app/) and the components, and do their work with the folders
+    // below. A view never uses another view (checked below).
+    ("views", &["app", "ai", "components", "db", "hardware_tests", "installation", "model", "pdf", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:
@@ -155,4 +165,109 @@ fn every_folder_uses_only_the_folders_below_it() {
     broken.sort();
     broken.dedup();
     assert!(broken.is_empty(), "uses against the direction of the dependencies:\n{}", broken.join("\n"));
+}
+
+/// The views of the window: the folders of `views/`.
+fn view_folders(root: &Path) -> Vec<String> {
+    let mut found = Vec::new();
+
+    for entry in fs::read_dir(root.join("views")).expect("the folder views is read").flatten() {
+        if entry.path().is_dir() {
+            found.push(entry.file_name().to_string_lossy().into_owned());
+        }
+    }
+
+    found
+}
+
+/// How deep the module of `file` lies in the folder of its view: 1 for
+/// `chat/mod.rs`, 2 for `chat/conversation/mod.rs` and `chat/turn.rs`.
+fn depth_in_view(file: &Path) -> usize {
+    let parts = file.components().count();
+
+    if file.file_name().is_some_and(|name| name == "mod.rs") { parts - 1 } else { parts }
+}
+
+/// The paths of `text` that start with `super::`, as the number of their
+/// `super::` (a path `super::super::x` is 2).
+fn super_chains(text: &str) -> Vec<usize> {
+    let mut found = Vec::new();
+
+    for (at, _) in text.match_indices("super::") {
+        let before = text[..at].chars().next_back().unwrap_or(' ');
+
+        if before == ':' || before.is_alphanumeric() || before == '_' {
+            continue;
+        }
+
+        found.push(text[at..].split("::").take_while(|part| *part == "super").count());
+    }
+
+    found
+}
+
+#[test]
+fn a_view_never_uses_another_view() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let views = view_folders(&root);
+    let mut broken = Vec::new();
+
+    assert!(views.len() > 1, "the views are found");
+
+    for view in &views {
+        for (file, text) in files(&root.join("views"), view) {
+            // By its name: `crate::views::<another view>`.
+            for path in paths(&text) {
+                let mut parts = path.split("::");
+
+                if parts.next() == Some("views") && parts.next().is_some_and(|other| other != view) {
+                    broken.push(format!("views/{file}: crate::{path}"));
+                }
+            }
+
+            // By `super::`: a chain that leaves the folder of the view.
+            let depth = depth_in_view(Path::new(&file));
+
+            for chain in super_chains(&text) {
+                if chain >= depth {
+                    broken.push(format!("views/{file}: a path with {chain} times super:: leaves the view {view}"));
+                }
+            }
+        }
+    }
+
+    broken.sort();
+    broken.dedup();
+    assert!(broken.is_empty(), "a view uses another view:\n{}", broken.join("\n"));
+}
+
+#[test]
+fn a_component_of_the_page_never_imports_a_view() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("src").join("components");
+    let mut pending = vec![root.clone()];
+    let mut checked = 0;
+    let mut broken = Vec::new();
+
+    while let Some(directory) = pending.pop() {
+        for entry in fs::read_dir(&directory).expect("the folder of the components is read").flatten() {
+            let path = entry.path();
+
+            if path.is_dir() {
+                pending.push(path);
+                continue;
+            }
+
+            checked += 1;
+            let text = fs::read_to_string(&path).unwrap_or_default();
+
+            for line in text.lines() {
+                if line.trim_start().starts_with("import") && line.contains("/views/") {
+                    broken.push(format!("{}: {}", path.strip_prefix(&root).unwrap_or(&path).display(), line.trim()));
+                }
+            }
+        }
+    }
+
+    assert!(checked > 0, "the components of the page are found");
+    assert!(broken.is_empty(), "a component imports a view:\n{}", broken.join("\n"));
 }

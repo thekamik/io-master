@@ -1,0 +1,51 @@
+/* ---------------------------------------------------------------
+ * 9. Devices
+ * ------------------------------------------------------------- */
+
+.table-card {
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+}
+
+table.ports {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+table.ports th,
+table.ports td {
+    padding: 0.55rem 0.85rem;
+    text-align: left;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border);
+    /* Paths and ids are read as a whole; values of several lines
+       (the stable names of a port) keep their lines. */
+    white-space: pre;
+}
+
+table.ports th {
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--surface-2);
+}
+
+table.ports tbody tr:last-child td {
+    border-bottom: none;
+}
+
+table.ports tbody tr:hover td {
+    background: var(--surface-2);
+}
+
+main section > h2 {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}

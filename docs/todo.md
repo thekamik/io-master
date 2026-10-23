@@ -21,9 +21,11 @@ The number of a step is its name and never changes, so that references in the co
 | 13 | 39: The domain folders and the objects in memory | built 2026-10-17; reworked by step 40 (`history.md`) |
 | 14 | **40: The cleanup of the architecture** | **built 2026-10-17; waiting for the user's review** (below) |
 | 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **concept in `docs/oscal.md`, approved 2026-10-18; 41.1 to 41.3 built, 41.4 next; before step 31** |
+| 14b | **42: The views: one folder per element of the window, instead of `business/` and the commands of `tauri_ui/`** | **built 2026-10-21: every view moved, `business/` and the commands of `tauri_ui/` removed** (below) |
+| 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **built 2026-10-23, in the phases 43.1 to 43.9** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
-| later | 30: Tool "Manufacturer documentation" | designed later (user); a placeholder in the sidebar; needed by steps 32 to 34 |
+| later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
 | later | 28: Reports in the LaTeX template of the laboratory | with or after step 23 |
 | 16 | 13: Start: keyring, secret of the application, one user per account | after the review |
 | 17 | 6: Port permissions | |
@@ -43,6 +45,88 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 43: One vocabulary, views and components, `tauri_ui/` renamed (2026-10-23)
+
+**State: built 2026-10-23, in the phases 43.1 to 43.9 (below).**
+
+The user found, after step 42: `tauri_ui/` is left although the architecture was agreed in the style of a web server; the names of the code and of the window differ from the words the user prompts in; and the views are mixed with the elements several of them use (the viewer of a standard lives in the view Evaluation plan and is used by the editor of a catalog as well).
+
+**Decisions of the user**
+- [x] One vocabulary for Rust, the page, the navigation and the documents (`CLAUDE.md`, "Terms"): `start`, `shell`, `evaluation_plan`, `evaluation_lab`, `devices`, `settings`, `chat`.
+- [x] A view is a whole page (the high-level display); a component is a small element used more than once (several times in one view or in several views), kept in `components/` and imported by the views (`CLAUDE.md`, "Terms"). Example to come: the *requirement*, with its functions of the AI.
+- [x] `tauri_ui/` is renamed **`app/`** (user, 2026-10-23): `state.rs`, `error.rs`; the list of the commands moved out of `main.rs` into `src/routes.rs` (as `urls.py` of Django), above `views/`. It holds the infrastructure every view uses, as the session and the error handling of a web framework; not `server/`, a name kept for the network server of the reset service (steps 4 and 11).
+- [x] The vocabulary, the tasks of the folders and the flow of data in the views are in `architecture.md`, sections 10 to 12 (user, 2026-10-23).
+- [x] The Manufacturer documentation (step 30) is a part of `evaluation_lab` (user, 2026-10-23): during an evaluation the laboratory delivers the evidence there (quotes of the Security Target, ...). The placeholder page goes into the view.
+- [ ] **The tiles of the evidence (open, not part of this step):** the user has not thought them through yet (2026-10-23). The present idea (`architecture.md`, section 10.2): requirement ← input ← proof, the AI in the input checking whether a proof meets the criteria to be that input of the requirement. Settled in the concept of step 41.5.
+- [x] **How the window loads** (user, 2026-10-23): the page is loaded once; a view asks for no data of its own; every element and component reads its own data with its own command and refreshes only itself (`architecture.md`, section 12). This is the way of step 42, kept.
+
+**The map** (old → new; the commands keep their names `<element>_<action>`, only their paths change)
+
+| Old | New | Why |
+|---|---|---|
+| `src/tauri_ui/` | `src/app/`; the list of the commands of `main.rs` to `src/routes.rs` | infrastructure, not an interface |
+| `src/views/plans/` | `src/views/evaluation_plan/` | vocabulary |
+| `src/views/catalog_editor/` | `src/views/evaluation_plan/catalog_editor/` | opened from the evaluation plan (`Plans.svelte`), a part of it |
+| `src/views/plans/pdf_viewer/` | `src/components/pdf_viewer/` | used by the evaluation plan and the editor of a catalog |
+| `src/views/catalog_editor/part_rows.rs` | `src/components/part_rows/` | used twice: the object chosen and the proposals |
+| `src/views/scan/` | `src/views/devices/` | vocabulary; its elements keep their names |
+| `ui/src/views/plans/`, `Plans.svelte` | `ui/src/views/evaluation_plan/`, `EvaluationPlan.svelte` | vocabulary |
+| `ui/src/views/catalog_editor/` | `ui/src/views/evaluation_plan/catalog_editor/` | as in Rust |
+| `ui/src/views/plans/PdfViewer.svelte`, `lib/pdf.ts` | `ui/src/components/PdfViewer.svelte` (with its pdf.js code) | component |
+| `ui/src/views/catalog_editor/PartRows.svelte` | `ui/src/components/PartRows.svelte` | component |
+| `ui/src/views/scan/`, `Scan.svelte` | `ui/src/views/devices/`, `Devices.svelte` | vocabulary |
+| `ui/src/pages/Evaluation.svelte`, `Documentation.svelte` | `ui/src/views/evaluation_lab/EvaluationLab.svelte` (one placeholder) | vocabulary; the documentation of the manufacturer is a part of the evaluation lab; `pages/` removed |
+| `ui/src/lib/api/<old view>/` | `ui/src/lib/api/<new view>/`, `ui/src/lib/api/components/` | as the views |
+| navigation: "Scan and permissions", "Evaluation", "Manufacturer documentation" | "Devices", "Evaluation lab" | vocabulary |
+
+`chat/`, `settings/`, `start/` and `shell/` keep their names. What two elements of the editor of a catalog share without being shown (`checked_quote.rs`, `oscal_object.rs`) stays in its folder: it is not a component.
+
+**The rules checked by `src/architecture_tests.rs`**
+- `components/` uses the folders below (`model/`, `db/`, `ai/`, ...) like a view; it never uses `views/`.
+- A view uses `components/`; it never uses another view (a part of a view inside its folder, as the editor of a catalog, is not another view).
+
+**Phases** (user, 2026-10-23: short series, so that a session never runs out of its context in the middle of a change and the work always returns to a stable state). Each phase is one commit, pushed: it builds, every test passes, clippy and `npm run check` are as before, and the documentation of what it changed is in the same commit. A session does one phase, or two small ones; the next session starts at the first phase not ticked.
+- [x] 43.1 `src/tauri_ui/` renamed `src/app/` (the folder only; its types renamed in 43.2); every `use`, the test of the architecture, the comments, `code_structure.md`.
+- [x] 43.2 The list of the commands moved out of `main.rs` into **`src/routes.rs`** (as `urls.py`; user, 2026-10-23: not `app/routes.rs`, which would name `views/` from below them, a cycle); the window and the tests of the commands use the one list (the copy in `views/test_support.rs` removed); `command_lists_tests.rs` reads it there. The types `UiState`, `UiError` renamed `AppState`, `AppError` (also `AppError` and `isAppError` of the page).
+- [x] 43.3 `scan` renamed `devices`: Rust (`views/devices/`), the page (`ui/src/views/devices/`, `lib/api/devices/`), the navigation "Devices".
+- [x] 43.4 `plans` renamed `evaluation_plan`: Rust, the page, `lib/api/`, the navigation.
+- [x] 43.5 `catalog_editor` moved into `evaluation_plan/catalog_editor/`: Rust, the page, `lib/api/`.
+- [x] 43.6 `components/` with its first component `pdf_viewer` (Rust and page); the rules of the components in the test of the architecture (a component never uses a view, a view never another view).
+- [x] 43.7 `part_rows` moved into `components/` (Rust and page).
+- [x] 43.8 `evaluation_lab`: one placeholder view instead of the pages Evaluation and Manufacturer documentation; `ui/src/pages/` removed; the navigation. A test that the ids of the pages (`views/shell/program/view.rs`) and the page `Shell.svelte` agree (an icon, a subtitle, a view for each), as the commands are checked (found in 43.4: the subtitle of Devices was lost in 43.3 and no check saw it).
+- [x] 43.9 The end: the notes "was ..." removed from `architecture.md` (sections 10 to 12) and `CLAUDE.md` ("Terms"), `handover.md`, the state of this step.
+
+**Done when** every name of the code is the one of the vocabulary, every element used more than once is in `components/`, and the test of the architecture checks it.
+
+---
+
+## Step 42: The views (2026-10-21)
+
+The user found that `business/` and the commands of `tauri_ui/` did the same thing in two layers: one action of the page went through three Rust functions of the same name and two closures, and the data flow could not be followed. The layout and its rules: `code_structure.md`, section 2.9.
+
+**Decisions of the user**
+- [x] Like the views of Django: every function that joins the program with the page belongs to an element of the window; `business/` and the commands of `tauri_ui/` are joined into `src/views/<view>/<element>/`.
+- [x] The page (`ui/`) and the Rust program are separate projects; their files are never mixed. The page has the same names (`ui/src/views/<view>/`).
+- [x] Only what matters goes to Rust (the AI, processing, storing); presentation stays in the page; only final results are sent.
+- [x] When an element changes data another element shows, it tells the view, and the other element reads the data again with its own command.
+- [x] `mod.rs` in the folder of a view and of an element; commands named `<element>_<action>`.
+- [x] The pilot is Scan.
+- [x] New code follows the rules for Rust (CLAUDE.md, "The rules for Rust").
+
+**Tasks**
+- [x] Scan: `views/scan/` (`ports_table/`, `scanner_settings/`), the settings of the scanner as plain data in `hardware_tests/devices/scan_settings.rs`, stored by `db/scan_settings/`; `business/hardware/`, `tauri_ui/commands/scan.rs` and `serializer/scan_view.rs` removed; the page in `ui/src/views/scan/`.
+- [x] `ensure!` (`checks.rs`); the tests of the commands through the IPC of Tauri (`views/test_support.rs`); the test of the command lists for the views (`command_lists_tests.rs`); `views/` in the test of the architecture.
+- [x] Start (`setup_form`, `login_form`) and Shell (`program`, `user_menu`); the installation, the account and the session moved unchanged to `installation/`. The setup, the login and the logout give no data back: the page reads the state of the program again (`program_get`).
+- [x] Chat (`connection_line`, `chat_list`, `conversation`); one turn of a chat (`business/chats/`) moved into the conversation (`turn.rs`, `stored.rs`); the line names the connection of the role *consultation*, as the chat uses it.
+- [x] Settings (`password_form`, `connection_list`, `connection_form`, `api_key`, `connection_check`); the tab Program shows the state of the program the frame has read. The key has an element of its own: the form never carries it, and the key is read again after a save (a changed address removes it).
+- [x] Evaluation plan (`oscal_documents`, `new_catalog`, `standard_documents`, `document_search`, `pdf_viewer`): the reading of PDFs in the new folder `pdf/` (without a closure: the loading reads part by part), the normal form of a quote in `model/standards/quote.rs`, the error of the stored documents of OSCAL in `db/oscal/error.rs`, the small standard of the tests in `test_support/standards.rs`. Every element reads the data it shows (the viewer and the new catalog their documents, a hit the title of its document). The command `document_page`, which the page never called, removed.
+- [x] The editor of a catalog, the last view (`catalog_tree`, `object_form`, `new_object`, `object_quotes`, `proposals`, `ai_builder`, `ai_instructions`): the changes of a catalog in memory in `model/oscal/catalog/` (`edit.rs`, `tree.rs`), the new UUIDs and times in `db/oscal/ids.rs`, a new catalog in `views/plans/new_catalog/made.rs`, the parts of the pages for the AI in `ai_builder/parts.rs`. The heavy work: the AI is an `async fn` command that awaits `ai/api/`, the PDFs are read with `spawn_blocking` (`code_structure.md`, section 2.9). The page in `ui/src/views/catalog_editor/`.
+- [x] `business/`, `tauri_ui/commands/`, `tauri_ui/session.rs` and `tauri_ui/blocking.rs` removed; `tauri_ui/serializer/` keeps only the error of a command (`error_view.rs`); `ui/src/components/` removed, `ui/src/pages/` keeps the two pages that call no command yet (Evaluation, Documentation); the exceptions of `architecture_tests.rs` for `tauri_ui/` are only the errors of the folders below.
+
+**Done when** every command of the window lives in the folder of its element and `business/` is gone.
 
 ---
 
@@ -329,7 +413,7 @@ Built on 2026-10-17 on the test projects and removed with them in step 41.1; its
 
 ## Step 30: Tool "Manufacturer documentation" (later)
 
-Designed later (user, 2026-10-17); its place in the sidebar holds a placeholder (`ui/src/pages/Documentation.svelte`). The documents of the manufacturer (Security Target, guidance, design) are loaded and analysed in a way proper to them; in OSCAL they become the system security plan and the component definition (`oscal.md`, section 1), which an assessment plan imports and an evaluation reads. Steps 32 to 34 need it.
+Designed later (user, 2026-10-17); a part of the view Evaluation lab since step 43 (user, 2026-10-23), whose placeholder (`ui/src/views/evaluation_lab/`) names it. The documents of the manufacturer (Security Target, guidance, design) are loaded and analysed in a way proper to them; in OSCAL they become the system security plan and the component definition (`oscal.md`, section 1), which an assessment plan imports and an evaluation reads. Steps 32 to 34 need it.
 
 ## Step 31: The window of the evaluation
 

@@ -6,6 +6,10 @@ use rusqlite::named_params;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::oscal::OscalDocument;
+use crate::model::oscal::catalog::Catalog;
+
+use super::error::OscalError;
+use super::ids::now_date_time;
 
 use super::rows::checked_json;
 
@@ -29,4 +33,13 @@ pub fn document(db: &UserDb, document: &OscalDocument) -> Result<(), DbError> {
     )?;
 
     if count == 0 { Err(DbError::NoRow { table: "oscal_documents", id: 0 }) } else { Ok(()) }
+}
+
+/// Stores a changed catalog with a new `last-modified`, checked against
+/// the schema of NIST.
+pub fn catalog(db: &UserDb, mut catalog: Catalog) -> Result<(), OscalError> {
+    catalog.metadata.last_modified = now_date_time();
+    document(db, &OscalDocument::Catalog(catalog))?;
+
+    Ok(())
 }

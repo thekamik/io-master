@@ -4,7 +4,10 @@ use rusqlite::{OptionalExtension, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
+use crate::model::oscal::catalog::Catalog;
 use crate::model::oscal::{OscalDocument, OscalSummary};
+
+use super::error::OscalError;
 
 use super::rows::{document_from_row, summary_from_row};
 
@@ -40,4 +43,14 @@ pub fn document(db: &UserDb, uuid: &str) -> Result<Option<OscalDocument>, DbErro
             document_from_row,
         )
         .optional()?)
+}
+
+/// Catalog `uuid`; an error when there is no such document, or it is not
+/// a catalog.
+pub fn catalog(db: &UserDb, uuid: &str) -> Result<Catalog, OscalError> {
+    match document(db, uuid)? {
+        Some(OscalDocument::Catalog(catalog)) => Ok(catalog),
+        Some(_) => Err(OscalError::WrongModel),
+        None => Err(OscalError::NotFound),
+    }
 }

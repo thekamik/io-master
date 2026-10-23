@@ -1,11 +1,11 @@
 // The errors of the commands (serializer/error_view.rs), and the sentence
 // to show for one.
 //
-// The types mirror the views of src/tauri_ui/serializer/; a change
+// The types mirror the views of src/app/serializer/; a change
 // there needs the same change here.
 
 /** An error of a command (serializer/error_view.rs). */
-export interface UiError {
+export interface AppError {
   kind:
     | "not_installed"
     | "already_installed"
@@ -21,7 +21,7 @@ export interface UiError {
 }
 
 /** Whether a rejected call carries an error of a command. */
-export function isUiError(error: unknown): error is UiError {
+export function isAppError(error: unknown): error is AppError {
   return typeof error === "object" && error !== null && "kind" in error && "message" in error;
 }
 
@@ -32,7 +32,7 @@ export function isUiError(error: unknown): error is UiError {
  * both.
  */
 export function sentence(error: unknown): string {
-  const text = isUiError(error) ? error.message : String(error);
+  const text = isAppError(error) ? error.message : String(error);
   const capital = text.charAt(0).toUpperCase() + text.slice(1);
 
   return /[.!?]$/.test(capital) ? capital : `${capital}.`;

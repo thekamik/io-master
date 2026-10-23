@@ -1,4 +1,7 @@
-//! Help for the tests of the whole program: temporary directories.
+//! Help for the tests of the whole program: temporary directories, and
+//! a small standard (`standards.rs`).
+
+pub mod standards;
 
 use std::fs;
 use std::path::{Path, PathBuf};

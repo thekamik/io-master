@@ -32,13 +32,13 @@ the user confirms them.
 
 | File | Why |
 |---|---|
-| `io-master/src/business/installation/verify.rs` | Rebuilt in step 13 (keyring, secret of the application). |
-| `io-master/src/business/installation/uninstall.rs` | Not compiled; "DO NOT USE: TO BE REWORKED" (uninstall moves to the window). |
+| `io-master/src/installation/verify.rs` | Rebuilt in step 13 (keyring, secret of the application). |
+| `io-master/src/installation/uninstall.rs` | Not compiled; "DO NOT USE: TO BE REWORKED" (uninstall moves to the window). |
 | `io-master/src/db/encryption/` | Moved unchanged; audited and redesigned by the user later (CLAUDE.md, "Database code"). |
 
 ## To review
 
 Everything in `io-master/src/` and `io-master/ui/`. A suggested order,
 from the bottom of the layers up (`docs/code_structure.md`): `model/`,
-`db/`, `security/`, `ai/`, `hardware_tests/`, `business/`, `tauri_ui/`,
-`main.rs`, `ui/`.
+`db/`, `security/`, `ai/`, `hardware_tests/`, `pdf/`, `installation/`,
+`app/`, `views/`, `main.rs`, `ui/`.

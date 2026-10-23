@@ -2,11 +2,13 @@
 
 Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md` and the order table of `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English.
 
-## Where the project is (2026-10-18)
+## Where the project is (2026-10-23)
 
 - Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branches **`main`** (the tested state) and **`test_branch`** (the work); no other branches and no version numbers yet (`CLAUDE.md`, "Branches"; the earlier branches are named in `docs/history.md`).
-- **Step 40 (the cleanup of the architecture) is built**: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `business/`, `tauri_ui/`, their rules and the tests that check them (`docs/code_structure.md`).
-- **Step 41 (NIST OSCAL, `docs/oscal.md`) is being built**, part by part (`docs/todo.md`, step 41): 41.1 to 41.3 are done. The evaluation plan works on documents of OSCAL 1.2.3 (import, export, deletion, every write checked against the schemas of NIST); catalogs are made in the program from the PDFs of a standard, with the AI proposing groups and controls and the evaluator accepting, correcting or rejecting them in the editor of a catalog (`ui/src/components/CatalogEditor.svelte`). The quotes and the proposals are the evaluation support (`db/evaluation_support/`), linked to OSCAL by UUID and id.
+- **Step 40 (the cleanup of the architecture) is built**: the layers `model/`, `db/`, `ai/`, `hardware_tests/`, `security/`, `tauri_ui/` (now `app/`), their rules and the tests that check them (`docs/code_structure.md`).
+- **Step 41 (NIST OSCAL, `docs/oscal.md`) is being built**, part by part (`docs/todo.md`, step 41): 41.1 to 41.3 are done. The evaluation plan works on documents of OSCAL 1.2.3 (import, export, deletion, every write checked against the schemas of NIST); catalogs are made in the program from the PDFs of a standard, with the AI proposing groups and controls and the evaluator accepting, correcting or rejecting them in the editor of a catalog (`src/views/evaluation_plan/catalog_editor/`, page `ui/src/views/evaluation_plan/catalog_editor/`). The quotes and the proposals are the evaluation support (`db/evaluation_support/`), linked to OSCAL by UUID and id.
+- **Step 42 (the views) is built** (2026-10-21): every function that joins the program with the page is a command of an element in `src/views/<view>/<element>/`; `business/` and the commands of `tauri_ui/` are removed (`docs/code_structure.md`, section 2.9).
+- **Step 43 (one vocabulary, views and components) is built** (2026-10-23): the names of the code follow the vocabulary of `docs/architecture.md`, section 10 (`start`, `shell`, `chat`, `evaluation_plan` with its editor of a catalog, `evaluation_lab`, `devices`, `settings`); `app/` (was `tauri_ui/`) holds what every view uses; the list of the commands is `src/routes.rs`; the elements used more than once are in `components/` (`pdf_viewer`, `part_rows`). The test of the architecture checks that a view never uses another view and a component never a view; a test checks that the ids of the pages agree with `Shell.svelte`.
 - **The review starts anew** on the code of step 40 (`review.md`): no approval moved with the code.
 
 ## What comes next
@@ -20,8 +22,8 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 
 - Concept first, approved by the user, then code; small steps, each with tests (`<file>_tests.rs`, attached with `#[cfg(test)] #[path = "..."] mod tests;`); `cargo fmt` before a commit.
 - The direction of the dependencies is checked by `src/architecture_tests.rs`; a new use against it is a finding, or an exception written there with its reason.
-- Every command of the window is listed in four places (`tauri_ui/commands.rs`, `main.rs`, `build.rs`, `capabilities/default.json`); a test checks them.
-- Serialization only in `src/tauri_ui/serializer/`; the core types carry no serde attributes.
+- Every command of the window is listed in four places (the `commands.rs` of its element in `views/`, `routes.rs`, `build.rs`, `capabilities/default.json`); a test checks them.
+- Serialization only in the `view.rs` of the elements of `src/views/` and in `src/app/serializer/` (the error of a command); the core types carry no serde attributes.
 - Secrets only in the encrypted database of the evaluator; never shown back, never printed; the page holds no secret.
 - Every connection leaving the computer: TLS 1.3, verified certificate. Plain HTTP only to 127.0.0.1/::1 (AI connections).
 - `tauri.conf.json` keeps `freezePrototype: true`; `vite.config.ts` patches `d3-color` for it (the window does not start otherwise).
@@ -38,10 +40,10 @@ npm run check               # svelte-check, must be clean
 npm run build               # copies pdf.js data, builds ui/dist (needed before cargo build)
 cargo fmt --check
 cargo build && cargo test   # also the test of the architecture and of the command lists
-cargo clippy --all-targets  # only the known warnings of unused code
+cargo clippy --all-targets  # must be clean (rule 10 of CLAUDE.md); the known warnings of unused code still to be removed
 ```
 
-Rust comes from rustup (stable, 1.99.1 on 2026-10-18). The system also has the rustc/cargo of the Debian packages (1.95), and `/etc/fish/config.fish` puts `/usr/bin` first in `PATH`; `~/.config/fish/config.fish` moves `~/.cargo/bin` back to the front (`fish_add_path --move --path`). If `rustc --version` shows 1.95, that line is missing, and clippy (rustup only) fails with E0514 on a build made by the other compiler; after a change of compiler, `cargo clean` once.
+The packages of the system for running, building and testing, on Debian 13 and on Arch Linux: `README.md`, section "Requirements". Rust comes from rustup (stable, 1.99.1 on 2026-10-21), never from the packages `rustc`/`cargo` of the system beside it: two compilers in `PATH` make clippy fail with E0514 on a build made by the other one; check with `rustc --version` and `which cargo` (`~/.cargo/bin/cargo`); after a change of compiler, `cargo clean` once.
 
 Window test on a private display (helpers in the scratchpad of the session; recreate them if missing):
 
@@ -59,5 +61,11 @@ env -u WAYLAND_DISPLAY DISPLAY=:99 GDK_BACKEND=x11 XDG_DATA_HOME=<scratch>/data 
 
 ## The environment
 
-- Parrot OS (KDE on Wayland, dark GTK preference). Installing packages needs `apt install -t echo-backports ...`. Poppler (`pdftotext`, `pdfinfo`) is installed.
+- **Why these machines (user, 2026-10-21).** The T480 stands for the virtual machines of the laboratories, which usually get few resources: one may be as strong as the T480 or weaker, so the program must work well on it. The T14 Gen 7 (new, 2026) with Arch and the newest packages checks that the code is future proof for the coming versions of Debian; the user starts to work on it once the code is cleaned up. **Later: a Raspberry Pi 5** (ARM64, no TPM) as a third machine for tests.
+- Since 2026-10-21 the user tests on two machines on purpose: an old one with the stable target system and a new one with a rolling system (newer libraries, WebKitGTK and kernel first), Intel and AMD, X11 and Wayland, XFCE and GNOME, so that a fault of one environment is told from a fault of the program. A fault seen on one machine only is checked on the other before it is fixed. The packages of both systems: `README.md`, "Requirements" (Debian: the plain repositories, no backports).
+
+  | Machine | System | Desktop | Notes |
+  |---|---|---|---|
+  | ThinkPad T480, Intel Core i5, 8 GB RAM | **Debian 13 (trixie), the target system** | XFCE (X11) | the keyring needs `libpam-gnome-keyring` and LightDM (`architecture.md`, section 9); a full build of Tauri is heavy for 8 GB: if the linker runs out of memory, `cargo build -j 2` |
+  | ThinkPad T14 Gen 7, AMD Ryzen 5, 16 GB RAM | Arch Linux | GNOME (Wayland) | GNOME Keyring unlocked at the login by GNOME itself; the TPM of an AMD processor is usually a firmware TPM (fTPM), which some BIOS updates clear (`architecture.md`, section 5.1) | Before 2026-10-21 the work was on Parrot OS (KDE on Wayland); notes in `history.md` and `todo.md` that name Parrot OS refer to it.
 - Shell of the user is fish; tools run in bash.

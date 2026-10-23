@@ -3,12 +3,11 @@
 //! encrypted database of the evaluator (`db/standards/`).
 //!
 //! ```text
-//! model/standards.rs                the types, the rules of the fields (this file)
-//! business/standards/documents.rs   the documents as a resource: load, list, page,
-//!                                   PDF, search, update, delete
-//! business/standards/load.rs        the loading of PDFs, a long work
-//! business/standards/pdf_text.rs    the text of a PDF page by page (Poppler)
-//! business/standards/quote.rs       one normal form of text; is a quote on its page
+//! model/standards.rs                       the types, the rules of the fields (this file)
+//! model/standards/quote.rs                 one normal form of text; is a quote on its page
+//! pdf/poppler.rs                           the text of a PDF page by page (Poppler)
+//! views/evaluation_plan/standard_documents/          the list, the loading of PDFs, a change, the deletion
+//! views/evaluation_plan/document_search/             the search of their text
 //! ```
 //!
 //! A standard often comes in several documents (CC Part 1 to 5 and
@@ -22,6 +21,8 @@
 //! The files are licensed copies and the work on them is
 //! confidential, so they are kept only in the encrypted database.
 
+pub mod quote;
+
 use sha2::{Digest, Sha256};
 
 use crate::model::text::{Field, Invalid, check_text};
@@ -33,7 +34,7 @@ pub const MAX_SHORT: usize = 200;
 pub const MAX_HITS: usize = 200;
 
 /// The longest quote that is accepted, in characters. A source is a
-/// passage, not a page (`business/standards/quote.rs`).
+/// passage, not a page (`model/standards/quote.rs`).
 pub const MAX_QUOTE: usize = 2000;
 
 /// What the user tells about a document.
@@ -59,8 +60,20 @@ pub struct Document {
     pub page_count: u32,
 }
 
+impl Document {
+    /// Its title and part as the evaluator reads them: "Common Criteria —
+    /// Part 3", or the title alone.
+    pub fn title_and_part(&self) -> String {
+        if self.fields.part.is_empty() {
+            self.fields.title.clone()
+        } else {
+            format!("{} — {}", self.fields.title, self.fields.part)
+        }
+    }
+}
+
 /// A part of the text of one document of a standard, sent in one
-/// question to the AI (`business/standards/parts.rs`).
+/// question to the AI (`views/evaluation_plan/catalog_editor/ai_builder/parts.rs`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Part {
     pub document_id: i64,

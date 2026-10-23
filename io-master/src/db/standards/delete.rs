@@ -1,5 +1,5 @@
 //! Removing a document of a standard. Whether a project still uses it
-//! is checked by `business/standards/` (step 41: whether an OSCAL document
+//! is checked by `views/evaluation_plan/standard_documents/stored.rs` (step 41: whether an OSCAL document
 //! names it as a resource).
 
 use crate::db::error::DbError;

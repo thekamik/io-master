@@ -9,7 +9,7 @@
    Contents (one file each in styles/):
      1. tokens            7. login and setup
      2. base              8. chat
-     3. text and notices  9. scan
+     3. text and notices  9. devices
      4. controls         10. settings and the tab AI
      5. cards and tabs   11. dialogs and the viewer of a standard
      6. the frame (bars, sidebar, page head)
@@ -26,7 +26,7 @@
 @import "./styles/06-frame.css";
 @import "./styles/07-login.css";
 @import "./styles/08-chat.css";
-@import "./styles/09-scan.css";
+@import "./styles/09-devices.css";
 @import "./styles/10-settings.css";
 @import "./styles/11-dialogs.css";
 @import "./styles/12-schemes.css";

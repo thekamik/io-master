@@ -1,5 +1,5 @@
 //! Storing chats and their messages. What a chat keeps of a reply
-//! (a refused reply drops its text) is decided by `business/chats/history.rs`.
+//! (a refused reply drops its text) is decided by `views/chat/conversation/stored.rs`.
 
 use rusqlite::named_params;
 
