@@ -52,19 +52,7 @@ They bind **our code** (`src/`, `ui/`). The dependencies (Tauri, rusqlite, serde
 
 - **"UI"** in the words of the user is the Rust folder `io-master/src/tauri_ui/`; **"business"** was the Rust folder `io-master/src/business/`, replaced by the views (`io-master/src/views/`) in step 42. The page (`io-master/ui/`, Svelte and TypeScript) is called **the page** or the front end.
 - **The page and the Rust program are two separate projects that communicate** (through the commands of Tauri). Their files are never mixed in one folder.
-- **One vocabulary (user, 2026-10-23).** The user prompts in Polish and the code is in English, so every name below is used the same way in Rust, in the page, in the navigation of the window and in the documents. **A plan (step 43 of `docs/todo.md`):** the code still has the old names given in brackets.
-
-  | Name | The user's words | What it is |
-  |---|---|---|
-  | `start` | ekran logowania | the login and the first installation, before anybody is logged in |
-  | `shell` | shell | the frame of the window around every view: the navigation, the user menu |
-  | `evaluation_plan` (was `plans`, `catalog_editor`) | plan ewaluacji | everything from the PDFs of a standard to OSCAL: the documents of standards, catalogs made from them (the editor of a catalog), OSCAL documents loaded, the scheme of the evaluation (profile, assessment plan) |
-  | `evaluation_lab` (was the placeholder Evaluation) | evaluation lab | the structure of a standard joined with what the client delivered, and the evidence assessed with the AI |
-  | `devices` (was `scan`) | urządzenia | the serial ports: the scan now, later UART, Bluetooth |
-  | `settings` | ustawienia | the settings panel |
-  | `chat` | chat | the panel with the chatbot |
-
-  The view `evaluation_plan` is wider than the OSCAL document *assessment plan* it makes; the two are never called by the same name.
+- **One vocabulary (user, 2026-10-23): `docs/architecture.md`, section 10.** The user prompts in Polish and the code is in English, so the names of the views (`start`, `shell`, `chat`, `evaluation_plan`, `evaluation_lab`, `devices`, `settings`), of the components and of the folders are used the same way in Rust, in the page, in the navigation and in the documents. A Polish word of the user is read through that table. **A plan (step 43 of `docs/todo.md`):** the code still has some old names (`plans`, `catalog_editor`, `scan`, `tauri_ui`).
 - **Views and components (user, 2026-10-23).** A **view** is a whole page of the window, the high-level display. A **component** is a small element used more than once, several times in one view or in several views (example: the window of a *requirement*, which describes a requirement of a standard, appears many times in a view and in other views, and has functions of the AI such as the analysis of the requirement and of the evidence linked to it). Components live in `components/` and are imported by the views; a component never imports a view. A part of a view used only once stays in the folder of its view. No mess: what is a view and what is a component is always clear.
 
 ## Main design rule: the desktop window is the only interface

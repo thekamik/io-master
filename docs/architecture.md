@@ -4,6 +4,8 @@ This document records the concept of the program, as agreed from 2026-10-14 on (
 
 Status markers: **agreed** is decided; **open** still needs a decision; **TODO** is known work that must not be forgotten.
 
+**The vocabulary of the project is in section 10, the tasks of the folders in section 11, the flow of data in the views in section 12.** They are at the end so that the numbers of the earlier sections, named all over the code and the documents, stay as they are.
+
 ---
 
 ## 1. Purpose
@@ -233,3 +235,141 @@ The work is planned step by step in `todo.md`. Two items must not be forgotten w
 - **Supported and tested desktops: GNOME and XFCE**, both with GNOME Keyring as the provider of the Secret Service. On XFCE the keyring is unlocked at login only with its PAM module (`libpam-gnome-keyring`) and a display manager that calls it (LightDM does), and with "Launch GNOME services on startup" switched on; otherwise it asks for its password at the first use. The installation guide describes this. Other desktops (KDE with KWallet, KeePassXC as the provider) may work but are not supported until they are tested.
 - A virtual machine needs a desktop and a logged-in session as well.
 - The optional TPM factor needs a TPM 2.0 (section 5.1).
+
+## 10. Vocabulary (agreed 2026-10-23)
+
+The user prompts in Polish and the code is written in English, so every name below is used the same way in Rust, in the page, in the navigation of the window and in the documents. **A plan (step 43 of `todo.md`):** where the code still has an old name, it is given in brackets.
+
+### 10.1 The views
+
+A **view** is a whole page of the window, the high-level display.
+
+| Name | The user's words | What it is |
+|---|---|---|
+| `start` | ekran logowania | the login and the first installation, before anybody is logged in |
+| `shell` | shell | the frame of the window around every view: the navigation, the user menu |
+| `chat` | chat | the panel with the chatbot (the AI in the role *consultation*) |
+| `evaluation_plan` (was `plans`, `catalog_editor`) | plan ewaluacji | everything from the PDFs of a standard to OSCAL: the documents of standards, catalogs made from them (the editor of a catalog), OSCAL documents loaded, the scheme of the evaluation (profile, assessment plan) |
+| `evaluation_lab` (was the placeholder Evaluation, and the placeholder Manufacturer documentation) | evaluation lab | the structure of a standard joined with what the client and the laboratory deliver (the documentation of the manufacturer, the Security Target, the results of the tests), and the evidence assessed with the AI |
+| `devices` (was `scan`) | urządzenia | the serial ports: the scan now, later UART, Bluetooth |
+| `settings` | ustawienia | the settings panel |
+
+The view `evaluation_plan` is wider than the OSCAL document *assessment plan* it makes; the two are never called by the same name.
+
+### 10.2 Components
+
+A **component** is a small element used more than once: several times in one view, or in several views. Components live in `components/` (in Rust and in the page) and are imported by the views; a component never imports a view. A part of a view used only once stays in the folder of its view, and is called an **element** of the view.
+
+| Name | The user's words | What it is |
+|---|---|---|
+| `pdf_viewer` (was in `plans/`) | podgląd normy | a document of a standard, a quote highlighted on its page; in the evaluation plan and in the editor of a catalog |
+| `part_rows` (was in `catalog_editor/`) | części obiektu | the parts of a group or a control as rows; the object chosen and the proposals of the AI |
+| `requirement` (planned, step 41.5) | wymaganie | a tile that describes one requirement of a standard; many times in a view and in several views; functions of the AI: the analysis of the requirement and of the proofs linked to it |
+| `proof` (planned, step 41.5) | dowód | a tile with an input of the laboratory: a result of a test, or quotes of a standard or of the Security Target; it is linked into the input of a requirement |
+
+### 10.3 Other terms
+
+| Name | The user's words | What it is |
+|---|---|---|
+| the page | strona, front end | `io-master/ui/`, Svelte and TypeScript: a separate project |
+| `app/` (was `tauri_ui/`) | app | what every view uses: the state of the window, the errors of the commands, the list of the commands |
+| command | komenda | a function of Rust the page calls through Tauri, named `<element>_<action>` |
+| evaluation support | wsparcie ewaluacji | what the program adds to OSCAL (quotes, proposals of the AI, instructions, the layout of the graph), linked to OSCAL by UUID and id (section 7.1) |
+
+## 11. The folders and their tasks (agreed 2026-10-17, 2026-10-21 and 2026-10-23)
+
+Each folder does one thing; a folder uses only itself and the folders below it, which a test checks (`src/architecture_tests.rs`). Details, the rules of each folder and the whole tree: `code_structure.md`.
+
+| Folder | Its task | Uses |
+|---|---|---|
+| `views/` | the views of section 10.1: one folder per view, with the elements of its page used only there; a command takes the parameters from the page, does the work with the folders below and gives the data back | `components/`, everything below |
+| `components/` (planned, step 43) | the components of section 10.2, built as an element: its commands and its data | everything below `views/` |
+| `app/` (now `tauri_ui/`) | the state of the window (the installation, the session, the stop signals), the errors of the commands as the page tells them apart, the list of the commands | `installation/`, `model/`, the errors of the folders below |
+| `installation/` | the installation of the Linux account, its one account and the session of the logged-in evaluator: the core of the protection | `db/`, `security/`, `model/` |
+| `ai/` | the whole communication with AI services: `ai/api/` the only way to a model, `ai/tasks/` the questions and the reading of the answers | `db/`, `model/` |
+| `hardware_tests/` | everything that talks to hardware: the scan of the serial ports, later UART, Bluetooth, the permissions of the ports | `model/` |
+| `pdf/` | reading PDFs with Poppler: the only place where the program starts another program on a document | nothing of the program |
+| `db/` | every operation on a database, as CRUD, one folder per area of data; all SQL and all encryption of the databases | `model/`, `security/` |
+| `security/` | the building blocks of protection: random numbers, the TPM | nothing of the program |
+| `model/` | the data as plain Rust types and the rules of their validity; no I/O | nothing of the program |
+| `ui/` (the page) | what the evaluator sees: the views and the components of the page, and one typed function per command (`ui/src/lib/api/`) | the commands only |
+
+## 12. The flow of data in the views (agreed 2026-10-21 and 2026-10-23)
+
+**How the window loads (user, 2026-10-23).** The page is loaded once, when the window opens, and is never loaded again. A view is shown without asking the program for the whole page; every element and every component reads its own data with its own command and refreshes only itself after a change. An element that changed data tells its view, and the view asks the elements that show that data to read it again. Only what matters goes to the program (the AI, processing, storing); what is only presentation (a tab, a selection, an open dialog) stays in the page.
+
+```text
+the page: a view, its elements and components     what it shows; no secret, no state that matters
+  │  a command <element>_<action>, its arguments as JSON
+  ▼
+views/<view>/<element>/commands.rs                the session taken, the parameters checked
+  ├──► model/                                     the rules of the data
+  ├──► db/                                        written through at once, in one transaction
+  └──► ai/api/, hardware_tests/, pdf/             the only ways to a model, a device, a PDF
+  ▼
+views/<view>/<element>/view.rs                    the data the element gets back (JSON)
+  │  a long work: its events through a channel of Tauri (progress, Stop)
+  ▼
+the page: the element shows it; "changed" ──► the view ──► the other elements read again
+```
+
+The flow inside each view, as it is now (the head of each `views/<view>/mod.rs` names its commands):
+
+**`start` and `shell`.** The page asks for the state of the program at the start and after each of its changes, and shows the setup, the login or the frame:
+
+```text
+setup form ──install(name, password, role)──► installation/: made, logged in ─┐
+login form ──log_in(name, password)─────────► installation/: logged in ───────┤
+user menu ──log_out()───────────────────────► installation/: the session ends ┤
+                                                                              ▼
+the page ──program_get()──► ProgramView: installed, the role, who is logged in, the pages
+```
+
+**`chat`.**
+
+```text
+list ──choose(id)──► the view ──► conversation ──open(id)──► the chat from db/
+conversation ──send(chat, text)──► db: the message ──► ai/api/: the reply, piece by piece ──► db: the reply
+     ▲                                                     │
+     └──────────── events: the text as it comes, the end ◄─┘
+conversation ──"changed"──► the view ──► list reads again
+```
+
+**`evaluation_plan`.** The documents of standards (PDF), the documents of OSCAL, and the editor of a catalog:
+
+```text
+documents (PDF) ──load()──► pdf/: the text, part by part ──► db/standards/   (events: file, pages, end; Stop)
+documents of OSCAL ──import / export / delete──► checked against the schema of NIST ──► db/oscal/
+new catalog ──create(title, sources)──► db/oscal/ ──► the view opens it in the editor
+search ──run(text)──► the hits ──► the view ──► viewer (component) ──► the PDF, the quote on its page
+
+the editor of a catalog:
+tree ──"chosen"──► the view ──► object form, quotes: each reads its own data
+object form, new object, quotes, proposals ──a change──► db/oscal/ (checked) ──"changed"──► every element reads again
+AI ──groups / controls(pages)──► ai/api/: the model, part by part ──► proposals in db/evaluation_support/
+proposal ──accepted by the evaluator (P1)──► the catalog in db/oscal/
+```
+
+**`devices`.**
+
+```text
+settings ──save(types, columns)──► db/scan_settings/ ──"saved"──► the view ──► table
+table ──scan()──► the settings from db/ ──► hardware_tests/: the descriptions of the ports (a port is never opened)
+```
+
+**`settings`.**
+
+```text
+list ──choose(id)──► the view ──► form ──get(id)──► the connection; key ──get(id)──► whether a key is stored (never the key)
+form ──save / delete / activate──► db/ai/connection/ ──"changed"──► list and key read again
+check ──run(id)──► ai/api/checks: one short question, written into the journal ──► the report
+password form ──change(old, new)──► installation/: the key of the database encrypted again
+```
+
+**`evaluation_lab` (planned, step 41.5; the concept is settled there).** A proposal of the user (2026-10-23), to be confirmed: the laboratory delivers its inputs as **proof** tiles, which are linked into the input of a **requirement** tile; the AI analyses a requirement on the proofs linked to it, and the evaluator decides (P1):
+
+```text
+plan (OSCAL, from evaluation_plan) ──handed over──► the requirements, each a requirement tile
+proof (result of a test, quotes of the standard or of the Security Target) ──linked──► requirement
+requirement ──analysis(proofs)──► ai/api/ ──► a proposal ──accepted by the evaluator──► the assessment results (OSCAL)
+```
