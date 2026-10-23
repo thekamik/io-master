@@ -140,6 +140,8 @@ The user (2026-10-23): the unit tests move from their own files (`<file>_tests.r
 - [x] 44.5 `views/`: `start`, `shell`, `chat`, `settings`, `devices`.
 - [x] 44.6 `views/evaluation_plan/` with its editor of a catalog; `handover.md`, the state of this step. The acceptance of a proposal, tested so far inside the tests of the AI of the editor, has its own tests in `proposals/accept.rs`; the helpers of the tests of the AI (`ready`, `collector`) are in `catalog_editor/test_support.rs`; the test of the architecture no longer skips a file by its name, and refuses a new `*_tests.rs`.
 
+**Left open (2026-10-23):** `db/user/delete.rs::remove_setting` has no test yet (the split of 44.2 only moved the assertions that existed).
+
 **Done when** no `<file>_tests.rs` is left besides the tests of the whole program, and the test of the architecture checks that every test module is the last item of its file.
 
 ---
