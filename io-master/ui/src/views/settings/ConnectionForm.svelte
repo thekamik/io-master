@@ -1,6 +1,6 @@
 <!--
   The element "connection form" of the view Settings, tab AI
-  (src/views/settings/connection_form/): one connection to an AI service.
+  (its commands in src/views/settings/settings.rs): one connection to an AI service.
   The program knows no provider: every connection says where the service
   is, how a request looks and where in the answer the text is.
 
@@ -22,7 +22,7 @@
   import { onMount } from "svelte";
 
   import { isAppError, sentence } from "../../lib/api/errors";
-  import * as connectionForm from "../../lib/api/settings/connection_form";
+  import * as settings from "../../lib/api/settings";
 
   let {
     chosen,
@@ -39,12 +39,12 @@
   /** A message after an action. */
   type Notice = { done: boolean; text: string } | null;
 
-  let template: connectionForm.ConnectionView | null = $state(null);
-  let presets: connectionForm.PresetView[] = $state([]);
+  let template: settings.ConnectionView | null = $state(null);
+  let presets: settings.PresetView[] = $state([]);
   let problem = $state("");
 
   /** The connection in the form (a copy); null until it is read. */
-  let editing: connectionForm.ConnectionView | null = $state(null);
+  let editing: settings.ConnectionView | null = $state(null);
   /** The fields as they were saved, to tell whether the form changed. */
   let saved = $state("");
 
@@ -64,7 +64,7 @@
   let helpArea: HTMLTextAreaElement | undefined = $state();
 
   /** Only the fields the program takes (it refuses any other). */
-  function fields(view: connectionForm.ConnectionView): connectionForm.ConnectionFields {
+  function fields(view: settings.ConnectionView): settings.ConnectionFields {
     return {
       name: view.name,
       url: view.url,
@@ -99,7 +99,7 @@
 
   onMount(async () => {
     try {
-      const fresh = await connectionForm.fresh();
+      const fresh = await settings.connectionFormNew();
 
       // The effect below then shows the chosen connection.
       template = fresh.template;
@@ -126,7 +126,7 @@
     tab = "fields";
 
     try {
-      const view = wanted === "new" ? { ...template!, name: "" } : await connectionForm.get(wanted);
+      const view = wanted === "new" ? { ...template!, name: "" } : await settings.connectionFormGet(wanted);
 
       editing = { ...view };
       saved = view.id === null ? "" : JSON.stringify(fields(view));
@@ -140,7 +140,7 @@
    * The connection itself (its number, its key) stays; a name already
    * given is kept. Nothing is stored until "Save".
    */
-  function usePreset(preset: connectionForm.PresetView) {
+  function usePreset(preset: settings.PresetView) {
     if (!editing) {
       return;
     }
@@ -168,7 +168,7 @@
     badField = null;
 
     try {
-      const result = await connectionForm.save(editing.id, fields(editing));
+      const result = await settings.connectionFormSave(editing.id, fields(editing));
 
       editing.id = result.id;
       saved = JSON.stringify(fields(editing));
@@ -188,7 +188,7 @@
     }
 
     try {
-      await connectionForm.remove(editing.id);
+      await settings.connectionFormDelete(editing.id);
       editing = null;
       onchanged(null);
     } catch (error) {
@@ -204,7 +204,7 @@
     }
 
     try {
-      await connectionForm.activate(editing.id);
+      await settings.connectionFormActivate(editing.id);
       notice = { done: true, text: "The chat now uses this connection." };
       onchanged(editing.id);
     } catch (error) {
@@ -219,7 +219,7 @@
     }
 
     try {
-      helpText = await connectionForm.fieldHelp(field, fields(editing));
+      helpText = await settings.connectionFormFieldHelp(field, fields(editing));
       helpFor = field;
       helpNotice = "";
       await copyHelp();

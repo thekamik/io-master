@@ -1,6 +1,6 @@
 <!--
   The element "conversation" of the view Chat
-  (src/views/chat/conversation/): the open chat, a new message with its
+  (its commands conversation_* in src/views/chat/chat.rs): the open chat, a new message with its
   reply shown while it is written (it can be stopped), and the deletion.
 
   The view says which chat is open (chatId; null: a new chat). When this
@@ -14,7 +14,7 @@
   import { tick } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as conversation from "../../lib/api/chat/conversation";
+  import * as chat from "../../lib/api/chat";
 
   let {
     chatId,
@@ -31,7 +31,7 @@
   /** The chat shown; undefined until the first is shown. Not reactive on purpose. */
   let shown: number | null | undefined = undefined;
   let title = $state("New chat");
-  let messages: conversation.MessageView[] = $state([]);
+  let messages: chat.MessageView[] = $state([]);
   let problem = $state("");
 
   let text = $state("");
@@ -59,10 +59,10 @@
     }
 
     try {
-      const chat = await conversation.open(id);
+      const opened = await chat.conversationOpen(id);
 
-      title = chat.title;
-      messages = chat.messages;
+      title = opened.title;
+      messages = opened.messages;
       await scrollDown();
     } catch (error) {
       problem = sentence(error);
@@ -80,7 +80,7 @@
     }
 
     try {
-      await conversation.remove(shown);
+      await chat.conversationDelete(shown);
       await show(null);
       onchanged(null);
     } catch (error) {
@@ -100,7 +100,7 @@
   }
 
   /** Puts one event of the reply into `reply`, the last message. */
-  function apply(event: conversation.ReplyEvent, reply: conversation.MessageView) {
+  function apply(event: chat.ReplyEvent, reply: chat.MessageView) {
     if (event.event === "chat") {
       shown = event.id;
       title = event.title;
@@ -134,7 +134,7 @@
     await scrollDown();
 
     try {
-      await conversation.send(shown ?? null, message, (replyEvent) => apply(replyEvent, reply));
+      await chat.conversationSend(shown ?? null, message, (replyEvent) => apply(replyEvent, reply));
       onchanged(shown ?? null);
     } catch (error) {
       // Refused before the reply started (no key, empty message): the
@@ -180,7 +180,7 @@
     <div class="buttons">
       <button type="submit" disabled={writing}>Send</button>
       {#if writing}
-        <button type="button" class="danger" onclick={conversation.stop}>Stop</button>
+        <button type="button" class="danger" onclick={chat.conversationStop}>Stop</button>
         <span class="note">The model is writing…</span>
       {/if}
     </div>

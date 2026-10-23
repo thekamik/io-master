@@ -1,6 +1,6 @@
 <!--
   The element "API key" of the view Settings, tab AI
-  (src/views/settings/api_key/): the key of the chosen connection. The
+  (its commands in src/views/settings/settings.rs): the key of the chosen connection. The
   page never holds a stored key: it learns only whether one is stored, and
   a key typed here is sent once and then cleared from the page. The view
   asks it to read again after the form saved the connection (reload()),
@@ -8,11 +8,11 @@
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import * as apiKey from "../../lib/api/settings/api_key";
+  import * as settings from "../../lib/api/settings";
 
   let { id }: { id: number | null } = $props();
 
-  let key: apiKey.ApiKeyView | null = $state(null);
+  let key: settings.ApiKeyView | null = $state(null);
   let typed = $state("");
   let notice: { done: boolean; text: string } | null = $state(null);
 
@@ -25,7 +25,7 @@
     }
 
     try {
-      key = await apiKey.get(id);
+      key = await settings.apiKeyGet(id);
     } catch (error) {
       notice = { done: false, text: sentence(error) };
     }
@@ -46,7 +46,7 @@
     }
 
     try {
-      key = await apiKey.store(id, typed);
+      key = await settings.apiKeyStore(id, typed);
       notice = { done: true, text: "The API key was stored." };
     } catch (error) {
       notice = { done: false, text: `The key was not stored: ${sentence(error)}` };
@@ -62,7 +62,7 @@
     }
 
     try {
-      key = await apiKey.remove(id);
+      key = await settings.apiKeyDelete(id);
       notice = { done: true, text: "The API key was deleted." };
     } catch (error) {
       notice = { done: false, text: `The key was not deleted: ${sentence(error)}` };

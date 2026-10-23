@@ -28,22 +28,407 @@
 #[macro_use]
 mod checks;
 
-// The folders of the program. Each declares its own modules in the
-// file of the same name next to it (`db.rs` next to `db/`), so that
-// a new file never changes this one; the whole tree is described in
-// docs/code_structure.md.
-mod ai;
-mod app;
-mod components;
-mod db;
-mod hardware_tests;
-mod installation;
-mod model;
-mod pdf;
-mod security;
+// ── The map of the program ──────────────────────────────────────────
+// Every folder of the program, in the order of its layers from the bottom
+// up: a folder uses only the folders above it in this list
+// (docs/code_structure.md, section 1; checked by architecture_tests.rs).
+// The comment of a group says which part of the project it is; what each
+// file holds is said at its functions. Since steps 45 and 46 of
+// docs/todo.md every module is written here, except those of a file with code
+// that has modules of its own (model/oscal.rs), which declares them itself.
+
+// model/: the data of the program as plain Rust types and the rules of
+// their validity; no I/O (no database, no network, no file).
+mod model {
+    pub mod ai;
+    pub mod api_key;
+    pub mod chats;
+    pub mod evaluation_support;
+    pub mod installation;
+    pub mod oscal;
+    pub mod standards;
+    pub mod text;
+    pub mod time;
+}
+
+// security/: the building blocks of protection: random numbers from the
+// system, and the TPM 2.0, the optional further factor. The encryption of
+// the databases is in db/encryption/.
+mod security {
+    pub mod random;
+    // security/tpm/: the TPM 2.0 (docs/architecture.md, section 5.1).
+    pub mod tpm {
+        pub mod chip;
+        pub mod device_secret;
+        pub mod emulator;
+        #[cfg(test)]
+        pub mod test_support;
+    }
+}
+
+// db/: every operation on a database, as CRUD, one folder per area of data
+// (CLAUDE.md, "Database code"). The schema.rs of an area says in which
+// database its data lives and how it is protected.
+mod db {
+    pub mod error;
+    // db/encryption/: all code of encryption of the databases.
+    pub mod encryption {
+        pub mod database_key;
+        pub mod generate_key;
+        pub mod keys;
+        pub mod sqlcipher;
+    }
+    // db/system/: the system database of the installation (not encrypted).
+    pub mod system {
+        pub mod create;
+        pub mod database;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/user/: the database of one evaluator (encrypted), its settings
+    // and secrets.
+    pub mod user {
+        pub mod database;
+        pub mod delete;
+        pub mod migrations;
+        pub mod read;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/ai/: the data of the AI (the database of the evaluator).
+    pub mod ai {
+        // db/ai/chats/: the chats with the AI.
+        pub mod chats {
+            pub mod create;
+            pub mod delete;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+        }
+        // db/ai/connection/: the AI connections and their API keys.
+        pub mod connection {
+            pub mod create;
+            pub mod delete;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+            pub mod update;
+        }
+        // db/ai/instructions/: the instructions of the tasks of the AI.
+        pub mod instructions {
+            pub mod delete;
+            pub mod read;
+            pub mod schema;
+            pub mod update;
+        }
+        // db/ai/journal/: the journal of the AI, never changed.
+        pub mod journal {
+            pub mod create;
+            pub mod read;
+            pub mod rows;
+            pub mod schema;
+        }
+        // db/ai/roles/: the connection each role of the AI uses.
+        pub mod roles {
+            pub mod read;
+            pub mod schema;
+            pub mod update;
+        }
+    }
+    // db/standards/: the documents of standards, their PDFs and the text of
+    // their pages (the database of the evaluator).
+    pub mod standards {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/oscal/: the documents of NIST OSCAL (the database of the evaluator).
+    pub mod oscal {
+        pub mod create;
+        pub mod delete;
+        pub mod error;
+        pub mod ids;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/evaluation_support/: what the program adds to OSCAL, linked by
+    // UUIDs and ids (the database of the evaluator).
+    pub mod evaluation_support {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+    }
+    // db/scan_settings/: the settings of the scanner of serial ports, as two
+    // texts in the settings of the evaluator (its file has the names of the
+    // settings, so it declares its own modules).
+    pub mod scan_settings;
+}
+
+// ai/: the whole communication with AI services (CLAUDE.md, "AI layer").
+mod ai {
+    // ai/api/: the only way to the AI, in the form of REST: resources and
+    // operations; every question is written into the journal of the AI.
+    pub mod api {
+        pub mod checks;
+        pub mod completions;
+        pub mod connection;
+        pub mod connections;
+        pub mod roles;
+        pub mod tasks;
+        #[cfg(test)]
+        pub mod test_support;
+        // ai/api/provider/: the communication with the provider (HTTP, TLS,
+        // request, answer, stream). Only ai/api/ reaches it; the rest of the
+        // program asks through the files above.
+        pub(in crate::ai::api) mod provider {
+            pub mod ai_error;
+            pub mod client;
+            pub mod json_path;
+            pub mod request;
+            pub mod response;
+            pub mod sse;
+        }
+    }
+    // ai/tasks/: for each task of the AI, the question sent to the model and
+    // the reading of its answer, on plain data of model/.
+    pub mod tasks {
+        pub mod catalog_outline;
+        pub mod catalog_section;
+        pub mod chat;
+        mod json;
+    }
+    // ai/presets/: the ready settings of well-known AI services (its file has
+    // the presets themselves, so it declares its own module).
+    pub mod presets;
+}
+
+// hardware_tests/: everything that talks to hardware. No command reaches a
+// device without an action of the evaluator for it (P2 of
+// docs/architecture.md). permissions/permission.rs is empty until step 6 of
+// docs/todo.md and not compiled.
+mod hardware_tests {
+    // hardware_tests/devices/: the scan of the serial ports, and the
+    // settings of the scanner.
+    pub mod devices {
+        pub mod port_property;
+        pub mod scan_settings;
+        pub mod serial_ports;
+    }
+}
+
+// pdf/: reading PDFs with the tools of Poppler (pdfinfo, pdftotext): the only
+// place where the program starts another program on a document of the
+// evaluator, kept in one folder for the audit. It uses nothing of the program.
+mod pdf {
+    pub mod poppler;
+}
+
+// installation/: the installation of this Linux account, its one user and
+// the session of that user: the core of the protection of the program.
+// uninstall.rs is not compiled ("DO NOT USE: TO BE REWORKED", step 12 of
+// docs/todo.md).
+mod installation {
+    pub mod accounts;
+    pub mod lifecycle;
+    pub mod session;
+    pub mod verify;
+}
+
+// app/: what every view uses: the state of the window, and the errors of
+// the commands in kinds the page tells apart.
+mod app {
+    pub mod error;
+    pub mod state;
+    #[cfg(test)]
+    pub mod test_support;
+    // app/serializer/: how an error of a command reaches the page (serde).
+    pub mod serializer {
+        pub mod error_view;
+    }
+}
+
+// components/: the elements of the window used more than once, several times
+// in one view or in several views (docs/architecture.md, section 10.2). A
+// component is built as an element of a view; one with commands has an entry,
+// the file of its name. The views use the components; a component never uses
+// a view (checked by architecture_tests.rs).
+mod components {
+    // components/part_rows/: the parts of a group or a control as rows with
+    // their level; the object chosen and the proposals of the editor of a
+    // catalog. No command: the elements give its rows with their data.
+    pub mod part_rows {
+        pub mod view;
+    }
+    // components/pdf_viewer/: the viewer of a standard, a quote highlighted on
+    // its page; the evaluation plan and the editor of a catalog.
+    pub mod pdf_viewer {
+        #[allow(clippy::module_inception)]
+        pub mod pdf_viewer;
+
+        pub mod view;
+    }
+}
+
+// views/: the views of the window, one folder per view. The entry of a view
+// is the file of its name in its folder: every command the page calls for
+// it (step 46 of docs/todo.md); the folders of its elements around it hold
+// their data and logic. The entry has the name of its folder, so its
+// module has the name of its parent: clippy's `module_inception` is
+// allowed there, on purpose.
+mod views {
+    // views/devices/: the view Devices: the serial ports of the computer and
+    // the settings of the scanner.
+    pub mod devices {
+        #[allow(clippy::module_inception)]
+        pub mod devices;
+
+        pub mod column_view;
+        pub mod stored_settings;
+        pub mod ports_table {
+            pub mod view;
+        }
+        pub mod scanner_settings {
+            pub mod view;
+        }
+    }
+
+    // views/start/: the view Start: the setup at the first start and the
+    // login, before anybody is logged in.
+    pub mod start {
+        #[allow(clippy::module_inception)]
+        pub mod start;
+    }
+
+    // views/shell/: the view Shell: the frame of the window around every page,
+    // and the state of the program.
+    pub mod shell {
+        #[allow(clippy::module_inception)]
+        pub mod shell;
+
+        pub mod program {
+            pub mod view;
+        }
+    }
+
+    // views/chat/: the view Chat: the chats of the evaluator with the model of
+    // the role consultation.
+    pub mod chat {
+        #[allow(clippy::module_inception)]
+        pub mod chat;
+
+        pub mod chat_list {
+            pub mod view;
+        }
+        pub mod connection_line {
+            pub mod view;
+        }
+        pub mod conversation {
+            pub mod stored;
+            pub mod turn;
+            pub mod view;
+        }
+    }
+
+    // views/settings/: the view Settings: the password of the evaluator, the
+    // connections to AI services and their keys, what the installation is.
+    pub mod settings {
+        #[allow(clippy::module_inception)]
+        pub mod settings;
+
+        pub mod api_key {
+            pub mod view;
+        }
+        pub mod connection_check {
+            pub mod view;
+        }
+        pub mod connection_form {
+            pub mod view;
+        }
+        pub mod connection_list {
+            pub mod view;
+        }
+    }
+
+    // views/evaluation_plan/: the view Evaluation plan: the documents of the
+    // standards in NIST OSCAL and the documents of standards (PDF) they quote.
+    pub mod evaluation_plan {
+        #[allow(clippy::module_inception)]
+        pub mod evaluation_plan;
+
+        pub mod document_search {
+            pub mod search;
+            pub mod view;
+        }
+        pub mod new_catalog {
+            pub mod made;
+            pub mod view;
+        }
+        pub mod oscal_documents {
+            pub mod dialog;
+            pub mod file;
+            pub mod view;
+        }
+        pub mod standard_documents {
+            pub mod dialog;
+            pub mod load;
+            pub mod stored;
+            pub mod view;
+        }
+
+        // views/evaluation_plan/catalog_editor/: the editor of a catalog, a
+        // screen of the view, with an entry of its own.
+        pub mod catalog_editor {
+            #[allow(clippy::module_inception)]
+            pub mod catalog_editor;
+
+            pub mod checked_quote;
+            pub mod oscal_object;
+            #[cfg(test)]
+            pub mod test_support;
+            pub mod ai_builder {
+                pub mod controls;
+                pub mod groups;
+                pub mod parts;
+                pub mod steps;
+                pub mod view;
+            }
+            pub mod catalog_tree {
+                pub mod view;
+            }
+            pub mod new_object {
+                pub mod view;
+            }
+            pub mod object_form {
+                pub mod view;
+            }
+            pub mod object_quotes {
+                pub mod view;
+            }
+            pub mod proposals {
+                pub mod accept;
+                pub mod view;
+            }
+        }
+    }
+
+    // Help for the tests of the views: a window of the mock runtime of Tauri.
+    #[cfg(test)]
+    pub mod test_support;
+}
+
+// Help for the tests: temporary folders, a database with a small standard.
 #[cfg(test)]
 mod test_support;
-mod views;
 
 // The routes of the window: the list of the commands the page may call,
 // above the views it names.

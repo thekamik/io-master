@@ -1,11 +1,11 @@
 <!--
   The element "password form" of the view Settings, tab User
-  (src/views/settings/password_form/). The passwords are cleared from the
+  (its commands in src/views/settings/settings.rs). The passwords are cleared from the
   page as soon as they were sent.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import { change } from "../../lib/api/settings/password_form";
+  import { passwordFormChange } from "../../lib/api/settings";
 
   let { user }: { user: string | null } = $props();
 
@@ -18,7 +18,7 @@
     event.preventDefault();
 
     try {
-      await change(current, password, passwordRepeat);
+      await passwordFormChange(current, password, passwordRepeat);
       notice = { done: true, text: "Your password was changed." };
     } catch (error) {
       notice = { done: false, text: `The password was not changed: ${sentence(error)}` };

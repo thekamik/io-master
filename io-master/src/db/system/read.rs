@@ -41,3 +41,35 @@ pub fn user_names(db: &SystemDb) -> Result<Vec<String>, DbError> {
 pub fn user(db: &SystemDb, name: &str) -> Result<Option<UserRecord>, DbError> {
     Ok(db.connection().query_row("SELECT * FROM users WHERE name = ?1", [name], user_from_row).optional()?)
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of reading the installation and the accounts.
+
+    use super::*;
+
+    use crate::db::system::create;
+    use crate::test_support::TempDir;
+    use crate::test_support::db::{system_db, wrapped_key};
+
+    #[test]
+    fn the_names_are_read_in_the_order_they_were_added() {
+        let directory = TempDir::new();
+        let db = system_db(&directory);
+        create::add_user(&db, "Anna", &wrapped_key()).unwrap();
+        create::add_user(&db, "jan", &wrapped_key()).unwrap();
+
+        assert_eq!(user_names(&db).unwrap(), ["Anna", "jan"]);
+    }
+
+    #[test]
+    fn an_account_is_found_without_regard_to_letter_case() {
+        let directory = TempDir::new();
+        let db = system_db(&directory);
+        let anna = create::add_user(&db, "Anna", &wrapped_key()).unwrap();
+
+        let found = user(&db, "anna").unwrap().unwrap();
+        assert_eq!((found.id, found.name.as_str()), (anna, "Anna"));
+        assert_eq!(user(&db, "nobody").unwrap(), None);
+    }
+}

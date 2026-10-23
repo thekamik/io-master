@@ -86,3 +86,67 @@ pub fn api_key(db: &UserDb, id: i64) -> Result<Option<ApiKey>, DbError> {
 
     Ok(user::read::secret(db, &key_name(id))?.and_then(|text| ApiKey::new(text.as_str().to_owned()).ok()))
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of reading the AI connections, the active one and the API key.
+
+    use super::*;
+
+    use crate::db::ai::connection::{create, update};
+    use crate::test_support::db::{SECRET_KEY, key, named};
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_stored_connection_is_read_and_a_missing_one_is_none() {
+        let test = database();
+        create::connection(&test.db, &named("Local")).unwrap();
+
+        assert_eq!(get(&test.db, 1).unwrap().unwrap().connection, named("Local"));
+        assert_eq!(list(&test.db).unwrap().len(), 1);
+        assert!(get(&test.db, 7).unwrap().is_none());
+    }
+
+    #[test]
+    fn no_connection_is_active_before_the_first_is_stored() {
+        let test = database();
+
+        assert_eq!(active(&test.db).unwrap(), None);
+    }
+
+    #[test]
+    fn a_stored_key_is_given_out_and_a_missing_one_is_none() {
+        let test = database();
+        let id = create::connection(&test.db, &named("Local")).unwrap().id;
+
+        assert!(api_key(&test.db, id).unwrap().is_none());
+
+        update::api_key(&test.db, id, &key()).unwrap();
+        assert_eq!(api_key(&test.db, id).unwrap().unwrap().expose(), SECRET_KEY);
+        assert!(get(&test.db, id).unwrap().unwrap().has_key);
+    }
+
+    #[test]
+    fn a_key_is_given_out_only_for_the_address_it_is_bound_to() {
+        let test = database();
+        let id = create::connection(&test.db, &named("Local")).unwrap().id;
+        update::api_key(&test.db, id, &key()).unwrap();
+        assert!(api_key(&test.db, id).unwrap().is_some());
+
+        // A save interrupted after the address changed, before the key was
+        // removed: the key stays in the file, but is never given out.
+        test.db
+            .connection_for_tests()
+            .execute("UPDATE ai_connections SET url = 'https://elsewhere.example/v1/chat' WHERE id = ?1", [id])
+            .unwrap();
+        assert!(get(&test.db, id).unwrap().unwrap().has_key);
+        assert!(api_key(&test.db, id).unwrap().is_none());
+
+        // A key with no recorded address is not given out either.
+        test.db
+            .connection_for_tests()
+            .execute("UPDATE ai_connections SET key_origin = NULL WHERE id = ?1", [id])
+            .unwrap();
+        assert!(api_key(&test.db, id).unwrap().is_none());
+    }
+}

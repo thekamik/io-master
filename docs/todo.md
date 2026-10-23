@@ -23,6 +23,9 @@ The number of a step is its name and never changes, so that references in the co
 | 14a | **41: The evaluation plan (was: test project) on the model of NIST OSCAL** | **concept in `docs/oscal.md`, approved 2026-10-18; 41.1 to 41.3 built, 41.4 next; before step 31** |
 | 14b | **42: The views: one folder per element of the window, instead of `business/` and the commands of `tauri_ui/`** | **built 2026-10-21: every view moved, `business/` and the commands of `tauri_ui/` removed** (below) |
 | 14c | **43: One vocabulary, views and components, `tauri_ui/` renamed** | **built 2026-10-23, in the phases 43.1 to 43.9** (below) |
+| 14d | **44: The tests in the file they test** | **built 2026-10-23, in the phases 44.1 to 44.6** (below) |
+| 14e | **45: The tree of the modules in `main.rs`** | **built 2026-10-23, in the phases 45.1 to 45.4** (below) |
+| 14f | **46: The entry of a view** | **built 2026-10-23, in the phases 46.1 to 46.7** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -45,6 +48,79 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 45: The tree of the modules in `main.rs` (2026-10-23)
+
+**State: built 2026-10-23, in the phases 45.1 to 45.4 (below).**
+
+27 files of the layers hold no code, only declarations of modules (`db.rs`, `db/ai.rs`, `db/ai/chats.rs`, `security.rs`, `security/tpm.rs`, ...). The user: they are moved into `main.rs`, but not as a heap: in the order of the layers (`model/` up to `views/`), each group with a comment that says which part of the project it is and what it does, and each module with its line; `main.rs` becomes the map of the program. Rust allows it: `mod security { pub mod random; pub mod tpm { pub mod chip; } }` in `main.rs` finds `src/security/random.rs` and `src/security/tpm/chip.rs`.
+
+**Decisions of the user**
+- [x] The declarations of the layers go into `main.rs`, grouped and commented; the files that only declared them are removed.
+- [x] The rule "`main.rs` lists only the top folders, so a new file never changes it" (`code_structure.md`, section 3) is replaced: every file of the program is named in `main.rs`, so the map is always complete.
+- [x] The comments of the removed files: a line that names a folder goes to its group in `main.rs`; a longer description of the architecture goes to `docs/` (Markdown, with schemes), never to the head of another file (`CLAUDE.md`, "Where the comments are").
+- [x] The `mod.rs` of the views and of the components (35 files) are not part of this step: step 46.
+
+**Phases** (one commit each, pushed, every test passing; `code_structure.md`, sections 3 and 4, with each):
+- [x] 45.1 The map in `main.rs`: every folder in the order of the layers from the bottom up, each group commented; `model/` written as its tree, `model.rs` removed (its list of files named a file that no longer exists, `analysis.rs`: the descriptions in files without code go stale).
+- [x] 45.2 `security/` and `db/` (15 files of declarations removed; `db/scan_settings.rs` stays, it holds the names of its settings). The comment of each area of `db/` says in which database its data lives; its `schema.rs` says how it is protected.
+- [x] 45.3 `ai/` (4 files of declarations removed; `ai/presets.rs` stays, it holds the presets). The provider stays reachable only from `ai/api/` (`pub(in crate::ai::api)`), seen to refuse a use from a view; the list of `ai/tasks.rs`, which named files that no longer exist, is gone, and `CLAUDE.md` names the real tasks.
+- [x] 45.4 `hardware_tests/`, `pdf/`, `installation/`, `app/` (6 files of declarations removed; the two files that are not compiled, `hardware_tests/permissions/permission.rs` and `installation/uninstall.rs`, are named in the comments of their groups); the exception of `hardware_tests.rs` in `architecture_tests.rs` (`the_tests_of_a_file_are_never_in_a_file_of_their_own`) removed with the file; the state of this step.
+
+---
+
+## Step 46: The entry of a view (2026-10-23)
+
+**State: built 2026-10-23, in the phases 46.1 to 46.7 (below).**
+
+When the folder of a view is opened, one must see at once where the view begins: the file the page calls to open it, and the functions the page calls to refresh its elements (user, 2026-10-23). The functions are right already; the fault is readability.
+
+**Decisions of the user**
+- [x] **One entry file per view, named after the view** (`views/chat/chat.rs`): all the commands of the view; first those the page calls when the view opens, then the refreshes and the actions of its elements. Every function carries the comment of `CLAUDE.md` ("Where the comments are"): what it does, where the page calls it (which component), which functions it calls. The `commands.rs` of the elements are gone.
+- [x] The folders of the elements stay, with their data and logic only (`view.rs`, `turn.rs`, `stored.rs`), around the entry file that uses them.
+- [x] The 35 `mod.rs` of the views and the components are gone: their declarations go into the map of `main.rs`, their descriptions of the flow of data into `docs/architecture.md`, section 12. The editor of a catalog, a screen of its own, has its entry `catalog_editor.rs`; a component has the file of its name (`pdf_viewer.rs`).
+- [x] The page follows: one file of commands per view (`ui/src/lib/api/chat.ts`) instead of one per element.
+- [x] No new command "open the view": the entry file shows at its top the functions the page calls when the view opens.
+- [x] The tests of the command lists check the new layout: a command is in the entry file of its view (or component), its name begins with the name of an element of that view.
+- The entry file has the name of its folder, so its module has the name of its parent (`views::devices::devices`); clippy's `module_inception` is allowed at those declarations in `main.rs`, with the reason.
+
+**Phases** (one commit each, pushed, every test passing; the documents with each)
+- [x] 46.1 `devices`, the pilot; `views.rs` written in the map of `main.rs`; the test of the command lists for entry files.
+- [x] 46.2 `start` and `shell`. An element with no data of its own (the login form) has no folder in the program; the test of the names takes the elements also from the components of the page (`LoginForm.svelte` is `login_form`).
+- [x] 46.3 `chat`.
+- [x] 46.4 `settings` (its two helpers, `api_key_view` and `no_such_connection`, at the end of the entry, commented as the commands).
+- [x] 46.5 `evaluation_plan`. What the commands of its elements did beside the commands went into the elements: the dialogs of the system into `oscal_documents/dialog.rs` and `standard_documents/dialog.rs`, the reading of a file and the safe name of a file into `oscal_documents/file.rs`, the limit of a search into `document_search/search.rs`.
+- [x] 46.6 the editor of a catalog (its helper `instructions_task` at the end of the entry; the description of the pipeline of the AI, in `ai_builder/mod.rs` so far, is in `architecture.md`, section 12).
+- [x] 46.7 the components (`pdf_viewer` with its entry `pdf_viewer.rs`; `part_rows`, without commands, only its `view.rs`); `components.rs` in the map; the test of the command lists no longer reads a `commands.rs`.
+
+---
+
+## Step 44: The tests in the file they test (2026-10-23)
+
+**State: built 2026-10-23, in the phases 44.1 to 44.6 (below).**
+
+The user (2026-10-23): the unit tests move from their own files (`<file>_tests.rs`, 85 files, about 6000 lines) into the file whose functions they test; fewer files, and a function and its tests read together. It replaces the rule of `CLAUDE.md` ("Way of working") and of `code_structure.md` (section 3, Tests).
+
+**The rule (proposed)**
+- The tests of a file are its **last item**: `#[cfg(test)] mod tests { use super::*; ... }`, after all the code of the program, so that the file is read from the top as the program and ends with its tests. The head of the module says what the tests cover.
+- What stays in files of its own: the help of the tests shared by several files (`test_support.rs`), and the tests of the whole program, which test no one file (`architecture_tests.rs`, `command_lists_tests.rs`).
+- `// ok kk` is unchanged: it marks a function of the program; the tests below it may still be changed.
+
+**What the checks need**
+- `architecture_tests.rs` reads a file only up to its test module, and checks that the module is the last item (after the line `mod tests {` only indented lines, empty lines and the closing `}`), so that no code of the program can hide below it. When step 44 is done, a file named `*_tests.rs` is no longer skipped by its name (until then the folders not moved yet keep theirs).
+- The other checks (clippy, rustfmt, the test of the command lists) see the same code as before.
+
+**Phases** (one commit each, pushed; every test passing after it; the move is mechanical: the content of `<file>_tests.rs` is put into `mod tests { }` at the end of `<file>.rs`, rustfmt indents it, the `#[path]` lines are removed)
+- [x] 44.1 The rule in `CLAUDE.md` and `code_structure.md`; `architecture_tests.rs` as above; the small folders: `checks`, `model/`, `pdf/`, `security/`, `app/`, `components/`, `installation/`.
+- [x] 44.2 `db/` (13 files). The tests of a whole area of CRUD were split by the function each checks (user, 2026-10-23): every file of an area ends with the tests of its own functions; the shared data of the tests of `db/` is in `src/test_support/db.rs`.
+- [x] 44.3 `ai/` (15 files; each tested one file).
+- [x] 44.4 `hardware_tests/` (3 files).
+- [x] 44.5 `views/`: `start`, `shell`, `chat`, `settings`, `devices`.
+- [x] 44.6 `views/evaluation_plan/` with its editor of a catalog; `handover.md`, the state of this step. The acceptance of a proposal, tested so far inside the tests of the AI of the editor, has its own tests in `proposals/accept.rs`; the helpers of the tests of the AI (`ready`, `collector`) are in `catalog_editor/test_support.rs`; the test of the architecture no longer skips a file by its name, and refuses a new `*_tests.rs`.
+
+**Done when** no `<file>_tests.rs` is left besides the tests of the whole program, and the test of the architecture checks that every test module is the last item of its file.
 
 ---
 

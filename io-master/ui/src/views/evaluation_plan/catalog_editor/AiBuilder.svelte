@@ -1,6 +1,6 @@
 <!--
   The element "the AI" of the editor of a catalog
-  (src/views/evaluation_plan/catalog_editor/ai_builder/): the AI reads a table of contents
+  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): the AI reads a table of contents
   and proposes the groups, or the pages of a group (the group chosen in
   the tree, else the top) and proposes its controls. Its events arrive
   while it works, and "Stop" ends it after its step. When it is over it
@@ -11,8 +11,8 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../../lib/api/errors";
-  import * as aiBuilder from "../../../lib/api/evaluation_plan/catalog_editor/ai_builder";
-  import type { Which } from "../../../lib/api/evaluation_plan/catalog_editor/ai_instructions";
+  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
+  import type { Which } from "../../../lib/api/evaluation_plan/catalog_editor";
 
   let {
     uuid,
@@ -26,7 +26,7 @@
     oninstructions: (which: Which) => void;
   } = $props();
 
-  let sources: aiBuilder.SourceView[] = $state([]);
+  let sources: catalogEditor.SourceView[] = $state([]);
   let outline = $state({ document_id: 0, first_page: 1, last_page: 1 });
   let section = $state({ document_id: 0, first_page: 1, last_page: 1, partSize: 12000 });
   let building = $state(false);
@@ -36,14 +36,14 @@
 
   onMount(async () => {
     try {
-      sources = await aiBuilder.sources();
+      sources = await catalogEditor.aiBuilderSources();
       outline.document_id = section.document_id = sources[0]?.id ?? 0;
     } catch (error) {
       problem = sentence(error);
     }
   });
 
-  function buildEvent(event: aiBuilder.BuildEvent) {
+  function buildEvent(event: catalogEditor.BuildEvent) {
     switch (event.event) {
       case "part":
         progress = `Part ${event.index} of ${event.count}: ${event.document}, pages ${event.first_page}–${event.last_page}…`;
@@ -84,13 +84,13 @@
   function buildGroups(event: SubmitEvent) {
     event.preventDefault();
     const range = { ...outline };
-    build(() => aiBuilder.groups(uuid, range, buildEvent));
+    build(() => catalogEditor.aiBuilderGroups(uuid, range, buildEvent));
   }
 
   function buildControls(event: SubmitEvent) {
     event.preventDefault();
     const { partSize, ...range } = section;
-    build(() => aiBuilder.controls(uuid, group, [range], partSize, buildEvent));
+    build(() => catalogEditor.aiBuilderControls(uuid, group, [range], partSize, buildEvent));
   }
 </script>
 
@@ -137,7 +137,7 @@
       <div class={line.done ? "done" : "problem"}>{line.text}</div>
     {/each}
     {#if building}
-      <button type="button" class="small danger" onclick={aiBuilder.stop}>Stop</button>
+      <button type="button" class="small danger" onclick={catalogEditor.aiBuilderStop}>Stop</button>
     {:else}
       <button type="button" class="small" onclick={() => (log = [])}>Close</button>
     {/if}

@@ -26,8 +26,34 @@ pub fn connection(db: &UserDb, role: Role, id: Option<i64>) -> Result<bool, DbEr
     Ok(true)
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// cover the whole folder (read, update).
 #[cfg(test)]
-#[path = "update_tests.rs"]
-mod tests;
+mod tests {
+    //! Tests of giving a role of the AI a connection of its own, or taking it
+    //! away.
+
+    use super::*;
+
+    use crate::db::ai::connection::create;
+    use crate::db::ai::roles::read;
+    use crate::test_support::db::named;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_role_gets_a_connection_and_loses_it() {
+        let test = database();
+        let id = create::connection(&test.db, &named("Local")).unwrap().id;
+
+        assert!(connection(&test.db, Role::Summary, Some(id)).unwrap());
+        assert_eq!(read::connection(&test.db, Role::Summary).unwrap(), Some(id));
+        assert!(connection(&test.db, Role::Summary, None).unwrap());
+        assert_eq!(read::connection(&test.db, Role::Summary).unwrap(), None);
+    }
+
+    #[test]
+    fn a_connection_that_does_not_exist_is_not_given() {
+        let test = database();
+        let id = create::connection(&test.db, &named("Local")).unwrap().id;
+
+        assert!(!connection(&test.db, Role::Summary, Some(id + 1)).unwrap());
+    }
+}

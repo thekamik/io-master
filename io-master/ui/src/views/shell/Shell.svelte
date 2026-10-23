@@ -8,7 +8,7 @@
   library), in the colour of the text around them.
 -->
 <script lang="ts">
-  import type { ProgramView } from "../../lib/api/shell/program";
+  import type { ProgramView } from "../../lib/api/shell";
   import Chat from "../chat/Chat.svelte";
   import Devices from "../devices/Devices.svelte";
   import EvaluationLab from "../evaluation_lab/EvaluationLab.svelte";

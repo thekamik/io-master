@@ -21,3 +21,29 @@ pub fn secret(db: &UserDb, name: &str) -> Result<Option<Zeroizing<String>>, DbEr
         .optional()?
         .map(Zeroizing::new))
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of reading the settings and secrets of an evaluator.
+
+    use super::*;
+
+    use crate::db::user::update;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_setting_or_a_secret_never_stored_is_none() {
+        let test = database();
+
+        assert_eq!(setting(&test.db, "scan.columns").unwrap(), None);
+        assert_eq!(secret(&test.db, "api").unwrap(), None);
+    }
+
+    #[test]
+    fn secrets_and_settings_do_not_mix() {
+        let test = database();
+        update::set_secret(&test.db, "api", "first").unwrap();
+
+        assert_eq!(setting(&test.db, "api").unwrap(), None);
+    }
+}

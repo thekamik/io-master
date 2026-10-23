@@ -35,3 +35,34 @@ pub fn add_user(db: &SystemDb, name: &str, key: &WrappedKey) -> Result<i64, DbEr
 
     Ok(connection.last_insert_rowid())
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of adding an account to the system database.
+
+    use super::*;
+
+    use crate::db::system::read;
+    use crate::test_support::TempDir;
+    use crate::test_support::db::{system_db, wrapped_key};
+
+    #[test]
+    fn an_account_is_stored_with_its_key() {
+        let directory = TempDir::new();
+        let db = system_db(&directory);
+
+        let id = add_user(&db, "Anna", &wrapped_key()).unwrap();
+
+        let found = read::user(&db, "Anna").unwrap().unwrap();
+        assert_eq!((found.id, found.name.as_str(), &found.key), (id, "Anna", &wrapped_key()));
+    }
+
+    #[test]
+    fn a_name_is_taken_once_whatever_its_case() {
+        let directory = TempDir::new();
+        let db = system_db(&directory);
+        add_user(&db, "Anna", &wrapped_key()).unwrap();
+
+        assert!(add_user(&db, "ANNA", &wrapped_key()).is_err());
+    }
+}

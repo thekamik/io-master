@@ -4,7 +4,7 @@
   (src/views/shell/program/). No command of its own.
 -->
 <script lang="ts">
-  import type { ProgramView } from "../../lib/api/shell/program";
+  import type { ProgramView } from "../../lib/api/shell";
 
   let { app }: { app: ProgramView } = $props();
 </script>

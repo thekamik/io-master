@@ -304,7 +304,7 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 the page: a view, its elements and components     what it shows; no secret, no state that matters
   │  a command <element>_<action>, its arguments as JSON
   ▼
-views/<view>/<element>/commands.rs                the session taken, the parameters checked
+views/<view>/<view>.rs (the entry of the view)   its command: the session taken, the parameters checked
   ├──► model/                                     the rules of the data
   ├──► db/                                        written through at once, in one transaction
   └──► ai/api/, hardware_tests/, pdf/             the only ways to a model, a device, a PDF
@@ -315,57 +315,92 @@ views/<view>/<element>/view.rs                    the data the element gets back
 the page: the element shows it; "changed" ──► the view ──► the other elements read again
 ```
 
-The flow inside each view, as it is now (the head of each `views/<view>/mod.rs` names its commands):
+The flow inside each view, as it is now (the entry of each view, `views/<view>/<view>.rs`, holds its commands in this order):
 
-**`start` and `shell`.** The page asks for the state of the program at the start and after each of its changes, and shows the setup, the login or the frame:
+**`start` and `shell`** (entries `views/start/start.rs` and `views/shell/shell.rs`). The page asks for the state of the program when the window opens and after each of its changes, and shows the setup, the login or the frame:
 
 ```text
-setup form ──install(name, password, role)──► installation/: made, logged in ─┐
-login form ──log_in(name, password)─────────► installation/: logged in ───────┤
-user menu ──log_out()───────────────────────► installation/: the session ends ┤
-                                                                              ▼
-the page ──program_get()──► ProgramView: installed, the role, who is logged in, the pages
+SetupForm ──setup_form_install(name, password, role)──► installation/: made, logged in ─┐
+LoginForm ──login_form_log_in(name, password)─────────► installation/: logged in ───────┤
+UserMenu  ──user_menu_log_out()───────────────────────► installation/: the session ends ┤
+                                                                                         ▼
+App.svelte ──program_get()──► ProgramView: installed, the role, who is logged in, the pages, the warnings
 ```
 
-**`chat`.**
+**`chat`** (entry `views/chat/chat.rs`, page `ui/src/views/chat/`).
 
 ```text
-list ──choose(id)──► the view ──► conversation ──open(id)──► the chat from db/
-conversation ──send(chat, text)──► db: the message ──► ai/api/: the reply, piece by piece ──► db: the reply
-     ▲                                                     │
-     └──────────── events: the text as it comes, the end ◄─┘
-conversation ──"changed"──► the view ──► list reads again
+the view opens
+  ├─► ConnectionLine ──connection_line_get()──► the connection of the role consultation (ai/api/)
+  └─► ChatList ──chat_list_get()──► db/ai/chats/: the chats, the newest first
+ChatList ──"chosen"(id)──► the view ──► Conversation ──conversation_open(id)──► the chat from db/
+Conversation ──conversation_send(chat, text)──► db: the message ──► ai/api/: the reply, piece by piece ──► db: the reply
+     ▲                                                                   │
+     └──────────── events (ReplyEvent): the text as it comes, the end ◄──┘
+Conversation ──conversation_stop() / conversation_delete(id)
+Conversation ──"changed"──► the view ──► ChatList ──chat_list_get()──► the list again
 ```
 
-**`evaluation_plan`.** The documents of standards (PDF), the documents of OSCAL, and the editor of a catalog:
+**`evaluation_plan`** (entry `views/evaluation_plan/evaluation_plan.rs`, page `ui/src/views/evaluation_plan/`). The documents of standards (PDF), the documents of OSCAL, and the editor of a catalog:
 
 ```text
-documents (PDF) ──load()──► pdf/: the text, part by part ──► db/standards/   (events: file, pages, end; Stop)
-documents of OSCAL ──import / export / delete──► checked against the schema of NIST ──► db/oscal/
-new catalog ──create(title, sources)──► db/oscal/ ──► the view opens it in the editor
-search ──run(text)──► the hits ──► the view ──► viewer (component) ──► the PDF, the quote on its page
+the view opens ──► OscalDocuments ──oscal_documents_get()──► the documents of OSCAL by model and title
+the tab Documents of standards ──► StandardDocuments ──standard_documents_get()──► the PDFs by title and part
+StandardDocuments ──standard_documents_load()──► the dialog ──► pdf/: the text, part by part ──► db/standards/
+                     (events LoadEvent: file, pages, end; standard_documents_stop())
+StandardDocuments ──standard_documents_update / _delete──► db/standards/ (refused while a catalog quotes it)
+OscalDocuments ──oscal_documents_import / _export / _delete──► the dialog ──► checked against the schema of NIST ──► db/oscal/
+NewCatalog ──new_catalog_sources()──► the PDFs it can come from; ──new_catalog_create(title, sources)──► db/oscal/
+     └── "made" ──► the view opens it in the editor
+DocumentSearch ──document_search_run(text)──► the hits ──► the view ──► the viewer (component) ──► the PDF, the quote on its page
 
-the editor of a catalog:
-tree ──"chosen"──► the view ──► object form, quotes: each reads its own data
-object form, new object, quotes, proposals ──a change──► db/oscal/ (checked) ──"changed"──► every element reads again
-AI ──groups / controls(pages)──► ai/api/: the model, part by part ──► proposals in db/evaluation_support/
-proposal ──accepted by the evaluator (P1)──► the catalog in db/oscal/
+the editor of a catalog (entry views/evaluation_plan/catalog_editor/catalog_editor.rs):
+the editor opens ──► CatalogTree ──catalog_tree_get(uuid)──► the rows of the tree (no recursion in the page)
+                 ├─► Proposals ──proposals_get(uuid)──► what the AI proposed, waiting
+                 └─► AiBuilder ──ai_builder_sources()──► the documents the AI can read
+CatalogTree ──"chosen"──► the editor ──► ObjectForm ──object_form_get(uuid, id)──►; ObjectQuotes ──object_quotes_get──►
+ObjectForm, NewObject, ObjectQuotes, Proposals ──a change──► the catalog in db/oscal/ (checked against the schema of NIST)
+  └── "changed" ──► the editor ──► every element reads again
+AiBuilder ──ai_builder_groups / ai_builder_controls(pages)──► ai/api/: the model, part by part ──► proposals in db/
+  └── BuildEvent (part, writing, proposed, failed, end) while it works; ai_builder_stop(); "changed" at the end
+Proposals ──proposals_accept(id, corrected)──► the object in the catalog, its quotes kept (P1)
 ```
 
-**`devices`.**
+Every question of the AI of the editor follows one pipeline (`ai_builder/`: `groups.rs` from a table of contents, `controls.rs` from the pages of a group, `steps.rs` what both share, `parts.rs` the pages cut into parts that fit the context of a model); the database is held for each step only, never while the model writes:
 
 ```text
-settings ──save(types, columns)──► db/scan_settings/ ──"saved"──► the view ──► table
-table ──scan()──► the settings from db/ ──► hardware_tests/: the descriptions of the ports (a port is never opened)
+the catalog and the pages (db/) ──prompt (ai/tasks/catalog_*.rs)──► the question
+  ──ai/api/completions::ask──► the model, and the journal of the AI
+  ──read (ai/tasks/catalog_*.rs)──► groups or controls of OSCAL
+  ──quotes checked on their pages, proposals stored (db/evaluation_support/)
 ```
 
-**`settings`.**
+**`devices`** (entry `views/devices/devices.rs`, page `ui/src/views/devices/`).
 
 ```text
-list ──choose(id)──► the view ──► form ──get(id)──► the connection; key ──get(id)──► whether a key is stored (never the key)
-form ──save / delete / activate──► db/ai/connection/ ──"changed"──► list and key read again
-check ──run(id)──► ai/api/checks: one short question, written into the journal ──► the report
-password form ──change(old, new)──► installation/: the key of the database encrypted again
+the view opens
+  ├─► ScannerSettings ──scanner_settings_get()──► db/scan_settings/: the texts ──► ScannerSettingsView
+  └─► PortsTable ──ports_table_scan()──► db/scan_settings/: the texts ──► hardware_tests/: the descriptions
+                                          of the ports (a port is never opened) ──► PortsTableView
+ScannerSettings ──scanner_settings_save(all_types, types, columns)──► the rules of the settings
+  │                    (hardware_tests/devices/scan_settings.rs) ──► db/scan_settings/ ──► ScannerSettingsView
+  └── "saved" ──► the view ──► PortsTable ──ports_table_scan()──► the table again
+```
+
+**`settings`** (entry `views/settings/settings.rs`, page `ui/src/views/settings/`).
+
+```text
+the tab AI opens
+  ├─► ConnectionList ──connection_list_get()──► the connections by name, the active one
+  └─► ConnectionForm ──connection_form_new()──► the template of a new connection, the presets
+ConnectionList ──"chosen"(id)──► the view ──► ConnectionForm ──connection_form_get(id)──► the connection (never the key)
+                                           ├─► ApiKey ──api_key_get(id)──► whether a key is stored
+                                           └─► ConnectionCheck (emptied)
+ConnectionForm ──connection_form_save / _delete / _activate──► db/ai/connection/ (through ai/api/connections)
+  └── "changed" ──► the view ──► ConnectionList ──connection_list_get()──►; ApiKey ──api_key_get(id)──►
+ApiKey ──api_key_store(id, key) / api_key_delete(id)──► the key in the encrypted database, bound to the address
+ConnectionCheck ──connection_check_run(id)──► ai/api/checks: one short question, written into the journal ──► the report
+PasswordForm ──password_form_change(old, new, new)──► installation/: the key of the database encrypted again
 ```
 
 **`evaluation_lab` (planned, step 41.5; open).** Its flow is drawn when its concept is settled; the tiles of the evidence are still open (section 10.2). What stands: the plan is handed over from `evaluation_plan`, what the AI proposes becomes a result of the assessment (OSCAL) only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3).

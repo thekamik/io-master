@@ -34,7 +34,35 @@ fn is_stored_text(text: &str) -> bool {
     !text.is_empty() && text.len() <= MAX_TEXT
 }
 
-// Unit tests of the whole area, in their own file.
 #[cfg(test)]
-#[path = "update_tests.rs"]
-mod tests;
+mod tests {
+    //! Tests of storing the settings of the scanner.
+
+    use super::*;
+
+    use crate::db::scan_settings::read;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn stored_texts_are_replaced() {
+        let test = database();
+
+        texts(&test.db, "ttyACM,ttyUSB", "path,driver").unwrap();
+        texts(&test.db, "all", "path").unwrap();
+
+        let stored = read::texts(&test.db).unwrap();
+        assert_eq!(stored.port_types.as_deref(), Some("all"));
+        assert_eq!(stored.columns.as_deref(), Some("path"));
+    }
+
+    #[test]
+    fn texts_that_cannot_be_stored_are_refused_and_nothing_changes() {
+        let test = database();
+        texts(&test.db, "all", "path").unwrap();
+
+        assert!(matches!(texts(&test.db, "", "path"), Err(DbError::Inconsistent(_))));
+        assert!(matches!(texts(&test.db, "all", &"x".repeat(MAX_TEXT + 1)), Err(DbError::Inconsistent(_))));
+
+        assert_eq!(read::texts(&test.db).unwrap().columns.as_deref(), Some("path"));
+    }
+}

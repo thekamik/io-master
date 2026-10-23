@@ -1,13 +1,13 @@
 <!--
   The element "quotes" of the editor of a catalog
-  (src/views/evaluation_plan/catalog_editor/object_quotes/): the passages of the standard
+  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): the passages of the standard
   the object comes from, each looked for on its page. Showing a quote and
   "Add a quote…" only tell the view, which opens the viewer; the view
   gives back the passage selected there (add(), below).
 -->
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
-  import * as objectQuotes from "../../../lib/api/evaluation_plan/catalog_editor/object_quotes";
+  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
 
   let {
     uuid,
@@ -25,7 +25,7 @@
     onchanged: () => void;
   } = $props();
 
-  let quotes: objectQuotes.ObjectQuotesView | null = $state(null);
+  let quotes: catalogEditor.ObjectQuotesView | null = $state(null);
   let problem = $state("");
 
   $effect(() => {
@@ -35,7 +35,7 @@
 
   async function load(catalog: string, object: string) {
     try {
-      quotes = await objectQuotes.get(catalog, object);
+      quotes = await catalogEditor.objectQuotesGet(catalog, object);
       problem = "";
     } catch (error) {
       problem = sentence(error);
@@ -45,7 +45,7 @@
   /** Adds the passage selected in the viewer; called by the view. */
   export async function add(source: { document_id: number; page: number; quote: string }) {
     try {
-      await objectQuotes.add(uuid, objectId, source.document_id, source.page, source.quote);
+      await catalogEditor.objectQuotesAdd(uuid, objectId, source.document_id, source.page, source.quote);
       onchanged();
     } catch (error) {
       problem = `The quote was not added: ${sentence(error)}`;
@@ -54,7 +54,7 @@
 
   async function remove(id: number) {
     try {
-      await objectQuotes.remove(id);
+      await catalogEditor.objectQuotesDelete(id);
       onchanged();
     } catch (error) {
       problem = sentence(error);

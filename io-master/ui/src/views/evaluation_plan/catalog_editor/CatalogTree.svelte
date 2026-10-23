@@ -1,13 +1,13 @@
 <!--
   The element "tree" of the editor of a catalog
-  (src/views/evaluation_plan/catalog_editor/catalog_tree/): the groups and controls, as
+  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): the groups and controls, as
   the rows the program gives with their level, drawn without recursion.
   Choosing an object, and "+ Group", "+ Control", only tell the view. It
   reads the tree again when the view says the catalog changed (version).
 -->
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
-  import * as catalogTree from "../../../lib/api/evaluation_plan/catalog_editor/catalog_tree";
+  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
 
   let {
     uuid,
@@ -21,11 +21,11 @@
     version: number;
     selected: string | null;
     onchoose: (id: string, kind: "group" | "control") => void;
-    onread: (tree: catalogTree.CatalogTreeView) => void;
+    onread: (tree: catalogEditor.CatalogTreeView) => void;
     onadd: (kind: "group" | "control") => void;
   } = $props();
 
-  let tree: catalogTree.CatalogTreeView | null = $state(null);
+  let tree: catalogEditor.CatalogTreeView | null = $state(null);
   let problem = $state("");
 
   $effect(() => {
@@ -35,7 +35,7 @@
 
   async function load(catalog: string) {
     try {
-      tree = await catalogTree.get(catalog);
+      tree = await catalogEditor.catalogTreeGet(catalog);
       problem = "";
       onread(tree);
     } catch (error) {

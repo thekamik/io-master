@@ -11,7 +11,7 @@
   Which tab is open is presentation, kept here.
 -->
 <script lang="ts">
-  import type { ProgramView } from "../../lib/api/shell/program";
+  import type { ProgramView } from "../../lib/api/shell";
   import AiTab from "./AiTab.svelte";
   import PasswordForm from "./PasswordForm.svelte";
   import ProgramTab from "./ProgramTab.svelte";

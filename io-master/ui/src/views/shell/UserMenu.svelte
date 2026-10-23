@@ -1,12 +1,12 @@
 <!--
-  The element "user menu" of the view Shell (src/views/shell/user_menu/):
+  The element "user menu" of the view Shell (its command user_menu_log_out in src/views/shell/shell.rs):
   the logged-in evaluator at the foot of the sidebar, and the logout. When
   the evaluator is logged out it tells the application (onloggedout),
   which reads the state of the program again.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import { logOut } from "../../lib/api/shell/user_menu";
+  import { userMenuLogOut } from "../../lib/api/shell";
 
   let { user, onloggedout }: { user: string | null; onloggedout: () => void } = $props();
 
@@ -16,7 +16,7 @@
     problem = "";
 
     try {
-      await logOut();
+      await userMenuLogOut();
       onloggedout();
     } catch (error) {
       problem = sentence(error);

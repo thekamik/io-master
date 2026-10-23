@@ -147,9 +147,55 @@ pub fn remove_all(data_dir: &Path) -> Result<(), DbError> {
     }
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// are part of this module, so they can use its private items. They
-// cover the whole folder (read, update, delete).
 #[cfg(test)]
-#[path = "database_tests.rs"]
-mod tests;
+mod tests {
+    //! Tests of the database of an evaluator: made, opened, kept, removed.
+
+    use super::*;
+
+    use std::os::unix::fs::PermissionsExt;
+
+    use crate::db::user::{read, update};
+    use crate::security::random::fill_random;
+    use crate::test_support::TempDir;
+
+    #[test]
+    fn a_database_of_an_account_is_made_and_opened() {
+        let directory = TempDir::new();
+        let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
+
+        create(directory.path(), 3, &key).unwrap();
+
+        assert!(path(directory.path(), 3).ends_with("users/3.db"));
+        assert!(open(directory.path(), 3, &key).is_ok());
+
+        let mode = fs::metadata(directory.path().join(DIRECTORY)).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode, 0o700);
+    }
+
+    #[test]
+    fn what_is_stored_is_kept_in_the_file_and_read_after_opening_again() {
+        let directory = TempDir::new();
+        let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
+        let db = create(directory.path(), 1, &key).unwrap();
+        update::set_setting(&db, "scan.columns", "path").unwrap();
+        drop(db);
+
+        // Kept in the file, and readable only with the key.
+        let db = open(directory.path(), 1, &key).unwrap();
+        assert_eq!(read::setting(&db, "scan.columns").unwrap().as_deref(), Some("path"));
+    }
+
+    #[test]
+    fn all_databases_are_removed() {
+        let directory = TempDir::new();
+        let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
+
+        create(directory.path(), 1, &key).unwrap();
+        create(directory.path(), 2, &key).unwrap();
+        remove_all(directory.path()).unwrap();
+
+        assert!(!directory.path().join(DIRECTORY).exists());
+        remove_all(directory.path()).unwrap();
+    }
+}

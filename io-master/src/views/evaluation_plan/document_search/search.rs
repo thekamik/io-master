@@ -9,6 +9,9 @@ use crate::db::user::database::UserDb;
 use crate::model::standards::quote::{normalize, normalize_with_places};
 use crate::model::standards::{Hit, MAX_HITS};
 
+/// The longest text searched for, in characters.
+pub const MAX_SEARCH: usize = 1000;
+
 /// The characters of text around a hit of a search, on each side.
 const SNIPPET: usize = 80;
 
@@ -65,8 +68,27 @@ fn snippet(page: &str, first: usize, last: usize) -> String {
     text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// are part of this module, so they can use its private items.
 #[cfg(test)]
-#[path = "search_tests.rs"]
-mod tests;
+mod tests {
+    //! Unit tests of `search.rs`.
+
+    use super::*;
+
+    use crate::test_support::standards::{database, load};
+
+    #[test]
+    fn the_text_is_searched_across_divided_words_and_case() {
+        let test = database();
+        let id = load(&test.db, b"%PDF search");
+
+        let hits = search(&test.db, "functional SPECIFICATION", None).unwrap();
+
+        assert_eq!(hits.len(), 2);
+        assert!(hits.iter().all(|hit| hit.document_id == id && hit.page == 2));
+        // The snippet is the text as it is on the page, on one line.
+        assert!(hits[0].snippet.contains("ADV_FSP.4 Complete functional specification"), "{}", hits[0].snippet);
+
+        assert!(search(&test.db, "  ", None).unwrap().is_empty());
+        assert!(search(&test.db, "nothing like this", Some(id)).unwrap().is_empty());
+    }
+}

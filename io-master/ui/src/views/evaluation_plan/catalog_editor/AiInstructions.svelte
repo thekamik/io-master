@@ -1,6 +1,6 @@
 <!--
   The element "instructions to the AI" of the editor of a catalog
-  (src/views/evaluation_plan/catalog_editor/ai_instructions/): a dialog with the
+  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): a dialog with the
   instructions of the task that proposes the groups or the controls.
   Saving an empty text brings back the default ones.
 -->
@@ -8,9 +8,9 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../../lib/api/errors";
-  import * as aiInstructions from "../../../lib/api/evaluation_plan/catalog_editor/ai_instructions";
+  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
 
-  let { which, onclose }: { which: aiInstructions.Which; onclose: () => void } = $props();
+  let { which, onclose }: { which: catalogEditor.Which; onclose: () => void } = $props();
 
   let text = $state("");
   let problem = $state("");
@@ -18,7 +18,7 @@
 
   onMount(async () => {
     try {
-      text = await aiInstructions.get(which);
+      text = await catalogEditor.aiInstructionsGet(which);
     } catch (error) {
       problem = sentence(error);
     }
@@ -26,7 +26,7 @@
 
   async function save(written: string) {
     try {
-      text = await aiInstructions.save(which, written);
+      text = await catalogEditor.aiInstructionsSave(which, written);
       notice = "The instructions were saved.";
     } catch (error) {
       problem = sentence(error);

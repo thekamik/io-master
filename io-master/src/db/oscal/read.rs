@@ -54,3 +54,35 @@ pub fn catalog(db: &UserDb, uuid: &str) -> Result<Catalog, OscalError> {
         None => Err(OscalError::NotFound),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of reading the documents of OSCAL.
+
+    use super::*;
+
+    use crate::db::oscal::create;
+    use crate::model::oscal::OscalModel;
+    use crate::test_support::db::basic_catalog;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn a_stored_document_is_read_with_its_summary() {
+        let test = database();
+        let stored = basic_catalog();
+        create::document(&test.db, &stored).unwrap();
+
+        let all = summaries(&test.db).unwrap();
+        assert_eq!(all.len(), 1);
+        assert_eq!(all[0].model, OscalModel::Catalog);
+        assert!(summary(&test.db, stored.uuid()).unwrap().is_some());
+        assert_eq!(document(&test.db, stored.uuid()).unwrap().unwrap(), stored);
+    }
+
+    #[test]
+    fn a_document_that_was_never_stored_is_none() {
+        let test = database();
+
+        assert!(document(&test.db, "00000000-0000-4000-8000-000000000000").unwrap().is_none());
+    }
+}

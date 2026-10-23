@@ -1,14 +1,12 @@
 //! The commands of the window are callable only when they are listed in
-//! four places: the `commands.rs` of an element of `views/` or of a
-//! component of `components/`, `routes.rs`
-//! (`generate_handler!`), `build.rs` (`AppManifest`) and
-//! `capabilities/default.json`; a mistake there closes the door, but it
-//! is a mistake. This test reads the four lists
-//! and says what one of them lacks. It also checks the rule of the views
-//! (`views.rs`) and of the components (`components.rs`): a command lives in
-//! the folder of its element or component and is named after it
-//! (`ports_table_scan` in `views/devices/ports_table/commands.rs`,
-//! `pdf_viewer_get` in `components/pdf_viewer/commands.rs`).
+//! four places: the entry of their view (`views/<view>/<view>.rs`) or of
+//! their component, `routes.rs` (`generate_handler!`), `build.rs`
+//! (`AppManifest`) and `capabilities/default.json`; a mistake there closes
+//! the door, but it is a mistake. This test reads the four lists and says
+//! what one of them lacks. It also checks that a command is named after an
+//! element of its view (`ports_table_scan` in `views/devices/devices.rs`,
+//! the element `views/devices/ports_table/`) or after its component
+//! (`pdf_viewer_get`).
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -37,26 +35,76 @@ fn commands_in(source: &str) -> Vec<String> {
     names
 }
 
-/// Every `commands.rs` under `views/` and `components/`, with the name of
-/// the folder of its element or component.
-fn element_files() -> Vec<(String, String)> {
+/// The files that define commands, under `views/` and `components/`: the
+/// entry of a view or a component, the file named after its folder (step
+/// 46), each with the names its commands may begin with: the names of the
+/// elements of the view (the folders beside the entry, and the components
+/// of its page) and the name of the folder itself, for a component.
+fn element_files() -> Vec<(Vec<String>, String)> {
     let mut found = Vec::new();
     let mut pending = vec![src().join("views"), src().join("components")];
 
     while let Some(directory) = pending.pop() {
+        let folder = directory.file_name().unwrap_or_default().to_string_lossy().into_owned();
+        let mut elements = vec![folder.clone()];
+        let mut files = Vec::new();
+
         for entry in fs::read_dir(&directory).expect("the folder is read").flatten() {
             let path = entry.path();
 
             if path.is_dir() {
+                elements.push(path.file_name().unwrap_or_default().to_string_lossy().into_owned());
                 pending.push(path);
-            } else if path.file_name().is_some_and(|name| name == "commands.rs") {
-                let element = directory.file_name().unwrap_or_default().to_string_lossy().into_owned();
-                found.push((element, fs::read_to_string(&path).expect("the file is read")));
+            } else {
+                files.push(path);
+            }
+        }
+
+        for path in files {
+            let name = path.file_name().unwrap_or_default().to_string_lossy().into_owned();
+
+            if name == format!("{folder}.rs") {
+                let mut names = elements.clone();
+                names.extend(page_elements(&directory));
+                found.push((names, fs::read_to_string(&path).expect("the file is read")));
             }
         }
     }
 
     found
+}
+
+/// The elements of a view on the page: its components
+/// (`ui/src/views/<view>/LoginForm.svelte` is the element `login_form`), for
+/// the elements that have no folder in the program (no data of their own).
+fn page_elements(directory: &Path) -> Vec<String> {
+    let relative = directory.strip_prefix(src()).unwrap_or(directory);
+    let page = Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("src").join(relative);
+    let mut names = Vec::new();
+
+    for entry in fs::read_dir(page).into_iter().flatten().flatten() {
+        let file = entry.file_name().to_string_lossy().into_owned();
+
+        if let Some(component) = file.strip_suffix(".svelte") {
+            names.push(snake_case(component));
+        }
+    }
+
+    names
+}
+
+/// `LoginForm` as `login_form`.
+fn snake_case(name: &str) -> String {
+    let mut snake = String::new();
+
+    for (index, letter) in name.chars().enumerate() {
+        if letter.is_uppercase() && index > 0 {
+            snake.push('_');
+        }
+        snake.extend(letter.to_lowercase());
+    }
+
+    snake
 }
 
 /// The commands defined in the views and the components: since step 42
@@ -135,13 +183,15 @@ fn the_four_lists_of_the_commands_agree() {
 
 #[test]
 fn a_command_of_a_view_is_named_after_its_element() {
-    let elements = element_files();
+    let files = element_files();
 
-    assert_ne!(elements.len(), 0);
+    assert_ne!(files.len(), 0);
 
-    for (element, source) in elements {
+    for (elements, source) in files {
         for command in commands_in(&source) {
-            assert!(command.starts_with(&format!("{element}_")), "{command} is not a command of the element {element}");
+            let named = elements.iter().any(|element| command.starts_with(&format!("{element}_")));
+
+            assert!(named, "{command} is named after none of {elements:?}");
         }
     }
 }

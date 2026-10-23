@@ -1,6 +1,6 @@
 <!--
   The element "list of connections" of the view Settings, tab AI
-  (src/views/settings/connection_list/). Choosing a connection and "New
+  (its commands in src/views/settings/settings.rs). Choosing a connection and "New
   connection" only tell the view (onchoose). It tells the view which
   connection the chat uses (onread). The view asks it to read the list
   again after the form changed it (reload(), below).
@@ -9,7 +9,7 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as connectionList from "../../lib/api/settings/connection_list";
+  import * as settings from "../../lib/api/settings";
 
   let {
     chosen,
@@ -23,13 +23,13 @@
     onread: (active: number | null) => void;
   } = $props();
 
-  let list: connectionList.ConnectionListView | null = $state(null);
+  let list: settings.ConnectionListView | null = $state(null);
   let problem = $state("");
 
   /** Reads the connections again; called by the view after a change. */
   export async function reload() {
     try {
-      list = await connectionList.get();
+      list = await settings.connectionListGet();
       problem = "";
       onread(list.active);
     } catch (error) {
