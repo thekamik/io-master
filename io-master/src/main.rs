@@ -321,10 +321,29 @@ mod views {
         }
     }
 
+    // views/settings/: the view Settings: the password of the evaluator, the
+    // connections to AI services and their keys, what the installation is.
+    pub mod settings {
+        #[allow(clippy::module_inception)]
+        pub mod settings;
+
+        pub mod api_key {
+            pub mod view;
+        }
+        pub mod connection_check {
+            pub mod view;
+        }
+        pub mod connection_form {
+            pub mod view;
+        }
+        pub mod connection_list {
+            pub mod view;
+        }
+    }
+
     // The views not written here yet declare their modules in their mod.rs
     // (step 46).
     pub mod evaluation_plan;
-    pub mod settings;
 
     // Help for the tests of the views: a window of the mock runtime of Tauri.
     #[cfg(test)]

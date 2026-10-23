@@ -179,7 +179,7 @@ views/<view>/<file>.rs               what the elements of one view share (Device
 ui/src/lib/api/<view>.ts             the commands of the view on the page, one function per command (portsTableScan)
 ```
 
-The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** Devices, Start, Shell and Chat are built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
+The modules of a view are declared in the map of `main.rs`; its flow of data is drawn in `architecture.md`, section 12. **A plan (step 46):** Devices, Start, Shell, Chat and Settings are built so; the other views still have `mod.rs` and a `commands.rs` per element (`views/<view>/<element>/commands.rs`, `ui/src/lib/api/<view>/<element>.ts`).
 
 - **An element** is an interactive part of the window that needs the program: to process or store data, to scan, to ask the AI. What is only presentation (an open menu, a selection, a tab, the position during a drag) stays in the page and has no folder here; only the final result is sent (CLAUDE.md, "What goes to Rust").
 - **A command is named `<element>_<action>`** (`ports_table_scan`, `scanner_settings_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
@@ -431,20 +431,15 @@ views.rs/                  The views of the window, one folder per view and one 
       stored.rs                    What is stored of a document of a standard, with its rules: a file is
       view.rs                      The data of the list of documents of standards, as the page gets and
   settings/                    The view Settings: the password of the evaluator, the connections to
+    settings.rs                  The entry of the view Settings: every command the page calls for it
     api_key/                     The element "API key" of the view Settings, tab AI: the key of one
-      commands.rs                  The commands of the API key.
       view.rs                      The data of the API key, as the page gets it: never the key itself.
     connection_check/            The element "check of a connection" of the view Settings, tab AI
-      commands.rs                  The command of the check of a connection.
       view.rs                      The report of a check of a connection, as the page gets it; the key
     connection_form/             The element "connection form" of the view Settings, tab AI: one
-      commands.rs                  The commands of the connection form.
       view.rs                      The data of the connection form, as the page gets it and sends it.
     connection_list/             The element "list of connections" of the view Settings, tab AI
-      commands.rs                  The command of the list of connections.
       view.rs                      The data of the list of connections, as the page gets it.
-    password_form/               The element "password form" of the view Settings, tab User
-      commands.rs                  The command of the password form.
   shell/                       The view Shell: the frame of the window around every page of a
     shell.rs                     The entry of the view Shell: the state of the program, the logout
     program/                     The element "program" of the view Shell: the state of the program the

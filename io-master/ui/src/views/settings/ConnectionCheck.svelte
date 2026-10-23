@@ -1,17 +1,17 @@
 <!--
   The element "check of a connection" of the view Settings, tab AI
-  (src/views/settings/connection_check/): sends one short message over the
+  (its commands in src/views/settings/settings.rs): sends one short message over the
   saved connection and shows what went out and what came back (the key
   masked). Not possible while the form has changes that are not saved
   (disabled).
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import * as connectionCheck from "../../lib/api/settings/connection_check";
+  import * as settings from "../../lib/api/settings";
 
   let { id, disabled }: { id: number; disabled: boolean } = $props();
 
-  let report: connectionCheck.CheckView | null = $state(null);
+  let report: settings.CheckView | null = $state(null);
   let problem = $state("");
   let checking = $state(false);
 
@@ -28,7 +28,7 @@
     problem = "";
 
     try {
-      report = await connectionCheck.run(id);
+      report = await settings.connectionCheckRun(id);
     } catch (error) {
       problem = `The connection cannot be checked: ${sentence(error)}`;
     } finally {

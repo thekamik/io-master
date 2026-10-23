@@ -368,13 +368,20 @@ ScannerSettings ──scanner_settings_save(all_types, types, columns)──► 
   └── "saved" ──► the view ──► PortsTable ──ports_table_scan()──► the table again
 ```
 
-**`settings`.**
+**`settings`** (entry `views/settings/settings.rs`, page `ui/src/views/settings/`).
 
 ```text
-list ──choose(id)──► the view ──► form ──get(id)──► the connection; key ──get(id)──► whether a key is stored (never the key)
-form ──save / delete / activate──► db/ai/connection/ ──"changed"──► list and key read again
-check ──run(id)──► ai/api/checks: one short question, written into the journal ──► the report
-password form ──change(old, new)──► installation/: the key of the database encrypted again
+the tab AI opens
+  ├─► ConnectionList ──connection_list_get()──► the connections by name, the active one
+  └─► ConnectionForm ──connection_form_new()──► the template of a new connection, the presets
+ConnectionList ──"chosen"(id)──► the view ──► ConnectionForm ──connection_form_get(id)──► the connection (never the key)
+                                           ├─► ApiKey ──api_key_get(id)──► whether a key is stored
+                                           └─► ConnectionCheck (emptied)
+ConnectionForm ──connection_form_save / _delete / _activate──► db/ai/connection/ (through ai/api/connections)
+  └── "changed" ──► the view ──► ConnectionList ──connection_list_get()──►; ApiKey ──api_key_get(id)──►
+ApiKey ──api_key_store(id, key) / api_key_delete(id)──► the key in the encrypted database, bound to the address
+ConnectionCheck ──connection_check_run(id)──► ai/api/checks: one short question, written into the journal ──► the report
+PasswordForm ──password_form_change(old, new, new)──► installation/: the key of the database encrypted again
 ```
 
 **`evaluation_lab` (planned, step 41.5; open).** Its flow is drawn when its concept is settled; the tiles of the evidence are still open (section 10.2). What stands: the plan is handed over from `evaluation_plan`, what the AI proposes becomes a result of the assessment (OSCAL) only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3).
