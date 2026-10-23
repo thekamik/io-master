@@ -57,8 +57,38 @@ pub fn proposal(db: &UserDb, proposal: &NewProposal<'_>) -> Result<i64, DbError>
     Ok(db.connection().last_insert_rowid())
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// cover the whole folder (create, read, delete).
 #[cfg(test)]
-#[path = "create_tests.rs"]
-mod tests;
+mod tests {
+    //! Tests of storing quotes and proposals of the evaluation support.
+
+    use super::*;
+
+    use crate::db::evaluation_support::read;
+    use crate::test_support::db::{proposal_content, quote_draft, stored_proposal};
+    use crate::test_support::standards::{database, load};
+
+    #[test]
+    fn a_quote_is_stored_for_its_object() {
+        let test = database();
+        let source = load(&test.db, b"%PDF support");
+
+        let id = quote(&test.db, "doc", "ADV_FSP.4", &quote_draft(source, "The developer shall")).unwrap();
+
+        let stored = read::quotes(&test.db, "doc", Some("ADV_FSP.4")).unwrap();
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored[0].id, id);
+    }
+
+    #[test]
+    fn a_proposal_keeps_its_content_its_quotes_and_its_parent() {
+        let test = database();
+        let source = load(&test.db, b"%PDF proposals");
+
+        let id = stored_proposal(&test.db, source);
+
+        let stored = read::proposal(&test.db, id).unwrap().unwrap();
+        assert_eq!(stored.content, proposal_content());
+        assert_eq!(stored.quotes, [QuoteDraft { found: false, ..quote_draft(source, "ADV_FSP.4") }]);
+        assert_eq!(stored.parent_id.as_deref(), Some("ADV"));
+    }
+}

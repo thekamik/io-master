@@ -1,8 +1,15 @@
 //! Help for the tests of `db/`: an AI connection that keeps the rules,
-//! and the API key of the tests.
+//! the API key of the tests, an entry of the journal of the AI, and a
+//! quote and a proposal of the evaluation support.
 
+use serde_json::{Value, json};
+
+use crate::db::ai::journal::rows::Entry;
+use crate::db::evaluation_support::create::{self, NewProposal};
+use crate::db::user::database::UserDb;
 use crate::model::ai::Connection;
 use crate::model::api_key::ApiKey;
+use crate::model::evaluation_support::{ProposalKind, QuoteDraft};
 
 /// The API key of the tests; it must never be found in the file of the
 /// database.
@@ -16,4 +23,53 @@ pub fn named(name: &str) -> Connection {
 /// The API key of the tests.
 pub fn key() -> ApiKey {
     ApiKey::new(SECRET_KEY.to_owned()).unwrap()
+}
+
+/// An entry of the journal of the AI of the task `task`, as a question of
+/// the chat would leave it (its id and time are given by the database).
+pub fn journal_entry(task: &str) -> Entry {
+    Entry {
+        id: 0,
+        time: 0,
+        task: task.to_owned(),
+        role: "consultation".to_owned(),
+        connection: "Local".to_owned(),
+        model: "gemma4".to_owned(),
+        request: "{\"messages\": []}".to_owned(),
+        answer: "Hello".to_owned(),
+        ending: "complete".to_owned(),
+        note: None,
+        input_tokens: 12,
+        output_tokens: 3,
+    }
+}
+
+/// A quote of page 2 of the document `source`, found on its page.
+pub fn quote_draft(source: i64, text: &str) -> QuoteDraft {
+    QuoteDraft { source_document_id: source, page: 2, text: text.to_owned(), found: true }
+}
+
+/// The content of the proposal of the tests: a control of the group ADV.
+pub fn proposal_content() -> Value {
+    json!({"id": "ADV_FSP.4", "title": "Complete functional specification"})
+}
+
+/// Stores the proposal of the tests for the document "doc", with one quote
+/// of `source`; returns its id.
+pub fn stored_proposal(db: &UserDb, source: i64) -> i64 {
+    let quotes = [QuoteDraft { found: false, ..quote_draft(source, "ADV_FSP.4") }];
+
+    create::proposal(
+        db,
+        &NewProposal {
+            document_uuid: "doc",
+            kind: ProposalKind::Control,
+            parent_id: Some("ADV"),
+            content: &proposal_content(),
+            quotes: &quotes,
+            note: "The component of ADV.",
+            model: "gemma4",
+        },
+    )
+    .unwrap()
 }

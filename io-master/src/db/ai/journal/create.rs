@@ -22,8 +22,24 @@ pub fn entry(db: &UserDb, entry: &Entry) -> Result<i64, DbError> {
     Ok(db.connection().last_insert_rowid())
 }
 
-// Unit tests, in their own file to keep this one readable. They
-// cover the whole folder (create, read, the triggers).
 #[cfg(test)]
-#[path = "create_tests.rs"]
-mod tests;
+mod tests {
+    //! Tests of adding an entry to the journal of the AI.
+
+    use super::*;
+
+    use crate::db::ai::journal::read;
+    use crate::test_support::db::journal_entry;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn an_entry_is_stored_as_it_was_given_with_its_time() {
+        let test = database();
+
+        entry(&test.db, &journal_entry("chat")).unwrap();
+
+        let stored = &read::last(&test.db, 10).unwrap()[0];
+        assert_eq!(*stored, Entry { id: stored.id, time: stored.time, ..journal_entry("chat") });
+        assert!(stored.time > 1_700_000_000);
+    }
+}

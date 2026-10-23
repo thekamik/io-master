@@ -47,3 +47,48 @@ pub fn proposal(db: &UserDb, id: i64) -> Result<Option<Proposal>, DbError> {
         .query_row("SELECT * FROM support_proposals WHERE id = :id", named_params! { ":id": id }, proposal_from_row)
         .optional()?)
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of reading the evaluation support.
+
+    use super::*;
+
+    use crate::db::evaluation_support::create;
+    use crate::test_support::db::{quote_draft, stored_proposal};
+    use crate::test_support::standards::{database, load};
+
+    #[test]
+    fn the_quotes_of_a_document_or_of_one_of_its_objects_are_read() {
+        let test = database();
+        let source = load(&test.db, b"%PDF support");
+        let draft = quote_draft(source, "The developer shall");
+        let id = create::quote(&test.db, "doc", "ADV_FSP.4", &draft).unwrap();
+        create::quote(&test.db, "doc", "ATE_IND.2", &draft).unwrap();
+
+        assert_eq!(quotes(&test.db, "doc", None).unwrap().len(), 2);
+        assert_eq!(quotes(&test.db, "doc", Some("ADV_FSP.4")).unwrap()[0].id, id);
+    }
+
+    #[test]
+    fn a_document_quoted_is_told_from_one_that_is_not() {
+        let test = database();
+        let quoted = load(&test.db, b"%PDF support");
+        let other = load(&test.db, b"%PDF other");
+        create::quote(&test.db, "doc", "ADV_FSP.4", &quote_draft(quoted, "The developer shall")).unwrap();
+
+        assert!(quotes_source(&test.db, quoted).unwrap());
+        assert!(!quotes_source(&test.db, other).unwrap());
+    }
+
+    #[test]
+    fn the_proposals_of_a_document_are_read() {
+        let test = database();
+        let source = load(&test.db, b"%PDF proposals");
+        let id = stored_proposal(&test.db, source);
+
+        assert_eq!(proposals(&test.db, "doc").unwrap().len(), 1);
+        assert!(proposal(&test.db, id).unwrap().is_some());
+        assert!(proposal(&test.db, id + 1).unwrap().is_none());
+    }
+}

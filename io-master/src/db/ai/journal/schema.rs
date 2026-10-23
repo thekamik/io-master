@@ -46,3 +46,27 @@ pub const SCHEMA: &str = "
         SELECT RAISE(ABORT, 'an entry of the journal of the AI is never removed');
     END;
 ";
+
+#[cfg(test)]
+mod tests {
+    //! Tests of the triggers of the journal: an entry is never changed nor
+    //! removed.
+
+    use crate::db::ai::journal::{create, read};
+    use crate::test_support::db::journal_entry;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn the_database_refuses_to_change_or_remove_an_entry() {
+        let test = database();
+        create::entry(&test.db, &journal_entry("chat")).unwrap();
+
+        let changed = test.db.connection().execute("UPDATE ai_journal SET answer = 'other'", []);
+        assert!(changed.unwrap_err().to_string().contains("never changed"));
+
+        let removed = test.db.connection().execute("DELETE FROM ai_journal", []);
+        assert!(removed.unwrap_err().to_string().contains("never removed"));
+
+        assert_eq!(read::last(&test.db, 10).unwrap()[0].answer, "Hello");
+    }
+}

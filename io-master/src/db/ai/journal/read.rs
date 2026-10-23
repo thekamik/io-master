@@ -12,3 +12,27 @@ pub fn last(db: &UserDb, count: usize) -> Result<Vec<Entry>, DbError> {
 
     Ok(statement.query_map([count as i64], entry_from_row)?.collect::<Result<Vec<_>, _>>()?)
 }
+
+#[cfg(test)]
+mod tests {
+    //! Tests of reading the journal of the AI.
+
+    use super::*;
+
+    use crate::db::ai::journal::create;
+    use crate::test_support::db::journal_entry;
+    use crate::test_support::standards::database;
+
+    #[test]
+    fn the_newest_entries_come_first_and_no_more_than_asked() {
+        let test = database();
+        create::entry(&test.db, &journal_entry("chat")).unwrap();
+        create::entry(&test.db, &journal_entry("chapter")).unwrap();
+
+        let entries = last(&test.db, 10).unwrap();
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].task, "chapter");
+        assert_eq!(entries[1].task, "chat");
+        assert_eq!(last(&test.db, 1).unwrap().len(), 1);
+    }
+}
