@@ -330,6 +330,41 @@ PasswordForm ──password_form_change(old, new, new)──► installation/: t
 App.svelte ──program_get()──► ProgramView: installed, the role, who is logged in, the pages, the warnings
 ```
 
+**The way of the key in every operation of `users`** (step 47; the functions named are those the commands of `views/users/users.rs` call; the keys: section 5.2):
+
+```text
+setup_form_install(name, password, role)
+  lifecycle::install ──► system.db made (not encrypted: the installation, the accounts)
+    accounts::create ──► keys::check_password (at least 12 characters)
+                     ──► generate_database_key: 32 random bytes ─────────────────── the key of the database (RAM)
+                     ──► keys::wrap: password ──Argon2id──► HKDF ──► unlocking key
+                                     key of the database ──AES-256-GCM──► WrappedKey ──► system.db (accounts)
+                     ──► user_db::create: users/<id>.db made by SQLCipher with the key
+  then the login below; the key of the setup is dropped (wiped)
+
+login_form_log_in(name, password)
+  accounts::log_in ──► the WrappedKey of the account from system.db
+                   ──► keys::unwrap: password ──Argon2id──► HKDF ──► unlocking key ──AES-256-GCM──► the key
+                       (a wrong password fails here: GCM detects it; the same error as an unknown name)
+  Session::open ──► SQLCipher opens users/<id>.db with the key (its memory locked and wiped)
+                ──► the key of the program dropped (wiped); SQLCipher keeps its own inside the connection
+  AppState::log_in ──► the session, with the open database, until its end
+
+password_form_change(current, new, new)
+  accounts::change_password ──► keys::unwrap with the current password ──► the key (RAM, briefly)
+                            ──► keys::wrap with the new password ──► the new WrappedKey ──► system.db
+                            (the database itself is not touched; the key is wiped)
+
+user_menu_log_out()                    the end of the session
+user_menu_close()                      the same, then the end of the program
+the cross of the window, the end       RunEvent::Exit (main.rs) ──► the same
+  AppState::log_out ──► the reply and the long work stopped
+                    ──► the session dropped; when its last holder lets it go, the connection
+                        closes and SQLCipher wipes its key and its pages
+```
+
+What stays on the disk after any of them, or after a cut of the power: `system.db` (no secret: the keys only wrapped) and `users/<id>.db`, encrypted page by page. What is in RAM during the session: the open connection with its key and at most 2 MiB of decrypted pages, and what a command reads for the page.
+
 **`chat`** (entry `views/chat/chat.rs`, page `ui/src/views/chat/`).
 
 ```text

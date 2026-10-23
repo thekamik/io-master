@@ -26,7 +26,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14d | **44: The tests in the file they test** | **built 2026-10-23, in the phases 44.1 to 44.6** (below) |
 | 14e | **45: The tree of the modules in `main.rs`** | **built 2026-10-23, in the phases 45.1 to 45.4** (below) |
 | 14f | **46: The entry of a view** | **built 2026-10-23, in the phases 46.1 to 46.7** (below) |
-| 14g | **47: The view `users`: the account, the session and the encryption in one place** | **approved 2026-10-23; built in phases 47.1 to 47.3** (below) |
+| 14g | **47: The view `users`: the account, the session and the encryption in one place** | **built 2026-10-23, in the phases 47.1 to 47.3** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -74,7 +74,7 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 47: The view `users`: the account, the session and the encryption in one place (2026-10-23)
 
-**State: approved by the user (2026-10-23); built phase by phase (below).**
+**State: built 2026-10-23, in the phases 47.1 to 47.3 (below).**
 
 The user (2026-10-23): the login is joined with the encryption of the database (the password, Argon2id, the unlocking key, the key of the database, the open database), so every function that touches it must be in one place, where the management of the keys and the encryption and decryption can be followed easily. The view `start` is renamed `users`, and its entry holds the setup (the installation and its user), the login, the change of the password, the logout and the closing of the program, and later every other function of the account. To keep the window and the code readable, the settings are split: **the settings of the user** (the account and the encryption: a page of their own, "User", in the navigation) and **the settings of the program** (the AI connections, what the installation is: the view `settings`).
 
@@ -87,7 +87,7 @@ The user (2026-10-23): the login is joined with the encryption of the database (
 **Phases** (one commit each, pushed, every test passing; the documents with each)
 - [x] 47.1 `users`: the setup and the login (from `start`), the logout (from `shell`), the change of the password (from `settings`), each commented with what happens to the key; the page `ui/src/views/users/` (the forms, the user menu, the page "User"); `settings` without the tab User; the vocabulary.
 - [x] 47.2 `user_menu_close`: the session ended (the key wiped, the database closed) and the program closed; its button in the user menu. **The cross of the window ends the session the same way** (user, 2026-10-23): "Log out", "Log out and close" and the cross go through one function, not through the end of the process alone. With it, the memory of SQLCipher (user, 2026-10-23: only the minimum of decrypted data in RAM; SQLCipher already decrypts only the pages a query reads, so the concept stands): `cipher_memory_security` on (the memory it frees wiped, its keys locked in RAM), the temporary files of SQLite in memory only and a small, explicit cache, each checked by a test; the core dumps of the process off; the requirements of the laboratory (encrypted swap, no hibernation) in `architecture.md`, section 9.
-- [ ] 47.3 `architecture.md`, section 12: the way of the key in every operation of `users`.
+- [x] 47.3 `architecture.md`, section 12: the way of the key in every operation of `users`.
 
 ---
 
