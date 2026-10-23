@@ -18,7 +18,7 @@ use crate::model::ai::{Role, Task, Turn};
 use crate::model::evaluation_support::QuoteDraft;
 use crate::model::standards::{Document, Part};
 
-use super::super::checked_quote;
+use super::super::object_quotes::checked_quote;
 use super::parts;
 use super::view::BuildEvent;
 

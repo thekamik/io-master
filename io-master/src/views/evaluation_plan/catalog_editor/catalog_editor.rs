@@ -27,11 +27,11 @@ use crate::model::oscal::catalog::{Control, Group};
 use super::ai_builder::view::{self as builder_view, BuildEvent, PageRange, SourceView};
 use super::ai_builder::{controls, groups};
 use super::catalog_tree::view::CatalogTreeView;
-use super::checked_quote;
 use super::new_object::view::PlaceForm;
+use super::object_form::oscal_object;
 use super::object_form::view::ObjectView;
+use super::object_quotes::checked_quote;
 use super::object_quotes::view::ObjectQuotesView;
-use super::oscal_object;
 use super::proposals::accept;
 use super::proposals::view::{self as proposal_view, ProposalView};
 

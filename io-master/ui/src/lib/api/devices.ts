@@ -7,7 +7,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 
-/** A column of the table (src/views/devices/column_view.rs). */
+/** A column of the table (src/views/devices/ports_table/view.rs). */
 export interface ColumnView {
   key: string;
   title: string;

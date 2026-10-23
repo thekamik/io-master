@@ -9,7 +9,32 @@ use crate::hardware_tests::devices::port_property::PortProperty;
 use crate::hardware_tests::devices::scan_settings::MAX_COLUMNS;
 use crate::hardware_tests::devices::serial_ports::{ScanError, SerialPortInfo};
 
-use super::super::column_view::ColumnView;
+/// A column that can be shown: by the table above its values, by the
+/// settings of the scanner as a choice.
+#[derive(Debug, Serialize)]
+pub struct ColumnView {
+    /// The key stored in the settings: `"path"`.
+    pub key: &'static str,
+    /// The title above the column: `"Path"`.
+    pub title: &'static str,
+}
+
+impl ColumnView {
+    pub fn new(property: PortProperty) -> ColumnView {
+        ColumnView { key: property.key(), title: property.title() }
+    }
+
+    /// The views of `properties`, in their order.
+    pub fn all(properties: &[PortProperty]) -> Vec<ColumnView> {
+        let mut columns = Vec::with_capacity(properties.len());
+
+        for property in properties {
+            columns.push(ColumnView::new(*property));
+        }
+
+        columns
+    }
+}
 
 /// The most ports the table shows. A computer has a few serial ports,
 /// a laboratory rack some dozens; more is a fault of the system.

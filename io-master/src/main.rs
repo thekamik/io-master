@@ -292,12 +292,11 @@ mod views {
         #[allow(clippy::module_inception)]
         pub mod devices;
 
-        pub mod column_view;
-        pub mod stored_settings;
         pub mod ports_table {
             pub mod view;
         }
         pub mod scanner_settings {
+            pub mod stored;
             pub mod view;
         }
     }
@@ -391,8 +390,6 @@ mod views {
             #[allow(clippy::module_inception)]
             pub mod catalog_editor;
 
-            pub mod checked_quote;
-            pub mod oscal_object;
             #[cfg(test)]
             pub mod test_support;
             pub mod ai_builder {
@@ -409,9 +406,11 @@ mod views {
                 pub mod view;
             }
             pub mod object_form {
+                pub mod oscal_object;
                 pub mod view;
             }
             pub mod object_quotes {
+                pub mod checked_quote;
                 pub mod view;
             }
             pub mod proposals {

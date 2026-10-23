@@ -7,7 +7,7 @@ use crate::hardware_tests::devices::port_property::PortProperty;
 use crate::hardware_tests::devices::scan_settings::ScanSettings;
 use crate::hardware_tests::devices::serial_ports::{PortFilter, PortType};
 
-use super::super::column_view::ColumnView;
+use super::super::ports_table::view::ColumnView;
 
 /// The settings of the scanner.
 #[derive(Debug, Serialize)]
