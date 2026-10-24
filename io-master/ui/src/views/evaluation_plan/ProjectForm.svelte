@@ -3,7 +3,7 @@
   project_form_get and project_form_save in
   src/views/evaluation_plan/evaluation_plan.rs): the title, the scope and the
   catalogs of a master project, shown folded; a catalog a task still points
-  to cannot leave it. After a save it tells the project (onchanged), which
+  to cannot leave it. It reads them again when the project changed (version). After a save it tells the project (onchanged), which
   reads its elements again.
 -->
 <script lang="ts">
@@ -12,16 +12,25 @@
 
   let {
     uuid,
+    version,
     onread,
     onchanged,
-  }: { uuid: string; onread: (project: evaluationPlan.ProjectView) => void; onchanged: () => void } = $props();
+  }: {
+    uuid: string;
+    version: number;
+    onread: (project: evaluationPlan.ProjectView) => void;
+    onchanged: () => void;
+  } = $props();
 
   let project: evaluationPlan.ProjectView | null = $state(null);
   let form: evaluationPlan.ProjectForm = $state({ title: "", description: "", catalogs: [] });
   let open = $state(false);
   let notice: { done: boolean; text: string } | null = $state(null);
 
+  // Read again when the project changed (version): a requirement of the
+  // laboratory may have added its catalog.
   $effect(() => {
+    void version;
     load(uuid);
   });
 

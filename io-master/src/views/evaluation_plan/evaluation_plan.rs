@@ -23,10 +23,13 @@ use super::oscal_documents::dialog::{choose_file, choose_place};
 use super::oscal_documents::file::{self, read_file, safe_name};
 use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
+use crate::model::own_requirement;
 
 use super::new_project::catalogs;
 use super::new_project::view::CatalogChoiceView;
 use super::oscal_documents::view::{self as oscal_view, OscalDocumentView};
+use super::own_requirement::catalog as own_catalog;
+use super::own_requirement::view::OwnRequirementForm;
 use super::project_form::view::{ProjectForm, ProjectView};
 use super::project_list::view::{self as project_view, ProjectSummaryView};
 use super::standard_browser::requirement;
@@ -373,7 +376,7 @@ pub fn task_list_move(state: State<'_, AppState>, task: String, up: bool) -> Res
 /// Called by the page: `StandardBrowser.svelte`, a requirement chosen in the
 /// tree or in the hits (`evaluationPlan.standardBrowserGet(project, catalog, id)`).
 /// Calls: [`project_catalog`], `db_evaluation_project::read::tasks`,
-/// `requirement::read`.
+/// `own_catalog::existing`, `requirement::read`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
@@ -394,7 +397,9 @@ pub fn standard_browser_get(
         }
     }
 
-    requirement::read(&db, &catalog, &found, &id, in_project)
+    let own = own_catalog::existing(&db)?.as_deref() == Some(catalog.as_str());
+
+    requirement::read(&db, &catalog, &found, &id, in_project, own)
 }
 
 /// The requirements of the catalogs of project `project` that hold `text`.
@@ -426,6 +431,99 @@ pub fn standard_browser_search(
     }
 
     search::search(&catalogs, &text)
+}
+
+/// Writes `requirement`, a requirement of the laboratory's own, into the
+/// shared catalog of the laboratory (made now if there is none), adds that
+/// catalog to project `project` and the requirement as a task at the end of
+/// its list. Its identifier is the planner's, whatever they chose.
+///
+/// Called by the page: `OwnRequirement.svelte`, "Add"
+/// (`evaluationPlan.ownRequirementAdd(project, requirement)`).
+/// Calls: `own_requirement::normalized` and `check`, `own_catalog::ensure`
+/// and `add`, `db_evaluation_project::update::add_catalog`,
+/// `db_evaluation_project::create::task`, `task_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn own_requirement_add(
+    state: State<'_, AppState>,
+    project: String,
+    requirement: OwnRequirementForm,
+) -> Result<Vec<TaskView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let written = own_requirement::normalized(&requirement.requirement());
+
+    own_requirement::check(&written).map_err(|error| AppError::Invalid(error.to_string()))?;
+    ensure!(
+        db_evaluation_project::read::project(&db, &project)?.is_some(),
+        AppError::Invalid("the project does not exist".to_owned())
+    );
+
+    let catalog = own_catalog::ensure(&db)?;
+    let control = own_catalog::add(&db, &catalog, &written)?;
+
+    db_evaluation_project::update::add_catalog(&db, &project, &catalog)?;
+
+    let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog, control_id: control };
+    db_evaluation_project::create::task(&db, &project, &task)?;
+
+    task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
+}
+
+/// Changes requirement `id` of the laboratory: for every project whose task
+/// points to it. Its id stays, so the tasks keep pointing to it.
+///
+/// Called by the page: `OwnRequirement.svelte`, "Save"
+/// (`evaluationPlan.ownRequirementSave(id, requirement)`).
+/// Calls: `own_requirement::normalized` and `check`, `own_catalog::existing`
+/// and `save`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn own_requirement_save(
+    state: State<'_, AppState>,
+    id: String,
+    requirement: OwnRequirementForm,
+) -> Result<(), AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let written = own_requirement::normalized(&requirement.requirement());
+
+    own_requirement::check(&written).map_err(|error| AppError::Invalid(error.to_string()))?;
+
+    let Some(catalog) = own_catalog::existing(&db)? else {
+        return Err(AppError::Invalid("there is no requirement of the laboratory yet".to_owned()));
+    };
+
+    own_catalog::save(&db, &catalog, &id, &written)
+}
+
+/// Deletes requirement `id` of the laboratory; refused while a task of any
+/// project points to it.
+///
+/// Called by the page: `StandardBrowser.svelte`, "Delete" of a requirement of
+/// the laboratory (`evaluationPlan.ownRequirementDelete(id)`).
+/// Calls: `own_catalog::existing`, `db_evaluation_project::read::control_in_use`,
+/// `own_catalog::remove`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn own_requirement_delete(state: State<'_, AppState>, id: String) -> Result<(), AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let Some(catalog) = own_catalog::existing(&db)? else {
+        return Err(AppError::Invalid("there is no requirement of the laboratory yet".to_owned()));
+    };
+
+    ensure!(
+        !db_evaluation_project::read::control_in_use(&db, &catalog, &id)?,
+        AppError::Invalid("a task points to this requirement: remove the task first".to_owned())
+    );
+
+    own_catalog::remove(&db, &catalog, &id)
 }
 
 // ── Helpers of the commands above ─────────────────────────────────────
@@ -619,5 +717,65 @@ mod tests {
 
         window.call("project_list_delete", json!({ "uuid": project })).unwrap();
         window.call("oscal_documents_delete", json!({ "uuid": catalog })).unwrap();
+    }
+
+    #[test]
+    fn a_requirement_of_the_laboratory_becomes_a_task_and_serves_other_projects() {
+        let (window, catalog, project) = with_project();
+        let written =
+            json!({ "identifier": " Net config 1 ", "title": "Network configuration", "statement": "Review it." });
+
+        let tasks = window.call("own_requirement_add", json!({ "project": project, "requirement": written })).unwrap();
+
+        // The identifier as the planner wrote it; the catalog of the laboratory joined the project.
+        assert_eq!(tasks[0]["label"], "Net config 1");
+        let lab = tasks[0]["catalog_uuid"].as_str().unwrap().to_owned();
+        let control = tasks[0]["control_id"].as_str().unwrap().to_owned();
+        let form = window.call("project_form_get", json!({ "uuid": project })).unwrap();
+        assert_eq!(form["catalogs"].as_array().unwrap().len(), 2);
+
+        // The same identifier twice is refused.
+        let again =
+            window.call("own_requirement_add", json!({ "project": project, "requirement": written })).unwrap_err();
+        assert_eq!(again["kind"], "invalid");
+
+        // Another project takes it from the shared catalog, as any requirement.
+        let other_form = json!({ "title": "Other", "description": "", "catalogs": [catalog, lab] });
+        let other = window.call("new_project_create", json!({ "project": other_form })).unwrap()["uuid"].clone();
+        window.call("task_list_add", json!({ "project": other, "catalog": lab, "control": control })).unwrap();
+
+        // Shown with its fields, and changed for all.
+        let shown =
+            window.call("standard_browser_get", json!({ "project": other, "catalog": lab, "id": control })).unwrap();
+        assert_eq!(shown["own"]["statement"], "Review it.");
+        let changed =
+            json!({ "identifier": "Net config 1", "title": "Network configuration review", "statement": "All of it." });
+        window.call("own_requirement_save", json!({ "id": control, "requirement": changed })).unwrap();
+        assert_eq!(
+            window.call("task_list_get", json!({ "project": project })).unwrap()[0]["title"],
+            "Network configuration review"
+        );
+        let standard =
+            window.call("standard_browser_get", json!({ "project": project, "catalog": catalog, "id": "s1.1.1" }));
+        assert_eq!(standard.unwrap()["own"], json!(null));
+    }
+
+    #[test]
+    fn a_requirement_of_the_laboratory_is_deleted_only_without_tasks() {
+        let (window, _, project) = with_project();
+        let written = json!({ "identifier": "R-7", "title": "A requirement", "statement": "Do it." });
+        let tasks = window.call("own_requirement_add", json!({ "project": project, "requirement": written })).unwrap();
+        let control = tasks[0]["control_id"].clone();
+
+        let refused = window.call("own_requirement_delete", json!({ "id": control })).unwrap_err();
+        assert_eq!(refused["kind"], "invalid");
+
+        window.call("task_list_remove", json!({ "task": tasks[0]["uuid"] })).unwrap();
+        window.call("own_requirement_delete", json!({ "id": control })).unwrap();
+
+        let empty = json!({ "identifier": "  ", "title": "t", "statement": "s" });
+        let error =
+            window.call("own_requirement_add", json!({ "project": project, "requirement": empty })).unwrap_err();
+        assert_eq!(error["kind"], "invalid");
     }
 }

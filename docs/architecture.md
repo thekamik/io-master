@@ -206,6 +206,7 @@ A **component** is a small element used more than once: several times in one vie
 | command | komenda | a function of Rust the page calls through Tauri, named `<element>_<action>` |
 | `evaluation_project` | projekt master | the master project of a standard (step 51): its catalogs and all its tasks; made once for a version of a standard, used again and again |
 | `evaluation_task` | zadanie ewaluacji | a task of a master project: a whole requirement (a control of a catalog); later with its scheme of input, requirement and output blocks |
+| requirement of the laboratory | wymaganie własne | a requirement outside the standards (step 51.1e): a control of the one shared catalog "Requirements of the laboratory"; its identifier is the planner's, whatever they choose |
 | `work_package` | pakiet pracy | tasks of a master project delegated to one evaluator and exported to them (step 51.5; planned) |
 | evaluation support | wsparcie ewaluacji | what the program adds to OSCAL (quotes, proposals of the AI, instructions, the layout of the graph), linked to OSCAL by UUID and id (section 7.1) |
 
@@ -385,6 +386,11 @@ the screen of a project:
         ──standard_browser_get(project, catalog, id)──► the requirement, its parts and quotes, whether a task already
         ──standard_browser_search(project, text)──► the requirements of all its catalogs that hold the text
         ──task_list_add(project, catalog, control)──► a task at the end ──► "changed" ──► every element reads again
+  └─► OwnRequirement (a requirement of the laboratory's own, step 51.1e)
+        ──own_requirement_add(project, identifier, title, statement)──► a control of the shared catalog
+          "Requirements of the laboratory" (made at the first one, db/own_requirements/) ──► the catalog joins the
+          project ──► a task at the end; ──own_requirement_save(id, …)──► changed for every project;
+        ──own_requirement_delete(id)──► only while no task of any project points to it
 the tab OSCAL documents ──► OscalDocuments ──oscal_documents_get()──► the finished documents of OSCAL
 OscalDocuments ──oscal_documents_import / _export / _delete──► the dialog ──► checked against the schema of NIST ──► db/oscal/
      (a catalog a master project uses is not deleted)

@@ -9,6 +9,7 @@
 -->
 <script lang="ts">
   import CatalogTree from "../../components/catalog_tree/CatalogTree.svelte";
+  import OwnRequirement from "./OwnRequirement.svelte";
   import PartRows from "../../components/part_rows/PartRows.svelte";
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
@@ -33,6 +34,8 @@
   let text = $state("");
   let hits: evaluationPlan.HitView[] | null = $state(null);
   let problem = $state("");
+  /** The dialog of a requirement of the laboratory: new, or the one changed. */
+  let own: { editing: { id: string; fields: evaluationPlan.OwnRequirement } | null } | null = $state(null);
 
   // The first catalog of the project, until another is chosen.
   $effect(() => {
@@ -69,6 +72,26 @@
     }
   }
 
+  function ownDone() {
+    own = null;
+    onchanged();
+  }
+
+  async function removeOwn() {
+    if (!requirement) {
+      return;
+    }
+
+    try {
+      await evaluationPlan.ownRequirementDelete(requirement.id);
+      requirement = null;
+      chosen = null;
+      onchanged();
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
+
   async function add() {
     if (!requirement) {
       return;
@@ -97,6 +120,7 @@
       <input bind:value={text} placeholder="Search the requirements" />
       <button type="submit">Search</button>
     </form>
+    <button type="button" onclick={() => (own = { editing: null })}>A requirement of your own…</button>
   </div>
 
   {#if hits}
@@ -130,9 +154,19 @@
     <div class="requirement">
       {#if requirement}
         <h4><span class="object-id">{requirement.label}</span> {requirement.title}</h4>
-        <button type="button" class="primary" disabled={requirement.in_project} onclick={add}>
-          {requirement.in_project ? "A task already" : "Add as a task"}
-        </button>
+        <div class="buttons">
+          <button type="button" class="primary" disabled={requirement.in_project} onclick={add}>
+            {requirement.in_project ? "A task already" : "Add as a task"}
+          </button>
+          {#if requirement.own}
+            {@const fields = requirement.own}
+            <button type="button" onclick={() => requirement && (own = { editing: { id: requirement.id, fields } })}>
+              Change
+            </button>
+            <button type="button" class="danger" onclick={removeOwn}>Delete</button>
+          {/if}
+        </div>
+        {#if requirement.own}<p class="note">A requirement of the laboratory, outside the standards.</p>{/if}
         <PartRows rows={requirement.parts} />
         {#each requirement.quotes as quote, index (index)}
           <blockquote class:missing={!quote.found}>
@@ -148,3 +182,7 @@
     </div>
   </div>
 </div>
+
+{#if own}
+  <OwnRequirement {project} editing={own.editing} ondone={ownDone} onclose={() => (own = null)} />
+{/if}

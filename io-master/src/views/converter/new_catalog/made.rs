@@ -9,8 +9,8 @@ use crate::db::oscal::ids::{new_uuid, now_date_time};
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::model::oscal::catalog::Catalog;
-use crate::model::oscal::common::{BackMatter, Hash, Metadata, Other, Resource, ResourceLink};
-use crate::model::oscal::{OSCAL_VERSION, OscalDocument, OscalSummary};
+use crate::model::oscal::common::{BackMatter, Hash, Other, Resource, ResourceLink};
+use crate::model::oscal::{OscalDocument, OscalSummary};
 use crate::model::standards::Document;
 
 /// The most documents a catalog may come from.
@@ -39,15 +39,11 @@ pub fn create(db: &UserDb, title: &str, version: &str, sources: &[i64]) -> Resul
         resources.push(resource(&document)?);
     }
 
-    let catalog = Catalog {
-        uuid: new_uuid()?,
-        metadata: metadata(title, version),
-        params: Vec::new(),
-        controls: Vec::new(),
-        groups: Vec::new(),
-        back_matter: if resources.is_empty() { None } else { Some(BackMatter { resources, other: Other::default() }) },
-        other: Other::default(),
-    };
+    let mut catalog = Catalog::empty(new_uuid()?, title, version, now_date_time());
+
+    if !resources.is_empty() {
+        catalog.back_matter = Some(BackMatter { resources, other: Other::default() });
+    }
 
     let document = OscalDocument::Catalog(catalog);
     db_oscal::create::document(db, &document)?;
@@ -57,21 +53,6 @@ pub fn create(db: &UserDb, title: &str, version: &str, sources: &[i64]) -> Resul
     db_conversion::create::conversion(db, document.uuid())?;
 
     Ok(document.summary())
-}
-
-/// The metadata of a new catalog.
-fn metadata(title: &str, version: &str) -> Metadata {
-    Metadata {
-        title: title.to_owned(),
-        published: None,
-        last_modified: now_date_time(),
-        version: if version.is_empty() { "1".to_owned() } else { version.to_owned() },
-        oscal_version: OSCAL_VERSION.to_owned(),
-        props: Vec::new(),
-        links: Vec::new(),
-        remarks: None,
-        other: Other::default(),
-    }
 }
 
 /// A document of the standard as a resource: "title, part (version)", the
@@ -111,6 +92,8 @@ mod tests {
     //! Unit tests of `made.rs`.
 
     use super::*;
+
+    use crate::model::oscal::OSCAL_VERSION;
 
     use crate::test_support::standards::{database, load};
 

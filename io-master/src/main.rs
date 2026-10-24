@@ -41,6 +41,7 @@ mod model {
     pub mod evaluation_support;
     pub mod installation;
     pub mod oscal;
+    pub mod own_requirement;
     pub mod recovery_code;
     pub mod standards;
     pub mod text;
@@ -167,6 +168,13 @@ mod db {
         pub mod read;
         pub mod rows;
         pub mod schema;
+        pub mod update;
+    }
+    // db/own_requirements/: which catalog is the shared catalog of the
+    // requirements of the laboratory (a setting of the evaluator; no table).
+    pub mod own_requirements {
+        pub mod delete;
+        pub mod read;
         pub mod update;
     }
     // db/evaluation_support/: what the program adds to OSCAL, linked by
@@ -367,6 +375,10 @@ mod views {
         pub mod oscal_documents {
             pub mod dialog;
             pub mod file;
+            pub mod view;
+        }
+        pub mod own_requirement {
+            pub mod catalog;
             pub mod view;
         }
         pub mod project_form {

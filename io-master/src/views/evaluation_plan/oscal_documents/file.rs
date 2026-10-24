@@ -10,6 +10,7 @@ use crate::db::error::DbError;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
+use crate::db::own_requirements as db_own_requirements;
 use crate::db::user::database::UserDb;
 use crate::model::oscal::{NotOscal, OscalDocument, OscalSummary};
 
@@ -54,10 +55,12 @@ pub fn export(db: &UserDb, uuid: &str) -> Result<String, OscalError> {
 }
 
 /// Deletes document `uuid` with its evaluation support and, for a catalog,
-/// its conversion; returns whether it existed.
+/// its conversion and, for the catalog of the laboratory, the setting that
+/// names it; returns whether it existed.
 pub fn delete(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
     db_evaluation_support::delete::of_document(db, uuid)?;
     db_conversion::delete::of_catalog(db, uuid)?;
+    db_own_requirements::delete::catalog_if(db, uuid)?;
     db_oscal::delete::document(db, uuid)
 }
 

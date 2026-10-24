@@ -7,11 +7,15 @@ use crate::components::part_rows::view as part_rows;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::user::database::UserDb;
 use crate::model::oscal::catalog::Catalog;
+use crate::model::own_requirement;
+
+use super::super::own_requirement::view::OwnRequirementView;
 
 use super::view::{QuoteView, RequirementView};
 
 /// Control `id` of `catalog` (stored as `catalog_uuid`) as the browser shows
-/// it; refused when the catalog has no such control.
+/// it, with its fields to be changed when `own` (the catalog of the
+/// laboratory); refused when the catalog has no such control.
 ///
 /// Called by: `standard_browser_get` (`evaluation_plan.rs`).
 /// Calls: `Catalog::locate`, `part_rows::rows`,
@@ -22,6 +26,7 @@ pub fn read(
     catalog: &Catalog,
     id: &str,
     in_project: bool,
+    own: bool,
 ) -> Result<RequirementView, AppError> {
     let location = catalog.locate(id)?;
     let control = match &location {
@@ -53,5 +58,6 @@ pub fn read(
         parts: part_rows::rows(&control.parts)?,
         quotes,
         in_project,
+        own: if own { Some(OwnRequirementView::new(own_requirement::of_control(control))) } else { None },
     })
 }

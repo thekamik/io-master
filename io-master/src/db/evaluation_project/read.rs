@@ -117,6 +117,18 @@ pub fn catalog_has_tasks(db: &UserDb, project: &str, catalog: &str) -> Result<bo
     )?)
 }
 
+/// Whether a task of any project points to control `control` of catalog
+/// `catalog` (a requirement of the laboratory is not deleted then).
+///
+/// Called by: `own_requirement_delete` (`evaluation_plan.rs`).
+pub fn control_in_use(db: &UserDb, catalog: &str, control: &str) -> Result<bool, DbError> {
+    Ok(db.connection().query_row(
+        "SELECT COUNT(*) > 0 FROM evaluation_tasks WHERE catalog_uuid = ?1 AND control_id = ?2",
+        [catalog, control],
+        |row| row.get(0),
+    )?)
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of reading projects and tasks.
@@ -144,5 +156,7 @@ mod tests {
         assert!(catalog_has_tasks(&test.db, "p", "c3").unwrap());
         assert!(!catalog_has_tasks(&test.db, "p", "c2").unwrap());
         assert_eq!(project(&test.db, "nothing").unwrap(), None);
+        assert!(control_in_use(&test.db, "c3", "x").unwrap());
+        assert!(!control_in_use(&test.db, "c2", "x").unwrap());
     }
 }

@@ -6,6 +6,8 @@ use serde::Serialize;
 
 use crate::components::part_rows::view::PartRowView;
 
+use super::super::own_requirement::view::OwnRequirementView;
+
 /// A passage of a document of a standard a requirement comes from.
 #[derive(Debug, Serialize)]
 pub struct QuoteView {
@@ -28,6 +30,9 @@ pub struct RequirementView {
     pub quotes: Vec<QuoteView>,
     /// Whether it is a task of the project already.
     pub in_project: bool,
+    /// For a requirement of the laboratory, its fields to be changed;
+    /// `None` for a requirement of a standard.
+    pub own: Option<OwnRequirementView>,
 }
 
 /// A requirement found by a search.

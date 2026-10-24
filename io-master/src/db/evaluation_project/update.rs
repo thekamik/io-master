@@ -5,7 +5,7 @@ use rusqlite::{OptionalExtension, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::ProjectFields;
+use crate::model::evaluation_project::{MAX_CATALOGS, ProjectFields};
 use crate::model::time::now;
 
 /// Replaces the fields and the catalogs of project `uuid`, in one
@@ -36,6 +36,40 @@ pub fn project(db: &UserDb, uuid: &str, fields: &ProjectFields, catalogs: &[Stri
         )?;
     }
 
+    transaction.commit()?;
+
+    Ok(())
+}
+
+/// Adds catalog `catalog` at the end of the catalogs of project `project`,
+/// when it does not use it already; refused when it uses `MAX_CATALOGS`.
+///
+/// Called by: `own_requirement_add` (`evaluation_plan.rs`): the catalog of the
+/// laboratory joins the project with its first requirement there.
+pub fn add_catalog(db: &UserDb, project: &str, catalog: &str) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    let (count, there, last): (i64, bool, Option<i64>) = transaction.query_row(
+        "SELECT COUNT(*), COALESCE(SUM(catalog_uuid = ?2), 0) > 0, MAX(position)
+         FROM project_catalogs WHERE project_uuid = ?1",
+        [project, catalog],
+        |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+    )?;
+
+    if there {
+        return Ok(());
+    }
+
+    let limit = i64::try_from(MAX_CATALOGS).map_err(|error| DbError::Inconsistent(error.to_string()))?;
+
+    if count >= limit {
+        return Err(DbError::Inconsistent(format!("a project uses at most {MAX_CATALOGS} catalogs")));
+    }
+
+    transaction.execute(
+        "INSERT INTO project_catalogs (project_uuid, catalog_uuid, position) VALUES (?1, ?2, ?3)",
+        rusqlite::params![project, catalog, last.unwrap_or(-1) + 1],
+    )?;
     transaction.commit()?;
 
     Ok(())
@@ -111,6 +145,10 @@ mod tests {
             ("new", vec!["b".to_owned(), "a".to_owned()])
         );
         assert!(project(&test.db, "none", &fields("x"), &[]).is_err());
+
+        add_catalog(&test.db, "p", "lab").unwrap();
+        add_catalog(&test.db, "p", "lab").unwrap();
+        assert_eq!(read::project(&test.db, "p").unwrap().unwrap().catalogs, ["b", "a", "lab"]);
     }
 
     #[test]

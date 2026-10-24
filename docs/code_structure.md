@@ -224,6 +224,7 @@ model/                     The data of the program as plain Rust types, and the 
   evaluation_project.rs        The master project of an evaluation (step 51 of docs/todo.md): the
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
+  own_requirement.rs           A requirement of the laboratory's own, outside the standards (step 51.1e
   recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/todo.md): 160
   oscal.rs/                    The documents of NIST OSCAL (Open Security Controls Assessment
     assessment_plan.rs           An OSCAL assessment plan: the evaluation plan (function a of
@@ -290,6 +291,10 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     recovery.rs                  The second copy of the key of a database, wrapped with the recovery
     sqlcipher.rs                 Opening and creating encrypted databases.
   error.rs                     The error of every function of the database layer (`db/`).
+  own_requirements/            Which catalog is the shared catalog of the requirements of the laboratory.
+    delete.rs                    Forgetting the shared catalog of the requirements of the laboratory.
+    read.rs                      Reading which catalog is the shared catalog of the requirements of the
+    update.rs                    Storing which catalog is the shared catalog of the requirements of the
   evaluation_support/          The evaluation support (step 41): what the program adds to the
     create.rs                    Storing quotes and proposals of the evaluation support.
     delete.rs                    Deleting from the evaluation support.
@@ -436,6 +441,9 @@ views/                     The views of the window, one folder per view and one 
       dialog.rs                    The dialogs of the system for a file of OSCAL: import, export.
       file.rs                      A file of OSCAL (JSON) read into the database, and written from it:
       view.rs                      The data of the list of documents of OSCAL, as the page gets it.
+    own_requirement/             The element "requirement of the laboratory": one outside the standards.
+      catalog.rs                   The shared catalog of the requirements of the laboratory (step 51.1e of
+      view.rs                      The data of a requirement of the laboratory, as the page sends it and
     project_form/                The element "project" of the view Evaluation plan: its title, scope, catalogs.
       view.rs                      The data of the form of a master project, as the page gets it: what the
     project_list/                The element "list of master projects" of the view Evaluation plan.

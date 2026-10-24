@@ -75,6 +75,16 @@ export interface RequirementView {
   parts: PartRowView[];
   quotes: QuoteView[];
   in_project: boolean;
+  /** For a requirement of the laboratory, its fields to be changed. */
+  own: OwnRequirement | null;
+}
+
+// own_requirement/view.rs
+/** A requirement of the laboratory's own; its identifier is the planner's. */
+export interface OwnRequirement {
+  identifier: string;
+  title: string;
+  statement: string;
 }
 
 /** A requirement found by a search. */
@@ -190,4 +200,19 @@ export function standardBrowserGet(project: string, catalog: string, id: string)
 /** Called by StandardBrowser.svelte, "Search". */
 export function standardBrowserSearch(project: string, text: string): Promise<HitView[]> {
   return invoke("standard_browser_search", { project, text });
+}
+
+/** Called by OwnRequirement.svelte, "Add". */
+export function ownRequirementAdd(project: string, requirement: OwnRequirement): Promise<TaskView[]> {
+  return invoke("own_requirement_add", { project, requirement });
+}
+
+/** Called by OwnRequirement.svelte, "Save". */
+export function ownRequirementSave(id: string, requirement: OwnRequirement): Promise<void> {
+  return invoke("own_requirement_save", { id, requirement });
+}
+
+/** Called by StandardBrowser.svelte, "Delete" of a requirement of the laboratory. */
+export function ownRequirementDelete(id: string): Promise<void> {
+  return invoke("own_requirement_delete", { id });
 }

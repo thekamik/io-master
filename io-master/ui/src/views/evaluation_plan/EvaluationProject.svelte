@@ -28,7 +28,7 @@
   {#if project}<h2>{project.title}</h2>{/if}
 </div>
 
-<ProjectForm {uuid} onread={(view) => (project = view)} onchanged={changed} />
+<ProjectForm {uuid} {version} onread={(view) => (project = view)} onchanged={changed} />
 
 <div class="project-body">
   <TaskList project={uuid} {version} onchanged={changed} />
