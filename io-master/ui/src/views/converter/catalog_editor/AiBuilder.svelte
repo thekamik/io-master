@@ -13,6 +13,7 @@
   import { sentence } from "../../../lib/api/errors";
   import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
   import type { Which } from "../../../lib/api/converter/catalog_editor";
+  import { applyBuildEvent } from "./build_progress";
 
   let {
     uuid,
@@ -44,26 +45,9 @@
   });
 
   function buildEvent(event: catalogEditor.BuildEvent) {
-    switch (event.event) {
-      case "part":
-        progress = `Part ${event.index} of ${event.count}: ${event.document}, pages ${event.first_page}–${event.last_page}…`;
-        break;
-      case "writing":
-        progress = progress.replace(/ — .* characters$/, "") + ` — ${event.characters} characters`;
-        break;
-      case "proposed":
-        log.push({ done: true, text: `Proposed: ${event.added}.` });
-        for (const dropped of event.dropped) {
-          log.push({ done: false, text: `Dropped: ${dropped}` });
-        }
-        break;
-      case "failed":
-        log.push({ done: false, text: event.message });
-        break;
-      case "end":
-        progress = event.stopped ? "Stopped." : "";
-        break;
-    }
+    const state = { progress, log };
+    applyBuildEvent(state, event);
+    progress = state.progress;
   }
 
   async function build(work: () => Promise<void>) {

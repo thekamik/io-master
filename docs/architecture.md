@@ -337,7 +337,17 @@ CatalogList ──"New catalog…"──► NewCatalog ──new_catalog_sources
 CatalogList ──"Open"──► the view opens the editor
 DocumentSearch ──document_search_run(text)──► the hits ──► the view ──► the viewer (component) ──► the PDF, the quote on its page
 
-the editor of a catalog (entry views/converter/catalog_editor/catalog_editor.rs):
+the editor of a catalog (entry views/converter/catalog_editor/catalog_editor.rs), tab Conversion (step 50.2):
+the editor opens ──► ConversionWizard ──conversion_wizard_get(uuid)──► the stage, the pages, the groups (db/conversion/)
+  ① contents: ──conversion_wizard_find_contents(uuid, document)──► ai/api/: the first pages ──► the pages of the
+     table of contents (checked within the pages read) ──► db/conversion/; ──conversion_wizard_contents(pages)──► confirmed
+  ② groups:   ──ai_builder_groups(pages of the contents)──► proposals; Proposals ──accept / reject──► the catalog
+  ③ controls: ──conversion_wizard_stage("controls")──► locate.rs: the heading of every group looked for in the pages
+     after the contents ──► the pages of every group ──► db/conversion/; per group ──ai_builder_controls(its pages)──►
+     proposals ──► ──conversion_wizard_group_state("proposed" / "done")──►; ──conversion_wizard_group_pages──► corrected
+  ④ review:   what is left (proposals, quotes not found, groups without controls) ──conversion_wizard_stage("finished")──►
+     the catalog shown in the view Evaluation plan (oscal_documents_get leaves out what is not finished)
+tab Manual editing:
 the editor opens ──► CatalogTree ──catalog_tree_get(uuid)──► the rows of the tree (no recursion in the page)
                  ├─► Proposals ──proposals_get(uuid)──► what the AI proposed, waiting
                  └─► AiBuilder ──ai_builder_sources()──► the documents the AI can read

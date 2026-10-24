@@ -83,3 +83,73 @@ ul.catalog-tree li.active > button.link {
 .catalog-object .panel-head h3 {
     margin: 0;
 }
+
+/* The conversion step by step (catalog_editor/ConversionWizard.svelte): the
+   wizard beside the proposals, its stages as a bar. */
+.wizard-body {
+    display: grid;
+    grid-template-columns: minmax(28rem, 2fr) minmax(18rem, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.wizard-body > .card {
+    margin: 0;
+    max-height: calc(100vh - 12rem);
+    overflow: auto;
+}
+
+ol.wizard-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+ol.wizard-stages li {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+ol.wizard-stages li.done {
+    color: var(--text);
+}
+
+ol.wizard-stages li.active {
+    color: var(--text);
+    border-color: var(--accent);
+    font-weight: 650;
+}
+
+ul.wizard-groups {
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+ul.wizard-groups li {
+    padding: 0.7rem 0.8rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+ul.wizard-groups li.finished {
+    opacity: 0.65;
+}
+
+.wizard-group-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.4rem;
+}
+
+ul.wizard-groups .range input[type="number"] {
+    width: 5rem;
+}

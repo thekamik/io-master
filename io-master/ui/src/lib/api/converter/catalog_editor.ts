@@ -78,7 +78,35 @@ export type BuildEvent =
 
 // ai_instructions/view.rs
 /** The instructions of the two tasks of the catalogs. */
-export type Which = "catalog_outline" | "catalog_section";
+export type Which = "catalog_contents" | "catalog_outline" | "catalog_section";
+
+// conversion_wizard/view.rs
+/** Pages of a document. */
+export interface PagesView {
+  document_id: number;
+  first_page: number;
+  last_page: number;
+}
+
+export type Stage = "contents" | "groups" | "controls" | "review" | "finished";
+export type GroupState = "todo" | "proposed" | "done";
+
+/** A group whose controls the AI reads. */
+export interface WizardGroupView {
+  id: string;
+  title: string;
+  pages: PagesView | null;
+  state: GroupState;
+  controls: number;
+}
+
+/** The wizard of a conversion. */
+export interface WizardView {
+  stage: Stage;
+  contents: PagesView | null;
+  groups: WizardGroupView[];
+  review: { proposals: number; quotes_not_found: number; groups_without_controls: number };
+}
 
 // object_form/view.rs
 export interface ObjectView {
@@ -184,7 +212,44 @@ export function aiBuilderControls(
   });
 }
 
-/** Called by AiBuilder.svelte, "Stop". */
+/** Called by ConversionWizard.svelte, when the editor opens and after a change. */
+export function conversionWizardGet(uuid: string): Promise<WizardView> {
+  return invoke("conversion_wizard_get", { uuid });
+}
+
+/** The AI finds the pages of the table of contents. Called by ConversionWizard.svelte, "Find it with the AI". */
+export function conversionWizardFindContents(
+  uuid: string,
+  documentId: number,
+  onEvent: (event: BuildEvent) => void,
+): Promise<WizardView> {
+  const channel = new Channel<BuildEvent>();
+  channel.onmessage = onEvent;
+
+  return invoke("conversion_wizard_find_contents", { uuid, documentId, onEvent: channel });
+}
+
+/** Called by ConversionWizard.svelte, "Keep these pages". */
+export function conversionWizardContents(uuid: string, pages: PagesView): Promise<WizardView> {
+  return invoke("conversion_wizard_contents", { uuid, pages });
+}
+
+/** Called by ConversionWizard.svelte, "Next", "Back", "Finish". */
+export function conversionWizardStage(uuid: string, stage: Stage): Promise<WizardView> {
+  return invoke("conversion_wizard_stage", { uuid, stage });
+}
+
+/** Called by ConversionWizard.svelte, the pages of a group. */
+export function conversionWizardGroupPages(uuid: string, group: string, pages: PagesView): Promise<WizardView> {
+  return invoke("conversion_wizard_group_pages", { uuid, group, pages });
+}
+
+/** Called by ConversionWizard.svelte, after the AI read a group and "This group is done". */
+export function conversionWizardGroupState(uuid: string, group: string, groupState: GroupState): Promise<WizardView> {
+  return invoke("conversion_wizard_group_state", { uuid, group, groupState });
+}
+
+/** Called by AiBuilder.svelte and ConversionWizard.svelte, "Stop". */
 export function aiBuilderStop(): Promise<void> {
   return invoke("ai_builder_stop");
 }

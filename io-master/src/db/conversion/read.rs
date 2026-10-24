@@ -16,7 +16,7 @@ use super::rows;
 pub fn conversion(db: &UserDb, uuid: &str) -> Result<Option<Conversion>, DbError> {
     let mut statement = db.connection().prepare("SELECT * FROM conversions WHERE catalog_uuid = ?1")?;
 
-    Ok(statement.query_row([uuid], |row| Ok(rows::conversion(row))).optional()?.transpose()?)
+    statement.query_row([uuid], |row| Ok(rows::conversion(row))).optional()?.transpose()
 }
 
 /// Whether catalog `uuid` is finished: converted to its end, or never in

@@ -151,10 +151,8 @@ pub fn ranges(starts: &[(String, Option<u32>)], document_id: i64, page_count: u3
     let mut groups = Vec::with_capacity(starts.len());
 
     for (index, (group_id, start)) in starts.iter().enumerate() {
-        let pages = match start {
-            Some(first) => Some(Pages { document_id, first: *first, last: end(starts, index, *first, page_count) }),
-            None => None,
-        };
+        // A short closure: Option::map, which clippy asks for here.
+        let pages = start.map(|first| Pages { document_id, first, last: end(starts, index, first, page_count) });
 
         groups.push(GroupPages { group_id: group_id.clone(), pages, state: GroupState::Todo });
     }

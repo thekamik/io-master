@@ -1,6 +1,11 @@
 <!--
   The view "editor of a catalog" (src/views/converter/catalog_editor/): a catalog of
-  OSCAL made in the program from the documents (PDF) of its standard.
+  OSCAL made in the program from the documents (PDF) of its standard, in two
+  tabs:
+
+  - Conversion: the wizard, step by step (ConversionWizard, step 50.2 of
+    docs/todo.md), beside the proposals waiting for the evaluator;
+  - Manual editing, as follows.
 
   - On the left the tree of the catalog.
   - In the middle the object chosen: its parts, its quotes checked on their
@@ -15,6 +20,7 @@
   element reads its data again.
 -->
 <script lang="ts">
+  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
   import type { Which } from "../../../lib/api/converter/catalog_editor";
   import type { CatalogTreeView } from "../../../lib/api/converter/catalog_editor";
   import type { Place } from "../../../lib/api/converter/catalog_editor";
@@ -22,6 +28,7 @@
   import AiBuilder from "./AiBuilder.svelte";
   import AiInstructions from "./AiInstructions.svelte";
   import CatalogTree from "./CatalogTree.svelte";
+  import ConversionWizard from "./ConversionWizard.svelte";
   import NewObject from "./NewObject.svelte";
   import ObjectForm from "./ObjectForm.svelte";
   import ObjectQuotes from "./ObjectQuotes.svelte";
@@ -29,6 +36,8 @@
 
   let { uuid, onclose }: { uuid: string; onclose: () => void } = $props();
 
+  /** The wizard of the conversion, or the manual editing: presentation. */
+  let mode: "wizard" | "manual" = $state("wizard");
   /** Counted up after every change: the elements read their data again. */
   let version = $state(0);
   let head: CatalogTreeView | null = $state(null);
@@ -42,6 +51,16 @@
   function changed() {
     version += 1;
   }
+
+  // The title of the catalog in the head, also in the wizard, where the tree
+  // (which reads it otherwise) is not shown.
+  $effect(() => {
+    void version;
+    catalogEditor.catalogTreeGet(uuid).then(
+      (tree) => (head = tree),
+      () => {},
+    );
+  });
 
   /** After a change of the object chosen: its id now (null: deleted). */
   function objectChanged(id: string | null) {
@@ -65,13 +84,38 @@
 </script>
 
 <div class="editor-head">
-  <button type="button" class="small" onclick={onclose}>← All OSCAL documents</button>
+  <button type="button" class="small" onclick={onclose}>← All catalogs</button>
   {#if head}
     <h2>{head.title}</h2>
     <span class="note">{head.version} · last modified {head.last_modified}</span>
   {/if}
 </div>
 
+<div class="tabs">
+  <button type="button" class:active={mode === "wizard"} onclick={() => (mode = "wizard")}>Conversion</button>
+  <button type="button" class:active={mode === "manual"} onclick={() => (mode = "manual")}>Manual editing</button>
+</div>
+
+{#if mode === "wizard"}
+  <div class="wizard-body">
+    <div class="card">
+      <ConversionWizard
+        {uuid}
+        {version}
+        onchanged={changed}
+        onview={(documentId, page) => (viewer = { documentId, page, quote: "", quoting: false })}
+      />
+    </div>
+    <div class="card">
+      <Proposals
+        {uuid}
+        {version}
+        onview={(documentId, page, quote) => (viewer = { documentId, page, quote, quoting: false })}
+        onchanged={changed}
+      />
+    </div>
+  </div>
+{:else}
 <div class="catalog-body">
   <CatalogTree
     {uuid}
@@ -119,6 +163,7 @@
     />
   </div>
 </div>
+{/if}
 
 {#if adding}
   <NewObject {uuid} kind={adding.kind} place={adding.place} ondone={added} onclose={() => (adding = null)} />

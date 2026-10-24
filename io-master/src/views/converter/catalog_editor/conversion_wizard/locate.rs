@@ -47,12 +47,8 @@ pub fn locate(db: &UserDb, catalog: &Catalog, contents: Pages) -> Result<Vec<Gro
             Some(offset) => {
                 from += offset;
 
-                let number = match pages.get(from) {
-                    Some((number, _)) => Some(*number),
-                    None => None,
-                };
-
-                starts.push((id.clone(), number));
+                // A short closure: Option::map, which clippy asks for here.
+                starts.push((id.clone(), pages.get(from).map(|(number, _)| *number)));
             }
             None => starts.push((id.clone(), None)),
         }
