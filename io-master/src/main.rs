@@ -389,6 +389,53 @@ mod views {
         }
     }
 
+    // views/evaluation_lab/: the view Evaluation lab: a work package of the
+    // Evaluation plan imported and carried out for one product (step 52).
+    pub mod evaluation_lab {
+        #[allow(clippy::module_inception)]
+        pub mod evaluation_lab;
+
+        #[cfg(test)]
+        pub mod test_support;
+
+        pub mod assessment {
+            pub mod propose;
+        }
+        pub mod evaluation_list {
+            pub mod view;
+        }
+        pub mod evidence {
+            pub mod add;
+            pub mod dialog;
+        }
+        pub mod fragments {
+            pub mod propose;
+            pub mod view;
+        }
+        pub mod input_chat {
+            pub mod chat;
+        }
+        pub mod lab_task {
+            pub mod read;
+            pub mod view;
+        }
+        pub mod lab_tasks {
+            pub mod view;
+        }
+        pub mod outputs {
+            pub mod draft;
+        }
+        pub mod package_import {
+            pub mod dialog;
+            pub mod read;
+            pub mod view;
+        }
+        pub mod report {
+            pub mod dialog;
+            pub mod export;
+        }
+    }
+
     // views/evaluation_plan/: the view Evaluation plan: it works only on the
     // documents of OSCAL (the list, the import, the export, the deletion;
     // later the document shown graphically and turned into the flow of data

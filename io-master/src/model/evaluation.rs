@@ -437,21 +437,6 @@ fn squeezed(text: &str) -> String {
     squeezed
 }
 
-/// The inputs of a scheme, in their order.
-///
-/// Called by: the elements of the Evaluation lab that go through the inputs of a task.
-pub fn inputs(blocks: &[Block]) -> Vec<&Block> {
-    let mut found = Vec::new();
-
-    for block in blocks {
-        if block.kind == BlockKind::Input {
-            found.push(block);
-        }
-    }
-
-    found
-}
-
 #[cfg(test)]
 mod tests {
     //! Unit tests of `evaluation.rs`.

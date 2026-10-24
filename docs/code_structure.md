@@ -469,6 +469,36 @@ views/                     The views of the window, one folder per view and one 
       load.rs                      The loading of documents of standards from PDF files: a long work.
       stored.rs                    What is stored of a document of a standard, with its rules: a file is
       view.rs                      The data of the list of documents of standards, as the page gets and
+  evaluation_lab/              The view Evaluation lab (step 52): a work package imported and carried
+                                 out for one product; the report exported.
+    evaluation_lab.rs            The entry of the view Evaluation lab: every command the page calls for it.
+    test_support.rs              Help for the tests of the view: an evaluation and a fake AI.
+    assessment/                  The element "assessment": the agent of a requirement.
+      propose.rs                   The four results and a verdict proposed, on the accepted fragments.
+    evaluation_list/             The element "list of evaluations".
+      view.rs                      The evaluations with their progress, as the page gets them.
+    evidence/                    The element "evidence" of an input.
+      add.rs                       A PDF, a text file or a pasted text, kept as delivered.
+      dialog.rs                    The dialog of the system for a file of evidence.
+    fragments/                   The element "fragments" of an input.
+      propose.rs                   The AI proposes the fragments of the evidence, quotes looked for.
+      view.rs                      A fragment written by the evaluator, as the page sends it.
+    input_chat/                  The element "chat of an input".
+      chat.rs                      A question of the evaluator and the answer of the AI, kept.
+    lab_task/                    The element "screen of a task".
+      read.rs                      The screen of a task: scheme, requirement, inputs, results, outputs.
+      view.rs                      The data of the screen, as the page gets it and sends it.
+    lab_tasks/                   The element "screen of an evaluation".
+      view.rs                      The evaluation with its tasks and their state.
+    outputs/                     The element "outputs" of a task.
+      draft.rs                     The AI drafts the text of an output whose condition holds.
+    package_import/              The element "import of a work package".
+      dialog.rs                    The dialog of the system for the file of a package.
+      read.rs                      The file read: its format, the package, the catalogs attached.
+      view.rs                      The product of the evaluation, as the page sends it.
+    report/                      The element "report".
+      dialog.rs                    The dialog of the system for the folder of the report.
+      export.rs                    One file per output: the accepted texts, task by task.
   evaluation_plan/             The view Evaluation plan: it works only on the documents of OSCAL
     evaluation_plan.rs           The entry of the view Evaluation plan: it works only on the documents of
     new_project/                 The element "new project" of the view Evaluation plan: a master project

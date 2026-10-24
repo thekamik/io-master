@@ -13,7 +13,7 @@ use tokio::sync::watch;
 use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::Model;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
+use crate::model::ai::{Task, Turn};
 
 use super::view::AiEvent;
 
@@ -35,7 +35,7 @@ pub enum Asked {
 /// written into the journal.
 ///
 /// Called by: the works of the AI of the views Evaluation plan and Evaluation lab.
-/// Calls: `completions::ask`, `completions::outcome`.
+/// Calls: [`ask_turns`].
 pub async fn ask(
     session: &Session,
     model: &Arc<Model>,
@@ -44,21 +44,30 @@ pub async fn ask(
     stop: &watch::Receiver<bool>,
     events: &Channel<AiEvent>,
 ) -> Asked {
+    ask_turns(session, model, task, &completions::single(text), stop, events).await
+}
+
+/// Asks `model` the next reply of the conversation `turns` of `task`, with
+/// the events of [`ask`].
+///
+/// Called by: [`ask`], the chat of an input of the Evaluation lab.
+/// Calls: `completions::ask`, `completions::outcome`.
+pub async fn ask_turns(
+    session: &Session,
+    model: &Arc<Model>,
+    task: Task,
+    turns: &[Turn],
+    stop: &watch::Receiver<bool>,
+    events: &Channel<AiEvent>,
+) -> Asked {
     // A page that is gone misses the progress; the answer is used all the
     // same, and the next step sees the page is gone and stops the work.
     let writing = |characters| {
         let _page_reached = events.send(AiEvent::Writing { characters }).is_ok();
     };
-    let turns = completions::single(text);
-    let asked = completions::ask(
-        &session.db_handle(),
-        model,
-        task,
-        &turns,
-        stop,
-        completions::counting(WRITING_EVERY, writing),
-    )
-    .await;
+    let asked =
+        completions::ask(&session.db_handle(), model, task, turns, stop, completions::counting(WRITING_EVERY, writing))
+            .await;
 
     if let Err(error) = &asked.journal {
         let message = format!("the question was not written into the journal of the AI: {error}");
