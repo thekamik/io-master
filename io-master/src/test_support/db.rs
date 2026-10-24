@@ -1,7 +1,8 @@
 //! Help for the tests of `db/`: an AI connection that keeps the rules,
 //! the API key of the tests, an entry of the journal of the AI, and a
 //! quote and a proposal of the evaluation support, a catalog of NIST, and
-//! the system database with an installation and the key of an account.
+//! the system database with an installation and the key of an account, and
+//! a work package as the Evaluation lab imports it.
 
 use serde_json::{Value, json};
 
@@ -13,9 +14,11 @@ use crate::db::system::database::SystemDb;
 use crate::db::user::database::UserDb;
 use crate::model::ai::Connection;
 use crate::model::api_key::ApiKey;
+use crate::model::evaluation::{Evaluation, EvaluationFields, LabTask, Package, PackageTask, TaskState};
 use crate::model::evaluation_support::{ProposalKind, QuoteDraft};
 use crate::model::installation::{ID_LENGTH, Installation};
 use crate::model::oscal::OscalDocument;
+use crate::model::task_scheme::{self, Block, BlockFields, BlockKind, OutputCondition, OutputFormat};
 use crate::test_support::TempDir;
 
 /// The API key of the tests; it must never be found in the file of the
@@ -112,4 +115,67 @@ pub fn wrapped_key() -> WrappedKey {
 /// A new system database of the installation of the tests in `directory`.
 pub fn system_db(directory: &TempDir) -> SystemDb {
     SystemDb::create(directory.path(), &installation()).unwrap()
+}
+
+/// A block of kind `kind` named `name` for the package of the tests.
+fn lab_block(uuid: &str, kind: BlockKind, name: &str, condition: OutputCondition) -> Block {
+    let fields = BlockFields {
+        name: name.to_owned(),
+        evidence: if kind == BlockKind::Input { "The list of roles".to_owned() } else { String::new() },
+        instructions: "Check it.".to_owned(),
+        target: String::new(),
+        format: if kind == BlockKind::Output { OutputFormat::Latex } else { OutputFormat::Text },
+        condition,
+    };
+
+    Block { uuid: uuid.to_owned(), kind, x: 0, y: 0, fields, proposal: None }
+}
+
+/// A work package of one task of the basic catalog of NIST (`catalog`,
+/// requirement s1.1.1): the requirement "r", the input "i", the outputs
+/// "o" (pETR, always) and "n" (Observation Report, only when not met).
+pub fn lab_package(catalog: &str) -> Package {
+    let blocks = vec![
+        lab_block("r", BlockKind::Requirement, "", OutputCondition::Always),
+        lab_block("i", BlockKind::Input, "Roles document", OutputCondition::Always),
+        lab_block("o", BlockKind::Output, "pETR", OutputCondition::Always),
+        lab_block("n", BlockKind::Output, "Observation Report", OutputCondition::NotMet),
+    ];
+    let connections = vec![
+        task_scheme::Connection { from: "i".to_owned(), to: "r".to_owned() },
+        task_scheme::Connection { from: "r".to_owned(), to: "o".to_owned() },
+        task_scheme::Connection { from: "r".to_owned(), to: "n".to_owned() },
+    ];
+    let task = LabTask {
+        uuid: "t".to_owned(),
+        catalog_uuid: catalog.to_owned(),
+        control_id: "s1.1.1".to_owned(),
+        label: "1.1.1".to_owned(),
+        title: "Information security roles and responsibilities".to_owned(),
+        state: TaskState::Todo,
+    };
+
+    Package {
+        package_uuid: "w".to_owned(),
+        project_title: "CC".to_owned(),
+        scope: "A smart card reader.".to_owned(),
+        name: "Roles".to_owned(),
+        evaluator: "Anna".to_owned(),
+        note: String::new(),
+        tasks: vec![PackageTask { task, blocks, connections, related: Vec::new() }],
+    }
+}
+
+/// The evaluation "e" of `package` for the product "Reader".
+pub fn lab_evaluation(package: &Package) -> Evaluation {
+    Evaluation {
+        uuid: "e".to_owned(),
+        package_uuid: package.package_uuid.clone(),
+        project_title: package.project_title.clone(),
+        scope: package.scope.clone(),
+        package_name: package.name.clone(),
+        evaluator: package.evaluator.clone(),
+        note: package.note.clone(),
+        fields: EvaluationFields { product: "Reader".to_owned(), product_version: "2.0".to_owned() },
+    }
 }

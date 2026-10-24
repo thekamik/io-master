@@ -222,6 +222,8 @@ model/                     The data of the program as plain Rust types, and the 
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the
   conversion.rs                The conversion of the documents of a standard (PDF) into a catalog of
   evaluation_project.rs        The master project of an evaluation (step 51 of docs/todo.md): the
+  evaluation.rs                An evaluation of the Evaluation lab (step 52): a work package carried
+                                 out for one product; verdicts, evidence, fragments, results.
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
   own_requirement.rs           A requirement of the laboratory's own, outside the standards (step 51.1e
@@ -281,6 +283,15 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     rows.rs                      The rows of the conversions and the types of `model/conversion.rs` they
     schema.rs                    The tables of the conversions of the documents of standards into
     update.rs                    Changing a conversion: its stage, the pages of its table of contents,
+  evaluation/                  The evaluations of the Evaluation lab (step 52): the frozen copy of a
+                                 work package, the evidence, the chats, the fragments, the results and
+                                 the texts of the outputs.
+    create.rs                    Storing evaluations and what the evaluator adds to them.
+    delete.rs                    Deleting evaluations and what the evaluator added to them.
+    read.rs                      Reading evaluations and what the evaluator added to them.
+    rows.rs                      The rows of the evaluations and the types of `model/evaluation.rs`.
+    schema.rs                    The tables of the evaluations.
+    update.rs                    The state of a task, the fragments accepted, the results, the outputs.
   evaluation_project/          The master projects of the evaluations and their tasks (step 51), the
                                  template of their outputs (standard_outputs, step 51.3).
     create.rs                    Storing master projects and their tasks.

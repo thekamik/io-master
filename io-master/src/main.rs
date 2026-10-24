@@ -37,6 +37,7 @@ mod model {
     pub mod api_key;
     pub mod chats;
     pub mod conversion;
+    pub mod evaluation;
     pub mod evaluation_project;
     pub mod evaluation_support;
     pub mod installation;
@@ -155,6 +156,16 @@ mod db {
     // db/conversion/: the conversions of the documents of standards into
     // catalogs of OSCAL, step by step (the database of the evaluator).
     pub mod conversion {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/evaluation/: the evaluations of the Evaluation lab, what the
+    // evaluator adds to them (the database of the evaluator).
+    pub mod evaluation {
         pub mod create;
         pub mod delete;
         pub mod read;
