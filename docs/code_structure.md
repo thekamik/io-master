@@ -472,6 +472,9 @@ views/                     The views of the window, one folder per view and one 
                                  with its events, the tasks whose instructions the planner may change.
       ask.rs                       One question of a work of the AI, with its events.
       view.rs                      The events of a work of the AI, as the page gets them.
+    task_links/                  The element "related elements" of a task (step 51.4).
+      propose.rs                   The AI finds the elements of other catalogs related to a task.
+      view.rs                      The related elements, as the page gets them.
     task_list/                   The element "list of tasks" of the view Evaluation plan.
       view.rs                      The data of the list of tasks of a master project, as the page gets it:
     task_proposals/              The element "tasks proposed by the AI" (step 51.4).

@@ -173,6 +173,19 @@ export interface TaskProposalView {
   reason: string;
 }
 
+// task_links/view.rs
+/** An element of another catalog related to a task. */
+export interface TaskLinkView {
+  catalog_uuid: string;
+  catalog_title: string;
+  control_id: string;
+  label: string;
+  title: string;
+  reason: string;
+  /** Whether it is only proposed by the AI. */
+  proposed: boolean;
+}
+
 // own_requirement/view.rs
 /** A requirement of the laboratory's own; its identifier is the planner's. */
 export interface OwnRequirement {
@@ -446,4 +459,28 @@ export function taskProposalsAcceptAll(project: string): Promise<void> {
 /** Called by TaskProposals.svelte, "Reject all". */
 export function taskProposalsRejectAll(project: string): Promise<void> {
   return invoke("task_proposals_reject_all", { project });
+}
+
+/** Called by TaskLinks.svelte, when a task opens. */
+export function taskLinksGet(task: string): Promise<TaskLinkView[]> {
+  return invoke("task_links_get", { task });
+}
+
+/** Called by TaskLinks.svelte, "Find with AI"; the events go to `onEvent`. */
+export function taskLinksPropose(task: string, onEvent: (event: AiEvent) => void): Promise<TaskLinkView[]> {
+  const channel = new Channel<AiEvent>();
+
+  channel.onmessage = onEvent;
+
+  return invoke("task_links_propose", { task, onEvent: channel });
+}
+
+/** Called by TaskLinks.svelte, "Accept". */
+export function taskLinksAccept(task: string, catalog: string, control: string): Promise<TaskLinkView[]> {
+  return invoke("task_links_accept", { task, catalog, control });
+}
+
+/** Called by TaskLinks.svelte, "Reject" and "Remove". */
+export function taskLinksRemove(task: string, catalog: string, control: string): Promise<TaskLinkView[]> {
+  return invoke("task_links_remove", { task, catalog, control });
 }

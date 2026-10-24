@@ -17,6 +17,8 @@
     the progress is shown as it comes; the proposals are dashed blocks and
     corrections in the form of their block, accepted or rejected there or
     all at once here. "Instructions…" opens the instructions of that AI.
+  - Beside the standard, the related elements of the task (TaskLinks, step
+    51.4): the work units and other elements the evaluator needs.
   - The program answers every change with the whole scheme as stored, so
     the drawing always shows what the program keeps.
 -->
@@ -32,6 +34,7 @@
   import BlockForm from "./BlockForm.svelte";
   import BlockNode from "./BlockNode.svelte";
   import AiWorkInstructions from "./AiWorkInstructions.svelte";
+  import TaskLinks from "./TaskLinks.svelte";
   import SchemeFit from "./SchemeFit.svelte";
 
   let { task, onclose }: { task: string; onclose: () => void } = $props();
@@ -276,6 +279,7 @@
           </div>
         {/if}
       </div>
+      <TaskLinks {task} />
       {#if quote}
         <div class="scheme-pdf">
           <PdfViewer documentId={quote.document_id} page={quote.page} quote={quote.text} embedded />

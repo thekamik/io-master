@@ -42,6 +42,8 @@ use super::standard_browser::requirement;
 use super::standard_browser::search;
 use super::standard_browser::view::{HitView, RequirementView};
 use super::standard_outputs::view::{self as output_view, StandardOutputForm, StandardOutputView};
+use super::task_links::propose as task_links_ask;
+use super::task_links::view::{self as link_view, TaskLinkView};
 use super::task_list::view::{self as task_view, TaskView};
 use super::task_proposals::propose as task_proposals_ask;
 use super::task_proposals::view::{self as proposal_view, TaskProposalView};
@@ -744,6 +746,100 @@ pub fn task_proposals_reject_all(state: State<'_, AppState>, project: String) ->
     db_evaluation_project::delete::task_proposals(&session.db(), &project, None)?;
 
     Ok(())
+}
+
+/// The elements of other catalogs related to task `task` (step 51.4):
+/// the accepted ones and those the AI only proposes.
+///
+/// Called by the page: `TaskLinks.svelte`, when a task opens and after a
+/// change (`evaluationPlan.taskLinksGet(task)`).
+/// Calls: `db_evaluation_project::read::task_links`, `link_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_links_get(state: State<'_, AppState>, task: String) -> Result<Vec<TaskLinkView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    link_view::all(&db, db_evaluation_project::read::task_links(&db, &task)?)
+}
+
+/// The AI reads the requirement of task `task` and the elements of the
+/// other catalogs of its project, and proposes the related ones; the
+/// proposals left undecided are removed first. The events arrive through
+/// `on_event`; gives the related elements.
+///
+/// Called by the page: `TaskLinks.svelte`, "Find with AI"
+/// (`evaluationPlan.taskLinksPropose(task, onEvent)`).
+/// Calls: `AppState::start_work`, `task_links_ask::propose` (one question per
+/// part through `ai/api/`), `link_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+pub async fn task_links_propose(
+    state: State<'_, AppState>,
+    task: String,
+    on_event: Channel<AiEvent>,
+) -> Result<Vec<TaskLinkView>, AppError> {
+    let session = state.session()?;
+    let stop = state.start_work();
+
+    task_links_ask::propose(&session, &task, &stop, &on_event).await?;
+
+    let db = session.db();
+    link_view::all(&db, db_evaluation_project::read::task_links(&db, &task)?)
+}
+
+/// Accepts the related element `control` of catalog `catalog` that the AI
+/// proposed for task `task`.
+///
+/// Called by the page: `TaskLinks.svelte`, "Accept"
+/// (`evaluationPlan.taskLinksAccept(task, catalog, control)`).
+/// Calls: `db_evaluation_project::update::accept_link`, `link_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_links_accept(
+    state: State<'_, AppState>,
+    task: String,
+    catalog: String,
+    control: String,
+) -> Result<Vec<TaskLinkView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    ensure!(
+        db_evaluation_project::update::accept_link(&db, &task, &catalog, &control)?,
+        AppError::Invalid("the AI did not propose this element".to_owned())
+    );
+
+    link_view::all(&db, db_evaluation_project::read::task_links(&db, &task)?)
+}
+
+/// Removes the related element `control` of catalog `catalog` from task
+/// `task`: a proposal rejected, or an accepted element removed.
+///
+/// Called by the page: `TaskLinks.svelte`, "Reject" and "Remove"
+/// (`evaluationPlan.taskLinksRemove(task, catalog, control)`).
+/// Calls: `db_evaluation_project::delete::task_link`, `link_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_links_remove(
+    state: State<'_, AppState>,
+    task: String,
+    catalog: String,
+    control: String,
+) -> Result<Vec<TaskLinkView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    ensure!(
+        db_evaluation_project::delete::task_link(&db, &task, &catalog, &control)?,
+        AppError::Invalid("the element is not related to the task".to_owned())
+    );
+
+    link_view::all(&db, db_evaluation_project::read::task_links(&db, &task)?)
 }
 
 /// The scheme of task `task`: its requirement as the standard writes it,
@@ -1662,5 +1758,41 @@ mod tests {
                 .unwrap_err()["kind"],
             "invalid"
         );
+    }
+
+    #[test]
+    fn a_related_element_is_accepted_and_removed() {
+        use crate::db::evaluation_project as db_evaluation_project;
+        use crate::model::evaluation_project::TaskLink;
+
+        let (window, task) = with_task();
+        let catalog = window.call("task_scheme_get", json!({ "task": task })).unwrap()["task"]["catalog_uuid"].clone();
+        let catalog = catalog.as_str().unwrap().to_owned();
+        {
+            let session = window.session();
+            let link = TaskLink {
+                catalog_uuid: catalog.clone(),
+                control_id: "s1.1.2".to_owned(),
+                reason: "Why.".to_owned(),
+                proposed: true,
+            };
+            db_evaluation_project::create::task_link(&session.db(), &task, &link).unwrap();
+        }
+
+        let listed = window.call("task_links_get", json!({ "task": task })).unwrap();
+        assert_eq!(
+            (listed[0]["title"].clone(), listed[0]["proposed"].clone()),
+            (json!("Segregation of duties"), json!(true))
+        );
+
+        let accepted =
+            window.call("task_links_accept", json!({ "task": task, "catalog": catalog, "control": "s1.1.2" })).unwrap();
+        assert_eq!(accepted[0]["proposed"], false);
+        let again = window.call("task_links_accept", json!({ "task": task, "catalog": catalog, "control": "s1.1.2" }));
+        assert_eq!(again.unwrap_err()["kind"], "invalid");
+
+        let left =
+            window.call("task_links_remove", json!({ "task": task, "catalog": catalog, "control": "s1.1.2" })).unwrap();
+        assert_eq!(left, json!([]));
     }
 }

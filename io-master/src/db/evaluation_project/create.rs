@@ -4,7 +4,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::{EvaluationTask, MAX_TASKS, ProjectFields, TaskProposal};
+use crate::model::evaluation_project::{EvaluationTask, MAX_LINKS, MAX_TASKS, ProjectFields, TaskLink, TaskProposal};
 use crate::model::task_scheme::{Block, Correction, MAX_BLOCKS, MAX_OUTPUTS, NewScheme, StandardOutput};
 use crate::model::time::now;
 
@@ -224,6 +224,36 @@ pub fn task_proposal(db: &UserDb, project: &str, proposal: &TaskProposal) -> Res
             ":reason": proposal.reason,
         },
     )?;
+
+    Ok(())
+}
+
+/// Adds `link` to the related elements of task `task`; an element related
+/// already stays as it is. Refused when the task has [`MAX_LINKS`] already.
+///
+/// Called by: `task_links/propose.rs`.
+pub fn task_link(db: &UserDb, task: &str, link: &TaskLink) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let count: i64 =
+        transaction.query_row("SELECT COUNT(*) FROM task_links WHERE task_uuid = ?1", [task], |row| row.get(0))?;
+    let limit = i64::try_from(MAX_LINKS).map_err(|error| DbError::Inconsistent(error.to_string()))?;
+
+    if count >= limit {
+        return Err(DbError::Inconsistent(format!("a task has at most {MAX_LINKS} related elements")));
+    }
+
+    transaction.execute(
+        "INSERT OR IGNORE INTO task_links (task_uuid, catalog_uuid, control_id, reason, proposed)
+         VALUES (:task, :catalog, :control, :reason, :proposed)",
+        named_params! {
+            ":task": task,
+            ":catalog": link.catalog_uuid,
+            ":control": link.control_id,
+            ":reason": link.reason,
+            ":proposed": link.proposed,
+        },
+    )?;
+    transaction.commit()?;
 
     Ok(())
 }

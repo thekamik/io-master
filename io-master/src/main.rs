@@ -404,6 +404,10 @@ mod views {
         pub mod standard_outputs {
             pub mod view;
         }
+        pub mod task_links {
+            pub mod propose;
+            pub mod view;
+        }
         pub mod task_list {
             pub mod view;
         }

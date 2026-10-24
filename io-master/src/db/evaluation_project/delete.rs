@@ -22,6 +22,10 @@ pub fn project(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
         "DELETE FROM block_corrections WHERE task_uuid IN (SELECT uuid FROM evaluation_tasks WHERE project_uuid = ?1)",
         [uuid],
     )?;
+    transaction.execute(
+        "DELETE FROM task_links WHERE task_uuid IN (SELECT uuid FROM evaluation_tasks WHERE project_uuid = ?1)",
+        [uuid],
+    )?;
     transaction.execute("DELETE FROM evaluation_tasks WHERE project_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM project_catalogs WHERE project_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM standard_outputs WHERE project_uuid = ?1", [uuid])?;
@@ -42,6 +46,7 @@ pub fn task(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
     transaction.execute("DELETE FROM task_connections WHERE task_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM task_blocks WHERE task_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM block_corrections WHERE task_uuid = ?1", [uuid])?;
+    transaction.execute("DELETE FROM task_links WHERE task_uuid = ?1", [uuid])?;
     let deleted = transaction.execute("DELETE FROM evaluation_tasks WHERE uuid = ?1", [uuid])? > 0;
     transaction.commit()?;
 
@@ -124,6 +129,30 @@ pub fn task_proposals(db: &UserDb, project: &str, catalog: Option<&str>) -> Resu
             .execute("DELETE FROM task_proposals WHERE project_uuid = ?1 AND catalog_uuid = ?2", [project, catalog])?,
         None => db.connection().execute("DELETE FROM task_proposals WHERE project_uuid = ?1", [project])?,
     };
+
+    Ok(())
+}
+
+/// Removes the related element `control` of catalog `catalog` from task
+/// `task`: a proposal rejected, or an accepted element removed; gives
+/// whether there was one.
+///
+/// Called by: `task_links_remove` (`evaluation_plan.rs`).
+pub fn task_link(db: &UserDb, task: &str, catalog: &str, control: &str) -> Result<bool, DbError> {
+    let deleted = db.connection().execute(
+        "DELETE FROM task_links WHERE task_uuid = ?1 AND catalog_uuid = ?2 AND control_id = ?3",
+        [task, catalog, control],
+    )?;
+
+    Ok(deleted > 0)
+}
+
+/// Rejects the related elements of task `task` that are only proposed;
+/// run before a new question to the AI.
+///
+/// Called by: `task_links/propose.rs`.
+pub fn proposed_links(db: &UserDb, task: &str) -> Result<(), DbError> {
+    db.connection().execute("DELETE FROM task_links WHERE task_uuid = ?1 AND proposed = 1", [task])?;
 
     Ok(())
 }
@@ -265,6 +294,37 @@ mod tests {
         update::accept_correction(&test.db, "r", &correction.applied(&BlockFields::empty())).unwrap();
         assert_eq!(read::block(&test.db, "r").unwrap().unwrap().1.fields.instructions, "Check the roles.");
         assert!(!self::correction(&test.db, "r").unwrap());
+    }
+
+    #[test]
+    fn a_related_element_is_accepted_removed_or_rejected_with_the_others_proposed() {
+        use crate::db::evaluation_project::update;
+        use crate::model::evaluation_project::TaskLink;
+
+        let test = database();
+        let fields = ProjectFields { title: "p".to_owned(), description: String::new() };
+        create::project(&test.db, "p", &fields, &["c".to_owned(), "cem".to_owned()]).unwrap();
+        let one = EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c".to_owned(), control_id: "x".to_owned() };
+        create::task(&test.db, "p", &one, &new_scheme("r", &[]).unwrap()).unwrap();
+        for unit in ["u1", "u2", "u3"] {
+            let link = TaskLink {
+                catalog_uuid: "cem".to_owned(),
+                control_id: unit.to_owned(),
+                reason: "Its work unit.".to_owned(),
+                proposed: true,
+            };
+            create::task_link(&test.db, "t", &link).unwrap();
+        }
+
+        assert!(update::accept_link(&test.db, "t", "cem", "u1").unwrap());
+        assert!(!update::accept_link(&test.db, "t", "cem", "u1").unwrap());
+        assert!(task_link(&test.db, "t", "cem", "u2").unwrap());
+        proposed_links(&test.db, "t").unwrap();
+
+        let left = read::task_links(&test.db, "t").unwrap();
+        assert_eq!((left.len(), left[0].control_id.as_str(), left[0].proposed), (1, "u1", false));
+        task(&test.db, "t").unwrap();
+        assert!(read::task_links(&test.db, "t").unwrap().is_empty());
     }
 
     #[test]

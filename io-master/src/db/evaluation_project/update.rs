@@ -184,6 +184,20 @@ fn write_fields(transaction: &rusqlite::Transaction<'_>, uuid: &str, fields: &Bl
     if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "task_blocks", id: 0 }) }
 }
 
+/// Accepts the related element `control` of catalog `catalog` that the AI
+/// proposed for task `task`; gives whether it was proposed.
+///
+/// Called by: `task_links_accept` (`evaluation_plan.rs`).
+pub fn accept_link(db: &UserDb, task: &str, catalog: &str, control: &str) -> Result<bool, DbError> {
+    let changed = db.connection().execute(
+        "UPDATE task_links SET proposed = 0
+         WHERE task_uuid = ?1 AND catalog_uuid = ?2 AND control_id = ?3 AND proposed = 1",
+        [task, catalog, control],
+    )?;
+
+    Ok(changed == 1)
+}
+
 /// Places block `uuid` at `x`, `y` in the drawing (where a drag ended).
 ///
 /// Called by: `task_scheme_move_block` (`evaluation_plan.rs`).

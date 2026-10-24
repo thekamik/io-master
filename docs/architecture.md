@@ -419,6 +419,11 @@ TaskScheme ──task_scheme_get(task)──► the task, its requirement read f
   │     ──task_scheme_stop()──► "Stop"; the instructions ──task_scheme_instructions_get / _save──► db/ai/instructions/
   │     ──task_scheme_accept(block) / _reject(block) / _accept_all(task) / _reject_all(task)──► nothing is
   │     overwritten without the planner (P1)
+  ├─► TaskLinks (step 51.4) ──task_links_get(task)──► the related elements (work units, test cases, ...)
+  │     ──task_links_propose(task, onEvent)──► the undecided proposals removed; the requirement and the elements of
+  │     the other catalogs of the project, part by part, one question of the task related_elements per part
+  │     ──► proposed elements with their reasons ──task_links_accept / _remove──► accepted (they travel with the
+  │     task, 51.5) or dropped
   └─► the standard, always beside: PartRows (component) and, for a quote, PdfViewer (component) at its page
      every command answers with the whole scheme as stored; the page draws it again from that answer
 the tab OSCAL documents ──► OscalDocuments ──oscal_documents_get()──► the finished documents of OSCAL

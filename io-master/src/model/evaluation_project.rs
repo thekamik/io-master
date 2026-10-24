@@ -21,6 +21,9 @@ pub const MAX_CATALOGS: usize = 20;
 /// requirements.
 pub const MAX_TASKS: usize = 5000;
 
+/// The most related elements of one task.
+pub const MAX_LINKS: usize = 100;
+
 /// The most projects an evaluator keeps.
 pub const MAX_PROJECTS: usize = 500;
 
@@ -65,6 +68,18 @@ pub struct TaskProposal {
     pub catalog_uuid: String,
     pub control_id: String,
     pub reason: String,
+}
+
+/// An element of another catalog related to the requirement of a task
+/// (step 51.4): a work unit of the CEM, a test case, ... Proposed by the AI
+/// with its reason; once the planner accepts it, it travels with the task.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskLink {
+    pub catalog_uuid: String,
+    pub control_id: String,
+    pub reason: String,
+    /// Whether it is only proposed by the AI.
+    pub proposed: bool,
 }
 
 /// The fields in their normal form: no spaces around them.

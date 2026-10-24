@@ -17,6 +17,8 @@
 //!                       waiting for the planner
 //! task_proposals        the requirements the AI proposes as tasks of a project
 //!                       (step 51.4), waiting for the planner
+//! task_links            the elements of other catalogs related to a task
+//!                       (step 51.4), proposed or accepted
 //! ```
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
@@ -91,6 +93,16 @@ pub const SCHEMA: &str = "
         control_id      TEXT NOT NULL,
         reason          TEXT NOT NULL,
         PRIMARY KEY (project_uuid, catalog_uuid, control_id)
+    );
+
+    -- An element related once per task; proposed: 1 while only proposed.
+    CREATE TABLE IF NOT EXISTS task_links (
+        task_uuid       TEXT NOT NULL,
+        catalog_uuid    TEXT NOT NULL,
+        control_id      TEXT NOT NULL,
+        reason          TEXT NOT NULL,
+        proposed        INTEGER NOT NULL,
+        PRIMARY KEY (task_uuid, catalog_uuid, control_id)
     );
 
     -- One correction per block at most.

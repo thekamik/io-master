@@ -349,6 +349,12 @@ ul.wizard-groups .range input[type="number"] {
     color: var(--accent);
 }
 
+/* A related element of a task; dashed while only proposed. */
+.link-row {
+    padding: 0.5rem 0;
+    border-top: 1px solid var(--border);
+}
+
 /* What the AI proposed for a block, in its form. */
 .ai-proposal {
     padding: 0.6rem 0.75rem;

@@ -5,7 +5,8 @@ use rusqlite::OptionalExtension;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{
-    EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_PROJECTS, MAX_TASKS, ProjectSummary, TaskProposal,
+    EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_LINKS, MAX_PROJECTS, MAX_TASKS, ProjectSummary, TaskLink,
+    TaskProposal,
 };
 use crate::model::task_scheme::{Block, Connection, Correction, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
 
@@ -91,6 +92,23 @@ pub fn task_proposals(db: &UserDb, project: &str) -> Result<Vec<TaskProposal>, D
     let mut found = Vec::new();
 
     for row in statement.query_map(rusqlite::params![project, limit(MAX_TASKS)?], |row| Ok(rows::task_proposal(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The related elements of task `task`, in the order added; at most
+/// `MAX_LINKS`.
+///
+/// Called by: `task_links_get` and the commands of the related elements (`evaluation_plan.rs`),
+/// `task_links/propose.rs`.
+pub fn task_links(db: &UserDb, task: &str) -> Result<Vec<TaskLink>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection.prepare("SELECT * FROM task_links WHERE task_uuid = ?1 ORDER BY rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![task, limit(MAX_LINKS)?], |row| Ok(rows::task_link(row)))? {
         found.push(row??);
     }
 
