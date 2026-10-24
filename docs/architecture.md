@@ -117,9 +117,9 @@ key of the database ┤                                                         
 
 - **At the setup, automatically when the user is created** (user, 2026-10-24), the program makes a random recovery code (160 bits from the kernel, written as groups of characters without 0, O, 1 and I, with a check sum against typing errors) and wraps the key of the database a second time with it. The code is shown **once**; the evaluator prints or copies it, confirms it by typing a group, and keeps it outside the computer (the safe of the laboratory). Argon2id is not needed for it: 160 random bits cannot be guessed.
 - **A forgotten password:** "I do not remember my password" on the login page; the code opens copy B, the evaluator sets a new password (a new copy A); the database is not re-encrypted.
-- **After a use the code is replaced** by a new one (shown once) and copy B is made anew; the evaluator can also replace it on the page User at any time, after entering the password.
+- **A new code after every change of the password** (user, 2026-10-24), the old one stops working: after the change on the page User and after the recovery with the code. **"Make a new recovery code"** on the page User needs the password of the user.
 - **Limits, said in the window:** the code is a second key to the data (whoever finds it has the data); a lost password *and* a lost code mean lost data (only a backup is left); a replaced code protects the files on the computer, not copies of them taken earlier.
-- **Until the recovery code is built** every page shows an orange bar: "Your password cannot be recovered: a forgotten password means lost data."
+- **Built in step 49** (2026-10-24): `model/recovery_code.rs` (the text of a code), `db/encryption/recovery.rs` (its copy of the key), `installation/accounts.rs` and `views/users/users.rs` (the operations), the component `recovery_code` of the page (the code shown once). The way of the key: section 12.
 
 ### 5.5 Backup (agreed; later stage; changed 2026-10-24)
 
@@ -246,10 +246,13 @@ The flow inside each view, as it is now (the entry of each view, `views/<view>/<
 **`users` and `shell`** (entries `views/users/users.rs` and `views/shell/shell.rs`). Everything that touches the key of the database is in `users`; the page asks for the state of the program when the window opens and after each of its changes, and shows the setup, the login or the frame:
 
 ```text
-SetupForm    ──setup_form_install(name, password)────────► installation/: made, logged in ─┐
+SetupForm    ──setup_form_install(name, password)────────► installation/: made, logged in ─┐   ──► the first recovery code
 LoginForm    ──login_form_log_in(name, password)─────────► installation/: logged in ───────┤
+LoginForm    ──login_form_recover(name, code, new, new)──► installation/: new keys, logged in ┤ ──► a new recovery code
 UserMenu     ──user_menu_log_out()───────────────────────► installation/: the session ends ┤
-PasswordForm ──password_form_change(old, new, new)──► installation/: the key of the database encrypted again
+PasswordForm ──password_form_change(old, new, new)──► installation/: both copies of the key anew ──► a new recovery code
+RecoveryCodeForm ──recovery_code_form_replace(password)──► installation/: the copy of the code anew ──► a new recovery code
+     (each code shown once by the component RecoveryCode, confirmed by a typed group, then forgotten)
                                                                                             ▼
 App.svelte ──program_get()──► ProgramView: installed, who is logged in, the pages, the warnings
 ```
@@ -262,9 +265,12 @@ setup_form_install(name, password)
     accounts::create ──► keys::check_password (at least 12 characters)
                      ──► generate_database_key: 32 random bytes ─────────────────── the key of the database (RAM)
                      ──► keys::wrap: password ──Argon2id──► HKDF ──► unlocking key
-                                     key of the database ──AES-256-GCM──► WrappedKey ──► system.db (accounts)
+                                     key of the database ──AES-256-GCM──► WrappedKey ──┐
+                     ──► recovery::new_code: 160 random bits = the recovery code (RAM)  │
+                     ──► recovery::wrap: code ──HKDF──► recovery key                    ├─► system.db (users)
+                                     key of the database ──AES-256-GCM──► RecoveryWrappedKey ┘
                      ──► user_db::create: users/<id>.db made by SQLCipher with the key
-  then the login below; the key of the setup is dropped (wiped)
+  then the login below; the key of the setup is dropped (wiped); the code goes to the page once
 
 login_form_log_in(name, password)
   accounts::log_in ──► the WrappedKey of the account from system.db
@@ -276,8 +282,21 @@ login_form_log_in(name, password)
 
 password_form_change(current, new, new)
   accounts::change_password ──► keys::unwrap with the current password ──► the key (RAM, briefly)
-                            ──► keys::wrap with the new password ──► the new WrappedKey ──► system.db
-                            (the database itself is not touched; the key is wiped)
+                            ──► keys::wrap with the new password, recovery::wrap with a new code
+                            ──► both copies replaced in one statement (the old code stops working)
+                            (the database itself is not touched; the key is wiped; the code goes to the page once)
+
+login_form_recover(name, code, new, new)
+  RecoveryCode::parse ──► the typed code checked (alphabet, length, check sum)
+  accounts::recover ──► recovery::unwrap: code ──HKDF──► recovery key ──AES-256-GCM──► the key
+                        (a wrong code: the same error as a wrong password or an unknown name)
+                    ──► user_db::open: the key opens the database before anything is replaced
+                    ──► keys::wrap with the new password, recovery::wrap with a new code ──► system.db
+  Session::open, AppState::log_in ──► logged in, as the login
+
+recovery_code_form_replace(password)
+  accounts::replace_recovery_code ──► keys::unwrap with the password ──► the key (RAM, briefly)
+                                  ──► recovery::wrap with a new code ──► only the copy of the code replaced
 
 user_menu_log_out()                    the end of the session
 user_menu_close()                      the same, then the end of the program

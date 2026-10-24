@@ -46,14 +46,14 @@ mod tests {
 
     use crate::db::system::create;
     use crate::test_support::TempDir;
-    use crate::test_support::db::{system_db, wrapped_key};
+    use crate::test_support::db::{recovery_key, system_db, wrapped_key};
 
     #[test]
     fn the_names_are_read_in_the_order_they_were_added() {
         let directory = TempDir::new();
         let db = system_db(&directory);
-        create::add_user(&db, "Anna", &wrapped_key()).unwrap();
-        create::add_user(&db, "jan", &wrapped_key()).unwrap();
+        create::add_user(&db, "Anna", &wrapped_key(), &recovery_key()).unwrap();
+        create::add_user(&db, "jan", &wrapped_key(), &recovery_key()).unwrap();
 
         assert_eq!(user_names(&db).unwrap(), ["Anna", "jan"]);
     }
@@ -62,7 +62,7 @@ mod tests {
     fn an_account_is_found_without_regard_to_letter_case() {
         let directory = TempDir::new();
         let db = system_db(&directory);
-        let anna = create::add_user(&db, "Anna", &wrapped_key()).unwrap();
+        let anna = create::add_user(&db, "Anna", &wrapped_key(), &recovery_key()).unwrap();
 
         let found = user(&db, "anna").unwrap().unwrap();
         assert_eq!((found.id, found.name.as_str()), (anna, "Anna"));

@@ -108,7 +108,7 @@ mod tests {
 
     use crate::db::system::{create, read};
     use crate::test_support::TempDir;
-    use crate::test_support::db::{installation, system_db, wrapped_key};
+    use crate::test_support::db::{installation, recovery_key, system_db, wrapped_key};
 
     #[test]
     fn the_installation_is_kept() {
@@ -125,7 +125,7 @@ mod tests {
 
         let directory = TempDir::new();
         let db = system_db(&directory);
-        create::add_user(&db, "anna", &wrapped_key()).unwrap();
+        create::add_user(&db, "anna", &wrapped_key(), &recovery_key()).unwrap();
 
         // A plain SQLite file, readable only by the user.
         let bytes = fs::read(path(directory.path())).unwrap();

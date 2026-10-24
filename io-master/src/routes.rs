@@ -25,7 +25,9 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         // encryption of its database.
         crate::views::users::users::setup_form_install,
         crate::views::users::users::login_form_log_in,
+        crate::views::users::users::login_form_recover,
         crate::views::users::users::password_form_change,
+        crate::views::users::users::recovery_code_form_replace,
         crate::views::users::users::user_menu_log_out,
         crate::views::users::users::user_menu_close,
         // The frame of the window (views/shell/).

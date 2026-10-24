@@ -56,7 +56,7 @@ mod tests {
         assert_eq!(program["pages"][3], json!({ "id": "users", "title": "User" }));
         assert_eq!(program["pages"][1], json!({ "id": "evaluation_plan", "title": "Evaluation plan" }));
         assert_eq!(program["pages"][2], json!({ "id": "evaluation_lab", "title": "Evaluation lab" }));
-        assert_eq!(program["warnings"].as_array().unwrap().len(), 1);
+        assert_eq!(program["warnings"], json!([]));
         assert_ne!(program["version"], "");
     }
 }

@@ -6,7 +6,9 @@
 //! ```text
 //! installation   one row: identifier, time of the first start
 //! users          one row: the account, its name, time it was created,
-//!                and the encrypted key of its database
+//!                and the key of its database twice, wrapped with the
+//!                password (key_*) and with the recovery code
+//!                (recovery_*, step 49)
 //! ```
 
 /// The tables, created with the database.
@@ -27,6 +29,10 @@ pub const SCHEMA: &str = "
         key_iterations  INTEGER NOT NULL,
         key_nonce       BLOB    NOT NULL,
         key_ciphertext  BLOB    NOT NULL,
-        key_tag         BLOB    NOT NULL
+        key_tag         BLOB    NOT NULL,
+        recovery_salt       BLOB    NOT NULL,
+        recovery_nonce      BLOB    NOT NULL,
+        recovery_ciphertext BLOB    NOT NULL,
+        recovery_tag        BLOB    NOT NULL
     );
 ";

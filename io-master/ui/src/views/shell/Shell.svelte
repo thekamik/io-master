@@ -31,7 +31,7 @@
     chat: "Ask the model of your active AI connection.",
     evaluation_plan: "The standards in NIST OSCAL and the plan of an evaluation, with the documents of the standards they come from.",
     evaluation_lab: "Carry out an evaluation plan for a product, with what the manufacturer and the laboratory deliver.",
-    users: "Your account: the password that opens your encrypted database.",
+    users: "Your account: the password that opens your encrypted database, and your recovery code.",
     settings: "The connections to AI services, and this installation.",
   };
 </script>

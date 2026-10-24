@@ -28,7 +28,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14f | **46: The entry of a view** | **built 2026-10-23, in the phases 46.1 to 46.7** (below) |
 | 14g | **47: The view `users`: the account, the session and the encryption in one place** | **built 2026-10-23, in the phases 47.1 to 47.3** (below) |
 | 14h | **48: The evaluation with AI as the only aim: devices, the master and the extra factors removed** | **decided 2026-10-24; 48.1 and 48.3 built** (below) |
-| 14i | **49: The recovery code of a forgotten password** | **concept approved 2026-10-24** (below) |
+| 14i | **49: The recovery code of a forgotten password** | **built 2026-10-24** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -56,17 +56,24 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 49: The recovery code of a forgotten password (2026-10-24)
 
-**State: concept approved by the user 2026-10-24** ("a sensible mechanism, and probably the only sensible option"). The design: `architecture.md`, section 5.4.
+**State: built 2026-10-24**; the concept approved by the user the same day ("a sensible mechanism, and probably the only sensible option"). The design: `architecture.md`, sections 5.4 and 12; tried in the window on a private display (the setup, the recovery with a code typed in small letters with spaces, a new code with a wrong and the right password).
 
 The key of the database is wrapped a second time, with a random recovery code (160 bits, groups of characters without 0, O, 1, I, with a check sum), the mechanism of BitLocker, FileVault and LUKS: no server.
 
 **Decision of the user (2026-10-24):** the first recovery code is made **automatically when the user is created** and shown right after the setup, before the program opens, as programs of this kind do; it is not something the evaluator has to find in the settings.
 
+**The management of the codes (user, 2026-10-24):**
+1. The code appears on the screen after the user is created, as in BitLocker.
+2. A new code appears after every change of the password, and the old one stops working (the recovery of a forgotten password with the code is a change of the password as well).
+3. The page User offers "Make a new recovery code", which needs the password of the user.
+
+Everything of it is in `views/users/users.rs`, with the password: one place for the keys of the account.
+
 **Tasks**
-- [ ] `db/encryption/keys.rs`: the wrapping with the recovery code (HKDF, AES-256-GCM, its own purpose of HKDF); the code made, written and read as text with its check sum (`model/`).
-- [ ] `system.db`: the second copy of the key (columns of its own; a migration of the system database, its first).
-- [ ] `views/users/users.rs`: the code shown once at the setup and confirmed by a group; "I do not remember my password" on the login page (the code, then the new password; the code replaced); the replacement of the code on the page User, after the password.
-- [ ] The warning of the window only while no recovery code exists; an installation made before step 49 is offered to make one.
+- [x] `db/encryption/recovery.rs` (a file of its own beside `keys.rs`): the wrapping with the recovery code (HKDF with its own purpose, AES-256-GCM); `model/recovery_code.rs`: the code written and read as text with its check sum (alphabet without 0, O, 1, I; 32 + 3 characters in 7 groups of 5; case, spaces and dashes aside).
+- [x] `system.db`: the second copy of the key in columns of its own (`recovery_*`, NOT NULL: no migration, the fresh start of 48.4).
+- [x] `views/users/users.rs`: `setup_form_install` and `password_form_change` give the new code; `login_form_recover` ("I do not remember my password"); `recovery_code_form_replace` (needs the password). The page: the component `recovery_code` (shown once, a random group typed to go on), `RecoveryCodeForm` on the page User.
+- [x] The warning bar of the window removed: every account has its code from the setup on (no installation before step 49 is left, 48.4).
 
 ---
 

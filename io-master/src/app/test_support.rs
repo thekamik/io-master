@@ -31,7 +31,7 @@ pub fn first_start() -> TestState {
 /// The program installed by "anna", nobody logged in yet.
 pub fn installed() -> TestState {
     let directory = TempDir::new();
-    let (running, _) = lifecycle::install(directory.path(), "anna", PASSWORD).unwrap();
+    let (running, _, _) = lifecycle::install(directory.path(), "anna", PASSWORD).unwrap();
     let state = AppState::new(directory.path().to_owned(), Opened::Installed(running));
 
     TestState { directory, state }

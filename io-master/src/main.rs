@@ -39,6 +39,7 @@ mod model {
     pub mod evaluation_support;
     pub mod installation;
     pub mod oscal;
+    pub mod recovery_code;
     pub mod standards;
     pub mod text;
     pub mod time;
@@ -62,6 +63,7 @@ mod db {
         pub mod database_key;
         pub mod generate_key;
         pub mod keys;
+        pub mod recovery;
         pub mod sqlcipher;
     }
     // db/system/: the system database of the installation (not encrypted).
@@ -235,6 +237,12 @@ mod components {
     // their level; the object chosen and the proposals of the editor of a
     // catalog. No command: the elements give its rows with their data.
     pub mod part_rows {
+        pub mod view;
+    }
+    // components/recovery_code/: the recovery code, shown once after the
+    // setup, a change or a recovery of the password, and a new code (step 49
+    // of docs/todo.md). No command: the commands of the view Users give it.
+    pub mod recovery_code {
         pub mod view;
     }
     // components/pdf_viewer/: the viewer of a standard, a quote highlighted on

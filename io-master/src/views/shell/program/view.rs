@@ -56,16 +56,11 @@ fn pages() -> Vec<PageView> {
     ]
 }
 
-/// The warnings. Always shown so far: the password cannot be recovered
-/// yet.
-///
-/// TODO (step 49 of docs/todo.md): the bar only while no recovery code
-/// exists.
+/// The warnings: none at present. Every account has its recovery code
+/// from the setup on (step 49 of docs/todo.md), so the bar "your password
+/// cannot be recovered" is gone; the bars stay for what comes later.
 fn warnings() -> Vec<WarningView> {
-    vec![WarningView {
-        level: "warning",
-        text: "Your password cannot be recovered: a forgotten password means lost data.",
-    }]
+    Vec::new()
 }
 
 impl ProgramView {

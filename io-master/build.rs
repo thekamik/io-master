@@ -12,6 +12,8 @@ fn main() {
     let commands = tauri_build::AppManifest::new().commands(&[
         "setup_form_install",
         "login_form_log_in",
+        "login_form_recover",
+        "recovery_code_form_replace",
         "program_get",
         "user_menu_log_out",
         "user_menu_close",

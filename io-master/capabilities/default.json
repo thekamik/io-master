@@ -8,6 +8,8 @@
   "permissions": [
     "allow-setup-form-install",
     "allow-login-form-log-in",
+    "allow-login-form-recover",
+    "allow-recovery-code-form-replace",
     "allow-program-get",
     "allow-user-menu-log-out",
     "allow-user-menu-close",

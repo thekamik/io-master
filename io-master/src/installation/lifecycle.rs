@@ -30,6 +30,7 @@ use crate::installation::accounts::{self, Account, AccountError};
 use crate::security::random::fill_random;
 
 use crate::model::installation::{self, Installation, InstallationId};
+use crate::model::recovery_code::RecoveryCode;
 
 /// An installed program, ready to work: its open system database.
 #[derive(Debug)]
@@ -104,9 +105,16 @@ pub fn open(data_dir: &Path) -> Result<Opened, LifecycleError> {
 }
 
 /// Makes the installation at the first start: the system database
-/// and its account. Returns the running
-/// installation and the first account.
-pub fn install(data_dir: &Path, first_user: &str, password: &str) -> Result<(Running, Account), LifecycleError> {
+/// and its account. Returns the running installation, the account and
+/// its first recovery code, to be shown once (step 49 of docs/todo.md).
+///
+/// Called by: `views/users/users.rs` (`setup_form_install`).
+/// Calls: `SystemDb::create`, `accounts::create_first`.
+pub fn install(
+    data_dir: &Path,
+    first_user: &str,
+    password: &str,
+) -> Result<(Running, Account, RecoveryCode), LifecycleError> {
     // Checked before anything is made, so that a mistake in the
     // form leaves nothing behind.
     installation::check_user_name(first_user).map_err(|error| LifecycleError::Account(error.into()))?;
@@ -129,8 +137,8 @@ pub fn install(data_dir: &Path, first_user: &str, password: &str) -> Result<(Run
     // If the first account cannot be made, the system database is
     // removed again: an installation without a user could never be
     // entered.
-    let account = match accounts::create_first(&system_db, data_dir, first_user, password) {
-        Ok(account) => account,
+    let (account, code) = match accounts::create_first(&system_db, data_dir, first_user, password) {
+        Ok(created) => created,
         Err(error) => {
             drop(system_db);
             let _ = SystemDb::remove(data_dir);
@@ -139,7 +147,7 @@ pub fn install(data_dir: &Path, first_user: &str, password: &str) -> Result<(Run
         }
     };
 
-    Ok((Running { system_db }, account))
+    Ok((Running { system_db }, account, code))
 }
 
 /// Removes the installation: the system database and the databases

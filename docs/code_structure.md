@@ -164,7 +164,7 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 
 ### 2.8a `components/`: the components (step 43)
 
-A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog, and the parts of an object (`part_rows/`), shown twice by the editor of a catalog; a component that only shows data the elements give it has no entry, only its `view.rs`.
+A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog, the parts of an object (`part_rows/`), shown twice by the editor of a catalog, and the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users; a component that only shows data the elements give it has no entry, only its `view.rs`.
 
 ### 2.9 `views/`: the views of the window (steps 42 and 46)
 
@@ -222,6 +222,7 @@ model/                     The data of the program as plain Rust types, and the 
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
+  recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/todo.md): 160
   oscal.rs/                    The documents of NIST OSCAL (Open Security Controls Assessment
     assessment_plan.rs           An OSCAL assessment plan: the evaluation plan (function a of
     assessment_results.rs        OSCAL assessment results: the evaluation (function b of
@@ -270,6 +271,7 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     database_key.rs              The key that encrypts a database of the program.
     generate_key.rs              Generating the key that encrypts the database.
     keys.rs                      The keys of the databases of the evaluators
+    recovery.rs                  The second copy of the key of a database, wrapped with the recovery
     sqlcipher.rs                 Opening and creating encrypted databases.
   error.rs                     The error of every function of the database layer (`db/`).
   evaluation_support/          The evaluation support (step 41): what the program adds to the
@@ -350,6 +352,8 @@ app/                       What the whole window shares (Tauri 2): the state the
 components/                The components of the window: small elements used more than once,
   part_rows/                   The component "parts of an object": the parts of a group or a control
     view.rs                      The data of the component "parts of an object": the parts of a group or
+  recovery_code/               The component "recovery code": the code shown once, after the setup,
+    view.rs                      The data of the component "recovery code": the code shown once, after
   pdf_viewer/                  The component "viewer of a standard": the original page of a PDF, with a
     pdf_viewer.rs                The entry of the viewer of a standard: its two commands
     view.rs                      The data of the viewer, as the page gets it: the documents it can

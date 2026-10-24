@@ -7,6 +7,7 @@ use serde_json::{Value, json};
 
 use crate::db::ai::journal::rows::Entry;
 use crate::db::encryption::keys::WrappedKey;
+use crate::db::encryption::recovery::RecoveryWrappedKey;
 use crate::db::evaluation_support::create::{self, NewProposal};
 use crate::db::system::database::SystemDb;
 use crate::db::user::database::UserDb;
@@ -88,6 +89,12 @@ pub fn basic_catalog() -> OscalDocument {
 /// The installation of the tests.
 pub fn installation() -> Installation {
     Installation { id: [5; ID_LENGTH] }
+}
+
+/// A copy of the key of an account wrapped with a recovery code, as the
+/// system database keeps it.
+pub fn recovery_key() -> RecoveryWrappedKey {
+    RecoveryWrappedKey { salt: vec![5; 16], nonce: vec![6; 12], ciphertext: vec![7; 32], tag: vec![8; 16] }
 }
 
 /// A wrapped key of an account, as the system database keeps it.

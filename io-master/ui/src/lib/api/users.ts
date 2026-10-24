@@ -1,19 +1,21 @@
 // The commands of the view Users, one function per command of its entry in
 // the program (src/views/users/users.rs), named as the command:
 // `loginFormLogIn` calls `login_form_log_in`: the account of the evaluator,
-// its session and the encryption of its database. None gives data back: the
-// page then reads the state of the program again (shell.programGet).
+// its session and the encryption of its database. Those that make a recovery
+// code give it back, to be shown once; the page then reads the state of the
+// program again (shell.programGet).
 
 import { invoke } from "@tauri-apps/api/core";
+import type { RecoveryCodeView } from "./components/recovery_code";
 
 // ── Before anybody is logged in ──────────────────────────────────────
 
-/** Makes the installation and logs its user in. Called by SetupForm.svelte, "Install". */
+/** Makes the installation, logs its user in, gives the first recovery code. Called by SetupForm.svelte, "Install". */
 export function setupFormInstall(fields: {
   name: string;
   password: string;
   passwordRepeat: string;
-}): Promise<void> {
+}): Promise<RecoveryCodeView> {
   return invoke("setup_form_install", fields);
 }
 
@@ -22,15 +24,33 @@ export function loginFormLogIn(name: string, password: string): Promise<void> {
   return invoke("login_form_log_in", { name, password });
 }
 
+/**
+ * Sets a new password with the recovery code and logs in; gives the new code.
+ * Called by LoginForm.svelte, "I do not remember my password".
+ */
+export function loginFormRecover(fields: {
+  name: string;
+  code: string;
+  password: string;
+  passwordRepeat: string;
+}): Promise<RecoveryCodeView> {
+  return invoke("login_form_recover", fields);
+}
+
 // ── The account of the logged-in evaluator ───────────────────────────
 
-/** Changes the password of the logged-in evaluator. Called by PasswordForm.svelte of the page User. */
+/** Changes the password; gives the new recovery code. Called by PasswordForm.svelte of the page User. */
 export function passwordFormChange(
   current: string,
   password: string,
   passwordRepeat: string,
-): Promise<void> {
+): Promise<RecoveryCodeView> {
   return invoke("password_form_change", { current, password, passwordRepeat });
+}
+
+/** Makes a new recovery code; needs the password. Called by RecoveryCodeForm.svelte of the page User. */
+export function recoveryCodeFormReplace(password: string): Promise<RecoveryCodeView> {
+  return invoke("recovery_code_form_replace", { password });
 }
 
 // ── The end of the session ───────────────────────────────────────────
