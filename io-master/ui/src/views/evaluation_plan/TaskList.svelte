@@ -59,6 +59,7 @@
           <span class="object-id">{task.label}</span>
           {task.title || "(removed from its catalog)"}
           <span class="note">{task.catalog_title}</span>
+          {#if task.package}<span class="note">Package: {task.package}</span>{/if}
         </button>
         <div class="task-actions">
           <button

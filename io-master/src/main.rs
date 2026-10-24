@@ -47,6 +47,7 @@ mod model {
     pub mod task_scheme;
     pub mod text;
     pub mod time;
+    pub mod work_package;
 }
 
 // security/: the building blocks of protection: random numbers from the
@@ -418,6 +419,10 @@ mod views {
         pub mod task_scheme {
             pub mod propose;
             pub mod scheme;
+            pub mod view;
+        }
+        pub mod work_packages {
+            pub mod export;
             pub mod view;
         }
     }

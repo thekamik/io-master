@@ -19,6 +19,9 @@
 //!                       (step 51.4), waiting for the planner
 //! task_links            the elements of other catalogs related to a task
 //!                       (step 51.4), proposed or accepted
+//! work_packages         the packages of tasks delegated to the evaluators
+//!                       (model/work_package.rs, step 51.5)
+//! package_tasks         the tasks of a package; a task is in one package at most
 //! ```
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
@@ -103,6 +106,22 @@ pub const SCHEMA: &str = "
         reason          TEXT NOT NULL,
         proposed        INTEGER NOT NULL,
         PRIMARY KEY (task_uuid, catalog_uuid, control_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS work_packages (
+        uuid            TEXT PRIMARY KEY,
+        project_uuid    TEXT NOT NULL,
+        name            TEXT NOT NULL,
+        evaluator       TEXT NOT NULL,
+        note            TEXT NOT NULL,
+        modified        INTEGER NOT NULL
+    );
+
+    -- task_uuid is the key: a task is in one package at most.
+    CREATE TABLE IF NOT EXISTS package_tasks (
+        task_uuid       TEXT PRIMARY KEY,
+        package_uuid    TEXT NOT NULL,
+        position        INTEGER NOT NULL
     );
 
     -- One correction per block at most.

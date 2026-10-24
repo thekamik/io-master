@@ -30,6 +30,11 @@ pub fn project(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
     transaction.execute("DELETE FROM project_catalogs WHERE project_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM standard_outputs WHERE project_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM task_proposals WHERE project_uuid = ?1", [uuid])?;
+    transaction.execute(
+        "DELETE FROM package_tasks WHERE package_uuid IN (SELECT uuid FROM work_packages WHERE project_uuid = ?1)",
+        [uuid],
+    )?;
+    transaction.execute("DELETE FROM work_packages WHERE project_uuid = ?1", [uuid])?;
     let deleted = transaction.execute("DELETE FROM evaluation_projects WHERE uuid = ?1", [uuid])? > 0;
     transaction.commit()?;
 
@@ -47,6 +52,7 @@ pub fn task(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
     transaction.execute("DELETE FROM task_blocks WHERE task_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM block_corrections WHERE task_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM task_links WHERE task_uuid = ?1", [uuid])?;
+    transaction.execute("DELETE FROM package_tasks WHERE task_uuid = ?1", [uuid])?;
     let deleted = transaction.execute("DELETE FROM evaluation_tasks WHERE uuid = ?1", [uuid])? > 0;
     transaction.commit()?;
 
@@ -155,6 +161,20 @@ pub fn proposed_links(db: &UserDb, task: &str) -> Result<(), DbError> {
     db.connection().execute("DELETE FROM task_links WHERE task_uuid = ?1 AND proposed = 1", [task])?;
 
     Ok(())
+}
+
+/// Deletes work package `uuid`; its tasks stay in the master project, free
+/// for another package. Gives whether it existed.
+///
+/// Called by: `work_packages_delete` (`evaluation_plan.rs`).
+pub fn work_package(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    transaction.execute("DELETE FROM package_tasks WHERE package_uuid = ?1", [uuid])?;
+    let deleted = transaction.execute("DELETE FROM work_packages WHERE uuid = ?1", [uuid])? > 0;
+    transaction.commit()?;
+
+    Ok(deleted)
 }
 
 /// Deletes standard output `uuid` from the template of its project (the
@@ -325,6 +345,42 @@ mod tests {
         assert_eq!((left.len(), left[0].control_id.as_str(), left[0].proposed), (1, "u1", false));
         task(&test.db, "t").unwrap();
         assert!(read::task_links(&test.db, "t").unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_work_package_keeps_a_task_once_and_frees_it_when_deleted() {
+        use crate::db::evaluation_project::update;
+        use crate::model::work_package::{PackageFields, WorkPackage};
+
+        let test = database();
+        let fields = ProjectFields { title: "p".to_owned(), description: String::new() };
+        create::project(&test.db, "p", &fields, &["c".to_owned()]).unwrap();
+        for uuid in ["t1", "t2", "t3"] {
+            let made =
+                EvaluationTask { uuid: uuid.to_owned(), catalog_uuid: "c".to_owned(), control_id: uuid.to_owned() };
+            create::task(&test.db, "p", &made, &new_scheme(&format!("r-{uuid}"), &[]).unwrap()).unwrap();
+        }
+        let package_fields =
+            PackageFields { name: "ADV".to_owned(), evaluator: "Anna".to_owned(), note: String::new() };
+        let package = WorkPackage {
+            uuid: "w".to_owned(),
+            fields: package_fields.clone(),
+            tasks: vec!["t2".to_owned(), "t1".to_owned()],
+        };
+        create::work_package(&test.db, "p", &package).unwrap();
+
+        assert_eq!(read::work_package(&test.db, "w").unwrap().unwrap(), ("p".to_owned(), package.clone()));
+        assert_eq!(read::package_of_task(&test.db, "t1").unwrap().as_deref(), Some("ADV"));
+        let twice = WorkPackage { uuid: "x".to_owned(), fields: package_fields.clone(), tasks: vec!["t1".to_owned()] };
+        assert!(create::work_package(&test.db, "p", &twice).is_err(), "a task is in one package at most");
+
+        update::work_package(&test.db, "w", &package_fields, &["t3".to_owned()]).unwrap();
+        assert_eq!(read::work_packages(&test.db, "p").unwrap()[0].tasks, ["t3"]);
+        task(&test.db, "t3").unwrap();
+        assert!(read::work_packages(&test.db, "p").unwrap()[0].tasks.is_empty());
+
+        assert!(work_package(&test.db, "w").unwrap());
+        assert!(read::work_packages(&test.db, "p").unwrap().is_empty());
     }
 
     #[test]

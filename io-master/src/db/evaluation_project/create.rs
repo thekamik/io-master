@@ -7,6 +7,7 @@ use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{EvaluationTask, MAX_LINKS, MAX_TASKS, ProjectFields, TaskLink, TaskProposal};
 use crate::model::task_scheme::{Block, Correction, MAX_BLOCKS, MAX_OUTPUTS, NewScheme, StandardOutput};
 use crate::model::time::now;
+use crate::model::work_package::{MAX_PACKAGES, WorkPackage};
 
 /// Stores a new project `uuid` with its fields and its catalogs, in one
 /// transaction.
@@ -254,6 +255,61 @@ pub fn task_link(db: &UserDb, task: &str, link: &TaskLink) -> Result<(), DbError
         },
     )?;
     transaction.commit()?;
+
+    Ok(())
+}
+
+/// Stores `package` of project `project` with its tasks, in one
+/// transaction; refused when the project has [`MAX_PACKAGES`] already or a
+/// task is in another package (the table keeps a task once).
+///
+/// Called by: `work_packages_add` (`evaluation_plan.rs`).
+pub fn work_package(db: &UserDb, project: &str, package: &WorkPackage) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let count: i64 =
+        transaction
+            .query_row("SELECT COUNT(*) FROM work_packages WHERE project_uuid = ?1", [project], |row| row.get(0))?;
+    let limit = i64::try_from(MAX_PACKAGES).map_err(|error| DbError::Inconsistent(error.to_string()))?;
+
+    if count >= limit {
+        return Err(DbError::Inconsistent(format!("a project has at most {MAX_PACKAGES} work packages")));
+    }
+
+    transaction.execute(
+        "INSERT INTO work_packages (uuid, project_uuid, name, evaluator, note, modified)
+         VALUES (:uuid, :project, :name, :evaluator, :note, :modified)",
+        named_params! {
+            ":uuid": package.uuid,
+            ":project": project,
+            ":name": package.fields.name,
+            ":evaluator": package.fields.evaluator,
+            ":note": package.fields.note,
+            ":modified": now(),
+        },
+    )?;
+    insert_package_tasks(&transaction, &package.uuid, &package.tasks)?;
+    transaction.commit()?;
+
+    Ok(())
+}
+
+/// Inserts `tasks` of package `package`, in their order, in the transaction
+/// of the caller.
+///
+/// Called by: [`work_package`], `update::work_package`.
+pub(super) fn insert_package_tasks(
+    transaction: &rusqlite::Transaction<'_>,
+    package: &str,
+    tasks: &[String],
+) -> Result<(), DbError> {
+    for (position, task) in tasks.iter().enumerate() {
+        let position = i64::try_from(position).map_err(|error| DbError::Inconsistent(error.to_string()))?;
+
+        transaction.execute(
+            "INSERT INTO package_tasks (task_uuid, package_uuid, position) VALUES (?1, ?2, ?3)",
+            rusqlite::params![task, package, position],
+        )?;
+    }
 
     Ok(())
 }

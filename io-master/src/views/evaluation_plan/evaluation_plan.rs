@@ -28,6 +28,7 @@ use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
 use crate::model::own_requirement;
 use crate::model::task_scheme::{self, Block, BlockFields, BlockKind, StandardOutput};
+use crate::model::work_package::{self, WorkPackage};
 
 use super::ai_work::ask as ai_ask;
 use super::ai_work::view::AiEvent;
@@ -50,6 +51,8 @@ use super::task_proposals::view::{self as proposal_view, TaskProposalView};
 use super::task_scheme::propose;
 use super::task_scheme::scheme;
 use super::task_scheme::view::{BlockForm, SchemeView};
+use super::work_packages::export as package_export;
+use super::work_packages::view::{self as package_view, WorkPackageForm, WorkPackageView};
 
 // ── When the view opens ───────────────────────────────────────────────
 
@@ -174,7 +177,7 @@ pub async fn oscal_documents_export<R: Runtime>(
     let session = state.session()?;
     let text = file::export(&session.db(), &uuid)?;
 
-    let Some(path) = choose_place(app, safe_name(&file_name)).await? else {
+    let Some(path) = choose_place(app, "Export the OSCAL document", safe_name(&file_name)).await? else {
         return Ok(false);
     };
 
@@ -842,6 +845,127 @@ pub fn task_links_remove(
     link_view::all(&db, db_evaluation_project::read::task_links(&db, &task)?)
 }
 
+/// The work packages of project `project` (step 51.5), by name.
+///
+/// Called by the page: `WorkPackages.svelte`, when a project opens and after
+/// a change (`evaluationPlan.workPackagesGet(project)`).
+/// Calls: `db_evaluation_project::read::work_packages`, `package_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn work_packages_get(state: State<'_, AppState>, project: String) -> Result<Vec<WorkPackageView>, AppError> {
+    let session = state.session()?;
+
+    Ok(package_view::all(db_evaluation_project::read::work_packages(&session.db(), &project)?))
+}
+
+/// Makes a work package of project `project` with the tasks chosen; a task
+/// in another package is refused.
+///
+/// Called by the page: `WorkPackages.svelte`, "Make"
+/// (`evaluationPlan.workPackagesAdd(project, package)`).
+/// Calls: `work_package::normalized` and `check_fields`, [`check_package_tasks`],
+/// `new_uuid`, `db_evaluation_project::create::work_package`, `package_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn work_packages_add(
+    state: State<'_, AppState>,
+    project: String,
+    package: WorkPackageForm,
+) -> Result<Vec<WorkPackageView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let fields = work_package::normalized(&package.fields());
+
+    work_package::check_fields(&fields).map_err(|error| AppError::Invalid(error.to_string()))?;
+    check_package_tasks(&db, &project, &package.tasks, None)?;
+
+    let made = WorkPackage { uuid: new_uuid()?, fields, tasks: package.tasks.clone() };
+    db_evaluation_project::create::work_package(&db, &project, &made)?;
+
+    Ok(package_view::all(db_evaluation_project::read::work_packages(&db, &project)?))
+}
+
+/// Saves the fields and the tasks of work package `package`.
+///
+/// Called by the page: `WorkPackages.svelte`, "Save"
+/// (`evaluationPlan.workPackagesSave(package, fields)`).
+/// Calls: [`package_project`], `work_package::normalized` and `check_fields`,
+/// [`check_package_tasks`], `db_evaluation_project::update::work_package`,
+/// `package_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn work_packages_save(
+    state: State<'_, AppState>,
+    package: String,
+    fields: WorkPackageForm,
+) -> Result<Vec<WorkPackageView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let project = package_project(&db, &package)?;
+    let written = work_package::normalized(&fields.fields());
+
+    work_package::check_fields(&written).map_err(|error| AppError::Invalid(error.to_string()))?;
+    check_package_tasks(&db, &project, &fields.tasks, Some(&package))?;
+    db_evaluation_project::update::work_package(&db, &package, &written, &fields.tasks)?;
+
+    Ok(package_view::all(db_evaluation_project::read::work_packages(&db, &project)?))
+}
+
+/// Deletes work package `package`; its tasks stay in the master project.
+///
+/// Called by the page: `WorkPackages.svelte`, "Delete"
+/// (`evaluationPlan.workPackagesDelete(package)`).
+/// Calls: [`package_project`], `db_evaluation_project::delete::work_package`,
+/// `package_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn work_packages_delete(state: State<'_, AppState>, package: String) -> Result<Vec<WorkPackageView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let project = package_project(&db, &package)?;
+
+    ensure!(
+        db_evaluation_project::delete::work_package(&db, &package)?,
+        AppError::Invalid("the work package does not exist".to_owned())
+    );
+
+    Ok(package_view::all(db_evaluation_project::read::work_packages(&db, &project)?))
+}
+
+/// Writes work package `package` into a file the evaluator chooses in a
+/// dialog of the system: our format with its tasks, their accepted schemes
+/// and related elements, and the documents of OSCAL as attachments; `false`
+/// when no place was chosen.
+///
+/// Called by the page: `WorkPackages.svelte`, "Export…"
+/// (`evaluationPlan.workPackagesExport(package)`).
+/// Calls: `package_export::file_text`, `choose_place`, `safe_name`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+pub async fn work_packages_export<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    package: String,
+) -> Result<bool, AppError> {
+    let session = state.session()?;
+    let (name, text) = package_export::file_text(&session.db(), &package)?;
+
+    let Some(path) = choose_place(app, "Export the work package", format!("{}.iomaster", safe_name(&name))).await?
+    else {
+        return Ok(false);
+    };
+
+    match tokio::fs::write(&path, text).await {
+        Ok(()) => Ok(true),
+        Err(error) => Err(AppError::Failed(format!("the file was not written: {error}"))),
+    }
+}
+
 /// The scheme of task `task`: its requirement as the standard writes it,
 /// its blocks and connections (step 51.2 of docs/todo.md).
 ///
@@ -1194,6 +1318,47 @@ pub fn ai_work_instructions_save(state: State<'_, AppState>, which: String, text
 }
 
 // ── Helpers of the commands above ─────────────────────────────────────
+
+/// The project of work package `uuid`; refused when it does not exist.
+///
+/// Called by: `work_packages_save`, `work_packages_delete`, `work_packages_export`.
+/// Calls: `db_evaluation_project::read::work_package`.
+fn package_project(db: &UserDb, uuid: &str) -> Result<String, AppError> {
+    match db_evaluation_project::read::work_package(db, uuid)? {
+        Some((project, _)) => Ok(project),
+        None => Err(AppError::Invalid("the work package does not exist".to_owned())),
+    }
+}
+
+/// Checks the tasks chosen for a package of project `project`: some, each
+/// once, every one a task of the project and in no other package than
+/// `package` (the one being changed, if any).
+///
+/// Called by: `work_packages_add`, `work_packages_save`.
+/// Calls: `work_package::check_tasks`, `db_evaluation_project::read::tasks`
+/// and `work_packages`.
+fn check_package_tasks(db: &UserDb, project: &str, tasks: &[String], package: Option<&str>) -> Result<(), AppError> {
+    work_package::check_tasks(tasks).map_err(|error| AppError::Invalid(error.to_string()))?;
+
+    let known = db_evaluation_project::read::tasks(db, project)?;
+    let packages = db_evaluation_project::read::work_packages(db, project)?;
+
+    for task in tasks {
+        ensure!(
+            known.iter().any(|candidate| candidate.uuid == *task),
+            AppError::Invalid("a task chosen is not in the project".to_owned())
+        );
+
+        for other in &packages {
+            ensure!(
+                Some(other.uuid.as_str()) == package || !other.tasks.contains(task),
+                AppError::Invalid(format!("a task chosen is in the package \"{}\" already", other.fields.name))
+            );
+        }
+    }
+
+    Ok(())
+}
 
 /// Adds control `control` of catalog `catalog` of project `project` as a
 /// task at the end of its list, with the outputs of the template: refused
@@ -1794,5 +1959,44 @@ mod tests {
         let left =
             window.call("task_links_remove", json!({ "task": task, "catalog": catalog, "control": "s1.1.2" })).unwrap();
         assert_eq!(left, json!([]));
+    }
+
+    #[test]
+    fn work_packages_take_tasks_once_and_show_in_the_list() {
+        let (window, catalog, project) = with_project();
+        let mut tasks = Vec::new();
+        for control in ["s1.1.1", "s1.1.2"] {
+            let listed = window
+                .call("task_list_add", json!({ "project": project, "catalog": catalog, "control": control }))
+                .unwrap();
+            tasks = listed.as_array().unwrap().iter().map(|task| task["uuid"].as_str().unwrap().to_owned()).collect();
+        }
+        let form =
+            |name: &str, chosen: &[String]| json!({ "name": name, "evaluator": "Anna", "note": "", "tasks": chosen });
+
+        let made = window
+            .call("work_packages_add", json!({ "project": project, "package": form(" Roles ", &tasks[..1]) }))
+            .unwrap();
+        assert_eq!(made[0]["name"], "Roles");
+        let listed = window.call("task_list_get", json!({ "project": project })).unwrap();
+        assert_eq!((listed[0]["package"].clone(), listed[1]["package"].clone()), (json!("Roles"), Value::Null));
+
+        let twice =
+            window.call("work_packages_add", json!({ "project": project, "package": form("Again", &tasks[..1]) }));
+        assert_eq!(twice.unwrap_err()["kind"], "invalid", "a task is in one package at most");
+        let none = window.call("work_packages_add", json!({ "project": project, "package": form("Empty", &[]) }));
+        assert_eq!(none.unwrap_err()["kind"], "invalid");
+        let foreign =
+            window.call("work_packages_add", json!({ "project": project, "package": form("X", &["no".to_owned()]) }));
+        assert_eq!(foreign.unwrap_err()["kind"], "invalid");
+
+        let saved = window
+            .call("work_packages_save", json!({ "package": made[0]["uuid"], "fields": form("Roles", &tasks) }))
+            .unwrap();
+        assert_eq!(saved[0]["tasks"].as_array().unwrap().len(), 2);
+        assert_eq!(window.call("work_packages_get", json!({ "project": project })).unwrap(), saved);
+
+        assert_eq!(window.call("work_packages_delete", json!({ "package": made[0]["uuid"] })).unwrap(), json!([]));
+        assert_eq!(window.call("work_packages_delete", json!({ "package": "none" })).unwrap_err()["kind"], "invalid");
     }
 }

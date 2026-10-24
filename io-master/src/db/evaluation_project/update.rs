@@ -8,6 +8,9 @@ use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{MAX_CATALOGS, ProjectFields};
 use crate::model::task_scheme::BlockFields;
 use crate::model::time::now;
+use crate::model::work_package::PackageFields;
+
+use super::create::insert_package_tasks;
 
 /// Replaces the fields and the catalogs of project `uuid`, in one
 /// transaction.
@@ -196,6 +199,36 @@ pub fn accept_link(db: &UserDb, task: &str, catalog: &str, control: &str) -> Res
     )?;
 
     Ok(changed == 1)
+}
+
+/// Replaces the fields and the tasks of work package `uuid`, in one
+/// transaction; refused when a task is in another package.
+///
+/// Called by: `work_packages_save` (`evaluation_plan.rs`).
+pub fn work_package(db: &UserDb, uuid: &str, fields: &PackageFields, tasks: &[String]) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    let changed = transaction.execute(
+        "UPDATE work_packages SET name = :name, evaluator = :evaluator, note = :note, modified = :modified
+         WHERE uuid = :uuid",
+        named_params! {
+            ":uuid": uuid,
+            ":name": fields.name,
+            ":evaluator": fields.evaluator,
+            ":note": fields.note,
+            ":modified": now(),
+        },
+    )?;
+
+    if changed != 1 {
+        return Err(DbError::NoRow { table: "work_packages", id: 0 });
+    }
+
+    transaction.execute("DELETE FROM package_tasks WHERE package_uuid = ?1", [uuid])?;
+    insert_package_tasks(&transaction, uuid, tasks)?;
+    transaction.commit()?;
+
+    Ok(())
 }
 
 /// Places block `uuid` at `x`, `y` in the drawing (where a drag ended).

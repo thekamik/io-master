@@ -6,6 +6,7 @@ use crate::model::evaluation_project::{EvaluationTask, ProjectFields, ProjectSum
 use crate::model::task_scheme::{
     Block, BlockFields, BlockKind, Connection, Correction, OutputCondition, OutputFormat, StandardOutput,
 };
+use crate::model::work_package::PackageFields;
 
 /// A row of `evaluation_projects` with its counts (`read::projects`).
 ///
@@ -61,6 +62,13 @@ pub(super) fn task_link(row: &rusqlite::Row<'_>) -> Result<TaskLink, DbError> {
         reason: row.get("reason")?,
         proposed: row.get("proposed")?,
     })
+}
+
+/// The fields of a row of `work_packages`.
+///
+/// Called by: `read::work_packages`, `read::work_package`.
+pub(super) fn package_fields(row: &rusqlite::Row<'_>) -> Result<PackageFields, DbError> {
+    Ok(PackageFields { name: row.get("name")?, evaluator: row.get("evaluator")?, note: row.get("note")? })
 }
 
 /// A value of a column of `table` the program never writes.

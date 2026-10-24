@@ -56,6 +56,8 @@ export interface TaskView {
   control_id: string;
   label: string;
   title: string;
+  /** The name of the work package the task is in. */
+  package: string | null;
 }
 
 // standard_browser/view.rs
@@ -184,6 +186,24 @@ export interface TaskLinkView {
   reason: string;
   /** Whether it is only proposed by the AI. */
   proposed: boolean;
+}
+
+// work_packages/view.rs
+/** A work package: the tasks delegated to one evaluator. */
+export interface WorkPackageView {
+  uuid: string;
+  name: string;
+  evaluator: string;
+  note: string;
+  tasks: string[];
+}
+
+/** A work package, as the page sends it. */
+export interface WorkPackageForm {
+  name: string;
+  evaluator: string;
+  note: string;
+  tasks: string[];
 }
 
 // own_requirement/view.rs
@@ -483,4 +503,29 @@ export function taskLinksAccept(task: string, catalog: string, control: string):
 /** Called by TaskLinks.svelte, "Reject" and "Remove". */
 export function taskLinksRemove(task: string, catalog: string, control: string): Promise<TaskLinkView[]> {
   return invoke("task_links_remove", { task, catalog, control });
+}
+
+/** Called by WorkPackages.svelte, when a project opens and after a change. */
+export function workPackagesGet(project: string): Promise<WorkPackageView[]> {
+  return invoke("work_packages_get", { project });
+}
+
+/** Called by WorkPackages.svelte, "Make". */
+export function workPackagesAdd(project: string, workPackage: WorkPackageForm): Promise<WorkPackageView[]> {
+  return invoke("work_packages_add", { project, package: workPackage });
+}
+
+/** Called by WorkPackages.svelte, "Save". */
+export function workPackagesSave(workPackage: string, fields: WorkPackageForm): Promise<WorkPackageView[]> {
+  return invoke("work_packages_save", { package: workPackage, fields });
+}
+
+/** Called by WorkPackages.svelte, "Delete". */
+export function workPackagesDelete(workPackage: string): Promise<WorkPackageView[]> {
+  return invoke("work_packages_delete", { package: workPackage });
+}
+
+/** Called by WorkPackages.svelte, "Export…"; false when no place was chosen. */
+export function workPackagesExport(workPackage: string): Promise<boolean> {
+  return invoke("work_packages_export", { package: workPackage });
 }

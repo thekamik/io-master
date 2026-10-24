@@ -225,6 +225,8 @@ model/                     The data of the program as plain Rust types, and the 
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
   own_requirement.rs           A requirement of the laboratory's own, outside the standards (step 51.1e
+  work_package.rs              A work package of a master project (step 51.5): the tasks delegated
+                                 to one evaluator; a task in one package at most.
   task_scheme.rs               The scheme of a task of a master project (step 51.2), the template of the
                                  outputs of a project and the first scheme of a new task (step 51.3): its blocks
   recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/todo.md): 160
@@ -485,6 +487,10 @@ views/                     The views of the window, one folder per view and one 
                                  (step 51.3): one question, the proposals stored for the planner.
       scheme.rs                    The scheme of a task read for the page: the task with its requirement
       view.rs                      The data of the scheme of a task, as the page gets it and sends it: the
+    work_packages/               The element "work packages" (step 51.5): the tasks delegated to the
+                                 evaluators, and the export of a package.
+      export.rs                    The file of a package: our format and the catalogs as attachments.
+      view.rs                      The packages, as the page gets them and sends them.
   settings/                    The view Settings: the settings of the program, the connections to
     settings.rs                  The entry of the view Settings: every command the page calls for it
     api_key/                     The element "API key" of the view Settings, tab AI: the key of one

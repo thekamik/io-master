@@ -384,6 +384,12 @@ the screen of a project (the screen of a task in place of it while a task is ope
   │     ──standard_outputs_add(project, output) / _save(output, fields) / _delete(output)──► db/evaluation_project/
   │     (a new task gets a copy of the template as its outputs, connected from its requirement: scheme::first;
   │      the tasks made before keep theirs)
+  ├─► WorkPackages (step 51.5) ──work_packages_get(project)──► the packages delegated to the evaluators
+  │     ──work_packages_add(project, package) / _save(package, fields) / _delete(package)──► db/evaluation_project/
+  │     (a task in one package at most; the list of tasks shows the package of each task)
+  │     ──work_packages_export(package)──► one JSON file chosen in a dialog of the system (work_packages/export.rs):
+  │     our format (the project, the package, the four results, every task with its accepted blocks and related
+  │     elements) and the documents of OSCAL of its catalogs as attachments, whole and unchanged
   ├─► TaskProposals (step 51.4) ──task_proposals_get(project)──► the requirements the AI proposes as tasks
   │     ──task_proposals_propose(project, catalog, onEvent)──► the undecided proposals of the catalog removed; the
   │     requirements that are no task yet, word for word, part by part (ai/tasks/candidates.rs), one question of the

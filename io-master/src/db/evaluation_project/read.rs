@@ -9,6 +9,7 @@ use crate::model::evaluation_project::{
     TaskProposal,
 };
 use crate::model::task_scheme::{Block, Connection, Correction, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
+use crate::model::work_package::{MAX_PACKAGES, WorkPackage};
 
 use super::rows;
 
@@ -113,6 +114,82 @@ pub fn task_links(db: &UserDb, task: &str) -> Result<Vec<TaskLink>, DbError> {
     }
 
     Ok(found)
+}
+
+/// The work packages of project `project` with their tasks, by name; at
+/// most `MAX_PACKAGES`.
+///
+/// Called by: `work_packages_get` and the commands of the packages (`evaluation_plan.rs`).
+/// Calls: [`package_tasks`].
+pub fn work_packages(db: &UserDb, project: &str) -> Result<Vec<WorkPackage>, DbError> {
+    let connection = db.connection();
+    let mut statement =
+        connection.prepare("SELECT * FROM work_packages WHERE project_uuid = ?1 ORDER BY name, rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![project, limit(MAX_PACKAGES)?], |row| {
+        Ok((row.get::<_, String>("uuid"), rows::package_fields(row)))
+    })? {
+        let (uuid, fields) = row?;
+        let uuid = uuid?;
+        let tasks = package_tasks(db, &uuid)?;
+
+        found.push(WorkPackage { uuid, fields: fields?, tasks });
+    }
+
+    Ok(found)
+}
+
+/// Work package `uuid` with its tasks, and its project; `None` when it does
+/// not exist.
+///
+/// Called by: `work_packages_save`, `work_packages_delete`, `work_packages_export` (`evaluation_plan.rs`).
+/// Calls: [`package_tasks`].
+pub fn work_package(db: &UserDb, uuid: &str) -> Result<Option<(String, WorkPackage)>, DbError> {
+    let found = db
+        .connection()
+        .query_row("SELECT * FROM work_packages WHERE uuid = ?1", [uuid], |row| {
+            Ok((row.get::<_, String>("project_uuid"), rows::package_fields(row)))
+        })
+        .optional()?;
+
+    let Some((project, fields)) = found else {
+        return Ok(None);
+    };
+
+    let package = WorkPackage { uuid: uuid.to_owned(), fields: fields?, tasks: package_tasks(db, uuid)? };
+
+    Ok(Some((project?, package)))
+}
+
+/// The tasks of package `package`, in their order; at most `MAX_TASKS`.
+///
+/// Called by: [`work_packages`], [`work_package`].
+fn package_tasks(db: &UserDb, package: &str) -> Result<Vec<String>, DbError> {
+    let connection = db.connection();
+    let mut statement =
+        connection.prepare("SELECT task_uuid FROM package_tasks WHERE package_uuid = ?1 ORDER BY position LIMIT ?2")?;
+    let mut tasks = Vec::new();
+
+    for task in statement.query_map(rusqlite::params![package, limit(MAX_TASKS)?], |row| row.get(0))? {
+        tasks.push(task?);
+    }
+
+    Ok(tasks)
+}
+
+/// The name of the package task `task` is in; `None` when it is in none.
+///
+/// Called by: `task_list/view.rs`.
+pub fn package_of_task(db: &UserDb, task: &str) -> Result<Option<String>, DbError> {
+    Ok(db
+        .connection()
+        .query_row(
+            "SELECT w.name FROM package_tasks p JOIN work_packages w ON w.uuid = p.package_uuid WHERE p.task_uuid = ?1",
+            [task],
+            |row| row.get(0),
+        )
+        .optional()?)
 }
 
 /// Task `uuid` and the project it is in; `None` when it does not exist.
