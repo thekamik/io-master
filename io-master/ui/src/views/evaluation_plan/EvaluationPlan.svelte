@@ -1,58 +1,48 @@
 <!--
-  The view Evaluation plan (src/views/evaluation_plan/), in two tabs:
+  The view Evaluation plan (src/views/evaluation_plan/): it works only on the
+  documents of NIST OSCAL, in two tabs:
 
-  - OSCAL: the documents of the standards in NIST OSCAL (catalogs,
-    mappings, profiles, assessment plans), made or imported; a catalog
-    opens in its editor (catalog_editor/);
-  - Documents of standards: the PDFs, loaded into the encrypted database,
-    searched and shown in the viewer; the sources the OSCAL documents
-    quote.
+  - Projects: the master projects (step 51 of docs/todo.md), each a list of
+    tasks, every task a whole requirement chosen in a browser of the
+    standards; a project opens in its screen (EvaluationProject);
+  - OSCAL documents: the catalogs, mappings, profiles and plans, imported,
+    exported and deleted.
 
-  The view keeps only what is presentation: the tab, the open catalog,
-  the dialog of a new catalog, and what the viewer shows.
+  The catalogs are made from the PDFs of a standard in the view Converter.
+  The view keeps only what is presentation: the tab, the project open, the
+  dialog of a new project.
 -->
 <script lang="ts">
-  import CatalogEditor from "./catalog_editor/CatalogEditor.svelte";
-  import DocumentSearch from "./DocumentSearch.svelte";
-  import NewCatalog from "./NewCatalog.svelte";
+  import EvaluationProject from "./EvaluationProject.svelte";
+  import NewProject from "./NewProject.svelte";
   import OscalDocuments from "./OscalDocuments.svelte";
-  import PdfViewer from "../../components/pdf_viewer/PdfViewer.svelte";
-  import StandardDocuments from "./StandardDocuments.svelte";
+  import ProjectList from "./ProjectList.svelte";
 
-  type Tab = "oscal" | "documents";
+  type Tab = "projects" | "documents";
 
-  let tab: Tab = $state("oscal");
-  /** The catalog open in its editor. */
-  let catalog: string | null = $state(null);
+  let tab: Tab = $state("projects");
+  let project: string | null = $state(null);
   let making = $state(false);
-  let viewer: { documentId: number; page: number; quote: string } | null = $state(null);
 
   function made(uuid: string) {
     making = false;
-    catalog = uuid;
+    project = uuid;
   }
 </script>
 
 <div class="tabs">
-  <button type="button" class:active={tab === "oscal"} onclick={() => (tab = "oscal")}>OSCAL</button>
-  <button type="button" class:active={tab === "documents"} onclick={() => (tab = "documents")}>
-    Documents of standards
-  </button>
+  <button type="button" class:active={tab === "projects"} onclick={() => (tab = "projects")}>Master projects</button>
+  <button type="button" class:active={tab === "documents"} onclick={() => (tab = "documents")}>OSCAL documents</button>
 </div>
 
-{#if tab === "oscal" && catalog}
-  <CatalogEditor uuid={catalog} onclose={() => (catalog = null)} />
-{:else if tab === "oscal"}
-  <OscalDocuments onopen={(uuid) => (catalog = uuid)} onnew={() => (making = true)} />
+{#if tab === "projects" && project}
+  <EvaluationProject uuid={project} onclose={() => (project = null)} />
+{:else if tab === "projects"}
+  <ProjectList onopen={(uuid) => (project = uuid)} onnew={() => (making = true)} />
 {:else}
-  <DocumentSearch onopen={(documentId, page, quote) => (viewer = { documentId, page, quote })} />
-  <StandardDocuments onview={(documentId) => (viewer = { documentId, page: 1, quote: "" })} />
+  <OscalDocuments />
 {/if}
 
 {#if making}
-  <NewCatalog onmade={made} onclose={() => (making = false)} />
-{/if}
-
-{#if viewer}
-  <PdfViewer documentId={viewer.documentId} page={viewer.page} quote={viewer.quote} onclose={() => (viewer = null)} />
+  <NewProject onmade={made} onclose={() => (making = false)} />
 {/if}

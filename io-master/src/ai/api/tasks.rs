@@ -4,6 +4,7 @@
 //!
 //! ```text
 //! task              role            instructions
+//! catalog_contents  text_analysis   ai/tasks/catalog_contents.rs (the pages of a table of contents)
 //! catalog_outline   text_analysis   ai/tasks/catalog_outline.rs (the groups of a catalog)
 //! catalog_section   text_analysis   ai/tasks/catalog_section.rs (the controls of a group)
 //! chat              consultation    none here: the system prompt of the connection
@@ -15,7 +16,7 @@
 //! set_instructions()   PUT    /tasks/{task}/instructions (empty text: DELETE)
 //! ```
 
-use crate::ai::tasks::{catalog_outline, catalog_section};
+use crate::ai::tasks::{catalog_contents, catalog_outline, catalog_section};
 use crate::db::ai::instructions as db_instructions;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -26,6 +27,7 @@ use crate::model::ai::Task;
 /// for a task without instructions of its own.
 pub fn default_instructions(task: Task) -> Option<&'static str> {
     match task {
+        Task::CatalogContents => Some(catalog_contents::DEFAULT_INSTRUCTIONS),
         Task::CatalogOutline => Some(catalog_outline::DEFAULT_INSTRUCTIONS),
         Task::CatalogSection => Some(catalog_section::DEFAULT_INSTRUCTIONS),
         Task::Chat | Task::Check => None,

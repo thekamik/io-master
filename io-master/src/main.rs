@@ -1,10 +1,7 @@
 //! Entry point of IO Master.
 //!
 //! IO Master is a desktop program: it is started without parameters
-//! and opens a window. All configuration is made in the window, also
-//! the network functions of a later step (the reset service of a
-//! master and its client, step 11 of docs/todo.md), which are
-//! started from there and not from the command line.
+//! and opens a window. All configuration is made in the window.
 //!
 //! `main` has two tasks, and does each by calling the module that
 //! owns it:
@@ -16,12 +13,8 @@
 //!    is closed.
 //!
 //! At the first start nothing is installed: the window asks for the
-//! user and the role of the installation.
-//!
-//! TODO (step 13 of docs/todo.md): the location of the installation
-//! and the secret of the application come from the keyring of the
-//! Linux account; one Linux account holds one installation with one
-//! user (docs/architecture.md, sections 3 and 5.6).
+//! one user of the installation. One Linux account holds one
+//! installation with one user (docs/architecture.md, section 3).
 
 // The check `ensure!` (rule 5 of CLAUDE.md), declared before the
 // folders so that every one of them knows it by its name alone.
@@ -43,27 +36,25 @@ mod model {
     pub mod ai;
     pub mod api_key;
     pub mod chats;
+    pub mod conversion;
+    pub mod evaluation_project;
     pub mod evaluation_support;
     pub mod installation;
     pub mod oscal;
+    pub mod own_requirement;
+    pub mod recovery_code;
     pub mod standards;
+    pub mod task_scheme;
     pub mod text;
     pub mod time;
 }
 
 // security/: the building blocks of protection: random numbers from the
-// system, and the TPM 2.0, the optional further factor. The encryption of
-// the databases is in db/encryption/.
+// system, and the protection of the memory of the process. The encryption
+// of the databases is in db/encryption/.
 mod security {
+    pub mod process;
     pub mod random;
-    // security/tpm/: the TPM 2.0 (docs/architecture.md, section 5.1).
-    pub mod tpm {
-        pub mod chip;
-        pub mod device_secret;
-        pub mod emulator;
-        #[cfg(test)]
-        pub mod test_support;
-    }
 }
 
 // db/: every operation on a database, as CRUD, one folder per area of data
@@ -76,6 +67,7 @@ mod db {
         pub mod database_key;
         pub mod generate_key;
         pub mod keys;
+        pub mod recovery;
         pub mod sqlcipher;
     }
     // db/system/: the system database of the installation (not encrypted).
@@ -159,6 +151,33 @@ mod db {
         pub mod schema;
         pub mod update;
     }
+    // db/conversion/: the conversions of the documents of standards into
+    // catalogs of OSCAL, step by step (the database of the evaluator).
+    pub mod conversion {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/evaluation_project/: the master projects of the evaluations and their
+    // tasks (the database of the evaluator).
+    pub mod evaluation_project {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/own_requirements/: which catalog is the shared catalog of the
+    // requirements of the laboratory (a setting of the evaluator; no table).
+    pub mod own_requirements {
+        pub mod delete;
+        pub mod read;
+        pub mod update;
+    }
     // db/evaluation_support/: what the program adds to OSCAL, linked by
     // UUIDs and ids (the database of the evaluator).
     pub mod evaluation_support {
@@ -168,10 +187,6 @@ mod db {
         pub mod rows;
         pub mod schema;
     }
-    // db/scan_settings/: the settings of the scanner of serial ports, as two
-    // texts in the settings of the evaluator (its file has the names of the
-    // settings, so it declares its own modules).
-    pub mod scan_settings;
 }
 
 // ai/: the whole communication with AI services (CLAUDE.md, "AI layer").
@@ -202,6 +217,7 @@ mod ai {
     // ai/tasks/: for each task of the AI, the question sent to the model and
     // the reading of its answer, on plain data of model/.
     pub mod tasks {
+        pub mod catalog_contents;
         pub mod catalog_outline;
         pub mod catalog_section;
         pub mod chat;
@@ -210,20 +226,6 @@ mod ai {
     // ai/presets/: the ready settings of well-known AI services (its file has
     // the presets themselves, so it declares its own module).
     pub mod presets;
-}
-
-// hardware_tests/: everything that talks to hardware. No command reaches a
-// device without an action of the evaluator for it (P2 of
-// docs/architecture.md). permissions/permission.rs is empty until step 6 of
-// docs/todo.md and not compiled.
-mod hardware_tests {
-    // hardware_tests/devices/: the scan of the serial ports, and the
-    // settings of the scanner.
-    pub mod devices {
-        pub mod port_property;
-        pub mod scan_settings;
-        pub mod serial_ports;
-    }
 }
 
 // pdf/: reading PDFs with the tools of Poppler (pdfinfo, pdftotext): the only
@@ -266,7 +268,22 @@ mod components {
     // components/part_rows/: the parts of a group or a control as rows with
     // their level; the object chosen and the proposals of the editor of a
     // catalog. No command: the elements give its rows with their data.
+    // components/catalog_tree/: the tree of a catalog, its groups and
+    // controls as rows with their level; the editor of a catalog (Converter)
+    // and the browser of the standards (Evaluation plan).
+    pub mod catalog_tree {
+        #[allow(clippy::module_inception)]
+        pub mod catalog_tree;
+
+        pub mod view;
+    }
     pub mod part_rows {
+        pub mod view;
+    }
+    // components/recovery_code/: the recovery code, shown once after the
+    // setup, a change or a recovery of the password, and a new code (step 49
+    // of docs/todo.md). No command: the commands of the view Users give it.
+    pub mod recovery_code {
         pub mod view;
     }
     // components/pdf_viewer/: the viewer of a standard, a quote highlighted on
@@ -286,26 +303,12 @@ mod components {
 // module has the name of its parent: clippy's `module_inception` is
 // allowed there, on purpose.
 mod views {
-    // views/devices/: the view Devices: the serial ports of the computer and
-    // the settings of the scanner.
-    pub mod devices {
+    // views/users/: the view Users: the account of the evaluator, its session
+    // and the encryption of its database in one place: the setup, the login,
+    // the password, the logout.
+    pub mod users {
         #[allow(clippy::module_inception)]
-        pub mod devices;
-
-        pub mod ports_table {
-            pub mod view;
-        }
-        pub mod scanner_settings {
-            pub mod stored;
-            pub mod view;
-        }
-    }
-
-    // views/start/: the view Start: the setup at the first start and the
-    // login, before anybody is logged in.
-    pub mod start {
-        #[allow(clippy::module_inception)]
-        pub mod start;
+        pub mod users;
     }
 
     // views/shell/: the view Shell: the frame of the window around every page,
@@ -358,23 +361,62 @@ mod views {
         }
     }
 
-    // views/evaluation_plan/: the view Evaluation plan: the documents of the
-    // standards in NIST OSCAL and the documents of standards (PDF) they quote.
+    // views/evaluation_plan/: the view Evaluation plan: it works only on the
+    // documents of OSCAL (the list, the import, the export, the deletion;
+    // later the document shown graphically and turned into the flow of data
+    // of the evaluation).
     pub mod evaluation_plan {
         #[allow(clippy::module_inception)]
         pub mod evaluation_plan;
 
+        pub mod new_project {
+            pub mod catalogs;
+            pub mod view;
+        }
+        pub mod oscal_documents {
+            pub mod dialog;
+            pub mod file;
+            pub mod view;
+        }
+        pub mod own_requirement {
+            pub mod catalog;
+            pub mod view;
+        }
+        pub mod project_form {
+            pub mod view;
+        }
+        pub mod project_list {
+            pub mod view;
+        }
+        pub mod standard_browser {
+            pub mod requirement;
+            pub mod search;
+            pub mod view;
+        }
+        pub mod task_list {
+            pub mod view;
+        }
+        pub mod task_scheme {
+            pub mod scheme;
+            pub mod view;
+        }
+    }
+
+    // views/converter/: the view Converter: the documents of a standard (PDF)
+    // converted into a catalog of OSCAL with the help of the AI.
+    pub mod converter {
+        #[allow(clippy::module_inception)]
+        pub mod converter;
+
+        pub mod catalog_list {
+            pub mod view;
+        }
         pub mod document_search {
             pub mod search;
             pub mod view;
         }
         pub mod new_catalog {
             pub mod made;
-            pub mod view;
-        }
-        pub mod oscal_documents {
-            pub mod dialog;
-            pub mod file;
             pub mod view;
         }
         pub mod standard_documents {
@@ -384,7 +426,7 @@ mod views {
             pub mod view;
         }
 
-        // views/evaluation_plan/catalog_editor/: the editor of a catalog, a
+        // views/converter/catalog_editor/: the editor of a catalog, a
         // screen of the view, with an entry of its own.
         pub mod catalog_editor {
             #[allow(clippy::module_inception)]
@@ -399,7 +441,10 @@ mod views {
                 pub mod steps;
                 pub mod view;
             }
-            pub mod catalog_tree {
+            pub mod conversion_wizard {
+                pub mod contents;
+                pub mod locate;
+                pub mod progress;
                 pub mod view;
             }
             pub mod new_object {
@@ -446,24 +491,7 @@ use std::process::ExitCode;
 use app::state::AppState;
 use installation::lifecycle::Opened;
 use installation::verify::{InstallationState, verify_installation};
-
-// The two entries of the installation in the keyring of the Linux
-// account (docs/architecture.md, section 5.6). These constants are
-// the *names* under which the entries are stored, not their
-// values: the location and the secret are read from the keyring
-// at every start and never written into the program.
-//
-// TODO (step 13 of docs/todo.md): move both to
-// installation/verify.rs, where the keyring will be read; unused
-// until then.
-
-/// Name of the keyring entry with the location of the installation
-/// (the folder that holds its databases).
-const KEYRING_DATA_DIR_ENTRY: &str = "io-master.data-dir";
-
-/// Name of the keyring entry with the secret of the application
-/// (32 random bytes, also the recovery code).
-const KEYRING_APP_SECRET_ENTRY: &str = "io-master.app-secret";
+use tauri::{Manager, RunEvent};
 
 // ok kk
 fn main() -> ExitCode {
@@ -512,7 +540,14 @@ fn main() -> ExitCode {
 /// of `tauri.conf.json` (only the own scripts and styles), and the
 /// list of commands it may call.
 fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
-    let result = tauri::Builder::default()
+    // The decrypted data is only in RAM: the system must never write the
+    // memory of the process into a file (security/process.rs).
+    if let Err(error) = security::process::forbid_memory_dumps() {
+        eprintln!("Error: the memory dumps of the program could not be forbidden: {error}");
+        return ExitCode::FAILURE;
+    }
+
+    let built = tauri::Builder::default()
         // The dialogs of the system, used only from Rust (commands.rs).
         .plugin(tauri_plugin_dialog::init())
         // The state shared by all commands: the installation, the
@@ -520,13 +555,26 @@ fn tauri_startup(data_dir: PathBuf, opened: Opened) -> ExitCode {
         .manage(AppState::new(data_dir, opened))
         // The commands the page may call (routes.rs).
         .invoke_handler(routes::handler())
-        .run(tauri::generate_context!());
+        .build(tauri::generate_context!());
 
-    match result {
-        Ok(()) => ExitCode::SUCCESS,
+    let app = match built {
+        Ok(app) => app,
         Err(error) => {
             eprintln!("Error: the window could not be opened: {error}");
-            ExitCode::FAILURE
+            return ExitCode::FAILURE;
         }
-    }
+    };
+
+    // However the program ends (the cross of the window, "Log out and
+    // close", the end of the session of the desktop), the session ends the
+    // way "Log out" ends it (AppState::log_out): the work stopped, the
+    // database closed, its key gone from memory. The closure is the one
+    // Tauri requires for its events (a library place, rule 9 of CLAUDE.md).
+    let code = app.run_return(|handle, event| {
+        if let RunEvent::Exit = event {
+            handle.state::<AppState>().log_out();
+        }
+    });
+
+    ExitCode::from(u8::try_from(code).unwrap_or(1))
 }

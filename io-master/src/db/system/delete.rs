@@ -21,13 +21,13 @@ mod tests {
 
     use crate::db::system::{create, read};
     use crate::test_support::TempDir;
-    use crate::test_support::db::{system_db, wrapped_key};
+    use crate::test_support::db::{recovery_key, system_db, wrapped_key};
 
     #[test]
     fn a_removed_account_is_found_no_more() {
         let directory = TempDir::new();
         let db = system_db(&directory);
-        let id = create::add_user(&db, "anna", &wrapped_key()).unwrap();
+        let id = create::add_user(&db, "anna", &wrapped_key(), &recovery_key()).unwrap();
 
         remove_user(&db, id).unwrap();
 

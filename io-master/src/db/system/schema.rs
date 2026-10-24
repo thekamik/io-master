@@ -4,16 +4,17 @@
 //! `encryption/keys.rs`).
 //!
 //! ```text
-//! installation   one row: identifier, role, time of the first start
-//! users          one row per account: name, time it was created,
-//!                and the encrypted key of its database
+//! installation   one row: identifier, time of the first start
+//! users          one row: the account, its name, time it was created,
+//!                and the key of its database twice, wrapped with the
+//!                password (key_*) and with the recovery code
+//!                (recovery_*, step 49)
 //! ```
 
 /// The tables, created with the database.
 pub const SCHEMA: &str = "
     CREATE TABLE installation (
         id          BLOB    NOT NULL,
-        role        TEXT    NOT NULL,
         created     INTEGER NOT NULL
     );
 
@@ -26,10 +27,12 @@ pub const SCHEMA: &str = "
         key_salt        BLOB    NOT NULL,
         key_memory_kib  INTEGER NOT NULL,
         key_iterations  INTEGER NOT NULL,
-        -- 1 when the secret of the device (TPM) is a factor.
-        key_device      INTEGER NOT NULL,
         key_nonce       BLOB    NOT NULL,
         key_ciphertext  BLOB    NOT NULL,
-        key_tag         BLOB    NOT NULL
+        key_tag         BLOB    NOT NULL,
+        recovery_salt       BLOB    NOT NULL,
+        recovery_nonce      BLOB    NOT NULL,
+        recovery_ciphertext BLOB    NOT NULL,
+        recovery_tag        BLOB    NOT NULL
     );
 ";

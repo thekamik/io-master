@@ -4,8 +4,8 @@
 //! (`AppManifest`) and `capabilities/default.json`; a mistake there closes
 //! the door, but it is a mistake. This test reads the four lists and says
 //! what one of them lacks. It also checks that a command is named after an
-//! element of its view (`ports_table_scan` in `views/devices/devices.rs`,
-//! the element `views/devices/ports_table/`) or after its component
+//! element of its view (`chat_list_get` in `views/chat/chat.rs`, the
+//! element `views/chat/chat_list/`) or after its component
 //! (`pdf_viewer_get`).
 
 use std::collections::BTreeSet;

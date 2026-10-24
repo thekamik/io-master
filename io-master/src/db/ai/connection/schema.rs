@@ -18,7 +18,8 @@ pub const SCHEMA: &str = "
     -- address it is bound to.
     CREATE TABLE IF NOT EXISTS ai_connections (
         id                  INTEGER PRIMARY KEY,
-        name                TEXT NOT NULL UNIQUE,
+        -- Unique whatever their letter case, as the program checks them.
+        name                TEXT NOT NULL UNIQUE COLLATE NOCASE,
         url                 TEXT NOT NULL,
         model               TEXT NOT NULL,
         ca_certificate      TEXT NOT NULL,
@@ -39,6 +40,6 @@ pub const SCHEMA: &str = "
         output_tokens_path  TEXT NOT NULL,
         done_marker         TEXT NOT NULL,
         key_origin          TEXT,
-        message_template    TEXT NOT NULL DEFAULT '{\"role\": \"{{role}}\", \"content\": \"{{text}}\"}'
+        message_template    TEXT NOT NULL
     );
 ";

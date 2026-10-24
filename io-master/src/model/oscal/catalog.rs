@@ -86,6 +86,54 @@ pub struct Control {
     pub other: Other,
 }
 
+impl Catalog {
+    /// A new catalog without groups, controls and sources: `uuid`, `title`,
+    /// the version of its standard (`version`, empty: "1"), changed at
+    /// `last_modified` (a time of OSCAL).
+    ///
+    /// Called by: `views/converter/new_catalog/made.rs` (a catalog to be
+    /// converted) and `views/evaluation_plan/own_requirement/catalog.rs` (the
+    /// catalog of the requirements of the laboratory).
+    pub fn empty(uuid: String, title: &str, version: &str, last_modified: String) -> Catalog {
+        Catalog {
+            uuid,
+            metadata: Metadata {
+                title: title.to_owned(),
+                published: None,
+                last_modified,
+                version: if version.is_empty() { "1".to_owned() } else { version.to_owned() },
+                oscal_version: super::OSCAL_VERSION.to_owned(),
+                props: Vec::new(),
+                links: Vec::new(),
+                remarks: None,
+                other: Other::default(),
+            },
+            params: Vec::new(),
+            controls: Vec::new(),
+            groups: Vec::new(),
+            back_matter: None,
+            other: Other::default(),
+        }
+    }
+}
+
+impl Control {
+    /// The label of the control: the identifier the standard writes
+    /// (`ADV_FSP.4`), kept by the program as the property `label`; `None`
+    /// when it has none.
+    ///
+    /// Called by: the views that show a requirement (`views/evaluation_plan/`).
+    pub fn label(&self) -> Option<&str> {
+        for prop in &self.props {
+            if prop.name == "label" {
+                return Some(&prop.value);
+            }
+        }
+
+        None
+    }
+}
+
 /// Why a change of a catalog was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CatalogError {

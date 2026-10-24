@@ -8,7 +8,7 @@ The number of a step is its name and never changes, so that references in the co
 |---|---|---|
 | 1 | 0: Put the current state in order | done (`history.md`) |
 | 2 | 1: Web server skeleton | done; replaced by the window of step 14 (`history.md`) |
-| 3 | 2: Secrets in the TPM (now an optional factor, see step 8) | done (`history.md`) |
+| 3 | 2: Secrets in the TPM (now an optional factor, see step 8) | done (`history.md`); its code removed in step 48 |
 | 4 | 3: Databases, accounts and the management of users | done (`history.md`) |
 | 5 | 5: Scan page | done (`history.md`) |
 | 6 | 7: AI chat with Anthropic | built; its connection replaced by step 15 (`history.md`) |
@@ -26,17 +26,22 @@ The number of a step is its name and never changes, so that references in the co
 | 14d | **44: The tests in the file they test** | **built 2026-10-23, in the phases 44.1 to 44.6** (below) |
 | 14e | **45: The tree of the modules in `main.rs`** | **built 2026-10-23, in the phases 45.1 to 45.4** (below) |
 | 14f | **46: The entry of a view** | **built 2026-10-23, in the phases 46.1 to 46.7** (below) |
+| 14g | **47: The view `users`: the account, the session and the encryption in one place** | **built 2026-10-23, in the phases 47.1 to 47.3** (below) |
+| 14h | **48: The evaluation with AI as the only aim: devices, the master and the extra factors removed** | **decided 2026-10-24; 48.1 and 48.3 built** (below) |
+| 14i | **49: The recovery code of a forgotten password** | **built 2026-10-24** (below) |
+| 14j | **50: The conversion of PDFs to OSCAL with the AI as a view of its own** | **decided 2026-10-24; 50.1 and 50.2 built** (below) |
+| 14k | **51: The evaluation plan: the evaluation project** | **settled 2026-10-24; 51.1 built** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
 | later | 28: Reports in the LaTeX template of the laboratory | with or after step 23 |
-| 16 | 13: Start: keyring, secret of the application, one user per account | after the review |
-| 17 | 6: Port permissions | |
-| 18 | 8: The TPM as an optional factor | |
-| 19 | 9: Passkeys as an optional factor | |
+| 16 | 13: Start: keyring, secret of the application, one user per account | dropped 2026-10-24 (step 48) |
+| 17 | 6: Port permissions | dropped 2026-10-24 (step 48) |
+| 18 | 8: The TPM as an optional factor | dropped 2026-10-24 (step 48) |
+| 19 | 9: Passkeys as an optional factor | dropped 2026-10-24 (step 48) |
 | 20 | 10: Before release of the workstation | |
-| 21 | 4: The TLS server of the reset service (changed 2026-10-16) | before the master |
-| 22 | 11: Master and password reset | last |
+| 21 | 4: The TLS server of the reset service (changed 2026-10-16) | dropped 2026-10-24 (step 48) |
+| 22 | 11: Master and password reset | dropped 2026-10-24 (step 48) |
 
 ## How every step is done
 
@@ -48,6 +53,162 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 51: The evaluation plan: the evaluation project (2026-10-24)
+
+**State: described by the user 2026-10-24 and settled by their answers the same day (below); the format of the export and the names are open.** It gives the step 41.4 (profile and assessment plan as a graph) its form.
+
+**The user's description (2026-10-24), in order:**
+1. The **author of the plan** browses the standard (in OSCAL, from the converter or imported) and searches it for requirements.
+2. **An option of the AI** reviews the document and proposes a list of requirements, which the author accepts (P1).
+3. Every requirement accepted is moved into the **evaluation project**: an element of the view Evaluation plan, and what is **exported to the evaluator**.
+4. The evaluation project holds the list of requirements, **shown graphically** (the drawings of the schemes of steps 16 to 27, Svelte Flow, move here).
+5. A requirement chosen in the plan shows a **scheme of the inputs the evaluator has to deliver**.
+6. When the author adds a requirement, **the AI proposes its scheme**, the inputs that represent it; the author accepts or corrects it.
+
+**The user's answers (2026-10-24), which settle the model:**
+- **The project is a list of tasks for the evaluator**, as the laboratories work: the evaluator gets a list of work units to carry out. The planner chooses elements of the standards (of several catalogs) as tasks; **every task is one requirement and has a scheme of its own**, made by the planner with the help of the AI. **No graph of a whole standard**: it would cloud the view and hinder the work.
+- **The scheme of a task has three kinds of blocks: input → requirement → output.** The evaluator imports the file of the project, sees the list, opens a task and sees the scheme the planner designed.
+  - **Input:** what the evaluator has to deliver to meet the requirement. Evidence has many forms (the Security Target as a PDF, the output of a program, even a conversation), so **an input has a chatbot** that takes the evidence in any form and, connected to the requirement, helps the evaluator judge whether the evidence is processed far enough to be assessed.
+  - **Requirement:** the interaction of the evaluator with an agent of the AI: the evaluator consults it whether the inputs meet the requirement. **One task, one requirement: the context of the agent stays small and it works better.**
+  - **Output:** the configuration of where the evaluator exports the result of the evaluation.
+- **The AI only proposes; the planner approves** (P1). The AI has to understand the text and find elements such as the work units; the structure of OSCAL helps the machine.
+- **51.1, the answers of the user (2026-10-24):**
+  - **A task is a whole requirement** (a control of a catalog), never a single work unit inside it: requirements are assigned to the evaluators, and the structure stays simple. One requirement, one task.
+  - **The master project** holds all the tasks of a standard (of its catalogs) with their schemes; it is made once, when a new version of the standard comes, and **used again and again**. From it the planner **delegates tasks into smaller packages, which are handed to the employees** (the evaluators); this organises the time of the planner.
+  - The tasks keep the order in which they were added and are moved by hand; the catalogs of a project are chosen when it is made and may be changed later (a catalog no task uses may be removed).
+  - **Names (approved 2026-10-24):** the master project is `evaluation_project` in the code ("Master project" in the window); a package delegated from it is a `work_package` (pakiet pracy). A package only points to tasks of its master, so a scheme is made once; its export (51.5) takes a picture of the state at that moment. **The packages and their export are the stage 51.5.**
+  - **The concept of 51.1 (approved 2026-10-24):** our data (`db/evaluation_project/`: the projects, their catalogs, their tasks with their order; a task points to a control of a catalog by UUID and id, so the text of the requirement always comes from the catalog); the view Evaluation plan in two tabs, Projects and OSCAL documents; the screen of a project: the list of tasks beside a browser of the standards (the tree of a catalog, a search, the requirement with its parts and quotes, "Add as a task"); the tree of a catalog becomes a component (`components/catalog_tree/`), used by the converter and the plan; a project uses only finished catalogs; a catalog a project uses cannot be deleted. Phases:
+    - [x] 51.1a the model (`model/evaluation_project.rs`) and the database (`db/evaluation_project/`);
+    - [x] 51.1b the tree of a catalog as a component (`components/catalog_tree/`, the command `catalog_tree_get` moved there);
+    - [x] 51.1c the twelve commands of the view (`project_list_*`, `new_project_*`, `project_form_*`, `task_list_*`, `standard_browser_*`), `Control::label`; a catalog used by a project cannot be deleted;
+    - [x] 51.1e **Requirements of one's own** (user, 2026-10-24): a project is not based on the standard alone; the planner may add a requirement of their own, outside the standard, as a task. **Concept approved (2026-10-24), with one shared catalog** (the user: "one shared OSCAL file"): the own requirements of the laboratory live in one catalog of OSCAL, "Requirements of the laboratory", made by the program at the first one and known by its UUID; an own requirement is a control (**its identifier written by the planner, whatever they choose: the program imposes no naming** (user, 2026-10-24), a title, a statement), checked against the schema of NIST; adding one makes it a task of the project and adds the catalog to the project; it stays in the catalog for other projects; it is changed for all, and deleted only while no task points to it. **Built 2026-10-24:** `model/own_requirement.rs`, `db/own_requirements/` (the UUID of the catalog as a setting), the element `own_requirement/` with `own_requirement_add`, `_save`, `_delete`; `Catalog::empty` shared with the converter; the dialog `OwnRequirement.svelte` and "Change"/"Delete" in the browser; tried in the window.
+    - [x] 51.1d the page (the tabs Master projects and OSCAL documents; `ProjectList`, `NewProject`, `EvaluationProject` with `ProjectForm`, `TaskList`, `StandardBrowser`), tried in the window on a private display with the example catalog of NIST (a project made, requirements chosen in the tree and in the hits of a search, added as tasks, reordered); `architecture.md` sections 4, 10, 12.
+- **51.2, the scheme of a task, as the user sees it (2026-10-24):**
+  - Opening a task shows **only the block of the requirement**, inherited from OSCAL. The planner **adds input blocks and connects them to the requirement by hand**, or asks the AI to propose the scheme (51.3).
+  - **The document of the standard stays visible** in the screen the whole time, so the planner can check the scheme against the text of the requirement.
+  - **Outputs: as many as needed, added and connected by the planner.** Example of the user: one output writes a text file, another fills a LaTeX template; in Common Criteria the results go to at least two documents of different structure and similar content, the **Observation Report** (only when the requirement is not met) and the **pETR**. So **an output has its rules**: its kind (a text file, a LaTeX template), its target, **its condition (always, only when the requirement is not met, only when it is met)** and the instructions with which its AI fills it.
+  - The fields of the input (name, expected evidence, instructions for its agent) and of the requirement (instructions for its agent; its text from the catalog) are approved.
+  - **Phases of 51.2:**
+    - [x] 51.2a the model (`model/task_scheme.rs`: the kinds, the formats and conditions of an output, the rules of the connections and the limits) and the tables `task_blocks`, `task_connections` in `db/evaluation_project/` (a new task gets its block of the requirement; a task and a project go with their schemes);
+    - [x] 51.2b the seven commands `task_scheme_*` (get, add a block, save its fields, move it, remove it, connect, disconnect);
+    - [x] 51.2c the page: the screen of a task with the drawing (Svelte Flow; `TaskScheme`, `BlockNode`, `SchemeFit`), the form of the block chosen (`BlockForm`), the standard always beside (the parts and, for a quote, the PDF in the embedded `PdfViewer`);
+    - [x] 51.2d tried in the window on a private display (2026-10-24): a task opens with only its requirement; inputs and outputs added, connected, a forbidden connection refused, the fields saved, a block moved and found in its place after the task is opened again, a connection and a block removed; `architecture.md`, section 12.
+- **The evaluator sees a scheme exactly as the planner made it**: several inputs of the planner are several inputs for the evaluator; the same blocks, connections and layout.
+- **A requirement may have many inputs** (a fragment of the Security Target, the output of a program, a fragment of the documentation, ...).
+- **What the evaluator delivers to an input is kept exactly as delivered, the raw data** (the file as it was, the output of the program, the conversation), **and beside it, as an addition, the interpretation of the AI** (user, 2026-10-24). The interpretation never replaces the raw data: the assessment can always go back to what was delivered (P3, P5).
+- **The format of the export (user, 2026-10-24: variant b):** the standard (its catalogs of OSCAL) travels as an **attachment**; **our format holds the list of the requirements (the evaluation tasks) with the information of their schemes**, linked to the catalogs by their ids and UUIDs.
+- **Names:** `evaluation_task` (zadanie ewaluacji) in the code and the documents; it does not clash with the tasks of the AI (`ai/api/tasks`).
+- **The file is not locked by a signature of its author**; a project is changed only in the view Evaluation plan and carried out only in the view Evaluation lab.
+- **The result of a task:** the four texts decided on 2026-10-17 (*Findings*, *Analysis*, *Assessment and verdict proposition*, *Vulnerabilities and notes*) are the default format; laboratories have templates of their own, so **the output block has an instance of the AI too**, which adapts the default format to what the laboratory requires.
+
+---
+
+## Step 50: The conversion of PDFs to OSCAL as a view of its own (2026-10-24)
+
+**State: decided by the user 2026-10-24; 50.1 built the same day; 50.2 next, concept first.**
+
+The user (2026-10-24): the conversion of the PDFs of a standard to OSCAL is today a part of the view Evaluation plan (`views/evaluation_plan/`: the documents of standards, a new catalog, the editor of a catalog with the AI). It becomes **a view of its own, whose only aim is the conversion of PDFs to OSCAL, supported by the AI**. The view Evaluation plan keeps the documents of OSCAL and the plan itself (step 41.4).
+
+**The new role of the view Evaluation plan (user, 2026-10-24):** it works only on documents of OSCAL: it shows a document graphically and turns it into the **flow of data of the evaluation**, which the view Evaluation lab then uses. Concept later; the converter comes first.
+
+**The answers taken (user, 2026-10-24: "first the converter"):** the view is named `converter` (the user's word; "Converter" in the navigation, after Chat); the view Evaluation plan shows only the list of the documents of OSCAL (no editor, no view of a catalog for now); the converter makes catalogs now, its name open to other models of OSCAL later; a guided flow step by step (50.2) is discussed after the move.
+
+**Phases**
+- [x] 50.1 The move, the logic unchanged (with a list of the catalogs of its own in the converter, `catalog_list/` and `catalog_list_get`, since the editor no longer opens from the view Evaluation plan and a view never uses another; the styles of the tables restored, lost in 48.1 with the sheet of the view Devices): `standard_documents/`, `document_search/`, `new_catalog/`, `catalog_editor/` from `views/evaluation_plan/` to `views/converter/` (Rust and the page), the entry `converter.rs` with their commands (names unchanged), `evaluation_plan.rs` keeps the documents of OSCAL; the navigation; the documents.
+- [x] 50.2 The conversion step by step (concept approved 2026-10-24, built the same day, below). **The user (2026-10-24): the conversion is best led step by step, interactively** (variant a: the PDFs, a new catalog, the AI proposes the structure, then the controls group by group, the review; the evaluator confirms every stage).
+  **The concept (approved 2026-10-24):** a catalog opens in a wizard of five stages, remembered so that a conversion can be left and resumed: (1) sources (title, version, PDFs; the dialog of a new catalog), (2) table of contents (**the AI finds its pages in the first pages of the document**, user 2026-10-24; the evaluator confirms them in the viewer), (3) groups (proposed by the AI from the table of contents, reviewed; **the program finds where every group starts**, by its heading in the text of the pages, never by the numbers of the AI), (4) controls group by group (the pages of each group filled in, corrected if needed, the AI asked, the proposals reviewed, "this group is done"), (5) review (quotes not found, groups without controls, proposals undecided; "Finish"). The editor of today stays as the tab "Manual editing". The state is ours (`db/conversion/`), linked to the catalog by its UUID. **The view Evaluation plan shows only finished catalogs** (user, 2026-10-24: the evaluator sees only what the planner approved); an imported catalog has no conversion and is finished.
+  - [x] 50.2a/b The state of a conversion (`model/conversion.rs`, `db/conversion/`), the wizard element (`catalog_editor/conversion_wizard/`: `progress.rs`, `locate.rs`, `contents.rs`) with its six commands, the task `catalog_contents` of the AI, the start of a conversion with a new catalog, its deletion with the catalog, the plan without unfinished catalogs.
+  - [x] 50.2c The page: `ConversionWizard.svelte` (the stages, the groups as cards, the log of the AI), the tabs Conversion and Manual editing of the editor, `build_progress.ts` (the events of the AI, shared with `AiBuilder.svelte`).
+  - [x] 50.2d Tried in the window on a private display with a small PDF of four pages and a fake AI service: the AI found the table of contents (page 2), proposed two groups, the program found their pages (3 and 4), the controls proposed and accepted group by group, the review, "Finish", the catalog shown in the Evaluation plan; the conversion resumed after a restart of the program. `architecture.md`, section 12.
+
+---
+
+## Step 49: The recovery code of a forgotten password (2026-10-24)
+
+**State: built 2026-10-24**; the concept approved by the user the same day ("a sensible mechanism, and probably the only sensible option"). The design: `architecture.md`, sections 5.4 and 12; tried in the window on a private display (the setup, the recovery with a code typed in small letters with spaces, a new code with a wrong and the right password).
+
+The key of the database is wrapped a second time, with a random recovery code (160 bits, groups of characters without 0, O, 1, I, with a check sum), the mechanism of BitLocker, FileVault and LUKS: no server.
+
+**Decision of the user (2026-10-24):** the first recovery code is made **automatically when the user is created** and shown right after the setup, before the program opens, as programs of this kind do; it is not something the evaluator has to find in the settings.
+
+**The management of the codes (user, 2026-10-24):**
+1. The code appears on the screen after the user is created, as in BitLocker.
+2. A new code appears after every change of the password, and the old one stops working (the recovery of a forgotten password with the code is a change of the password as well).
+3. The page User offers "Make a new recovery code", which needs the password of the user.
+
+Everything of it is in `views/users/users.rs`, with the password: one place for the keys of the account.
+
+**Tasks**
+- [x] `db/encryption/recovery.rs` (a file of its own beside `keys.rs`): the wrapping with the recovery code (HKDF with its own purpose, AES-256-GCM); `model/recovery_code.rs`: the code written and read as text with its check sum (alphabet without 0, O, 1, I; 32 + 3 characters in 7 groups of 5; case, spaces and dashes aside).
+- [x] `system.db`: the second copy of the key in columns of its own (`recovery_*`, NOT NULL: no migration, the fresh start of 48.4).
+- [x] `views/users/users.rs`: `setup_form_install` and `password_form_change` give the new code; `login_form_recover` ("I do not remember my password"); `recovery_code_form_replace` (needs the password). The page: the component `recovery_code` (shown once, a random group typed to go on), `RecoveryCodeForm` on the page User.
+- [x] The warning bar of the window removed: every account has its code from the setup on (no installation before step 49 is left, 48.4).
+
+---
+
+## Step 48: The evaluation with AI as the only aim (2026-10-24)
+
+**State: decided 2026-10-24; 48.1 and 48.3 built; 48.2 (the documents of the framework) partly done with them.**
+
+The user (2026-10-24): the project tried to catch too many magpies by the tail. **IO Master is a framework for the evaluation with the help of AI**: it works with the documentation of the client and the inputs of the evaluator, and its output is the report. The name stays: IO is the input and the output, and the flow of the data between them is to be done masterfully.
+
+**Decisions of the user**
+- [x] **No work with devices.** The scan of the serial ports, the view Devices, `hardware_tests/` and `db/scan_settings/` are removed; step 6 (port permissions), UART and Bluetooth are dropped. The results of tests on a device are inputs of the evaluator.
+- [x] **P2 removed** ("no command reaches a device without an action of the evaluator"); its number stays so that P3 to P5 keep theirs. That the AI only proposes is P1.
+- [x] **The name IO Master stays.**
+- [x] **No role master and no password reset through a master** (steps 4 and 11 dropped): it is architecturally overcomplicated. The evaluator exports backups instead (section 5.5 of `architecture.md`), encrypted with **OpenPGP** keys, a standard of the laboratories.
+- [x] **No TPM factor and no passkeys** (steps 8 and 9 dropped): OpenPGP makes them unnecessary.
+- [x] **No git in the program** (`architecture.md`, section 6): the laboratory manages its documents itself; not every laboratory uses git, and the configurations would hold the work up.
+- [x] **The export to LaTeX stays** (step 28): the results go straight into the report template of the laboratory.
+- [x] ~~The protection is built on GnuPG~~ (user, 2026-10-24, morning). **Withdrawn the same day** (user, 2026-10-24): an open source program must be easy to use, and OpenPGP keys have no recovery of a passphrase either, so the **simple login with a password stays, as it was designed and built** (the password, Argon2id, the key of the database wrapped with AES-256-GCM, `db/encryption/keys.rs`). What follows from it (user, 2026-10-24):
+  - **No role master and no server mode**: a strong overcomplication. A recovery of a forgotten password only if a safe and proven mechanism exists for a program installed on a workstation (Claude proposes one); otherwise no recovery.
+  - **The password alone at first**; an optional second factor of the login may be added later.
+  - **No keyring of GNOME and no secret of the application** (step 13 dropped): it added security at the cost of chaos.
+  - **One user per installation.**
+  - **Backups may be encrypted with an OpenPGP key, optionally**: without a key the backup is not encrypted, and the window says so and recommends a key; never required.
+
+**Phases** (one commit each, pushed, every test passing; the documents with each)
+- [x] 48.1 The devices removed: `hardware_tests/`, `views/devices/`, `db/scan_settings/` (the version 4 of the database of the evaluator removes its two settings), the three commands in their four lists, the page (`ui/src/views/devices/`, `lib/api/devices.ts`, `styles/09-devices.css`, the navigation), the feature `fs` of `rustix`; the documents.
+- [x] 48.4 A fresh start of the databases (user, 2026-10-24: the user removes the old installation and tests from the beginning): the migrations 2 to 4 of the development removed, the history of `db/user/migrations.rs` starts again at version 1 and a database of another version is refused; the names of the AI connections unique whatever their case in the table itself (`COLLATE NOCASE`, was an index made by a migration); the default of `message_template` (needed only by the migration) removed; the note on the old columns of `system.db` removed.
+- [ ] 48.2 The documents describe the framework (README, `architecture.md` and `CLAUDE.md` brought up to date with 48.1 and 48.3; left: a read of the whole for the framework, `oscal.md`, `history.md`): `README.md`, `architecture.md` (sections 1, 3, 5, 6, 8), `CLAUDE.md`; the steps dropped marked so in this file; `v0.2_functionality.md`.
+- [x] 48.3 The role master, more users, the TPM and the constants of the keyring removed; the password stays (decided 2026-10-24): `Role` and the choice of the role at the setup, the page of the master, `accounts::add`, `security/tpm/` and `tss-esapi`, the factor of the device in `db/encryption/keys.rs` (the keys wrapped before open unchanged: the derivation without a device is the same), the columns `role` and `key_device` no longer written (an older `system.db` keeps working), `base64` (used by nothing); one warning instead of two; `architecture.md` sections 3, 5, 6, 8, 9. **The concept on GnuPG below is withdrawn** (kept for the record: the analysis of the flow of GnuPG may serve the backup).
+
+### The concept of 48.3 on GnuPG (proposed by Claude 2026-10-24; withdrawn the same day, the user chose the password)
+
+Found in the code: the keyring was never built (step 13): only two unused constants in `main.rs`. `accounts::add` (more users) is dead code. The TPM factor is half built (`device_secret` always `None`). GnuPG 2.4.7 and `pinentry-gnome3` are on Debian 13.
+
+```text
+SETUP
+  gpg --list-secret-keys ──► the keys of the evaluator (fingerprint, UID, on a card or not)
+  the evaluator chooses their key [+ optionally the recovery key of the laboratory]
+  32 random bytes = the key of the database (RAM)
+    ──► gpg --encrypt -r <evaluator> [-r <recovery>] ──► an OpenPGP message ──► system.db
+    ──► SQLCipher makes users/<id>.db with the key; the key wiped
+
+OPENING (instead of the login)
+  the button "Open" ──► gpg --decrypt (the message on its standard input)
+    gpg-agent ──► pinentry asks for the passphrase of the key / the PIN of the card
+                  (the window of the program never sees the secret)
+    the key of the database on its standard output (RAM) ──► SQLCipher opens the database ──► the key wiped
+```
+
+- **`security/openpgp/gpg.rs`**: the only place that starts `gpg` (as `pdf/` with Poppler; uses nothing of the program): the secret keys, the public keys, encrypt for recipients, decrypt. A fixed path `/usr/bin/gpg`, never `PATH`; its output read in the machine format (`--with-colons`, `--status-fd`) up to a constant number of bytes; the decrypted key in `Zeroizing`. The tests use a temporary home of GnuPG (`--homedir`) with a key without passphrase made in the test; `~/.gnupg` is never touched.
+- **`db/encryption/keys.rs`** rewritten: `WrappedKey` = the OpenPGP message and the fingerprints of its recipients. Argon2id, HKDF, AES-GCM and the rules of the password go.
+- **`views/users/users.rs`** stays the one place of the key: `setup_form_keys` (the list of keys), `setup_form_install(name, key, recovery)`, `login_form_open` instead of `login_form_log_in`; the change of the password is replaced by the change of the recipients (a new key after a rotation, a recovery key added).
+- **Removed:** `Role` and the choice of the role, the panel of the master in `Shell.svelte`; `accounts::add`; `security/tpm/` whole, `device_secret`, `tss-esapi`, `swtpm`, `libtss2-dev`; `PasswordForm`, `password_form_change`, `argon2`, `aes-gcm`, `hkdf`; the constants of the keyring, section 5.6; `base64` (used by nothing any more).
+- **The warnings at the top of the window:** instead of "no password reset" and "no factor", one: "No recovery key: losing your OpenPGP key means losing the data", while the key of the database has one recipient.
+- **Phases:** 48.3a the master, more users and the TPM removed (only deletion; the password still works); 48.3b `security/openpgp/` with its tests; 48.3c the setup and the opening with OpenPGP instead of the password (`keys.rs`, the new layout of `system.db`, the forms of the page, the dependencies of cryptography removed); 48.3d the change of the recipients on the page User; then 48.2, the documents of the framework. The backup, encrypted for the same recipients, is a step after 48.
+- **Risks accepted knowingly:** gpg-agent keeps the passphrase for a while (meanwhile other programs of the account may use the key; a card with touch lessens it); a key without passphrase cannot be forbidden by the program (a requirement of the laboratory; the list shows which key is on a card); a graphical pinentry is needed (README, requirements).
+
+**Decisions for the user** (Claude's proposal after each):
+- [ ] The recovery key of the laboratory: required, recommended or not offered? *Proposed: optional, with a lasting warning while it is missing.*
+- [ ] The keyring of GNOME: dropped entirely? *Proposed: yes; the private key of OpenPGP is outside the files of the installation anyway, so it does the work of the secret of the application, and the trouble with PAM on XFCE goes.*
+- [ ] The name of the user: from the UID of the key? *Proposed: yes by default, editable.*
+- [ ] The installations of the tests: migrated? *Proposed: no (as in step 41): the program recognises an old `system.db` and asks to remove `~/.local/share/io-master` and install anew.*
+- [ ] An OpenPGP card (YubiKey, Nitrokey) to test with? Otherwise the tests use keys in software.
 
 ---
 
@@ -68,6 +229,25 @@ Legend: `[ ]` to do, `[x]` done.
 - [x] 45.2 `security/` and `db/` (15 files of declarations removed; `db/scan_settings.rs` stays, it holds the names of its settings). The comment of each area of `db/` says in which database its data lives; its `schema.rs` says how it is protected.
 - [x] 45.3 `ai/` (4 files of declarations removed; `ai/presets.rs` stays, it holds the presets). The provider stays reachable only from `ai/api/` (`pub(in crate::ai::api)`), seen to refuse a use from a view; the list of `ai/tasks.rs`, which named files that no longer exist, is gone, and `CLAUDE.md` names the real tasks.
 - [x] 45.4 `hardware_tests/`, `pdf/`, `installation/`, `app/` (6 files of declarations removed; the two files that are not compiled, `hardware_tests/permissions/permission.rs` and `installation/uninstall.rs`, are named in the comments of their groups); the exception of `hardware_tests.rs` in `architecture_tests.rs` (`the_tests_of_a_file_are_never_in_a_file_of_their_own`) removed with the file; the state of this step.
+
+---
+
+## Step 47: The view `users`: the account, the session and the encryption in one place (2026-10-23)
+
+**State: built 2026-10-23, in the phases 47.1 to 47.3 (below).**
+
+The user (2026-10-23): the login is joined with the encryption of the database (the password, Argon2id, the unlocking key, the key of the database, the open database), so every function that touches it must be in one place, where the management of the keys and the encryption and decryption can be followed easily. The view `start` is renamed `users`, and its entry holds the setup (the installation and its user), the login, the change of the password, the logout and the closing of the program, and later every other function of the account. To keep the window and the code readable, the settings are split: **the settings of the user** (the account and the encryption: a page of their own, "User", in the navigation) and **the settings of the program** (the AI connections, what the installation is: the view `settings`).
+
+**Decisions of the user**
+- [x] `start` renamed `users`; `views/users/users.rs` is the entry of everything that touches the key of the database.
+- [x] The settings of the user are a page of their own in the navigation ("User"); the view `settings` keeps the tabs AI and Program.
+- [x] A new function: log out and close the program (`user_menu_close`), beside "Log out" in the user menu.
+- The commands keep their names `<element>_<action>`; the user menu is shown in the frame of the window (`Shell.svelte`), which places it as it places the views.
+
+**Phases** (one commit each, pushed, every test passing; the documents with each)
+- [x] 47.1 `users`: the setup and the login (from `start`), the logout (from `shell`), the change of the password (from `settings`), each commented with what happens to the key; the page `ui/src/views/users/` (the forms, the user menu, the page "User"); `settings` without the tab User; the vocabulary.
+- [x] 47.2 `user_menu_close`: the session ended (the key wiped, the database closed) and the program closed; its button in the user menu. **The cross of the window ends the session the same way** (user, 2026-10-23): "Log out", "Log out and close" and the cross go through one function, not through the end of the process alone. With it, the memory of SQLCipher (user, 2026-10-23: only the minimum of decrypted data in RAM; SQLCipher already decrypts only the pages a query reads, so the concept stands): `cipher_memory_security` on (the memory it frees wiped, its keys locked in RAM), the temporary files of SQLite in memory only and a small, explicit cache, each checked by a test; the core dumps of the process off; the requirements of the laboratory (encrypted swap, no hibernation) in `architecture.md`, section 9.
+- [x] 47.3 `architecture.md`, section 12: the way of the key in every operation of `users`.
 
 ---
 
@@ -119,6 +299,8 @@ The user (2026-10-23): the unit tests move from their own files (`<file>_tests.r
 - [x] 44.4 `hardware_tests/` (3 files).
 - [x] 44.5 `views/`: `start`, `shell`, `chat`, `settings`, `devices`.
 - [x] 44.6 `views/evaluation_plan/` with its editor of a catalog; `handover.md`, the state of this step. The acceptance of a proposal, tested so far inside the tests of the AI of the editor, has its own tests in `proposals/accept.rs`; the helpers of the tests of the AI (`ready`, `collector`) are in `catalog_editor/test_support.rs`; the test of the architecture no longer skips a file by its name, and refuses a new `*_tests.rs`.
+
+**Left open (2026-10-23):** `db/user/delete.rs::remove_setting` has no test yet (the split of 44.2 only moved the assertions that existed).
 
 **Done when** no `<file>_tests.rs` is left besides the tests of the whole program, and the test of the architecture checks that every test module is the last item of its file.
 
@@ -256,6 +438,8 @@ Built on the analysis of the code of 2026-10-17 and the guidelines of the user. 
 
 ## Step 4: The TLS server of the reset service (changed 2026-10-16)
 
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
+
 **Changed on 2026-10-16:** the program is a desktop program started without parameters (step 14). The TLS server for a remote access to the interface (`--address`) is **dropped**: there is no remote access to the interface, the evaluator works at the computer. `--port`, `--address` and the parser of the command line were removed from `main.rs`. What remains for this step is the network part of the password reset: done right before the master (step 11) and together with it.
 
 **Decisions**
@@ -274,6 +458,8 @@ Built on the analysis of the code of 2026-10-17 and the guidelines of the user. 
 ---
 
 ## Step 6: Port permissions
+
+**Dropped 2026-10-24 (step 48): the program no longer works with devices.** Kept below as it was.
 
 **Decisions**
 - [ ] How access to a port is granted from the browser: (a) a button that runs `pkexec` (system password dialog), or (b) the command shown for the user to copy and run. Proposed: (b) first.
@@ -328,6 +514,8 @@ The concept changed several times while steps 0 to 7 were built (CLI removed, TP
 
 ## Step 13: Start: keyring, secret of the application, one user per account
 
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
+
 Agreed with the user on 2026-10-15 during the review (step 12); the concept is in `architecture.md`, sections 3, 3.2, 5.1, 5.2, 5.6 and 9. It replaces the first start told by the system database alone, the data directory chosen with `--data-dir`, and the removal with `--uninstall`.
 
 **Decisions**
@@ -365,6 +553,8 @@ Agreed with the user on 2026-10-15 during the review (step 12); the concept is i
 
 ## Step 8: The TPM as an optional factor
 
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
+
 Comes after the functions of the workstation (steps 4–7). The program authenticates with passwords only by default (`architecture.md`, section 5). The TPM, built in step 2, becomes a further factor that can be switched on where a TPM exists, for the whole installation.
 
 **Decisions**
@@ -385,6 +575,8 @@ Comes after the functions of the workstation (steps 4–7). The program authenti
 ---
 
 ## Step 9: Passkeys as an optional factor
+
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
 
 A further factor next to the TPM, chosen by each user for their own account (`architecture.md`, section 5.1). The TPM binds the data to the computer, a passkey to the person; either, both or neither can be used.
 
@@ -414,6 +606,8 @@ A further factor next to the TPM, chosen by each user for their own account (`ar
 ---
 
 ## Step 11: Master and password reset (last stage)
+
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
 
 The workstation is the core of the program and is completed first (steps 0–10). The master comes last.
 
@@ -525,11 +719,9 @@ Designed later (user, 2026-10-17); a part of the view Evaluation lab since step 
 
 Not planned in detail yet; to be designed once the steps above are done:
 
-- AI on the data of the devices (any provider and local models are configurable since step 15).
 - Backup of the databases with its own encryption, independent of the TPM; also the way to move to a new computer (`architecture.md`, section 5.5).
 - Git of the laboratory over a secure connection, with checks of its configuration (`architecture.md`, section 6).
 - Filling the LaTeX report templates of the laboratory and committing the result.
 - Git panel in the window.
-- The other functions of version 0.2 (`v0.2_functionality.md`): UART read and write with the confirmation of every command (P2), Bluetooth.
 - A build variant without the code of the master (`architecture.md`, section 3.2).
-- Beyond the evaluation (steps 41 and 31 to 36): guided execution of functional tests on the device, their results as observations of the OSCAL assessment results. (The documentation of the product is step 30.)
+- The results of functional tests delivered by the evaluator, as observations of the OSCAL assessment results (the program does not run tests itself, step 48). (The documentation of the product is step 30.)

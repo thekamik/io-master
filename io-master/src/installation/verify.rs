@@ -13,13 +13,10 @@
 //! Damaged         not at all; main reports the reason
 //! ```
 //!
-//! TODO (step 13 of docs/todo.md): the location of the installation
-//! and the secret of the application are read from the keyring of
-//! the Linux account, and the states of docs/architecture.md,
-//! section 3.2, are told apart here (a lost keyring, an entry
-//! without its installation, ...). Until then the location is the
-//! usual data directory, and the state is told by the system
-//! database alone (`lifecycle::open`).
+//! The location is the usual data directory, and the state is told by
+//! the system database alone (`lifecycle::open`). (The keyring of the
+//! Linux account planned for both was dropped in step 48 of
+//! docs/todo.md.)
 
 use std::fmt;
 use std::path::PathBuf;
@@ -105,7 +102,6 @@ mod tests {
 
     use std::fs;
 
-    use crate::model::installation::Role;
     use crate::test_support::TempDir;
 
     const PASSWORD: &str = "correct horse battery";
@@ -129,14 +125,14 @@ mod tests {
     #[test]
     fn an_installation_is_found_and_opened() {
         let directory = TempDir::new();
-        lifecycle::install(directory.path(), Role::Workstation, "anna", PASSWORD).unwrap();
+        lifecycle::install(directory.path(), "anna", PASSWORD).unwrap();
 
         let InstallationState::Installed { data_dir, running } = verify_at(Some(directory.path().to_owned())) else {
             panic!("the installation was not found");
         };
 
         assert_eq!(data_dir, directory.path());
-        assert_eq!(running.installation.role, Role::Workstation);
+        assert!(crate::db::system::read::user(&running.system_db, "anna").unwrap().is_some());
     }
 
     #[test]

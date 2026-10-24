@@ -11,8 +11,8 @@
   import { sentence } from "./lib/api/errors";
   import * as shell from "./lib/api/shell";
   import Shell from "./views/shell/Shell.svelte";
-  import LoginForm from "./views/start/LoginForm.svelte";
-  import SetupForm from "./views/start/SetupForm.svelte";
+  import LoginForm from "./views/users/LoginForm.svelte";
+  import SetupForm from "./views/users/SetupForm.svelte";
 
   /** The state of the program; null until it is read. */
   let app: shell.ProgramView | null = $state(null);

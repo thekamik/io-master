@@ -1,6 +1,6 @@
 //! Storing a document of a standard: the file and the text of its
 //! pages. The rules (title, a file loaded once) are checked by
-//! `views/evaluation_plan/standard_documents/stored.rs`.
+//! `views/converter/standard_documents/stored.rs`.
 
 use rusqlite::named_params;
 

@@ -49,6 +49,37 @@ impl Catalog {
         Ok(titles)
     }
 
+    /// The groups that hold no group (those whose controls are read from
+    /// their pages), in the order of the document: id, title, and label (the
+    /// identifier the standard writes, `ADV_FSP`), if it has one.
+    ///
+    /// Called by: `views/converter/catalog_editor/conversion_wizard/locate.rs`.
+    pub fn leaf_groups(&self) -> Result<Vec<(String, String, Option<String>)>, CatalogError> {
+        let mut leaves = Vec::new();
+
+        for location in self.locations()? {
+            if !location.is_group() {
+                continue;
+            }
+
+            if let Some(Group { id: Some(id), title, groups, props, .. }) = self.group_at(&location.groups)
+                && groups.is_empty()
+            {
+                let mut label = None;
+
+                for prop in props {
+                    if prop.name == "label" {
+                        label = Some(prop.value.clone());
+                    }
+                }
+
+                leaves.push((id.clone(), title.clone(), label));
+            }
+        }
+
+        Ok(leaves)
+    }
+
     /// Every control, in the order of the document, with the titles of the
     /// groups it is in.
     pub fn all_controls(&self) -> Result<Vec<(Vec<&str>, &Control)>, CatalogError> {

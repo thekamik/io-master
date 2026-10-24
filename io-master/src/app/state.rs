@@ -16,7 +16,6 @@ use tokio::sync::watch;
 use crate::installation::accounts::Account;
 use crate::installation::lifecycle::{Opened, Running};
 use crate::installation::session::Session;
-use crate::model::installation::Role;
 
 use super::error::AppError;
 
@@ -67,12 +66,6 @@ impl AppState {
     /// is done.
     pub fn running(&self) -> Option<Arc<Running>> {
         self.running.read().unwrap_or_else(|poisoned| poisoned.into_inner()).clone()
-    }
-
-    /// The role of the installation, or `None` before the first start
-    /// is done.
-    pub fn role(&self) -> Option<Role> {
-        Some(self.running()?.installation.role)
     }
 
     /// The running installation, or the error that nothing is

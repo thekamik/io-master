@@ -20,7 +20,6 @@ export interface WarningView {
 /** The state of the program. */
 export interface ProgramView {
   installed: boolean;
-  role: "workstation" | "master" | null;
   user: string | null;
   pages: PageView[];
   warnings: WarningView[];
@@ -38,11 +37,4 @@ export interface ProgramView {
  */
 export function programGet(): Promise<ProgramView> {
   return invoke("program_get");
-}
-
-// ── The actions of the elements ──────────────────────────────────────
-
-/** Logs out. Called by UserMenu.svelte, "Log out". */
-export function userMenuLogOut(): Promise<void> {
-  return invoke("user_menu_log_out");
 }

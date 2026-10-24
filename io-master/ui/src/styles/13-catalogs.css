@@ -83,3 +83,263 @@ ul.catalog-tree li.active > button.link {
 .catalog-object .panel-head h3 {
     margin: 0;
 }
+
+/* The conversion step by step (catalog_editor/ConversionWizard.svelte): the
+   wizard beside the proposals, its stages as a bar. */
+.wizard-body {
+    display: grid;
+    grid-template-columns: minmax(28rem, 2fr) minmax(18rem, 1fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.wizard-body > .card {
+    margin: 0;
+    max-height: calc(100vh - 12rem);
+    overflow: auto;
+}
+
+ol.wizard-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+ol.wizard-stages li {
+    padding: 0.3rem 0.7rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+ol.wizard-stages li.done {
+    color: var(--text);
+}
+
+ol.wizard-stages li.active {
+    color: var(--text);
+    border-color: var(--accent);
+    font-weight: 650;
+}
+
+ul.wizard-groups {
+    margin: 0 0 1rem;
+    padding: 0;
+    list-style: none;
+}
+
+ul.wizard-groups li {
+    padding: 0.7rem 0.8rem;
+    margin-bottom: 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+}
+
+ul.wizard-groups li.finished {
+    opacity: 0.65;
+}
+
+.wizard-group-head {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.4rem;
+}
+
+ul.wizard-groups .range input[type="number"] {
+    width: 5rem;
+}
+
+/* The screen of a master project (views/evaluation_plan/EvaluationProject.svelte):
+   the tasks beside the browser of the standards. */
+.project-form summary {
+    cursor: pointer;
+    font-weight: 650;
+}
+
+.project-body {
+    display: grid;
+    grid-template-columns: minmax(18rem, 1fr) minmax(30rem, 2fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.project-body > .card {
+    margin: 0;
+    max-height: calc(100vh - 14rem);
+    overflow: auto;
+}
+
+.task-list ol {
+    margin: 0;
+    padding-left: 1.4rem;
+}
+
+.task-list li {
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.task-list .task-text {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: baseline;
+}
+
+.task-list .task-actions {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+}
+
+.standard-browser .browser-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: end;
+    margin-bottom: 0.8rem;
+}
+
+.standard-browser .browser-body {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1fr) minmax(16rem, 1.4fr);
+    gap: 0.8rem;
+    align-items: start;
+}
+
+.standard-browser .browser-body > .card {
+    margin: 0;
+    max-height: calc(100vh - 22rem);
+    overflow: auto;
+}
+
+.standard-browser .hits {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    gap: 0.2rem;
+    margin-bottom: 0.8rem;
+}
+
+.standard-browser blockquote.missing {
+    border-left-color: var(--danger, #e06c75);
+}
+
+/* The screen of a task (views/evaluation_plan/TaskScheme.svelte): the
+   drawing of its scheme beside the form of a block and the standard. The
+   colours of the kinds of blocks and the blocks themselves (BlockNode.svelte). */
+.scheme-body {
+    display: grid;
+    grid-template-columns: minmax(28rem, 3fr) minmax(20rem, 2fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.scheme-canvas {
+    position: relative;
+    height: calc(100vh - 12rem);
+    min-height: 26rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.scheme-tools {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.6rem;
+    z-index: 5;
+    align-items: center;
+}
+
+.scheme-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    max-height: calc(100vh - 12rem);
+    overflow: auto;
+}
+
+.scheme-side > .card {
+    margin: 0;
+}
+
+.scheme-pdf {
+    height: 28rem;
+    flex-shrink: 0;
+}
+
+.tile.input {
+    --kind: #2f9e6b;
+}
+
+.tile.requirement {
+    --kind: #6d8bff;
+}
+
+.tile.output {
+    --kind: #e8590c;
+}
+
+.tile {
+    width: 15rem;
+    padding: 0.55rem 0.75rem 0.65rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border-strong, var(--border));
+    border-left: 4px solid var(--kind);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.tile.selected {
+    box-shadow: 0 0 0 2px var(--kind), var(--shadow-raised);
+}
+
+.tile-head {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.2rem;
+}
+
+.tile-kind {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--kind);
+}
+
+.tile-id {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.tile-title {
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.svelte-flow__edge .svelte-flow__edge-path {
+    stroke-width: 1.8;
+}
+
+.svelte-flow__edge.selected .svelte-flow__edge-path {
+    stroke-width: 3.2;
+}
+
+.svelte-flow__handle {
+    width: 10px;
+    height: 10px;
+    background: var(--kind, var(--accent));
+    border: 2px solid var(--surface);
+}

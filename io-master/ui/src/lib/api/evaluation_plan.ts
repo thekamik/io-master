@@ -1,13 +1,137 @@
 // The commands of the view Evaluation plan, one function per command of its
 // entry in the program (src/views/evaluation_plan/evaluation_plan.rs),
 // named as the command: `oscalDocumentsGet` calls `oscal_documents_get`.
-// The commands of the editor of a catalog are in evaluation_plan/catalog_editor/,
-// those of the viewer of a standard in components/.
+// The view works only on the documents of OSCAL: the master projects (each a
+// list of tasks, every task a whole requirement) and the documents of OSCAL;
+// the catalogs are made from the PDFs of a standard in the view Converter
+// (converter.ts).
 //
 // The types mirror the view.rs of the elements (src/views/evaluation_plan/);
 // a change there needs the same change here.
 
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
+
+import type { PartRowView } from "./components/part_rows";
+
+// project_list/view.rs
+/** A master project, as a row of the list. */
+export interface ProjectSummaryView {
+  uuid: string;
+  title: string;
+  catalogs: number;
+  tasks: number;
+}
+
+// new_project/view.rs
+/** A catalog a project can use (a finished one). */
+export interface CatalogChoiceView {
+  uuid: string;
+  title: string;
+  version: string;
+}
+
+// project_form/view.rs
+/** A master project in its form. */
+export interface ProjectView {
+  uuid: string;
+  title: string;
+  description: string;
+  catalogs: CatalogChoiceView[];
+  available: CatalogChoiceView[];
+}
+
+/** What the page sends of a project. */
+export interface ProjectForm {
+  title: string;
+  description: string;
+  catalogs: string[];
+}
+
+// task_list/view.rs
+/** A task: a whole requirement. */
+export interface TaskView {
+  uuid: string;
+  catalog_uuid: string;
+  catalog_title: string;
+  control_id: string;
+  label: string;
+  title: string;
+}
+
+// standard_browser/view.rs
+export interface QuoteView {
+  document_id: number;
+  page: number;
+  text: string;
+  found: boolean;
+}
+
+/** A requirement of a catalog of the project. */
+export interface RequirementView {
+  catalog_uuid: string;
+  id: string;
+  label: string;
+  title: string;
+  parts: PartRowView[];
+  quotes: QuoteView[];
+  in_project: boolean;
+  /** For a requirement of the laboratory, its fields to be changed. */
+  own: OwnRequirement | null;
+}
+
+// task_scheme/view.rs
+export type BlockKind = "requirement" | "input" | "output";
+export type OutputFormat = "text" | "latex";
+export type OutputCondition = "always" | "not_met" | "met";
+
+/** A block of the scheme of a task. */
+export interface BlockView {
+  uuid: string;
+  kind: BlockKind;
+  x: number;
+  y: number;
+  name: string;
+  evidence: string;
+  instructions: string;
+  target: string;
+  format: OutputFormat;
+  condition: OutputCondition;
+}
+
+/** The fields of a block, as the page sends them. */
+export interface BlockForm {
+  name: string;
+  evidence: string;
+  instructions: string;
+  target: string;
+  format: OutputFormat;
+  condition: OutputCondition;
+}
+
+/** The scheme of a task. */
+export interface SchemeView {
+  task: TaskView;
+  requirement: RequirementView;
+  blocks: BlockView[];
+  connections: { from: string; to: string }[];
+}
+
+// own_requirement/view.rs
+/** A requirement of the laboratory's own; its identifier is the planner's. */
+export interface OwnRequirement {
+  identifier: string;
+  title: string;
+  statement: string;
+}
+
+/** A requirement found by a search. */
+export interface HitView {
+  catalog_uuid: string;
+  catalog_title: string;
+  id: string;
+  label: string;
+  title: string;
+}
 
 // oscal_documents/view.rs
 export type OscalModel =
@@ -28,58 +152,26 @@ export interface OscalDocumentView {
   last_modified: string;
 }
 
-// standard_documents/view.rs
-export interface DocumentView {
-  id: number;
-  title: string;
-  part: string;
-  version: string;
-  file_name: string;
-  sha256: string;
-  page_count: number;
-}
-
-export interface DocumentFields {
-  title: string;
-  part: string;
-  version: string;
-}
-
-/** An event of loading documents. */
-export type LoadEvent =
-  | { event: "file"; name: string; index: number; count: number }
-  | { event: "pages"; done: number; total: number }
-  | { event: "loaded"; document: DocumentView }
-  | { event: "failed"; name: string; message: string }
-  | { event: "end"; stopped: boolean };
-
-// new_catalog/view.rs
-/** A document a catalog can come from. */
-export interface SourceView {
-  id: number;
-  title: string;
-  part: string;
-}
-
-// document_search/view.rs
-export interface HitView {
-  document_id: number;
-  /** The title of the document and its part. */
-  document: string;
-  page: number;
-  snippet: string;
-}
-
 // ── When the view opens ──────────────────────────────────────────────
+
+/** Called by ProjectList.svelte, when the view opens and after a change. */
+export function projectListGet(): Promise<ProjectSummaryView[]> {
+  return invoke("project_list_get");
+}
+
+/** Called by ProjectForm.svelte, when a project opens. */
+export function projectFormGet(uuid: string): Promise<ProjectView> {
+  return invoke("project_form_get", { uuid });
+}
+
+/** Called by TaskList.svelte, when a project opens and after a change. */
+export function taskListGet(project: string): Promise<TaskView[]> {
+  return invoke("task_list_get", { project });
+}
 
 /** Called by OscalDocuments.svelte, when the view opens and after a change. */
 export function oscalDocumentsGet(): Promise<OscalDocumentView[]> {
   return invoke("oscal_documents_get");
-}
-
-/** Called by StandardDocuments.svelte, when its tab opens and after a change. */
-export function standardDocumentsGet(): Promise<DocumentView[]> {
-  return invoke("standard_documents_get");
 }
 
 // ── The actions of the elements ──────────────────────────────────────
@@ -102,53 +194,97 @@ export function oscalDocumentsDelete(uuid: string): Promise<void> {
   return invoke("oscal_documents_delete", { uuid });
 }
 
-/** Called by NewCatalog.svelte, when its dialog opens. */
-export function newCatalogSources(): Promise<SourceView[]> {
-  return invoke("new_catalog_sources");
+/** Called by NewProject.svelte, when its dialog opens. */
+export function newProjectCatalogs(): Promise<CatalogChoiceView[]> {
+  return invoke("new_project_catalogs");
 }
 
-/** Called by NewCatalog.svelte, "Make". */
-export function newCatalogCreate(
-  title: string,
-  version: string,
-  sources: number[],
-): Promise<OscalDocumentView> {
-  return invoke("new_catalog_create", { title, version, sources });
+/** Called by NewProject.svelte, "Make". */
+export function newProjectCreate(project: ProjectForm): Promise<ProjectSummaryView> {
+  return invoke("new_project_create", { project });
 }
 
-/** Opens the dialog of the system for PDFs and loads them; the promise ends with the loading. Called by StandardDocuments.svelte, "Load PDFs". */
-export function standardDocumentsLoad(
-  onEvent: (event: LoadEvent) => void,
-): Promise<void> {
-  const channel = new Channel<LoadEvent>();
-
-  channel.onmessage = onEvent;
-
-  return invoke("standard_documents_load", { onEvent: channel });
+/** Called by ProjectList.svelte, "Delete". */
+export function projectListDelete(uuid: string): Promise<void> {
+  return invoke("project_list_delete", { uuid });
 }
 
-/** Stops the loading. Called by StandardDocuments.svelte, "Stop". */
-export function standardDocumentsStop(): Promise<void> {
-  return invoke("standard_documents_stop");
+/** Called by ProjectForm.svelte, "Save". */
+export function projectFormSave(uuid: string, project: ProjectForm): Promise<ProjectView> {
+  return invoke("project_form_save", { uuid, project });
 }
 
-/** Called by StandardDocuments.svelte, "Save". */
-export function standardDocumentsUpdate(
-  id: number,
-  document: DocumentFields,
-): Promise<DocumentView> {
-  return invoke("standard_documents_update", { id, document });
+/** Called by StandardBrowser.svelte, "Add as a task". */
+export function taskListAdd(project: string, catalog: string, control: string): Promise<TaskView[]> {
+  return invoke("task_list_add", { project, catalog, control });
 }
 
-/** Called by StandardDocuments.svelte, "Delete". */
-export function standardDocumentsDelete(id: number): Promise<void> {
-  return invoke("standard_documents_delete", { id });
+/** Called by TaskList.svelte, "✕". */
+export function taskListRemove(task: string): Promise<TaskView[]> {
+  return invoke("task_list_remove", { task });
 }
 
-/** Called by DocumentSearch.svelte, "Search". */
-export function documentSearchRun(
-  text: string,
-  document: number | null,
-): Promise<HitView[]> {
-  return invoke("document_search_run", { text, document });
+/** Called by TaskList.svelte, "↑" and "↓". */
+export function taskListMove(task: string, up: boolean): Promise<TaskView[]> {
+  return invoke("task_list_move", { task, up });
+}
+
+/** Called by StandardBrowser.svelte, a requirement chosen. */
+export function standardBrowserGet(project: string, catalog: string, id: string): Promise<RequirementView> {
+  return invoke("standard_browser_get", { project, catalog, id });
+}
+
+/** Called by StandardBrowser.svelte, "Search". */
+export function standardBrowserSearch(project: string, text: string): Promise<HitView[]> {
+  return invoke("standard_browser_search", { project, text });
+}
+
+/** Called by OwnRequirement.svelte, "Add". */
+export function ownRequirementAdd(project: string, requirement: OwnRequirement): Promise<TaskView[]> {
+  return invoke("own_requirement_add", { project, requirement });
+}
+
+/** Called by OwnRequirement.svelte, "Save". */
+export function ownRequirementSave(id: string, requirement: OwnRequirement): Promise<void> {
+  return invoke("own_requirement_save", { id, requirement });
+}
+
+/** Called by StandardBrowser.svelte, "Delete" of a requirement of the laboratory. */
+export function ownRequirementDelete(id: string): Promise<void> {
+  return invoke("own_requirement_delete", { id });
+}
+
+/** Called by TaskScheme.svelte, when a task opens. */
+export function taskSchemeGet(task: string): Promise<SchemeView> {
+  return invoke("task_scheme_get", { task });
+}
+
+/** Called by TaskScheme.svelte, "+ Input" and "+ Output". */
+export function taskSchemeAddBlock(task: string, kind: "input" | "output", x: number, y: number): Promise<SchemeView> {
+  return invoke("task_scheme_add_block", { task, kind, x, y });
+}
+
+/** Called by BlockForm.svelte, "Save". */
+export function taskSchemeSaveBlock(block: string, fields: BlockForm): Promise<SchemeView> {
+  return invoke("task_scheme_save_block", { block, fields });
+}
+
+/** Called by TaskScheme.svelte, the end of a drag. */
+export function taskSchemeMoveBlock(block: string, x: number, y: number): Promise<void> {
+  return invoke("task_scheme_move_block", { block, x, y });
+}
+
+/** Called by BlockForm.svelte, "Remove". */
+export function taskSchemeRemoveBlock(block: string): Promise<SchemeView> {
+  return invoke("task_scheme_remove_block", { block });
+}
+
+/** Called by TaskScheme.svelte, a connection drawn. */
+export function taskSchemeConnect(from: string, to: string): Promise<SchemeView> {
+  return invoke("task_scheme_connect", { from, to });
+}
+
+/** Called by TaskScheme.svelte, a connection removed. */
+export function taskSchemeDisconnect(from: string, to: string): Promise<SchemeView> {
+  return invoke("task_scheme_disconnect", { from, to });
 }

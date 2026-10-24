@@ -32,7 +32,7 @@ pub fn normalize(text: &str) -> String {
 /// The text in the one form of the top of this file, and for every
 /// byte of it the byte of `text` it comes from: so that a place found
 /// in the normal form can be shown in the text as it was (the search,
-/// `views/evaluation_plan/document_search/search.rs`).
+/// `views/converter/document_search/search.rs`).
 pub fn normalize_with_places(text: &str) -> (String, Vec<usize>) {
     let mut out = String::with_capacity(text.len());
     let mut places = Vec::with_capacity(text.len());

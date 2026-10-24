@@ -1,61 +1,118 @@
-//! The entry of the view Evaluation plan: the documents of the standards
-//! in NIST OSCAL and the documents of standards (PDF) they quote (page:
-//! `ui/src/views/evaluation_plan/`, its commands in
-//! `ui/src/lib/api/evaluation_plan.ts`). Which tab is open, which catalog
-//! is open and what the viewer shows are presentation, kept by the page; a
-//! catalog opens in its editor (`catalog_editor/catalog_editor.rs`), the
-//! viewer of a standard is a component (`components/pdf_viewer/`). The
-//! files are chosen in the dialogs of the system, opened in Rust: the page
-//! never sees a path. The flow of data: `docs/architecture.md`, section 12.
+//! The entry of the view Evaluation plan: it works only on the documents of
+//! OSCAL (page: `ui/src/views/evaluation_plan/`, its commands in
+//! `ui/src/lib/api/evaluation_plan.ts`): the master projects (step 51 of
+//! docs/todo.md), each a list of tasks, every task a whole requirement of one
+//! of its catalogs, chosen in a browser of the standards; and the documents
+//! of OSCAL (the list, the import, the export, the deletion). The catalogs
+//! are made from the PDFs of a standard in the view Converter
+//! (`views/converter/`). The files are chosen in the dialogs of the system,
+//! opened in Rust: the page never sees a path. The flow of data:
+//! `docs/architecture.md`, section 12.
 
-use tauri::ipc::Channel;
 use tauri::{AppHandle, Runtime, State};
 
 use crate::app::error::AppError;
 use crate::app::state::AppState;
+use crate::db::conversion as db_conversion;
+use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
-use crate::db::standards as db_standards;
+use crate::db::oscal::ids::new_uuid;
+use crate::db::user::database::UserDb;
 
-use super::document_search::search::{self, MAX_SEARCH};
-use super::document_search::view::{self as hit_view, HitView};
-use super::new_catalog::made;
-use super::new_catalog::view::{self as source_view, SourceView};
 use super::oscal_documents::dialog::{choose_file, choose_place};
 use super::oscal_documents::file::{self, read_file, safe_name};
+use crate::model::evaluation_project::{self, EvaluationTask};
+use crate::model::oscal::catalog::Catalog;
+use crate::model::own_requirement;
+use crate::model::task_scheme::{self, Block, BlockFields, BlockKind};
+
+use super::new_project::catalogs;
+use super::new_project::view::CatalogChoiceView;
 use super::oscal_documents::view::{self as oscal_view, OscalDocumentView};
-use super::standard_documents::dialog::choose_files;
-use super::standard_documents::load::{self, MAX_FILES};
-use super::standard_documents::stored::{self, DocumentError};
-use super::standard_documents::view::{self as document_view, DocumentForm, DocumentView, LoadEvent};
+use super::own_requirement::catalog as own_catalog;
+use super::own_requirement::view::OwnRequirementForm;
+use super::project_form::view::{ProjectForm, ProjectView};
+use super::project_list::view::{self as project_view, ProjectSummaryView};
+use super::standard_browser::requirement;
+use super::standard_browser::search;
+use super::standard_browser::view::{HitView, RequirementView};
+use super::task_list::view::{self as task_view, TaskView};
+use super::task_scheme::scheme;
+use super::task_scheme::view::{BlockForm, SchemeView};
 
 // ── When the view opens ───────────────────────────────────────────────
 
 /// The documents of OSCAL of the evaluator, by model and title.
 ///
-/// Called by the page: `OscalDocuments.svelte`, when the view opens (the tab
-/// OSCAL) and after a change (`evaluation_plan.oscalDocumentsGet()`).
-/// Calls: `db_oscal::read::summaries`, `oscal_view::all`.
+/// Called by the page: `OscalDocuments.svelte`, when the view opens and after
+/// a change (`evaluation_plan.oscalDocumentsGet()`).
+/// Only the finished documents: a catalog still in conversion is shown only
+/// in the view Converter (user, 2026-10-24).
+///
+/// Calls: `db_oscal::read::summaries`, `db_conversion::read::finished`,
+/// `oscal_view::all`.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn oscal_documents_get(state: State<'_, AppState>) -> Result<Vec<OscalDocumentView>, AppError> {
     let session = state.session()?;
+    let db = session.db();
+    let summaries = db_oscal::read::summaries(&db)?;
+    let mut unfinished = Vec::new();
 
-    Ok(oscal_view::all(db_oscal::read::summaries(&session.db())?))
+    for summary in &summaries {
+        if !db_conversion::read::finished(&db, &summary.uuid)? {
+            unfinished.push(summary.uuid.clone());
+        }
+    }
+
+    Ok(oscal_view::all(summaries, &unfinished))
 }
 
-/// The documents of the evaluator, by title and part.
+/// The master projects of the evaluator, the newest change first.
 ///
-/// Called by the page: `StandardDocuments.svelte`, when the tab Documents of
-/// standards opens and after a change (`evaluation_plan.standardDocumentsGet()`).
-/// Calls: `db_standards::read::documents`, `document_view::all`.
+/// Called by the page: `ProjectList.svelte`, when the view opens (the tab
+/// Projects) and after a change (`evaluationPlan.projectListGet()`).
+/// Calls: `db_evaluation_project::read::projects`, `project_view::all`.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn standard_documents_get(state: State<'_, AppState>) -> Result<Vec<DocumentView>, AppError> {
+pub fn project_list_get(state: State<'_, AppState>) -> Result<Vec<ProjectSummaryView>, AppError> {
     let session = state.session()?;
 
-    Ok(document_view::all(db_standards::read::documents(&session.db())?))
+    Ok(project_view::all(db_evaluation_project::read::projects(&session.db())?))
+}
+
+/// Project `uuid` in its form: what the planner wrote, its catalogs, and the
+/// finished catalogs it could use.
+///
+/// Called by the page: `ProjectForm.svelte`, when a project opens and after
+/// a change (`evaluationPlan.projectFormGet(uuid)`).
+/// Calls: `db_evaluation_project::read::project`, `catalogs::finished`,
+/// [`project_view_of`].
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn project_form_get(state: State<'_, AppState>, uuid: String) -> Result<ProjectView, AppError> {
+    let session = state.session()?;
+
+    project_view_of(&session.db(), &uuid)
+}
+
+/// The tasks of project `project`, in their order, each with its
+/// requirement read from its catalog.
+///
+/// Called by the page: `TaskList.svelte`, when a project opens and after a
+/// change (`evaluationPlan.taskListGet(project)`).
+/// Calls: `db_evaluation_project::read::tasks`, `task_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_list_get(state: State<'_, AppState>, project: String) -> Result<Vec<TaskView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
 }
 
 // ── The actions of the elements ───────────────────────────────────────
@@ -120,178 +177,584 @@ pub async fn oscal_documents_export<R: Runtime>(
 ///
 /// Called by the page: `OscalDocuments.svelte`, "Delete"
 /// (`evaluation_plan.oscalDocumentsDelete(uuid)`).
-/// Calls: `file::delete` (the document and its evaluation support).
+/// Refused while a master project uses the catalog.
+/// Calls: `db_evaluation_project::read::catalog_in_use`, `file::delete` (the
+/// document, its evaluation support and its conversion).
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn oscal_documents_delete(state: State<'_, AppState>, uuid: String) -> Result<(), AppError> {
     let session = state.session()?;
+    let db = session.db();
 
-    ensure!(file::delete(&session.db(), &uuid)?, AppError::Invalid("the OSCAL document does not exist".to_owned()));
+    ensure!(
+        !db_evaluation_project::read::catalog_in_use(&db, &uuid)?,
+        AppError::Invalid("a master project uses this catalog: remove it from the project first".to_owned())
+    );
+    ensure!(file::delete(&db, &uuid)?, AppError::Invalid("the OSCAL document does not exist".to_owned()));
 
     Ok(())
 }
 
-/// The documents of a standard a catalog can come from, by title and
-/// part.
+/// The finished catalogs a new project can use.
 ///
-/// Called by the page: `NewCatalog.svelte`, when its dialog opens
-/// (`evaluation_plan.newCatalogSources()`).
-/// Calls: `db_standards::read::documents`, `source_view::all`.
+/// Called by the page: `NewProject.svelte`, when its dialog opens
+/// (`evaluationPlan.newProjectCatalogs()`).
+/// Calls: `catalogs::finished`.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn new_catalog_sources(state: State<'_, AppState>) -> Result<Vec<SourceView>, AppError> {
+pub fn new_project_catalogs(state: State<'_, AppState>) -> Result<Vec<CatalogChoiceView>, AppError> {
     let session = state.session()?;
 
-    Ok(source_view::all(db_standards::read::documents(&session.db())?))
+    catalogs::finished(&session.db())
 }
 
-/// Makes a new, empty catalog named `title`, of `version`, from the
-/// documents of a standard `sources`.
+/// Makes a new master project of the fields and catalogs of `project`.
 ///
-/// Called by the page: `NewCatalog.svelte`, "Make"
-/// (`evaluation_plan.newCatalogCreate(...)`).
-/// Calls: `made::create` (the catalog checked and stored),
-/// `OscalDocumentView::new`.
+/// Called by the page: `NewProject.svelte`, "Make"
+/// (`evaluationPlan.newProjectCreate(project)`).
+/// Calls: `evaluation_project::normalized` and `check_fields`,
+/// `catalogs::check`, `new_uuid`, `db_evaluation_project::create::project`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn new_catalog_create(
-    state: State<'_, AppState>,
-    title: String,
-    version: String,
-    sources: Vec<i64>,
-) -> Result<OscalDocumentView, AppError> {
+pub fn new_project_create(state: State<'_, AppState>, project: ProjectForm) -> Result<ProjectSummaryView, AppError> {
     let session = state.session()?;
+    let db = session.db();
+    let fields = evaluation_project::normalized(&project.fields());
 
-    Ok(OscalDocumentView::new(made::create(&session.db(), &title, &version, &sources)?))
+    evaluation_project::check_fields(&fields).map_err(|error| AppError::Invalid(error.to_string()))?;
+    catalogs::check(&db, &project.catalogs)?;
+
+    let uuid = new_uuid()?;
+    db_evaluation_project::create::project(&db, &uuid, &fields, &project.catalogs)?;
+
+    Ok(ProjectSummaryView { uuid, title: fields.title, catalogs: project.catalogs.len(), tasks: 0 })
 }
 
-/// Asks for PDFs in a dialog of the system and loads them (`load.rs`);
-/// the events arrive through `on_event`. Nothing chosen: nothing happens.
+/// Deletes project `uuid` with its tasks; its catalogs stay.
 ///
-/// Called by the page: `StandardDocuments.svelte`, "Load PDFs"
-/// (`evaluation_plan.standardDocumentsLoad(...)`).
-/// Calls: `choose_files` (the dialog), `AppState::start_work` (the stop
-/// signal), `load::load` (the PDFs read part by part, stored).
+/// Called by the page: `ProjectList.svelte`, "Delete"
+/// (`evaluationPlan.projectListDelete(uuid)`).
+/// Calls: `db_evaluation_project::delete::project`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
-#[tauri::command]
-pub async fn standard_documents_load<R: Runtime>(
-    app: AppHandle<R>,
-    state: State<'_, AppState>,
-    on_event: Channel<LoadEvent>,
-) -> Result<(), AppError> {
+#[tauri::command(async)]
+pub fn project_list_delete(state: State<'_, AppState>, uuid: String) -> Result<(), AppError> {
     let session = state.session()?;
-    let paths = choose_files(app).await?;
-
-    ensure!(paths.len() <= MAX_FILES, AppError::Invalid(format!("at most {MAX_FILES} files can be loaded at once")));
-
-    if paths.is_empty() {
-        return Ok(());
-    }
-
-    let stop = state.start_work();
 
     ensure!(
-        load::load(&session, &paths, &stop, &on_event).await,
-        AppError::Failed("the window can no longer be reached".to_owned())
+        db_evaluation_project::delete::project(&session.db(), &uuid)?,
+        AppError::Invalid("the project does not exist".to_owned())
     );
 
     Ok(())
 }
 
-/// Stops the loading, if one runs.
+/// Saves the fields and the catalogs of project `uuid`; a catalog a task
+/// still points to cannot leave the project.
 ///
-/// Called by the page: `StandardDocuments.svelte`, "Stop"
-/// (`evaluation_plan.standardDocumentsStop()`).
-/// Calls: `AppState::stop_work`.
-// Tauri hands a command its state by value.
-#[allow(clippy::needless_pass_by_value)]
-#[tauri::command(async)]
-pub fn standard_documents_stop(state: State<'_, AppState>) {
-    state.stop_work();
-}
-
-/// Changes the title, part and version of document `id`.
-///
-/// Called by the page: `StandardDocuments.svelte`, "Save" of a document
-/// (`evaluation_plan.standardDocumentsUpdate(...)`).
-/// Calls: `stored::update` (the rules of the fields),
-/// `db_standards::read::document`, `DocumentView::new`.
+/// Called by the page: `ProjectForm.svelte`, "Save"
+/// (`evaluationPlan.projectFormSave(uuid, project)`).
+/// Calls: `evaluation_project::normalized` and `check_fields`,
+/// `catalogs::check`, `db_evaluation_project::read`, `update::project`,
+/// [`project_view_of`].
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn standard_documents_update(
+pub fn project_form_save(
     state: State<'_, AppState>,
-    id: i64,
-    document: DocumentForm,
-) -> Result<DocumentView, AppError> {
+    uuid: String,
+    project: ProjectForm,
+) -> Result<ProjectView, AppError> {
     let session = state.session()?;
     let db = session.db();
+    let fields = evaluation_project::normalized(&project.fields());
 
-    stored::update(&db, id, &document.into_fields())?;
+    evaluation_project::check_fields(&fields).map_err(|error| AppError::Invalid(error.to_string()))?;
+    catalogs::check(&db, &project.catalogs)?;
 
-    let Some(document) = db_standards::read::document(&db, id)? else {
-        return Err(DocumentError::NotFound.into());
+    let Some(current) = db_evaluation_project::read::project(&db, &uuid)? else {
+        return Err(AppError::Invalid("the project does not exist".to_owned()));
     };
 
-    Ok(DocumentView::new(document))
+    for catalog in &current.catalogs {
+        ensure!(
+            project.catalogs.contains(catalog) || !db_evaluation_project::read::catalog_has_tasks(&db, &uuid, catalog)?,
+            AppError::Invalid("a catalog with tasks cannot leave the project: remove its tasks first".to_owned())
+        );
+    }
+
+    db_evaluation_project::update::project(&db, &uuid, &fields, &project.catalogs)?;
+
+    project_view_of(&db, &uuid)
 }
 
-/// Deletes document `id`; refused while an OSCAL document quotes it.
+/// Adds control `control` of catalog `catalog` as a task at the end of the
+/// list of project `project`: a whole requirement, once in a project.
 ///
-/// Called by the page: `StandardDocuments.svelte`, "Delete"
-/// (`evaluation_plan.standardDocumentsDelete(id)`).
-/// Calls: `stored::delete` (refused while an OSCAL document quotes it).
+/// Called by the page: `StandardBrowser.svelte`, "Add as a task"
+/// (`evaluationPlan.taskListAdd(project, catalog, control)`).
+/// Calls: [`project_catalog`], `Catalog::locate`, `new_uuid`,
+/// `db_evaluation_project::create::task`, `task_view::all`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn standard_documents_delete(state: State<'_, AppState>, id: i64) -> Result<(), AppError> {
+pub fn task_list_add(
+    state: State<'_, AppState>,
+    project: String,
+    catalog: String,
+    control: String,
+) -> Result<Vec<TaskView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let found = project_catalog(&db, &project, &catalog)?;
+
+    let is_control = match found.locate(&control)? {
+        Some(location) => found.control_at(&location).is_some(),
+        None => false,
+    };
+
+    ensure!(is_control, AppError::Invalid("the catalog has no such requirement".to_owned()));
+
+    for task in db_evaluation_project::read::tasks(&db, &project)? {
+        ensure!(
+            !(task.catalog_uuid == catalog && task.control_id == control),
+            AppError::Invalid("the requirement is a task of the project already".to_owned())
+        );
+    }
+
+    let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog, control_id: control };
+    db_evaluation_project::create::task(&db, &project, &task, &new_uuid()?)?;
+
+    task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
+}
+
+/// Removes task `task` from its project; gives the tasks left.
+///
+/// Called by the page: `TaskList.svelte`, "✕" (`evaluationPlan.taskListRemove(task)`).
+/// Calls: `db_evaluation_project::read::task`, `delete::task`, `task_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_list_remove(state: State<'_, AppState>, task: String) -> Result<Vec<TaskView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let Some((project, _)) = db_evaluation_project::read::task(&db, &task)? else {
+        return Err(AppError::Invalid("the task does not exist".to_owned()));
+    };
+
+    ensure!(db_evaluation_project::delete::task(&db, &task)?, AppError::Invalid("the task does not exist".to_owned()));
+
+    task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
+}
+
+/// Moves task `task` one place up or down in its list; gives the tasks.
+///
+/// Called by the page: `TaskList.svelte`, "↑" and "↓"
+/// (`evaluationPlan.taskListMove(task, up)`).
+/// Calls: `db_evaluation_project::read::task`, `update::move_task`,
+/// `task_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_list_move(state: State<'_, AppState>, task: String, up: bool) -> Result<Vec<TaskView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let Some((project, _)) = db_evaluation_project::read::task(&db, &task)? else {
+        return Err(AppError::Invalid("the task does not exist".to_owned()));
+    };
+
+    db_evaluation_project::update::move_task(&db, &task, up)?;
+
+    task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
+}
+
+/// Requirement `id` of catalog `catalog` of project `project`, as the
+/// browser shows it, with whether it is a task already.
+///
+/// Called by the page: `StandardBrowser.svelte`, a requirement chosen in the
+/// tree or in the hits (`evaluationPlan.standardBrowserGet(project, catalog, id)`).
+/// Calls: [`project_catalog`], `db_evaluation_project::read::tasks`,
+/// `own_catalog::existing`, `requirement::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn standard_browser_get(
+    state: State<'_, AppState>,
+    project: String,
+    catalog: String,
+    id: String,
+) -> Result<RequirementView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let found = project_catalog(&db, &project, &catalog)?;
+    let mut in_project = false;
+
+    for task in db_evaluation_project::read::tasks(&db, &project)? {
+        if task.catalog_uuid == catalog && task.control_id == id {
+            in_project = true;
+        }
+    }
+
+    let own = own_catalog::existing(&db)?.as_deref() == Some(catalog.as_str());
+
+    requirement::read(&db, &catalog, &found, &id, in_project, own)
+}
+
+/// The requirements of the catalogs of project `project` that hold `text`.
+///
+/// Called by the page: `StandardBrowser.svelte`, "Search"
+/// (`evaluationPlan.standardBrowserSearch(project, text)`).
+/// Calls: `db_evaluation_project::read::project`, `db_oscal::read::catalog`,
+/// `search::search`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn standard_browser_search(
+    state: State<'_, AppState>,
+    project: String,
+    text: String,
+) -> Result<Vec<HitView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let Some(found) = db_evaluation_project::read::project(&db, &project)? else {
+        return Err(AppError::Invalid("the project does not exist".to_owned()));
+    };
+
+    let mut catalogs = Vec::with_capacity(found.catalogs.len());
+
+    for uuid in found.catalogs {
+        let catalog = db_oscal::read::catalog(&db, &uuid)?;
+        catalogs.push((uuid, catalog));
+    }
+
+    search::search(&catalogs, &text)
+}
+
+/// Writes `requirement`, a requirement of the laboratory's own, into the
+/// shared catalog of the laboratory (made now if there is none), adds that
+/// catalog to project `project` and the requirement as a task at the end of
+/// its list. Its identifier is the planner's, whatever they chose.
+///
+/// Called by the page: `OwnRequirement.svelte`, "Add"
+/// (`evaluationPlan.ownRequirementAdd(project, requirement)`).
+/// Calls: `own_requirement::normalized` and `check`, `own_catalog::ensure`
+/// and `add`, `db_evaluation_project::update::add_catalog`,
+/// `db_evaluation_project::create::task`, `task_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn own_requirement_add(
+    state: State<'_, AppState>,
+    project: String,
+    requirement: OwnRequirementForm,
+) -> Result<Vec<TaskView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let written = own_requirement::normalized(&requirement.requirement());
+
+    own_requirement::check(&written).map_err(|error| AppError::Invalid(error.to_string()))?;
+    ensure!(
+        db_evaluation_project::read::project(&db, &project)?.is_some(),
+        AppError::Invalid("the project does not exist".to_owned())
+    );
+
+    let catalog = own_catalog::ensure(&db)?;
+    let control = own_catalog::add(&db, &catalog, &written)?;
+
+    db_evaluation_project::update::add_catalog(&db, &project, &catalog)?;
+
+    let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog, control_id: control };
+    db_evaluation_project::create::task(&db, &project, &task, &new_uuid()?)?;
+
+    task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
+}
+
+/// Changes requirement `id` of the laboratory: for every project whose task
+/// points to it. Its id stays, so the tasks keep pointing to it.
+///
+/// Called by the page: `OwnRequirement.svelte`, "Save"
+/// (`evaluationPlan.ownRequirementSave(id, requirement)`).
+/// Calls: `own_requirement::normalized` and `check`, `own_catalog::existing`
+/// and `save`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn own_requirement_save(
+    state: State<'_, AppState>,
+    id: String,
+    requirement: OwnRequirementForm,
+) -> Result<(), AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let written = own_requirement::normalized(&requirement.requirement());
+
+    own_requirement::check(&written).map_err(|error| AppError::Invalid(error.to_string()))?;
+
+    let Some(catalog) = own_catalog::existing(&db)? else {
+        return Err(AppError::Invalid("there is no requirement of the laboratory yet".to_owned()));
+    };
+
+    own_catalog::save(&db, &catalog, &id, &written)
+}
+
+/// Deletes requirement `id` of the laboratory; refused while a task of any
+/// project points to it.
+///
+/// Called by the page: `StandardBrowser.svelte`, "Delete" of a requirement of
+/// the laboratory (`evaluationPlan.ownRequirementDelete(id)`).
+/// Calls: `own_catalog::existing`, `db_evaluation_project::read::control_in_use`,
+/// `own_catalog::remove`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn own_requirement_delete(state: State<'_, AppState>, id: String) -> Result<(), AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let Some(catalog) = own_catalog::existing(&db)? else {
+        return Err(AppError::Invalid("there is no requirement of the laboratory yet".to_owned()));
+    };
+
+    ensure!(
+        !db_evaluation_project::read::control_in_use(&db, &catalog, &id)?,
+        AppError::Invalid("a task points to this requirement: remove the task first".to_owned())
+    );
+
+    own_catalog::remove(&db, &catalog, &id)
+}
+
+/// The scheme of task `task`: its requirement as the standard writes it,
+/// its blocks and connections (step 51.2 of docs/todo.md).
+///
+/// Called by the page: `TaskScheme.svelte`, when a task opens and after a
+/// change (`evaluationPlan.taskSchemeGet(task)`).
+/// Calls: `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_get(state: State<'_, AppState>, task: String) -> Result<SchemeView, AppError> {
     let session = state.session()?;
 
-    stored::delete(&session.db(), id)?;
+    scheme::read(&session.db(), &task)
+}
+
+/// Adds a block of `kind` (`"input"` or `"output"`) at `x`, `y` to the
+/// scheme of task `task`; the planner names and connects it.
+///
+/// Called by the page: `TaskScheme.svelte`, "+ Input" and "+ Output"
+/// (`evaluationPlan.taskSchemeAddBlock(task, kind, x, y)`).
+/// Calls: `task_scheme::check_position` and `check_new_block`,
+/// `db_evaluation_project::create::block`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_add_block(
+    state: State<'_, AppState>,
+    task: String,
+    kind: String,
+    x: i64,
+    y: i64,
+) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let kind = match BlockKind::from_name(&kind) {
+        Some(kind @ (BlockKind::Input | BlockKind::Output)) => kind,
+        _ => return Err(AppError::Invalid("only an input or an output is added".to_owned())),
+    };
+
+    task_scheme::check_position(x, y).map_err(|error| AppError::Invalid(error.to_string()))?;
+    let blocks = db_evaluation_project::read::blocks(&db, &task)?;
+    task_scheme::check_new_block(&blocks, kind).map_err(|error| AppError::Invalid(error.to_string()))?;
+
+    let mut fields = BlockFields::empty();
+    fields.name = if kind == BlockKind::Input { "Input".to_owned() } else { "Output".to_owned() };
+
+    let block = Block { uuid: new_uuid()?, kind, x, y, fields };
+    db_evaluation_project::create::block(&db, &task, &block)?;
+
+    scheme::read(&db, &task)
+}
+
+/// Saves the fields of block `block`.
+///
+/// Called by the page: `BlockForm.svelte`, "Save"
+/// (`evaluationPlan.taskSchemeSaveBlock(block, fields)`).
+/// Calls: `scheme::block`, `task_scheme::normalized` and `check_fields`,
+/// `db_evaluation_project::update::block_fields`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_save_block(
+    state: State<'_, AppState>,
+    block: String,
+    fields: BlockForm,
+) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, found) = scheme::block(&db, &block)?;
+    let fields = task_scheme::normalized(&fields.fields()?);
+
+    task_scheme::check_fields(found.kind, &fields).map_err(|error| AppError::Invalid(error.to_string()))?;
+    db_evaluation_project::update::block_fields(&db, &block, &fields)?;
+
+    scheme::read(&db, &task)
+}
+
+/// Places block `block` at `x`, `y`: where a drag ended (only the end is
+/// sent, never the steps of the drag).
+///
+/// Called by the page: `TaskScheme.svelte`, the end of a drag
+/// (`evaluationPlan.taskSchemeMoveBlock(block, x, y)`).
+/// Calls: `task_scheme::check_position`, `scheme::block`,
+/// `db_evaluation_project::update::block_position`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_move_block(state: State<'_, AppState>, block: String, x: i64, y: i64) -> Result<(), AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    task_scheme::check_position(x, y).map_err(|error| AppError::Invalid(error.to_string()))?;
+    scheme::block(&db, &block)?;
+    db_evaluation_project::update::block_position(&db, &block, x, y)?;
 
     Ok(())
 }
 
-/// Searches the text of the documents (all, or `document`).
+/// Removes block `block` (an input or an output) with its connections; the
+/// requirement stays.
 ///
-/// Called by the page: `DocumentSearch.svelte`, "Search"
-/// (`evaluation_plan.documentSearchRun(...)`).
-/// Calls: `search::search`, `db_standards::read::documents`, `hit_view::all`.
+/// Called by the page: `BlockForm.svelte`, "Remove"
+/// (`evaluationPlan.taskSchemeRemoveBlock(block)`).
+/// Calls: `scheme::block`, `db_evaluation_project::delete::block`,
+/// `scheme::read`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn document_search_run(
-    state: State<'_, AppState>,
-    text: String,
-    document: Option<i64>,
-) -> Result<Vec<HitView>, AppError> {
+pub fn task_scheme_remove_block(state: State<'_, AppState>, block: String) -> Result<SchemeView, AppError> {
     let session = state.session()?;
+    let db = session.db();
+    let (task, found) = scheme::block(&db, &block)?;
 
+    ensure!(found.kind != BlockKind::Requirement, AppError::Invalid("the requirement stays in its task".to_owned()));
     ensure!(
-        text.chars().count() <= MAX_SEARCH,
-        AppError::Invalid(format!("search for at most {MAX_SEARCH} characters"))
+        db_evaluation_project::delete::block(&db, &block)?,
+        AppError::Invalid("the block does not exist".to_owned())
     );
 
-    let db = session.db();
+    scheme::read(&db, &task)
+}
 
-    Ok(hit_view::all(search::search(&db, &text, document)?, &db_standards::read::documents(&db)?))
+/// Connects block `from` to block `to` of one task: an input to the
+/// requirement, or the requirement to an output.
+///
+/// Called by the page: `TaskScheme.svelte`, a connection drawn
+/// (`evaluationPlan.taskSchemeConnect(from, to)`).
+/// Calls: `scheme::block`, `task_scheme::may_connect`,
+/// `db_evaluation_project::create::connection`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_connect(state: State<'_, AppState>, from: String, to: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, start) = scheme::block(&db, &from)?;
+    let (other_task, end) = scheme::block(&db, &to)?;
+
+    ensure!(task == other_task, AppError::Invalid("the blocks belong to two tasks".to_owned()));
+    ensure!(
+        task_scheme::may_connect(start.kind, end.kind),
+        AppError::Invalid("an input connects to the requirement, the requirement to an output".to_owned())
+    );
+
+    db_evaluation_project::create::connection(&db, &task, &from, &to)?;
+
+    scheme::read(&db, &task)
+}
+
+/// Removes the connection of block `from` to block `to`.
+///
+/// Called by the page: `TaskScheme.svelte`, a connection removed
+/// (`evaluationPlan.taskSchemeDisconnect(from, to)`).
+/// Calls: `scheme::block`, `db_evaluation_project::delete::connection`,
+/// `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_disconnect(state: State<'_, AppState>, from: String, to: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, _) = scheme::block(&db, &from)?;
+
+    db_evaluation_project::delete::connection(&db, &from, &to)?;
+
+    scheme::read(&db, &task)
+}
+
+// ── Helpers of the commands above ─────────────────────────────────────
+
+/// Project `uuid` in its form.
+///
+/// Called by: `project_form_get`, `project_form_save`.
+/// Calls: `db_evaluation_project::read::project`, `catalogs::finished`.
+fn project_view_of(db: &UserDb, uuid: &str) -> Result<ProjectView, AppError> {
+    let Some(project) = db_evaluation_project::read::project(db, uuid)? else {
+        return Err(AppError::Invalid("the project does not exist".to_owned()));
+    };
+
+    let available = catalogs::finished(db)?;
+    let mut chosen = Vec::with_capacity(project.catalogs.len());
+
+    for catalog in &project.catalogs {
+        for choice in &available {
+            if &choice.uuid == catalog {
+                chosen.push(choice.clone());
+            }
+        }
+    }
+
+    Ok(ProjectView {
+        uuid: project.uuid,
+        title: project.fields.title,
+        description: project.fields.description,
+        catalogs: chosen,
+        available,
+    })
+}
+
+/// Catalog `catalog`, read, when project `project` uses it.
+///
+/// Called by: `task_list_add`, `standard_browser_get`.
+/// Calls: `db_evaluation_project::read::project`, `db_oscal::read::catalog`.
+fn project_catalog(db: &UserDb, project: &str, catalog: &str) -> Result<Catalog, AppError> {
+    let Some(found) = db_evaluation_project::read::project(db, project)? else {
+        return Err(AppError::Invalid("the project does not exist".to_owned()));
+    };
+
+    ensure!(
+        found.catalogs.contains(&catalog.to_owned()),
+        AppError::Invalid("the project does not use this catalog".to_owned())
+    );
+
+    Ok(db_oscal::read::catalog(db, catalog)?)
 }
 
 #[cfg(test)]
 mod tests {
     //! Tests of the commands of the view Evaluation plan, called as the page
     //! calls them: by name, through the IPC of Tauri. The import and the
-    //! export are tested in `oscal_documents/file.rs`, the loading of PDFs
-    //! in `standard_documents/load.rs`: the dialogs of the system cannot
-    //! run in the mock window.
+    //! export are tested in `oscal_documents/file.rs`: the dialogs of the
+    //! system cannot run in the mock window.
 
     use serde_json::json;
 
-    use crate::test_support::standards::load;
     use crate::views::evaluation_plan::oscal_documents::file;
     use crate::views::test_support::{logged_in_window, logged_out_window};
 
@@ -311,83 +774,249 @@ mod tests {
     }
 
     #[test]
-    fn a_document_is_listed_renamed_and_deleted() {
+    fn the_documents_need_a_login() {
+        assert_eq!(logged_out_window().call("oscal_documents_get", json!({})).unwrap_err()["kind"], "not_logged_in");
+    }
+
+    /// A window with the example catalog of NIST stored (imported, so
+    /// finished) and a master project using it; gives the window, the
+    /// catalog and the project.
+    fn with_project() -> (crate::views::test_support::TestWindow, String, String) {
         let window = logged_in_window();
-        let id = load(&window.session().db(), b"%PDF a");
+        let catalog = {
+            let session = window.session();
+            let document = crate::test_support::db::basic_catalog();
+            crate::db::oscal::create::document(&session.db(), &document).unwrap();
+            document.uuid().to_owned()
+        };
+        let form = json!({ "title": " CC:2022 R1 ", "description": "All of it", "catalogs": [catalog] });
+        let project = window.call("new_project_create", json!({ "project": form })).unwrap()["uuid"].clone();
 
-        assert_eq!(window.call("standard_documents_get", json!({})).unwrap()[0]["page_count"], 3);
-
-        let form = json!({ "title": " Common Criteria ", "part": "Part 3", "version": "CC:2022" });
-        let changed = window.call("standard_documents_update", json!({ "id": id, "document": form })).unwrap();
-        assert_eq!(changed["title"], "Common Criteria");
-        assert_eq!(changed["part"], "Part 3");
-
-        window.call("standard_documents_delete", json!({ "id": id })).unwrap();
-        assert_eq!(window.call("standard_documents_get", json!({})).unwrap(), json!([]));
-        assert_eq!(window.call("standard_documents_delete", json!({ "id": id })).unwrap_err()["kind"], "invalid");
+        (window, catalog, project.as_str().unwrap().to_owned())
     }
 
     #[test]
-    fn a_title_is_needed() {
-        let window = logged_in_window();
-        let id = load(&window.session().db(), b"%PDF b");
-        let form = json!({ "title": "  ", "part": "", "version": "" });
+    fn a_project_is_made_from_finished_catalogs_and_listed() {
+        let (window, catalog, project) = with_project();
 
-        let error = window.call("standard_documents_update", json!({ "id": id, "document": form })).unwrap_err();
+        let list = window.call("project_list_get", json!({})).unwrap();
+        assert_eq!(list[0]["title"], "CC:2022 R1");
+        assert_eq!((list[0]["catalogs"].clone(), list[0]["tasks"].clone()), (json!(1), json!(0)));
 
+        let form = window.call("project_form_get", json!({ "uuid": project })).unwrap();
+        assert_eq!(form["catalogs"][0]["uuid"], catalog);
+        assert_eq!(window.call("new_project_catalogs", json!({})).unwrap()[0]["uuid"], catalog);
+
+        // A catalog in conversion, or none at all, is refused.
+        let unfinished = {
+            let session = window.session();
+            let source = crate::test_support::standards::load(&session.db(), b"%PDF plan");
+            crate::views::converter::new_catalog::made::create(&session.db(), "Draft", "", &[source]).unwrap().uuid
+        };
+        for catalogs in [json!([unfinished]), json!([])] {
+            let form = json!({ "title": "X", "description": "", "catalogs": catalogs });
+            assert_eq!(window.call("new_project_create", json!({ "project": form })).unwrap_err()["kind"], "invalid");
+        }
+    }
+
+    #[test]
+    fn requirements_become_tasks_once_and_are_ordered_by_hand() {
+        let (window, catalog, project) = with_project();
+        let add = |control: &str| {
+            window.call("task_list_add", json!({ "project": project, "catalog": catalog, "control": control }))
+        };
+
+        add("s1.1.1").unwrap();
+        let tasks = add("s2.1.1").unwrap();
+
+        assert_eq!(tasks[0]["label"], "1.1.1");
+        assert_eq!(tasks[1]["title"], "Access control policy");
+        assert_eq!(add("s1.1.1").unwrap_err()["kind"], "invalid");
+        assert_eq!(add("s1.1").unwrap_err()["kind"], "invalid", "a group is no requirement");
+
+        let moved = window.call("task_list_move", json!({ "task": tasks[1]["uuid"], "up": true })).unwrap();
+        assert_eq!(moved[0]["control_id"], "s2.1.1");
+
+        let left = window.call("task_list_remove", json!({ "task": moved[0]["uuid"] })).unwrap();
+        assert_eq!(left.as_array().unwrap().len(), 1);
+        assert_eq!(window.call("task_list_get", json!({ "project": project })).unwrap(), left);
+    }
+
+    #[test]
+    fn the_browser_shows_a_requirement_and_finds_others() {
+        let (window, catalog, project) = with_project();
+        window.call("task_list_add", json!({ "project": project, "catalog": catalog, "control": "s1.1.1" })).unwrap();
+
+        let requirement = window
+            .call("standard_browser_get", json!({ "project": project, "catalog": catalog, "id": "s1.1.1" }))
+            .unwrap();
+        assert_eq!(requirement["title"], "Information security roles and responsibilities");
+        assert_eq!(requirement["in_project"], true);
+        assert!(!requirement["parts"].as_array().unwrap().is_empty());
+
+        let hits =
+            window.call("standard_browser_search", json!({ "project": project, "text": "ACCESS CONTROL" })).unwrap();
+        assert!(hits.as_array().unwrap().iter().any(|hit| hit["id"] == "s2.1.1"));
+        let empty = window.call("standard_browser_search", json!({ "project": project, "text": "  " })).unwrap_err();
+        assert_eq!(empty["kind"], "invalid");
+    }
+
+    #[test]
+    fn a_catalog_in_use_stays_and_a_catalog_with_tasks_stays_in_the_project() {
+        let (window, catalog, project) = with_project();
+        window.call("task_list_add", json!({ "project": project, "catalog": catalog, "control": "s1.1.1" })).unwrap();
+
+        let error = window.call("oscal_documents_delete", json!({ "uuid": catalog })).unwrap_err();
+        assert_eq!(error["kind"], "invalid");
+
+        let other = {
+            let session = window.session();
+            let mut document = crate::test_support::db::basic_catalog();
+            let text = serde_json::to_string(&document)
+                .unwrap()
+                .replace(document.uuid(), "11111111-2222-4333-8444-555555555555");
+            document = crate::model::oscal::OscalDocument::from_json(&text).unwrap();
+            crate::db::oscal::create::document(&session.db(), &document).unwrap();
+            document.uuid().to_owned()
+        };
+        let form = json!({ "title": "CC", "description": "", "catalogs": [other] });
+        let refused = window.call("project_form_save", json!({ "uuid": project, "project": form })).unwrap_err();
+        assert_eq!(refused["kind"], "invalid");
+
+        let form = json!({ "title": "CC 2", "description": "", "catalogs": [catalog, other] });
+        let saved = window.call("project_form_save", json!({ "uuid": project, "project": form })).unwrap();
+        assert_eq!(saved["catalogs"].as_array().unwrap().len(), 2);
+
+        window.call("project_list_delete", json!({ "uuid": project })).unwrap();
+        window.call("oscal_documents_delete", json!({ "uuid": catalog })).unwrap();
+    }
+
+    #[test]
+    fn a_requirement_of_the_laboratory_becomes_a_task_and_serves_other_projects() {
+        let (window, catalog, project) = with_project();
+        let written =
+            json!({ "identifier": " Net config 1 ", "title": "Network configuration", "statement": "Review it." });
+
+        let tasks = window.call("own_requirement_add", json!({ "project": project, "requirement": written })).unwrap();
+
+        // The identifier as the planner wrote it; the catalog of the laboratory joined the project.
+        assert_eq!(tasks[0]["label"], "Net config 1");
+        let lab = tasks[0]["catalog_uuid"].as_str().unwrap().to_owned();
+        let control = tasks[0]["control_id"].as_str().unwrap().to_owned();
+        let form = window.call("project_form_get", json!({ "uuid": project })).unwrap();
+        assert_eq!(form["catalogs"].as_array().unwrap().len(), 2);
+
+        // The same identifier twice is refused.
+        let again =
+            window.call("own_requirement_add", json!({ "project": project, "requirement": written })).unwrap_err();
+        assert_eq!(again["kind"], "invalid");
+
+        // Another project takes it from the shared catalog, as any requirement.
+        let other_form = json!({ "title": "Other", "description": "", "catalogs": [catalog, lab] });
+        let other = window.call("new_project_create", json!({ "project": other_form })).unwrap()["uuid"].clone();
+        window.call("task_list_add", json!({ "project": other, "catalog": lab, "control": control })).unwrap();
+
+        // Shown with its fields, and changed for all.
+        let shown =
+            window.call("standard_browser_get", json!({ "project": other, "catalog": lab, "id": control })).unwrap();
+        assert_eq!(shown["own"]["statement"], "Review it.");
+        let changed =
+            json!({ "identifier": "Net config 1", "title": "Network configuration review", "statement": "All of it." });
+        window.call("own_requirement_save", json!({ "id": control, "requirement": changed })).unwrap();
+        assert_eq!(
+            window.call("task_list_get", json!({ "project": project })).unwrap()[0]["title"],
+            "Network configuration review"
+        );
+        let standard =
+            window.call("standard_browser_get", json!({ "project": project, "catalog": catalog, "id": "s1.1.1" }));
+        assert_eq!(standard.unwrap()["own"], json!(null));
+    }
+
+    #[test]
+    fn a_requirement_of_the_laboratory_is_deleted_only_without_tasks() {
+        let (window, _, project) = with_project();
+        let written = json!({ "identifier": "R-7", "title": "A requirement", "statement": "Do it." });
+        let tasks = window.call("own_requirement_add", json!({ "project": project, "requirement": written })).unwrap();
+        let control = tasks[0]["control_id"].clone();
+
+        let refused = window.call("own_requirement_delete", json!({ "id": control })).unwrap_err();
+        assert_eq!(refused["kind"], "invalid");
+
+        window.call("task_list_remove", json!({ "task": tasks[0]["uuid"] })).unwrap();
+        window.call("own_requirement_delete", json!({ "id": control })).unwrap();
+
+        let empty = json!({ "identifier": "  ", "title": "t", "statement": "s" });
+        let error =
+            window.call("own_requirement_add", json!({ "project": project, "requirement": empty })).unwrap_err();
         assert_eq!(error["kind"], "invalid");
     }
 
-    #[test]
-    fn the_documents_need_a_login() {
-        assert_eq!(logged_out_window().call("standard_documents_get", json!({})).unwrap_err()["kind"], "not_logged_in");
-    }
-
-    #[test]
-    fn a_catalog_is_made_from_documents() {
-        let window = logged_in_window();
-        let source = load(&window.session().db(), b"%PDF catalog");
-
-        assert_eq!(window.call("new_catalog_sources", json!({})).unwrap()[0]["id"], source);
-
-        let made = window
-            .call("new_catalog_create", json!({ "title": "CC Part 3", "version": "CC:2022", "sources": [source] }))
+    /// A project with one task (`s1.1.1`); gives the window and the task.
+    fn with_task() -> (crate::views::test_support::TestWindow, String) {
+        let (window, catalog, project) = with_project();
+        let tasks = window
+            .call("task_list_add", json!({ "project": project, "catalog": catalog, "control": "s1.1.1" }))
             .unwrap();
 
-        assert_eq!(made["model"], "catalog");
-        assert_eq!(made["title"], "CC Part 3");
-        assert_eq!(window.call("oscal_documents_get", json!({})).unwrap()[0]["uuid"], made["uuid"]);
+        (window, tasks[0]["uuid"].as_str().unwrap().to_owned())
+    }
+
+    fn fields(name: &str, format: &str, condition: &str) -> serde_json::Value {
+        json!({ "name": name, "evidence": "The Security Target, section 6.", "instructions": "Check it is complete.",
+                "target": "pETR, section 4", "format": format, "condition": condition })
     }
 
     #[test]
-    fn a_source_that_does_not_exist_is_refused() {
-        let window = logged_in_window();
+    fn a_task_opens_with_only_its_requirement_from_the_standard() {
+        let (window, task) = with_task();
 
-        let error =
-            window.call("new_catalog_create", json!({ "title": "X", "version": "", "sources": [99] })).unwrap_err();
+        let scheme = window.call("task_scheme_get", json!({ "task": task })).unwrap();
 
-        assert_eq!(error["kind"], "invalid");
+        assert_eq!(scheme["blocks"].as_array().unwrap().len(), 1);
+        assert_eq!(scheme["blocks"][0]["kind"], "requirement");
+        assert_eq!(scheme["requirement"]["title"], "Information security roles and responsibilities");
+        assert_eq!(scheme["connections"], json!([]));
     }
 
     #[test]
-    fn the_hits_name_their_document_and_page() {
-        let window = logged_in_window();
-        let id = load(&window.session().db(), b"%PDF c");
+    fn inputs_and_outputs_are_added_named_connected_and_removed() {
+        let (window, task) = with_task();
+        let add = |kind: &str| {
+            window.call("task_scheme_add_block", json!({ "task": task, "kind": kind, "x": -300, "y": 20 }))
+        };
 
-        let hits = window.call("document_search_run", json!({ "text": "adv_fsp.4", "document": null })).unwrap();
+        let requirement = window.call("task_scheme_get", json!({ "task": task })).unwrap()["blocks"][0]["uuid"].clone();
+        let input = add("input").unwrap()["blocks"][1]["uuid"].clone();
+        let output = add("output").unwrap()["blocks"][2]["uuid"].clone();
+        assert_eq!(add("requirement").unwrap_err()["kind"], "invalid");
 
-        assert_eq!(hits[0]["document_id"], id);
-        assert_eq!(hits[0]["document"], "Common Criteria — Part 3");
-        assert_eq!(hits[0]["page"], 2);
-    }
+        let saved = window
+            .call(
+                "task_scheme_save_block",
+                json!({ "block": output, "fields": fields("Observation Report", "latex", "not_met") }),
+            )
+            .unwrap();
+        assert_eq!(saved["blocks"][2]["condition"], "not_met");
+        assert_eq!(saved["blocks"][2]["format"], "latex");
+        let nameless =
+            window.call("task_scheme_save_block", json!({ "block": input, "fields": fields(" ", "text", "always") }));
+        assert_eq!(nameless.unwrap_err()["kind"], "invalid");
 
-    #[test]
-    fn a_too_long_text_is_refused() {
-        let window = logged_in_window();
-        let text = "x".repeat(1001);
+        window.call("task_scheme_connect", json!({ "from": input, "to": requirement })).unwrap();
+        let connected = window.call("task_scheme_connect", json!({ "from": requirement, "to": output })).unwrap();
+        assert_eq!(connected["connections"].as_array().unwrap().len(), 2);
+        let wrong = window.call("task_scheme_connect", json!({ "from": input, "to": output }));
+        assert_eq!(wrong.unwrap_err()["kind"], "invalid");
 
-        let error = window.call("document_search_run", json!({ "text": text, "document": null })).unwrap_err();
+        window.call("task_scheme_move_block", json!({ "block": input, "x": -400, "y": 60 })).unwrap();
+        let moved = window.call("task_scheme_disconnect", json!({ "from": input, "to": requirement })).unwrap();
+        assert_eq!((moved["blocks"][1]["x"].clone(), moved["connections"].as_array().unwrap().len()), (json!(-400), 1));
 
-        assert_eq!(error["kind"], "invalid");
+        let left = window.call("task_scheme_remove_block", json!({ "block": output })).unwrap();
+        assert_eq!((left["blocks"].as_array().unwrap().len(), left["connections"].clone()), (2, json!([])));
+        assert_eq!(
+            window.call("task_scheme_remove_block", json!({ "block": requirement })).unwrap_err()["kind"],
+            "invalid"
+        );
     }
 }

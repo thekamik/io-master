@@ -14,32 +14,20 @@ use super::program::view::ProgramView;
 
 // ── When the view opens ───────────────────────────────────────────────
 
-/// The state of the program: whether it is installed, its role, who is
+/// The state of the program: whether it is installed, who is
 /// logged in, the pages, the warnings, the version and the folder.
 ///
 /// Called by the page: `App.svelte`, when the window opens and after every
 /// change of the state (the setup, the login, the logout) (`shell.programGet()`).
-/// Calls: `ProgramView::new` (the pages and the warnings of the role).
+/// Calls: `ProgramView::new` (the pages and the warnings).
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn program_get(state: State<'_, AppState>) -> ProgramView {
-    ProgramView::new(state.role(), state.current_user(), &state.data_dir)
+    ProgramView::new(state.running().is_some(), state.current_user(), &state.data_dir)
 }
 
 // ── The actions of the elements ───────────────────────────────────────
-
-/// Logs out: ends the session of the evaluator.
-///
-/// Called by the page: `UserMenu.svelte`, "Log out" (`shell.userMenuLogOut()`).
-/// Calls: `AppState::log_out` (the session ends, the key of the database is
-/// wiped).
-// Tauri hands a command its state by value.
-#[allow(clippy::needless_pass_by_value)]
-#[tauri::command(async)]
-pub fn user_menu_log_out(state: State<'_, AppState>) {
-    state.log_out();
-}
 
 #[cfg(test)]
 mod tests {
@@ -55,7 +43,6 @@ mod tests {
         let program = first_start_window().call("program_get", json!({})).unwrap();
 
         assert_eq!(program["installed"], false);
-        assert_eq!(program["role"], json!(null));
         assert_eq!(program["pages"], json!([]));
         assert_eq!(program["warnings"], json!([]));
     }
@@ -65,21 +52,12 @@ mod tests {
         let program = logged_in_window().call("program_get", json!({})).unwrap();
 
         assert_eq!(program["user"], "anna");
-        assert_eq!(program["pages"].as_array().unwrap().len(), 5);
-        assert_eq!(program["pages"][1], json!({ "id": "evaluation_plan", "title": "Evaluation plan" }));
-        assert_eq!(program["pages"][2], json!({ "id": "evaluation_lab", "title": "Evaluation lab" }));
-        assert_eq!(program["pages"][3], json!({ "id": "devices", "title": "Devices" }));
-        assert_eq!(program["warnings"].as_array().unwrap().len(), 2);
+        assert_eq!(program["pages"].as_array().unwrap().len(), 6);
+        assert_eq!(program["pages"][1], json!({ "id": "converter", "title": "Converter" }));
+        assert_eq!(program["pages"][2], json!({ "id": "evaluation_plan", "title": "Evaluation plan" }));
+        assert_eq!(program["pages"][3], json!({ "id": "evaluation_lab", "title": "Evaluation lab" }));
+        assert_eq!(program["pages"][4], json!({ "id": "users", "title": "User" }));
+        assert_eq!(program["warnings"], json!([]));
         assert_ne!(program["version"], "");
-    }
-
-    #[test]
-    fn the_logout_ends_the_session() {
-        let window = logged_in_window();
-
-        window.call("user_menu_log_out", json!({})).unwrap();
-
-        assert_eq!(window.call("program_get", json!({})).unwrap()["user"], json!(null));
-        assert_eq!(window.call("ports_table_scan", json!({})).unwrap_err()["kind"], "not_logged_in");
     }
 }
