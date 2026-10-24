@@ -18,6 +18,10 @@ pub fn project(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
         "DELETE FROM task_blocks WHERE task_uuid IN (SELECT uuid FROM evaluation_tasks WHERE project_uuid = ?1)",
         [uuid],
     )?;
+    transaction.execute(
+        "DELETE FROM block_corrections WHERE task_uuid IN (SELECT uuid FROM evaluation_tasks WHERE project_uuid = ?1)",
+        [uuid],
+    )?;
     transaction.execute("DELETE FROM evaluation_tasks WHERE project_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM project_catalogs WHERE project_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM standard_outputs WHERE project_uuid = ?1", [uuid])?;
@@ -36,20 +40,22 @@ pub fn task(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
 
     transaction.execute("DELETE FROM task_connections WHERE task_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM task_blocks WHERE task_uuid = ?1", [uuid])?;
+    transaction.execute("DELETE FROM block_corrections WHERE task_uuid = ?1", [uuid])?;
     let deleted = transaction.execute("DELETE FROM evaluation_tasks WHERE uuid = ?1", [uuid])? > 0;
     transaction.commit()?;
 
     Ok(deleted)
 }
 
-/// Deletes block `uuid` with its connections, in one transaction; gives
-/// whether it existed.
+/// Deletes block `uuid` with its connections and its correction, in one
+/// transaction; gives whether it existed.
 ///
-/// Called by: `task_scheme_remove_block` (`evaluation_plan.rs`).
+/// Called by: `task_scheme_remove_block`, `task_scheme_reject` (`evaluation_plan.rs`).
 pub fn block(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
     transaction.execute("DELETE FROM task_connections WHERE from_block = ?1 OR to_block = ?1", [uuid])?;
+    transaction.execute("DELETE FROM block_corrections WHERE block_uuid = ?1", [uuid])?;
     let deleted = transaction.execute("DELETE FROM task_blocks WHERE uuid = ?1", [uuid])? > 0;
     transaction.commit()?;
 
@@ -62,6 +68,34 @@ pub fn block(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
 /// Called by: `task_scheme_disconnect` (`evaluation_plan.rs`).
 pub fn connection(db: &UserDb, from: &str, to: &str) -> Result<bool, DbError> {
     Ok(db.connection().execute("DELETE FROM task_connections WHERE from_block = ?1 AND to_block = ?2", [from, to])? > 0)
+}
+
+/// Rejects the correction of block `block`; gives whether there was one.
+///
+/// Called by: `task_scheme_reject` (`evaluation_plan.rs`).
+pub fn correction(db: &UserDb, block: &str) -> Result<bool, DbError> {
+    Ok(db.connection().execute("DELETE FROM block_corrections WHERE block_uuid = ?1", [block])? > 0)
+}
+
+/// Rejects every proposal of task `task`, in one transaction: the proposed
+/// blocks go with their connections, the corrections are removed. Also run
+/// before a new question to the AI, so that no undecided proposal stays.
+///
+/// Called by: `task_scheme_reject_all` (`evaluation_plan.rs`), `task_scheme/propose.rs`.
+pub fn proposals(db: &UserDb, task: &str) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    transaction.execute(
+        "DELETE FROM task_connections WHERE task_uuid = ?1 AND (
+             from_block IN (SELECT uuid FROM task_blocks WHERE task_uuid = ?1 AND proposal IS NOT NULL)
+             OR to_block IN (SELECT uuid FROM task_blocks WHERE task_uuid = ?1 AND proposal IS NOT NULL))",
+        [task],
+    )?;
+    transaction.execute("DELETE FROM task_blocks WHERE task_uuid = ?1 AND proposal IS NOT NULL", [task])?;
+    transaction.execute("DELETE FROM block_corrections WHERE task_uuid = ?1", [task])?;
+    transaction.commit()?;
+
+    Ok(())
 }
 
 /// Deletes standard output `uuid` from the template of its project (the
@@ -131,8 +165,14 @@ mod tests {
         let task_one =
             EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c".to_owned(), control_id: "x".to_owned() };
         create::task(&test.db, "p", &task_one, &new_scheme("requirement", &[]).unwrap()).unwrap();
-        let input =
-            Block { uuid: "in".to_owned(), kind: BlockKind::Input, x: -200, y: 0, fields: BlockFields::empty() };
+        let input = Block {
+            uuid: "in".to_owned(),
+            kind: BlockKind::Input,
+            x: -200,
+            y: 0,
+            fields: BlockFields::empty(),
+            proposal: None,
+        };
         create::block(&test.db, "t", &input).unwrap();
         create::connection(&test.db, "t", "in", "requirement").unwrap();
         create::connection(&test.db, "t", "in", "requirement").unwrap();
@@ -147,5 +187,53 @@ mod tests {
 
         assert!(task(&test.db, "t").unwrap());
         assert!(read::blocks(&test.db, "t").unwrap().is_empty());
+    }
+
+    #[test]
+    fn the_proposals_of_a_task_are_accepted_or_rejected() {
+        use crate::db::evaluation_project::update;
+        use crate::model::task_scheme::{Block, BlockKind, Correction};
+
+        let test = database();
+        let fields = ProjectFields { title: "p".to_owned(), description: String::new() };
+        create::project(&test.db, "p", &fields, &["c".to_owned()]).unwrap();
+        let one = EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c".to_owned(), control_id: "x".to_owned() };
+        create::task(&test.db, "p", &one, &new_scheme("r", &[]).unwrap()).unwrap();
+        for uuid in ["p1", "p2"] {
+            let proposed = Block {
+                uuid: uuid.to_owned(),
+                kind: BlockKind::Input,
+                x: -320,
+                y: 0,
+                fields: BlockFields::empty(),
+                proposal: Some("The requirement asks for it.".to_owned()),
+            };
+            create::block(&test.db, "t", &proposed).unwrap();
+            create::connection(&test.db, "t", uuid, "r").unwrap();
+        }
+        let correction = Correction {
+            block: "r".to_owned(),
+            name: String::new(),
+            evidence: String::new(),
+            instructions: "Check the roles.".to_owned(),
+            reason: "Clearer.".to_owned(),
+        };
+        create::correction(&test.db, "t", &correction).unwrap();
+
+        assert!(update::accept_block(&test.db, "p1").unwrap());
+        assert!(!update::accept_block(&test.db, "p1").unwrap(), "accepted once");
+        assert_eq!(read::correction(&test.db, "r").unwrap(), Some(correction.clone()));
+
+        proposals(&test.db, "t").unwrap();
+
+        let left: Vec<String> = read::blocks(&test.db, "t").unwrap().into_iter().map(|block| block.uuid).collect();
+        assert_eq!(left, ["r", "p1"]);
+        assert_eq!(read::connections(&test.db, "t").unwrap().len(), 1);
+        assert!(read::corrections(&test.db, "t").unwrap().is_empty());
+
+        create::correction(&test.db, "t", &correction).unwrap();
+        update::accept_correction(&test.db, "r", &correction.applied(&BlockFields::empty())).unwrap();
+        assert_eq!(read::block(&test.db, "r").unwrap().unwrap().1.fields.instructions, "Check the roles.");
+        assert!(!self::correction(&test.db, "r").unwrap());
     }
 }

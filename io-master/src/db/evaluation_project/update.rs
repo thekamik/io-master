@@ -120,6 +120,70 @@ pub fn standard_output(db: &UserDb, uuid: &str, fields: &BlockFields) -> Result<
     if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "standard_outputs", id: 0 }) }
 }
 
+/// Accepts proposed block `uuid`: it becomes an ordinary block of its
+/// scheme. Gives whether it was a proposed block.
+///
+/// Called by: `task_scheme_accept` (`evaluation_plan.rs`).
+pub fn accept_block(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
+    let changed = db
+        .connection()
+        .execute("UPDATE task_blocks SET proposal = NULL WHERE uuid = ?1 AND proposal IS NOT NULL", [uuid])?;
+
+    Ok(changed == 1)
+}
+
+/// Accepts the correction of block `uuid`: its fields become `fields` (the
+/// correction applied, `Correction::applied`) and the correction is
+/// removed, in one transaction.
+///
+/// Called by: `task_scheme_accept` (`evaluation_plan.rs`).
+pub fn accept_correction(db: &UserDb, uuid: &str, fields: &BlockFields) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    write_fields(&transaction, uuid, fields)?;
+    transaction.execute("DELETE FROM block_corrections WHERE block_uuid = ?1", [uuid])?;
+    transaction.commit()?;
+
+    Ok(())
+}
+
+/// Accepts every proposal of task `task`: the proposed blocks become
+/// ordinary blocks, and every block of `corrected` gets its fields (its
+/// correction applied), in one transaction; the corrections are removed.
+///
+/// Called by: `task_scheme_accept_all` (`evaluation_plan.rs`).
+pub fn accept_all(db: &UserDb, task: &str, corrected: &[(String, BlockFields)]) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    transaction.execute("UPDATE task_blocks SET proposal = NULL WHERE task_uuid = ?1", [task])?;
+
+    for (uuid, fields) in corrected {
+        write_fields(&transaction, uuid, fields)?;
+    }
+
+    transaction.execute("DELETE FROM block_corrections WHERE task_uuid = ?1", [task])?;
+    transaction.commit()?;
+
+    Ok(())
+}
+
+/// Writes the fields of block `uuid` in the transaction of the caller.
+///
+/// Called by: [`accept_correction`], [`accept_all`].
+fn write_fields(transaction: &rusqlite::Transaction<'_>, uuid: &str, fields: &BlockFields) -> Result<(), DbError> {
+    let changed = transaction.execute(
+        "UPDATE task_blocks SET name = :name, evidence = :evidence, instructions = :instructions WHERE uuid = :uuid",
+        named_params! {
+            ":uuid": uuid,
+            ":name": fields.name,
+            ":evidence": fields.evidence,
+            ":instructions": fields.instructions,
+        },
+    )?;
+
+    if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "task_blocks", id: 0 }) }
+}
+
 /// Places block `uuid` at `x`, `y` in the drawing (where a drag ended).
 ///
 /// Called by: `task_scheme_move_block` (`evaluation_plan.rs`).

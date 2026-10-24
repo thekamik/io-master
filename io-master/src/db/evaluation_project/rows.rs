@@ -4,7 +4,7 @@
 use crate::db::error::{Corrupt, DbError};
 use crate::model::evaluation_project::{EvaluationTask, ProjectFields, ProjectSummary};
 use crate::model::task_scheme::{
-    Block, BlockFields, BlockKind, Connection, OutputCondition, OutputFormat, StandardOutput,
+    Block, BlockFields, BlockKind, Connection, Correction, OutputCondition, OutputFormat, StandardOutput,
 };
 
 /// A row of `evaluation_projects` with its counts (`read::projects`).
@@ -87,6 +87,20 @@ pub(super) fn block(row: &rusqlite::Row<'_>) -> Result<Block, DbError> {
             format,
             condition,
         },
+        proposal: row.get("proposal")?,
+    })
+}
+
+/// A row of `block_corrections`.
+///
+/// Called by: `read::corrections`, `read::correction`.
+pub(super) fn correction(row: &rusqlite::Row<'_>) -> Result<Correction, DbError> {
+    Ok(Correction {
+        block: row.get("block_uuid")?,
+        name: row.get("name")?,
+        evidence: row.get("evidence")?,
+        instructions: row.get("instructions")?,
+        reason: row.get("reason")?,
     })
 }
 

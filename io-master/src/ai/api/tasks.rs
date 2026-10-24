@@ -7,6 +7,7 @@
 //! catalog_contents  text_analysis   ai/tasks/catalog_contents.rs (the pages of a table of contents)
 //! catalog_outline   text_analysis   ai/tasks/catalog_outline.rs (the groups of a catalog)
 //! catalog_section   text_analysis   ai/tasks/catalog_section.rs (the controls of a group)
+//! task_scheme       text_analysis   ai/tasks/task_scheme.rs (the inputs of a task, corrections of its blocks)
 //! chat              consultation    none here: the system prompt of the connection
 //! check             none            none: the check of a connection (checks.rs)
 //! ```
@@ -16,7 +17,7 @@
 //! set_instructions()   PUT    /tasks/{task}/instructions (empty text: DELETE)
 //! ```
 
-use crate::ai::tasks::{catalog_contents, catalog_outline, catalog_section};
+use crate::ai::tasks::{catalog_contents, catalog_outline, catalog_section, task_scheme};
 use crate::db::ai::instructions as db_instructions;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -30,6 +31,7 @@ pub fn default_instructions(task: Task) -> Option<&'static str> {
         Task::CatalogContents => Some(catalog_contents::DEFAULT_INSTRUCTIONS),
         Task::CatalogOutline => Some(catalog_outline::DEFAULT_INSTRUCTIONS),
         Task::CatalogSection => Some(catalog_section::DEFAULT_INSTRUCTIONS),
+        Task::Scheme => Some(task_scheme::DEFAULT_INSTRUCTIONS),
         Task::Chat | Task::Check => None,
     }
 }

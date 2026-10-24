@@ -406,6 +406,13 @@ TaskScheme ──task_scheme_get(task)──► the task, its requirement read f
   │     a connection chosen ──task_scheme_disconnect(from, to)──►
   ├─► BlockForm (the block chosen) ──task_scheme_save_block(block, fields)──► name, evidence, instructions,
   │     target, format, condition; ──task_scheme_remove_block(block)──► with its connections (not the requirement)
+  ├─► "Propose with AI" ──task_scheme_propose(task, onEvent)──► the undecided proposals removed; one question of the
+  │     task task_scheme (ai/tasks/task_scheme.rs: the requirement word for word, the scope, the blocks by short ids)
+  │     through ai/api/ into the journal ──► the inputs stored as dashed blocks connected to the requirement, the
+  │     corrections beside their blocks (db/evaluation_project/) ──► events writing / proposed / failed / end;
+  │     ──task_scheme_stop()──► "Stop"; the instructions ──task_scheme_instructions_get / _save──► db/ai/instructions/
+  │     ──task_scheme_accept(block) / _reject(block) / _accept_all(task) / _reject_all(task)──► nothing is
+  │     overwritten without the planner (P1)
   └─► the standard, always beside: PartRows (component) and, for a quote, PdfViewer (component) at its page
      every command answers with the whole scheme as stored; the page draws it again from that answer
 the tab OSCAL documents ──► OscalDocuments ──oscal_documents_get()──► the finished documents of OSCAL

@@ -5,7 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::app::error::AppError;
-use crate::model::task_scheme::{Block, BlockFields, Connection, OutputCondition, OutputFormat, ResultText};
+use crate::model::task_scheme::{
+    Block, BlockFields, Connection, Correction, OutputCondition, OutputFormat, ResultText,
+};
 
 use super::super::standard_browser::view::RequirementView;
 use super::super::task_list::view::TaskView;
@@ -26,10 +28,32 @@ pub struct BlockView {
     pub format: &'static str,
     /// `"always"`, `"not_met"` or `"met"`.
     pub condition: &'static str,
+    /// The reason of the AI while the block is only proposed (drawn dashed).
+    pub proposal: Option<String>,
+    /// The correction the AI proposes for the block, waiting for the planner.
+    pub correction: Option<CorrectionView>,
+}
+
+/// A correction of a block the AI proposes.
+#[derive(Debug, Serialize)]
+pub struct CorrectionView {
+    pub name: String,
+    pub evidence: String,
+    pub instructions: String,
+    pub reason: String,
 }
 
 impl BlockView {
-    pub fn new(block: Block) -> BlockView {
+    /// The block with the correction proposed for it, if any.
+    pub fn new(block: Block, correction: Option<Correction>) -> BlockView {
+        // A short closure: Option::map, which clippy asks for here.
+        let correction = correction.map(|found| CorrectionView {
+            name: found.name,
+            evidence: found.evidence,
+            instructions: found.instructions,
+            reason: found.reason,
+        });
+
         BlockView {
             uuid: block.uuid,
             kind: block.kind.name(),
@@ -41,8 +65,25 @@ impl BlockView {
             target: block.fields.target,
             format: block.fields.format.name(),
             condition: block.fields.condition.name(),
+            proposal: block.proposal,
+            correction,
         }
     }
+}
+
+/// An event of a question to the AI about a scheme.
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "event", rename_all = "snake_case")]
+pub enum ProposalEvent {
+    /// The model is answering: the characters written so far.
+    Writing { characters: usize },
+    /// What the answer gave: the inputs proposed, the corrections, and what
+    /// was dropped and why.
+    Proposed { inputs: usize, corrections: usize, dropped: Vec<String> },
+    /// The question gave nothing; why.
+    Failed { message: String },
+    /// The work is over.
+    End { stopped: bool },
 }
 
 /// A connection of two blocks.

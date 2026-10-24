@@ -5,7 +5,7 @@ use rusqlite::named_params;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{EvaluationTask, MAX_TASKS, ProjectFields};
-use crate::model::task_scheme::{Block, MAX_BLOCKS, MAX_OUTPUTS, NewScheme, StandardOutput};
+use crate::model::task_scheme::{Block, Correction, MAX_BLOCKS, MAX_OUTPUTS, NewScheme, StandardOutput};
 use crate::model::time::now;
 
 /// Stores a new project `uuid` with its fields and its catalogs, in one
@@ -92,10 +92,12 @@ pub fn task(db: &UserDb, project: &str, task: &EvaluationTask, scheme: &NewSchem
     Ok(())
 }
 
-/// Adds `block` (an input or an output) to the scheme of task `task`;
-/// refused when the scheme holds `MAX_BLOCKS` already.
+/// Adds `block` (an input or an output, made by the planner or proposed by
+/// the AI) to the scheme of task `task`; refused when the scheme holds
+/// `MAX_BLOCKS` already.
 ///
-/// Called by: `task_scheme_add_block` (`evaluation_plan.rs`).
+/// Called by: `task_scheme_add_block` (`evaluation_plan.rs`),
+/// `task_scheme/propose.rs`.
 pub fn block(db: &UserDb, task: &str, block: &Block) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
     let count: i64 =
@@ -117,8 +119,10 @@ pub fn block(db: &UserDb, task: &str, block: &Block) -> Result<(), DbError> {
 /// Called by: [`task`], [`block`].
 fn insert_block(transaction: &rusqlite::Transaction<'_>, task: &str, block: &Block) -> Result<(), DbError> {
     transaction.execute(
-        "INSERT INTO task_blocks (uuid, task_uuid, kind, x, y, name, evidence, instructions, target, format, condition)
-         VALUES (:uuid, :task, :kind, :x, :y, :name, :evidence, :instructions, :target, :format, :condition)",
+        "INSERT INTO task_blocks (uuid, task_uuid, kind, x, y, name, evidence, instructions, target, format, condition,
+                                  proposal)
+         VALUES (:uuid, :task, :kind, :x, :y, :name, :evidence, :instructions, :target, :format, :condition,
+                 :proposal)",
         named_params! {
             ":uuid": block.uuid,
             ":task": task,
@@ -131,6 +135,28 @@ fn insert_block(transaction: &rusqlite::Transaction<'_>, task: &str, block: &Blo
             ":target": block.fields.target,
             ":format": block.fields.format.name(),
             ":condition": block.fields.condition.name(),
+            ":proposal": block.proposal,
+        },
+    )?;
+
+    Ok(())
+}
+
+/// Keeps `correction` of a block of task `task`, in place of one it may have
+/// had.
+///
+/// Called by: `task_scheme/propose.rs`.
+pub fn correction(db: &UserDb, task: &str, correction: &Correction) -> Result<(), DbError> {
+    db.connection().execute(
+        "INSERT OR REPLACE INTO block_corrections (block_uuid, task_uuid, name, evidence, instructions, reason)
+         VALUES (:block, :task, :name, :evidence, :instructions, :reason)",
+        named_params! {
+            ":block": correction.block,
+            ":task": task,
+            ":name": correction.name,
+            ":evidence": correction.evidence,
+            ":instructions": correction.instructions,
+            ":reason": correction.reason,
         },
     )?;
 

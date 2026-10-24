@@ -13,6 +13,8 @@
 //! task_blocks           the blocks of the scheme of a task (step 51.2): its
 //!                       requirement, its inputs, its outputs, placed in the drawing
 //! task_connections      the connections of the blocks of a task
+//! block_corrections     the corrections of blocks the AI proposed (step 51.3),
+//!                       waiting for the planner
 //! ```
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
@@ -56,7 +58,8 @@ pub const SCHEMA: &str = "
     );
 
     -- kind, format, condition: model/task_scheme.rs (BlockKind, OutputFormat,
-    -- OutputCondition). The fields a kind does not use are empty.
+    -- OutputCondition). The fields a kind does not use are empty. proposal:
+    -- the reason of the AI while the block is only proposed, else NULL.
     CREATE TABLE IF NOT EXISTS task_blocks (
         uuid            TEXT PRIMARY KEY,
         task_uuid       TEXT NOT NULL,
@@ -68,7 +71,8 @@ pub const SCHEMA: &str = "
         instructions    TEXT NOT NULL,
         target          TEXT NOT NULL,
         format          TEXT NOT NULL,
-        condition       TEXT NOT NULL
+        condition       TEXT NOT NULL,
+        proposal        TEXT
     );
 
     CREATE TABLE IF NOT EXISTS task_connections (
@@ -76,5 +80,15 @@ pub const SCHEMA: &str = "
         from_block      TEXT NOT NULL,
         to_block        TEXT NOT NULL,
         PRIMARY KEY (from_block, to_block)
+    );
+
+    -- One correction per block at most.
+    CREATE TABLE IF NOT EXISTS block_corrections (
+        block_uuid      TEXT PRIMARY KEY,
+        task_uuid       TEXT NOT NULL,
+        name            TEXT NOT NULL,
+        evidence        TEXT NOT NULL,
+        instructions    TEXT NOT NULL,
+        reason          TEXT NOT NULL
     );
 ";

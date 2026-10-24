@@ -222,6 +222,7 @@ mod ai {
         pub mod catalog_section;
         pub mod chat;
         mod json;
+        pub mod task_scheme;
     }
     // ai/presets/: the ready settings of well-known AI services (its file has
     // the presets themselves, so it declares its own module).
@@ -400,6 +401,7 @@ mod views {
             pub mod view;
         }
         pub mod task_scheme {
+            pub mod propose;
             pub mod scheme;
             pub mod view;
         }

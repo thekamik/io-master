@@ -7,7 +7,7 @@ use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{
     EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_PROJECTS, MAX_TASKS, ProjectSummary,
 };
-use crate::model::task_scheme::{Block, Connection, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
+use crate::model::task_scheme::{Block, Connection, Correction, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
 
 use super::rows;
 
@@ -189,6 +189,32 @@ pub fn connections(db: &UserDb, task: &str) -> Result<Vec<Connection>, DbError> 
     }
 
     Ok(found)
+}
+
+/// The corrections the AI proposed for the blocks of task `task`; at most
+/// one per block, so at most `MAX_BLOCKS`.
+///
+/// Called by: `scheme::read`, `task_scheme_accept_all` (`evaluation_plan.rs`).
+pub fn corrections(db: &UserDb, task: &str) -> Result<Vec<Correction>, DbError> {
+    let connection = db.connection();
+    let mut statement =
+        connection.prepare("SELECT * FROM block_corrections WHERE task_uuid = ?1 ORDER BY rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![task, limit(MAX_BLOCKS)?], |row| Ok(rows::correction(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The correction proposed for block `block`; `None` when there is none.
+///
+/// Called by: `task_scheme_accept`, `task_scheme_reject` (`evaluation_plan.rs`).
+pub fn correction(db: &UserDb, block: &str) -> Result<Option<Correction>, DbError> {
+    let mut statement = db.connection().prepare("SELECT * FROM block_corrections WHERE block_uuid = ?1")?;
+
+    statement.query_row([block], |row| Ok(rows::correction(row))).optional()?.transpose()
 }
 
 /// Block `uuid` and the task it belongs to; `None` when it does not exist.

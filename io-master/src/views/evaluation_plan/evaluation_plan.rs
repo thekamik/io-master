@@ -9,8 +9,10 @@
 //! opened in Rust: the page never sees a path. The flow of data:
 //! `docs/architecture.md`, section 12.
 
+use tauri::ipc::Channel;
 use tauri::{AppHandle, Runtime, State};
 
+use crate::ai::api::tasks;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::db::conversion as db_conversion;
@@ -21,6 +23,7 @@ use crate::db::user::database::UserDb;
 
 use super::oscal_documents::dialog::{choose_file, choose_place};
 use super::oscal_documents::file::{self, read_file, safe_name};
+use crate::model::ai::{INSTRUCTIONS_MAX, Task};
 use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
 use crate::model::own_requirement;
@@ -38,8 +41,9 @@ use super::standard_browser::search;
 use super::standard_browser::view::{HitView, RequirementView};
 use super::standard_outputs::view::{self as output_view, StandardOutputForm, StandardOutputView};
 use super::task_list::view::{self as task_view, TaskView};
+use super::task_scheme::propose;
 use super::task_scheme::scheme;
-use super::task_scheme::view::{BlockForm, SchemeView};
+use super::task_scheme::view::{BlockForm, ProposalEvent, SchemeView};
 
 // ── When the view opens ───────────────────────────────────────────────
 
@@ -676,7 +680,7 @@ pub fn task_scheme_add_block(
     let mut fields = BlockFields::empty();
     fields.name = if kind == BlockKind::Input { "Input".to_owned() } else { "Output".to_owned() };
 
-    let block = Block { uuid: new_uuid()?, kind, x, y, fields };
+    let block = Block { uuid: new_uuid()?, kind, x, y, fields, proposal: None };
     db_evaluation_project::create::block(&db, &task, &block)?;
 
     scheme::read(&db, &task)
@@ -798,6 +802,184 @@ pub fn task_scheme_disconnect(state: State<'_, AppState>, from: String, to: Stri
     scheme::read(&db, &task)
 }
 
+/// The AI proposes inputs of the scheme of task `task` and corrections of
+/// its blocks (step 51.3); the proposals left undecided are removed first.
+/// The events arrive through `on_event`; gives the scheme with the new
+/// proposals.
+///
+/// Called by the page: `TaskScheme.svelte`, "Propose with AI"
+/// (`evaluationPlan.taskSchemePropose(task, onEvent)`).
+/// Calls: `AppState::start_work`, `propose::propose` (one question through
+/// `ai/api/`), `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+pub async fn task_scheme_propose(
+    state: State<'_, AppState>,
+    task: String,
+    on_event: Channel<ProposalEvent>,
+) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let stop = state.start_work();
+
+    propose::propose(&session, &task, &stop, &on_event).await?;
+
+    scheme::read(&session.db(), &task)
+}
+
+/// Stops the question to the AI, if there is one.
+///
+/// Called by the page: `TaskScheme.svelte`, "Stop" (`evaluationPlan.taskSchemeStop()`).
+/// Calls: `AppState::stop_work`.
+// Tauri hands a command its state by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_stop(state: State<'_, AppState>) {
+    state.stop_work();
+}
+
+/// Accepts what the AI proposed for block `block`: a proposed block becomes
+/// an ordinary one, a correction is applied to its block.
+///
+/// Called by the page: `BlockForm.svelte`, "Accept"
+/// (`evaluationPlan.taskSchemeAccept(block)`).
+/// Calls: `scheme::block`, `db_evaluation_project::update::accept_block`,
+/// `read::correction`, `Correction::applied`, `update::accept_correction`,
+/// `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_accept(state: State<'_, AppState>, block: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, found) = scheme::block(&db, &block)?;
+
+    if found.proposal.is_some() {
+        ensure!(
+            db_evaluation_project::update::accept_block(&db, &block)?,
+            AppError::Invalid("the block is no longer proposed".to_owned())
+        );
+    } else {
+        let Some(correction) = db_evaluation_project::read::correction(&db, &block)? else {
+            return Err(AppError::Invalid("the AI proposed nothing for this block".to_owned()));
+        };
+
+        db_evaluation_project::update::accept_correction(&db, &block, &correction.applied(&found.fields))?;
+    }
+
+    scheme::read(&db, &task)
+}
+
+/// Rejects what the AI proposed for block `block`: a proposed block goes
+/// with its connections, a correction is removed.
+///
+/// Called by the page: `BlockForm.svelte`, "Reject"
+/// (`evaluationPlan.taskSchemeReject(block)`).
+/// Calls: `scheme::block`, `db_evaluation_project::delete::block` and
+/// `correction`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_reject(state: State<'_, AppState>, block: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, found) = scheme::block(&db, &block)?;
+
+    let rejected = if found.proposal.is_some() {
+        db_evaluation_project::delete::block(&db, &block)?
+    } else {
+        db_evaluation_project::delete::correction(&db, &block)?
+    };
+
+    ensure!(rejected, AppError::Invalid("the AI proposed nothing for this block".to_owned()));
+
+    scheme::read(&db, &task)
+}
+
+/// Accepts every proposal of task `task`: the proposed blocks and the
+/// corrections, in one transaction.
+///
+/// Called by the page: `TaskScheme.svelte`, "Accept all"
+/// (`evaluationPlan.taskSchemeAcceptAll(task)`).
+/// Calls: `db_evaluation_project::read::blocks` and `corrections`,
+/// `Correction::applied`, `update::accept_all`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_accept_all(state: State<'_, AppState>, task: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let blocks = db_evaluation_project::read::blocks(&db, &task)?;
+    let corrections = db_evaluation_project::read::corrections(&db, &task)?;
+    let mut corrected = Vec::with_capacity(corrections.len());
+
+    for correction in &corrections {
+        for block in &blocks {
+            if block.uuid == correction.block {
+                corrected.push((block.uuid.clone(), correction.applied(&block.fields)));
+            }
+        }
+    }
+
+    ensure!(
+        corrected.len() == corrections.len(),
+        AppError::Failed("a correction points to a block that is gone".to_owned())
+    );
+    db_evaluation_project::update::accept_all(&db, &task, &corrected)?;
+
+    scheme::read(&db, &task)
+}
+
+/// Rejects every proposal of task `task`: the proposed blocks go with their
+/// connections, the corrections are removed.
+///
+/// Called by the page: `TaskScheme.svelte`, "Reject all"
+/// (`evaluationPlan.taskSchemeRejectAll(task)`).
+/// Calls: `db_evaluation_project::delete::proposals`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_reject_all(state: State<'_, AppState>, task: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    db_evaluation_project::delete::proposals(&db, &task)?;
+
+    scheme::read(&db, &task)
+}
+
+/// The instructions of the AI that proposes a scheme: those the evaluator
+/// changed, or the default ones.
+///
+/// Called by the page: `SchemeInstructions.svelte`, when its dialog opens
+/// (`evaluationPlan.taskSchemeInstructionsGet()`).
+/// Calls: `tasks::instructions`.
+// Tauri hands a command its state by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_instructions_get(state: State<'_, AppState>) -> Result<String, AppError> {
+    let session = state.session()?;
+
+    Ok(tasks::instructions(&session.db(), Task::Scheme)?.unwrap_or_default())
+}
+
+/// Stores the instructions of the AI that proposes a scheme; an empty text
+/// brings the default ones back. Gives the instructions now in force.
+///
+/// Called by the page: `SchemeInstructions.svelte`, "Save"
+/// (`evaluationPlan.taskSchemeInstructionsSave(text)`).
+/// Calls: `tasks::set_instructions`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_instructions_save(state: State<'_, AppState>, text: String) -> Result<String, AppError> {
+    let session = state.session()?;
+
+    ensure!(text.len() <= INSTRUCTIONS_MAX, AppError::Invalid("the instructions are too long".to_owned()));
+
+    Ok(tasks::set_instructions(&session.db(), Task::Scheme, &text)?.unwrap_or_default())
+}
+
 // ── Helpers of the commands above ─────────────────────────────────────
 
 /// The project of standard output `uuid`; refused when it does not exist.
@@ -864,7 +1046,7 @@ mod tests {
     //! export are tested in `oscal_documents/file.rs`: the dialogs of the
     //! system cannot run in the mock window.
 
-    use serde_json::json;
+    use serde_json::{Value, json};
 
     use crate::views::evaluation_plan::oscal_documents::file;
     use crate::views::test_support::{logged_in_window, logged_out_window};
@@ -1192,6 +1374,95 @@ mod tests {
         assert_eq!(
             window.call("standard_outputs_get", json!({ "project": project })).unwrap().as_array().unwrap().len(),
             2
+        );
+    }
+
+    /// Two inputs proposed in task `task` and a correction of its requirement
+    /// `requirement`, as the AI leaves them.
+    fn proposals(window: &crate::views::test_support::TestWindow, task: &str, requirement: &str) {
+        use crate::db::evaluation_project as db_evaluation_project;
+        use crate::model::task_scheme::{Block, BlockFields, BlockKind, Correction};
+
+        let session = window.session();
+        let db = session.db();
+        for (uuid, y) in [("p1", 0), ("p2", 130)] {
+            let mut fields = BlockFields::empty();
+            fields.name = format!("Proposed {uuid}");
+            let block = Block {
+                uuid: uuid.to_owned(),
+                kind: BlockKind::Input,
+                x: -320,
+                y,
+                fields,
+                proposal: Some("Why.".to_owned()),
+            };
+            db_evaluation_project::create::block(&db, task, &block).unwrap();
+            db_evaluation_project::create::connection(&db, task, uuid, requirement).unwrap();
+        }
+        let correction = Correction {
+            block: requirement.to_owned(),
+            name: String::new(),
+            evidence: String::new(),
+            instructions: "Check every role.".to_owned(),
+            reason: "Narrower.".to_owned(),
+        };
+        db_evaluation_project::create::correction(&db, task, &correction).unwrap();
+    }
+
+    #[test]
+    fn a_proposal_is_accepted_or_rejected_one_by_one() {
+        let (window, task) = with_task();
+        let requirement = window.call("task_scheme_get", json!({ "task": task })).unwrap()["blocks"][0]["uuid"].clone();
+        proposals(&window, &task, requirement.as_str().unwrap());
+
+        let scheme = window.call("task_scheme_get", json!({ "task": task })).unwrap();
+        assert_eq!(scheme["blocks"][0]["correction"]["reason"], "Narrower.");
+        assert_eq!(scheme["blocks"][1]["proposal"], "Why.");
+
+        let accepted = window.call("task_scheme_accept", json!({ "block": "p1" })).unwrap();
+        assert_eq!(accepted["blocks"][1]["proposal"], Value::Null);
+        let corrected = window.call("task_scheme_accept", json!({ "block": requirement })).unwrap();
+        assert_eq!(corrected["blocks"][0]["instructions"], "Check every role.");
+        assert_eq!(corrected["blocks"][0]["correction"], Value::Null);
+
+        let rejected = window.call("task_scheme_reject", json!({ "block": "p2" })).unwrap();
+        assert_eq!(rejected["blocks"].as_array().unwrap().len(), 2);
+        assert_eq!(rejected["connections"].as_array().unwrap().len(), 1);
+        assert_eq!(window.call("task_scheme_reject", json!({ "block": "p1" })).unwrap_err()["kind"], "invalid");
+    }
+
+    #[test]
+    fn every_proposal_is_accepted_or_rejected_at_once() {
+        let (window, task) = with_task();
+        let requirement = window.call("task_scheme_get", json!({ "task": task })).unwrap()["blocks"][0]["uuid"].clone();
+        proposals(&window, &task, requirement.as_str().unwrap());
+
+        let rejected = window.call("task_scheme_reject_all", json!({ "task": task })).unwrap();
+        assert_eq!(rejected["blocks"].as_array().unwrap().len(), 1);
+        assert_eq!(rejected["blocks"][0]["correction"], Value::Null);
+
+        proposals(&window, &task, requirement.as_str().unwrap());
+        let accepted = window.call("task_scheme_accept_all", json!({ "task": task })).unwrap();
+        assert_eq!(accepted["blocks"].as_array().unwrap().len(), 3);
+        assert_eq!(accepted["blocks"][0]["instructions"], "Check every role.");
+        assert!(accepted["blocks"].as_array().unwrap().iter().all(|block| block["proposal"].is_null()));
+    }
+
+    #[test]
+    fn the_instructions_of_the_scheme_are_changed_and_restored() {
+        use crate::model::ai::INSTRUCTIONS_MAX;
+
+        let window = logged_in_window();
+        let default = window.call("task_scheme_instructions_get", json!({})).unwrap();
+        assert!(default.as_str().unwrap().contains("Propose"));
+
+        assert_eq!(window.call("task_scheme_instructions_save", json!({ "text": "Mine." })).unwrap(), "Mine.");
+        assert_eq!(window.call("task_scheme_instructions_get", json!({})).unwrap(), "Mine.");
+        assert_eq!(window.call("task_scheme_instructions_save", json!({ "text": " " })).unwrap(), default);
+        let long = "x".repeat(INSTRUCTIONS_MAX + 1);
+        assert_eq!(
+            window.call("task_scheme_instructions_save", json!({ "text": long })).unwrap_err()["kind"],
+            "invalid"
         );
     }
 }

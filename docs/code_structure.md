@@ -358,6 +358,8 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
     catalog_contents.rs          The task `catalog_contents` of the AI (role *text analysis*, step 50.2
     catalog_outline.rs           The task `catalog_outline` of the AI (role *text analysis*): the
     catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
+    task_scheme.rs               The task `task_scheme` of the AI (role *text analysis*, step 51.3): the
+                                 inputs of the scheme of a task and corrections of its blocks
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a
     json.rs                      The JSON object in an answer of a model, and its texts.
 pdf/                       Reading PDFs with the tools of Poppler (`pdfinfo`, `pdftotext`): the
@@ -463,6 +465,8 @@ views/                     The views of the window, one folder per view and one 
     task_list/                   The element "list of tasks" of the view Evaluation plan.
       view.rs                      The data of the list of tasks of a master project, as the page gets it:
     task_scheme/                 The element "scheme of a task": its blocks input, requirement, output.
+      propose.rs                   The AI proposes inputs of a scheme and corrections of its blocks
+                                 (step 51.3): one question, the proposals stored for the planner.
       scheme.rs                    The scheme of a task read for the page: the task with its requirement
       view.rs                      The data of the scheme of a task, as the page gets it and sends it: the
   settings/                    The view Settings: the settings of the program, the connections to

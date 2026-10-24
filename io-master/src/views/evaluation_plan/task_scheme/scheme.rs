@@ -37,8 +37,15 @@ pub fn read(db: &UserDb, task: &str) -> Result<SchemeView, AppError> {
 
     let mut block_views = Vec::with_capacity(blocks.len());
 
+    let mut corrections = db_evaluation_project::read::corrections(db, task)?;
+
     for block in blocks {
-        block_views.push(BlockView::new(block));
+        // The correction of this block, taken out of the list. Short
+        // closures: the key of the search, and Option::map, which clippy asks for.
+        let correction =
+            corrections.iter().position(|found| found.block == block.uuid).map(|index| corrections.swap_remove(index));
+
+        block_views.push(BlockView::new(block, correction));
     }
 
     let mut connections = Vec::new();

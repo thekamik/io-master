@@ -394,6 +394,9 @@ impl Role {
     }
 }
 
+/// The longest instructions of a task the evaluator may write.
+pub const INSTRUCTIONS_MAX: usize = 20_000;
+
 /// A task of the AI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Task {
@@ -404,6 +407,9 @@ pub enum Task {
     CatalogOutline,
     /// The controls of a group of an OSCAL catalog, from its pages.
     CatalogSection,
+    /// The inputs of the scheme of a task and the corrections of its
+    /// blocks (step 51.3).
+    Scheme,
     /// A message of the chat.
     Chat,
     /// The check of a connection.
@@ -411,8 +417,8 @@ pub enum Task {
 }
 
 impl Task {
-    pub const ALL: [Task; 5] =
-        [Task::CatalogContents, Task::CatalogOutline, Task::CatalogSection, Task::Chat, Task::Check];
+    pub const ALL: [Task; 6] =
+        [Task::CatalogContents, Task::CatalogOutline, Task::CatalogSection, Task::Scheme, Task::Chat, Task::Check];
 
     /// The name kept in the database and in the journal.
     pub fn name(self) -> &'static str {
@@ -420,6 +426,7 @@ impl Task {
             Task::CatalogContents => "catalog_contents",
             Task::CatalogOutline => "catalog_outline",
             Task::CatalogSection => "catalog_section",
+            Task::Scheme => "task_scheme",
             Task::Chat => "chat",
             Task::Check => "check",
         }
@@ -432,7 +439,9 @@ impl Task {
     /// The role it is asked in; `None` for the check of a connection.
     pub fn role(self) -> Option<Role> {
         match self {
-            Task::CatalogContents | Task::CatalogOutline | Task::CatalogSection => Some(Role::TextAnalysis),
+            Task::CatalogContents | Task::CatalogOutline | Task::CatalogSection | Task::Scheme => {
+                Some(Role::TextAnalysis)
+            }
             Task::Chat => Some(Role::Consultation),
             Task::Check => None,
         }
