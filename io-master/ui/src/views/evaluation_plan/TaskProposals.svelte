@@ -136,8 +136,11 @@
       <tbody>
         {#each proposals as proposal (`${proposal.catalog_uuid}/${proposal.control_id}`)}
           <tr>
-            <td><span class="object-id">{proposal.label}</span> {proposal.title}<br /><span class="note">{proposal.catalog_title}</span></td>
-            <td class="note">{proposal.reason}</td>
+            <td>
+              <span class="object-id">{proposal.label}</span> {proposal.title}
+              <br /><span class="note">{proposal.catalog_title}</span>
+              {#if proposal.reason}<br /><span class="note">The AI: {proposal.reason}</span>{/if}
+            </td>
             <td class="actions">
               <button type="button" class="small" onclick={() => decide(() => evaluationPlan.taskProposalsAccept(project, proposal.catalog_uuid, proposal.control_id))}>Accept</button>
               <button type="button" class="small danger" onclick={() => decide(() => evaluationPlan.taskProposalsReject(project, proposal.catalog_uuid, proposal.control_id))}>Reject</button>
