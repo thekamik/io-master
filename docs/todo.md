@@ -29,6 +29,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14g | **47: The view `users`: the account, the session and the encryption in one place** | **built 2026-10-23, in the phases 47.1 to 47.3** (below) |
 | 14h | **48: The evaluation with AI as the only aim: devices, the master and the extra factors removed** | **decided 2026-10-24; 48.1 and 48.3 built** (below) |
 | 14i | **49: The recovery code of a forgotten password** | **built 2026-10-24** (below) |
+| 14j | **50: The conversion of PDFs to OSCAL with the AI as a view of its own** | **decided 2026-10-24; concept proposed, waiting for the user** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -51,6 +52,14 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 50: The conversion of PDFs to OSCAL as a view of its own (2026-10-24)
+
+**State: decided by the user 2026-10-24; the concept is proposed in the chat and waits for the user's answers.**
+
+The user (2026-10-24): the conversion of the PDFs of a standard to OSCAL is today a part of the view Evaluation plan (`views/evaluation_plan/`: the documents of standards, a new catalog, the editor of a catalog with the AI). It becomes **a view of its own, whose only aim is the conversion of PDFs to OSCAL, supported by the AI**. The view Evaluation plan keeps the documents of OSCAL and the plan itself (step 41.4).
 
 ---
 
