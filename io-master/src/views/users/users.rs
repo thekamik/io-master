@@ -1,6 +1,6 @@
 //! The entry of the view Users: the account of the evaluator, its session
 //! and the encryption of its database, in one place (step 47 of
-//! docs/todo.md), so that the way of the keys can be followed: the setup
+//! docs/history.md), so that the way of the keys can be followed: the setup
 //! that makes the user, the login, the change of the password, the recovery
 //! code (step 49), the logout (page: `ui/src/views/users/`, its commands in
 //! `ui/src/lib/api/users.ts`). Those that make a recovery code give it back

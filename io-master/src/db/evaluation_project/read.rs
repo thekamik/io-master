@@ -5,9 +5,11 @@ use rusqlite::OptionalExtension;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{
-    EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_PROJECTS, MAX_TASKS, ProjectSummary,
+    EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_LINKS, MAX_PROJECTS, MAX_TASKS, ProjectSummary, TaskLink,
+    TaskProposal,
 };
-use crate::model::task_scheme::{Block, Connection, MAX_BLOCKS};
+use crate::model::task_scheme::{Block, Connection, Correction, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
+use crate::model::work_package::{MAX_PACKAGES, WorkPackage};
 
 use super::rows;
 
@@ -80,6 +82,116 @@ pub fn tasks(db: &UserDb, project: &str) -> Result<Vec<EvaluationTask>, DbError>
     Ok(found)
 }
 
+/// The requirements the AI proposes as tasks of project `project`, by
+/// catalog and in the order proposed; at most `MAX_TASKS`.
+///
+/// Called by: `task_proposals_get` and the commands of the proposals (`evaluation_plan.rs`).
+pub fn task_proposals(db: &UserDb, project: &str) -> Result<Vec<TaskProposal>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection
+        .prepare("SELECT * FROM task_proposals WHERE project_uuid = ?1 ORDER BY catalog_uuid, rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![project, limit(MAX_TASKS)?], |row| Ok(rows::task_proposal(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The related elements of task `task`, in the order added; at most
+/// `MAX_LINKS`.
+///
+/// Called by: `task_links_get` and the commands of the related elements (`evaluation_plan.rs`),
+/// `task_links/propose.rs`.
+pub fn task_links(db: &UserDb, task: &str) -> Result<Vec<TaskLink>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection.prepare("SELECT * FROM task_links WHERE task_uuid = ?1 ORDER BY rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![task, limit(MAX_LINKS)?], |row| Ok(rows::task_link(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The work packages of project `project` with their tasks, by name; at
+/// most `MAX_PACKAGES`.
+///
+/// Called by: `work_packages_get` and the commands of the packages (`evaluation_plan.rs`).
+/// Calls: [`package_tasks`].
+pub fn work_packages(db: &UserDb, project: &str) -> Result<Vec<WorkPackage>, DbError> {
+    let connection = db.connection();
+    let mut statement =
+        connection.prepare("SELECT * FROM work_packages WHERE project_uuid = ?1 ORDER BY name, rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![project, limit(MAX_PACKAGES)?], |row| {
+        Ok((row.get::<_, String>("uuid"), rows::package_fields(row)))
+    })? {
+        let (uuid, fields) = row?;
+        let uuid = uuid?;
+        let tasks = package_tasks(db, &uuid)?;
+
+        found.push(WorkPackage { uuid, fields: fields?, tasks });
+    }
+
+    Ok(found)
+}
+
+/// Work package `uuid` with its tasks, and its project; `None` when it does
+/// not exist.
+///
+/// Called by: `work_packages_save`, `work_packages_delete`, `work_packages_export` (`evaluation_plan.rs`).
+/// Calls: [`package_tasks`].
+pub fn work_package(db: &UserDb, uuid: &str) -> Result<Option<(String, WorkPackage)>, DbError> {
+    let found = db
+        .connection()
+        .query_row("SELECT * FROM work_packages WHERE uuid = ?1", [uuid], |row| {
+            Ok((row.get::<_, String>("project_uuid"), rows::package_fields(row)))
+        })
+        .optional()?;
+
+    let Some((project, fields)) = found else {
+        return Ok(None);
+    };
+
+    let package = WorkPackage { uuid: uuid.to_owned(), fields: fields?, tasks: package_tasks(db, uuid)? };
+
+    Ok(Some((project?, package)))
+}
+
+/// The tasks of package `package`, in their order; at most `MAX_TASKS`.
+///
+/// Called by: [`work_packages`], [`work_package`].
+fn package_tasks(db: &UserDb, package: &str) -> Result<Vec<String>, DbError> {
+    let connection = db.connection();
+    let mut statement =
+        connection.prepare("SELECT task_uuid FROM package_tasks WHERE package_uuid = ?1 ORDER BY position LIMIT ?2")?;
+    let mut tasks = Vec::new();
+
+    for task in statement.query_map(rusqlite::params![package, limit(MAX_TASKS)?], |row| row.get(0))? {
+        tasks.push(task?);
+    }
+
+    Ok(tasks)
+}
+
+/// The name of the package task `task` is in; `None` when it is in none.
+///
+/// Called by: `task_list/view.rs`.
+pub fn package_of_task(db: &UserDb, task: &str) -> Result<Option<String>, DbError> {
+    Ok(db
+        .connection()
+        .query_row(
+            "SELECT w.name FROM package_tasks p JOIN work_packages w ON w.uuid = p.package_uuid WHERE p.task_uuid = ?1",
+            [task],
+            |row| row.get(0),
+        )
+        .optional()?)
+}
+
 /// Task `uuid` and the project it is in; `None` when it does not exist.
 ///
 /// Called by: `task_list_remove`, `task_list_move` (`evaluation_plan.rs`).
@@ -116,6 +228,42 @@ pub fn catalog_has_tasks(db: &UserDb, project: &str, catalog: &str) -> Result<bo
         [project, catalog],
         |row| row.get(0),
     )?)
+}
+
+/// The template of the outputs of project `project`, in its order; at most
+/// `MAX_OUTPUTS`.
+///
+/// Called by: `standard_outputs_get` and the commands that change the
+/// template (`evaluation_plan.rs`), `task_scheme/scheme.rs` (`first`).
+pub fn standard_outputs(db: &UserDb, project: &str) -> Result<Vec<StandardOutput>, DbError> {
+    let connection = db.connection();
+    let mut statement =
+        connection.prepare("SELECT * FROM standard_outputs WHERE project_uuid = ?1 ORDER BY position LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in
+        statement.query_map(rusqlite::params![project, limit(MAX_OUTPUTS)?], |row| Ok(rows::standard_output(row)))?
+    {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// Standard output `uuid` and its project; `None` when it does not exist.
+///
+/// Called by: `standard_outputs_save`, `standard_outputs_delete` (`evaluation_plan.rs`).
+pub fn standard_output(db: &UserDb, uuid: &str) -> Result<Option<(String, StandardOutput)>, DbError> {
+    let mut statement = db.connection().prepare("SELECT * FROM standard_outputs WHERE uuid = ?1")?;
+
+    let found = statement
+        .query_row([uuid], |row| Ok((row.get::<_, String>("project_uuid"), rows::standard_output(row))))
+        .optional()?;
+
+    match found {
+        Some((project, output)) => Ok(Some((project?, output?))),
+        None => Ok(None),
+    }
 }
 
 /// The blocks of the scheme of task `task`: its requirement first, then the
@@ -155,6 +303,32 @@ pub fn connections(db: &UserDb, task: &str) -> Result<Vec<Connection>, DbError> 
     Ok(found)
 }
 
+/// The corrections the AI proposed for the blocks of task `task`; at most
+/// one per block, so at most `MAX_BLOCKS`.
+///
+/// Called by: `scheme::read`, `task_scheme_accept_all` (`evaluation_plan.rs`).
+pub fn corrections(db: &UserDb, task: &str) -> Result<Vec<Correction>, DbError> {
+    let connection = db.connection();
+    let mut statement =
+        connection.prepare("SELECT * FROM block_corrections WHERE task_uuid = ?1 ORDER BY rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![task, limit(MAX_BLOCKS)?], |row| Ok(rows::correction(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The correction proposed for block `block`; `None` when there is none.
+///
+/// Called by: `task_scheme_accept`, `task_scheme_reject` (`evaluation_plan.rs`).
+pub fn correction(db: &UserDb, block: &str) -> Result<Option<Correction>, DbError> {
+    let mut statement = db.connection().prepare("SELECT * FROM block_corrections WHERE block_uuid = ?1")?;
+
+    statement.query_row([block], |row| Ok(rows::correction(row))).optional()?.transpose()
+}
+
 /// Block `uuid` and the task it belongs to; `None` when it does not exist.
 ///
 /// Called by: the commands that change a block (`evaluation_plan.rs`).
@@ -189,6 +363,7 @@ mod tests {
 
     use crate::db::evaluation_project::create;
     use crate::model::evaluation_project::ProjectFields;
+    use crate::model::task_scheme::new_scheme;
     use crate::test_support::standards::database;
 
     #[test]
@@ -197,7 +372,7 @@ mod tests {
         let fields = ProjectFields { title: "CC".to_owned(), description: String::new() };
         create::project(&test.db, "p", &fields, &["c3".to_owned(), "c2".to_owned()]).unwrap();
         let added = EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c3".to_owned(), control_id: "x".to_owned() };
-        create::task(&test.db, "p", &added, &format!("b-{}", added.uuid)).unwrap();
+        create::task(&test.db, "p", &added, &new_scheme(&format!("b-{}", added.uuid), &[]).unwrap()).unwrap();
 
         let list = projects(&test.db).unwrap();
 

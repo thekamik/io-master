@@ -27,7 +27,7 @@ mod checks;
 // (docs/code_structure.md, section 1; checked by architecture_tests.rs).
 // The comment of a group says which part of the project it is; what each
 // file holds is said at its functions. Since steps 45 and 46 of
-// docs/todo.md every module is written here, except those of a file with code
+// docs/history.md every module is written here, except those of a file with code
 // that has modules of its own (model/oscal.rs), which declares them itself.
 
 // model/: the data of the program as plain Rust types and the rules of
@@ -37,6 +37,7 @@ mod model {
     pub mod api_key;
     pub mod chats;
     pub mod conversion;
+    pub mod evaluation;
     pub mod evaluation_project;
     pub mod evaluation_support;
     pub mod installation;
@@ -47,6 +48,7 @@ mod model {
     pub mod task_scheme;
     pub mod text;
     pub mod time;
+    pub mod work_package;
 }
 
 // security/: the building blocks of protection: random numbers from the
@@ -161,6 +163,16 @@ mod db {
         pub mod schema;
         pub mod update;
     }
+    // db/evaluation/: the evaluations of the Evaluation lab, what the
+    // evaluator adds to them (the database of the evaluator).
+    pub mod evaluation {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
     // db/evaluation_project/: the master projects of the evaluations and their
     // tasks (the database of the evaluator).
     pub mod evaluation_project {
@@ -217,11 +229,20 @@ mod ai {
     // ai/tasks/: for each task of the AI, the question sent to the model and
     // the reading of its answer, on plain data of model/.
     pub mod tasks {
+        pub mod assessment;
+        pub mod candidates;
         pub mod catalog_contents;
         pub mod catalog_outline;
         pub mod catalog_section;
         pub mod chat;
+        pub mod evidence_fragments;
+        pub mod evidence_text;
+        pub mod input_chat;
         mod json;
+        pub mod output_draft;
+        pub mod related_elements;
+        pub mod requirement_choice;
+        pub mod task_scheme;
     }
     // ai/presets/: the ready settings of well-known AI services (its file has
     // the presets themselves, so it declares its own module).
@@ -237,8 +258,6 @@ mod pdf {
 
 // installation/: the installation of this Linux account, its one user and
 // the session of that user: the core of the protection of the program.
-// uninstall.rs is not compiled ("DO NOT USE: TO BE REWORKED", step 12 of
-// docs/todo.md).
 mod installation {
     pub mod accounts;
     pub mod lifecycle;
@@ -265,6 +284,13 @@ mod app {
 // the file of its name. The views use the components; a component never uses
 // a view (checked by architecture_tests.rs).
 mod components {
+    // components/ai_work/: one question of a work of the AI with its events
+    // (the progress, a failure, the end); the works of the AI of the views
+    // Evaluation plan and Evaluation lab. No command of its own.
+    pub mod ai_work {
+        pub mod ask;
+        pub mod view;
+    }
     // components/part_rows/: the parts of a group or a control as rows with
     // their level; the object chosen and the proposals of the editor of a
     // catalog. No command: the elements give its rows with their data.
@@ -282,7 +308,7 @@ mod components {
     }
     // components/recovery_code/: the recovery code, shown once after the
     // setup, a change or a recovery of the password, and a new code (step 49
-    // of docs/todo.md). No command: the commands of the view Users give it.
+    // of docs/history.md). No command: the commands of the view Users give it.
     pub mod recovery_code {
         pub mod view;
     }
@@ -298,7 +324,7 @@ mod components {
 
 // views/: the views of the window, one folder per view. The entry of a view
 // is the file of its name in its folder: every command the page calls for
-// it (step 46 of docs/todo.md); the folders of its elements around it hold
+// it (step 46 of docs/history.md); the folders of its elements around it hold
 // their data and logic. The entry has the name of its folder, so its
 // module has the name of its parent: clippy's `module_inception` is
 // allowed there, on purpose.
@@ -361,6 +387,53 @@ mod views {
         }
     }
 
+    // views/evaluation_lab/: the view Evaluation lab: a work package of the
+    // Evaluation plan imported and carried out for one product (step 52).
+    pub mod evaluation_lab {
+        #[allow(clippy::module_inception)]
+        pub mod evaluation_lab;
+
+        #[cfg(test)]
+        pub mod test_support;
+
+        pub mod assessment {
+            pub mod propose;
+        }
+        pub mod evaluation_list {
+            pub mod view;
+        }
+        pub mod evidence {
+            pub mod add;
+            pub mod dialog;
+        }
+        pub mod fragments {
+            pub mod propose;
+            pub mod view;
+        }
+        pub mod input_chat {
+            pub mod chat;
+        }
+        pub mod lab_task {
+            pub mod read;
+            pub mod view;
+        }
+        pub mod lab_tasks {
+            pub mod view;
+        }
+        pub mod outputs {
+            pub mod draft;
+        }
+        pub mod package_import {
+            pub mod dialog;
+            pub mod read;
+            pub mod view;
+        }
+        pub mod report {
+            pub mod dialog;
+            pub mod export;
+        }
+    }
+
     // views/evaluation_plan/: the view Evaluation plan: it works only on the
     // documents of OSCAL (the list, the import, the export, the deletion;
     // later the document shown graphically and turned into the flow of data
@@ -393,11 +466,27 @@ mod views {
             pub mod search;
             pub mod view;
         }
+        pub mod standard_outputs {
+            pub mod view;
+        }
+        pub mod task_links {
+            pub mod propose;
+            pub mod view;
+        }
         pub mod task_list {
             pub mod view;
         }
+        pub mod task_proposals {
+            pub mod propose;
+            pub mod view;
+        }
         pub mod task_scheme {
+            pub mod propose;
             pub mod scheme;
+            pub mod view;
+        }
+        pub mod work_packages {
+            pub mod export;
             pub mod view;
         }
     }

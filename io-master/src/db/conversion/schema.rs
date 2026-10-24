@@ -1,5 +1,5 @@
 //! The tables of the conversions of the documents of standards into
-//! catalogs of OSCAL (`model/conversion.rs`, step 50.2 of docs/todo.md), in
+//! catalogs of OSCAL (`model/conversion.rs`, step 50.2 of docs/history.md), in
 //! the database of an evaluator. **Protection: encrypted by SQLCipher** with
 //! the key of the database of the evaluator (`db/encryption/`). Linked to
 //! the catalog only by its UUID; nothing here is part of a document of OSCAL.

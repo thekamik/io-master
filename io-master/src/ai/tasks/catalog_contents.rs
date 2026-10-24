@@ -1,5 +1,5 @@
 //! The task `catalog_contents` of the AI (role *text analysis*, step 50.2
-//! of docs/todo.md): the question with the first pages of a document of a
+//! of docs/history.md): the question with the first pages of a document of a
 //! standard, and the reading of the answer: the pages that hold its table of
 //! contents. The evaluator confirms them before the groups are read from
 //! them (`catalog_outline.rs`); the program never takes them on trust.

@@ -1,6 +1,6 @@
 //! The data of the component "recovery code": the code shown once, after
 //! the setup, a change or a recovery of the password, and after "Make a new
-//! recovery code" (step 49 of docs/todo.md). The one secret that reaches the
+//! recovery code" (step 49 of docs/history.md). The one secret that reaches the
 //! page (CLAUDE.md, "State lives in the core"): the page shows it, keeps it
 //! nowhere, and forgets it when the evaluator goes on.
 

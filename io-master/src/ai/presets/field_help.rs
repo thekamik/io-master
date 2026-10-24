@@ -1,5 +1,5 @@
 //! Instructions for a chatbot: help to fill one field of an AI
-//! connection (step 15 of `docs/todo.md`).
+//! connection (step 15 of `docs/history.md`).
 //!
 //! The evaluator presses "AI help" at a field of the tab AI of Settings,
 //! copies the instruction into a chatbot of their choice, and types

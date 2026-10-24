@@ -1,5 +1,5 @@
 //! The documents of standards an evaluator has loaded (steps 16 to 22
-//! of `docs/todo.md`): their types and rules. Kept lastingly in the
+//! and 50 of `docs/history.md`): their types and rules. Kept lastingly in the
 //! encrypted database of the evaluator (`db/standards/`).
 //!
 //! ```text

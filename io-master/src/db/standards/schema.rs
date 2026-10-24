@@ -1,5 +1,5 @@
 //! The tables of the documents of standards, in the database of an
-//! evaluator (steps 16 to 22 of docs/todo.md). **Protection: encrypted
+//! evaluator (steps 16 to 22 of docs/history.md). **Protection: encrypted
 //! by SQLCipher** with the key of the database of the evaluator
 //! (`encryption/`); the text of a licensed standard is overwritten in
 //! the file when it is deleted (`delete.rs`).

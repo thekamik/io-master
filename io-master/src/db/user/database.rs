@@ -28,7 +28,7 @@
 //! migrations.rs the changes of the layout, by version
 //! ```
 //!
-//! Each step of `docs/todo.md` that keeps data of an evaluator adds
+//! Each step that keeps data of an evaluator adds
 //! its own tables. Tables are created with `IF NOT EXISTS` when the
 //! database is opened, so a database made by an earlier version
 //! gets the tables it lacks; other changes of the layout are the steps
@@ -45,7 +45,7 @@ use rusqlite::Connection;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
-use crate::db::{ai, conversion, evaluation_project, evaluation_support, oscal, standards};
+use crate::db::{ai, conversion, evaluation, evaluation_project, evaluation_support, oscal, standards};
 
 use super::{migrations, schema};
 
@@ -80,6 +80,7 @@ impl UserDb {
         connection.execute_batch(evaluation_support::schema::SCHEMA)?;
         connection.execute_batch(conversion::schema::SCHEMA)?;
         connection.execute_batch(evaluation_project::schema::SCHEMA)?;
+        connection.execute_batch(evaluation::schema::SCHEMA)?;
         migrations::run(&connection)?;
 
         Ok(UserDb { connection })

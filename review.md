@@ -8,7 +8,7 @@ Two levels of approval:
 
 - **A function or a fragment:** the comment `// ok kk` above it in the
   code. Every line added or removed in it needs the user's approval
-  first. Its tests (`<file>_tests.rs`) may be changed.
+  first. Its tests (the module `tests` at the end of its file) may be changed.
 - **A whole file:** the user says so in the chat; Claude writes it in
   the table below with the date. Every function of an approved file is
   treated as marked `// ok kk`, even where the comment is missing.
@@ -32,13 +32,11 @@ the user confirms them.
 
 | File | Why |
 |---|---|
-| `io-master/src/installation/verify.rs` | Rebuilt in step 13 (keyring, secret of the application). |
-| `io-master/src/installation/uninstall.rs` | Not compiled; "DO NOT USE: TO BE REWORKED" (uninstall moves to the window). |
 | `io-master/src/db/encryption/` | Moved unchanged; audited and redesigned by the user later (CLAUDE.md, "Database code"). |
 
 ## To review
 
 Everything in `io-master/src/` and `io-master/ui/`. A suggested order,
 from the bottom of the layers up (`docs/code_structure.md`): `model/`,
-`db/`, `security/`, `ai/`, `hardware_tests/`, `pdf/`, `installation/`,
-`app/`, `views/`, `main.rs`, `ui/`.
+`db/`, `security/`, `ai/`, `pdf/`, `installation/`, `app/`,
+`components/`, `views/`, `main.rs`, `ui/`.

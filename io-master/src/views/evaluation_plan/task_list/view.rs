@@ -1,9 +1,11 @@
 //! The data of the list of tasks of a master project, as the page gets it:
-//! every task with the text of its requirement read from its catalog.
+//! every task with the text of its requirement read from its catalog, and
+//! the work package it is in.
 
 use serde::Serialize;
 
 use crate::app::error::AppError;
+use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::EvaluationTask;
@@ -21,12 +23,14 @@ pub struct TaskView {
     /// The title of the requirement; empty when the control was removed
     /// from its catalog.
     pub title: String,
+    /// The name of the work package the task is in (step 51.5).
+    pub package: Option<String>,
 }
 
 /// The views of `tasks`, their catalogs read once each.
 ///
 /// Called by: the commands of the list of tasks (`evaluation_plan.rs`).
-/// Calls: `db_oscal::read::catalog`, `Catalog::locate`, `Control::label`.
+/// Calls: `db_oscal::read::catalog`, [`view`].
 pub fn all(db: &UserDb, tasks: Vec<EvaluationTask>) -> Result<Vec<TaskView>, AppError> {
     let mut catalogs: Vec<(String, Catalog)> = Vec::new();
     let mut views = Vec::with_capacity(tasks.len());
@@ -52,16 +56,19 @@ pub fn all(db: &UserDb, tasks: Vec<EvaluationTask>) -> Result<Vec<TaskView>, App
             return Err(AppError::Failed("a catalog of a task was lost".to_owned()));
         };
 
-        views.push(view(catalog, task)?);
+        views.push(view(db, catalog, task)?);
     }
 
     Ok(views)
 }
 
-/// The view of one task, its requirement read from `catalog`.
+/// The view of one task, its requirement read from `catalog`. A
+/// requirement shown as a task (a proposal, a related element) has no UUID
+/// and no package.
 ///
 /// Called by: [`all`].
-fn view(catalog: &Catalog, task: EvaluationTask) -> Result<TaskView, AppError> {
+/// Calls: `Catalog::locate`, `Control::label`, `db_evaluation_project::read::package_of_task`.
+fn view(db: &UserDb, catalog: &Catalog, task: EvaluationTask) -> Result<TaskView, AppError> {
     let location = catalog.locate(&task.control_id)?;
     let control = match &location {
         Some(location) => catalog.control_at(location),
@@ -73,7 +80,11 @@ fn view(catalog: &Catalog, task: EvaluationTask) -> Result<TaskView, AppError> {
         None => (task.control_id.clone(), String::new()),
     };
 
+    let package =
+        if task.uuid.is_empty() { None } else { db_evaluation_project::read::package_of_task(db, &task.uuid)? };
+
     Ok(TaskView {
+        package,
         uuid: task.uuid,
         catalog_uuid: task.catalog_uuid,
         catalog_title: catalog.metadata.title.clone(),

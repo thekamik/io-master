@@ -106,7 +106,7 @@ pub fn open(data_dir: &Path) -> Result<Opened, LifecycleError> {
 
 /// Makes the installation at the first start: the system database
 /// and its account. Returns the running installation, the account and
-/// its first recovery code, to be shown once (step 49 of docs/todo.md).
+/// its first recovery code, to be shown once (step 49 of docs/history.md).
 ///
 /// Called by: `views/users/users.rs` (`setup_form_install`).
 /// Calls: `SystemDb::create`, `accounts::create_first`.

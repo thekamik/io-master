@@ -2,7 +2,7 @@
   The element "wizard" of the editor of a catalog (its commands
   conversion_wizard_* in src/views/converter/catalog_editor/catalog_editor.rs):
   the conversion of the documents of a standard into the catalog, step by
-  step (step 50.2 of docs/todo.md):
+  step (step 50.2 of docs/history.md):
 
   1. Table of contents: the AI finds its pages, the evaluator confirms them;
   2. Groups: the AI proposes them from the table of contents;

@@ -1,5 +1,5 @@
 //! The AI finds the table of contents of a document of a standard (step
-//! 50.2 of docs/todo.md): it reads the first pages (`FIRST_PAGES`) and names
+//! 50.2 of docs/history.md): it reads the first pages (`FIRST_PAGES`) and names
 //! the pages of the table of contents, which are kept for the conversion and
 //! shown to the evaluator to confirm. The question goes through `ai/api/`
 //! into the journal of the AI, as every question.

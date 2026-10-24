@@ -2,7 +2,7 @@
   The view Evaluation plan (src/views/evaluation_plan/): it works only on the
   documents of NIST OSCAL, in two tabs:
 
-  - Projects: the master projects (step 51 of docs/todo.md), each a list of
+  - Projects: the master projects (step 51 of docs/history.md), each a list of
     tasks, every task a whole requirement chosen in a browser of the
     standards; a project opens in its screen (EvaluationProject);
   - OSCAL documents: the catalogs, mappings, profiles and plans, imported,

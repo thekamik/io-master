@@ -48,7 +48,7 @@ pub fn create(db: &UserDb, title: &str, version: &str, sources: &[i64]) -> Resul
     let document = OscalDocument::Catalog(catalog);
     db_oscal::create::document(db, &document)?;
 
-    // The conversion of the catalog starts (step 50.2 of docs/todo.md): it
+    // The conversion of the catalog starts (step 50.2 of docs/history.md): it
     // is shown in the view Evaluation plan only when it is finished.
     db_conversion::create::conversion(db, document.uuid())?;
 

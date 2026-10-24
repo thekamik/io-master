@@ -49,7 +49,7 @@ fn pages() -> Vec<PageView> {
         PageView { id: "chat", title: "Chat" },
         PageView { id: "converter", title: "Converter" },
         PageView { id: "evaluation_plan", title: "Evaluation plan" },
-        // A placeholder until step 41.5 of docs/todo.md; it holds the
+        // A placeholder until step 41.5 of docs/history.md; it holds the
         // documentation of the manufacturer as well (step 30).
         PageView { id: "evaluation_lab", title: "Evaluation lab" },
         PageView { id: "users", title: "User" },
@@ -58,7 +58,7 @@ fn pages() -> Vec<PageView> {
 }
 
 /// The warnings: none at present. Every account has its recovery code
-/// from the setup on (step 49 of docs/todo.md), so the bar "your password
+/// from the setup on (step 49 of docs/history.md), so the bar "your password
 /// cannot be recovered" is gone; the bars stay for what comes later.
 fn warnings() -> Vec<WarningView> {
     Vec::new()

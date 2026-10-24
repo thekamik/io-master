@@ -4,7 +4,7 @@
   tabs:
 
   - Conversion: the wizard, step by step (ConversionWizard, step 50.2 of
-    docs/todo.md), beside the proposals waiting for the evaluator;
+    docs/history.md), beside the proposals waiting for the evaluator;
   - Manual editing, as follows.
 
   - On the left the tree of the catalog.

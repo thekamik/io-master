@@ -1,4 +1,4 @@
-//! The scheme of a task of a master project (step 51.2 of docs/todo.md):
+//! The scheme of a task of a master project (step 51.2 of docs/history.md):
 //! the blocks the evaluator meets in the Evaluation lab, as the planner
 //! designs them. A task starts with only the block of its requirement
 //! (inherited from OSCAL); the planner adds inputs (what the evaluator
@@ -10,6 +10,15 @@
 //!  input ──┼──► requirement ──┬──► output (always)
 //!  input ──┘                  └──► output (only when the requirement is not met)
 //! ```
+//!
+//! The AI may propose inputs and corrections of the blocks already there
+//! (step 51.3): a proposed block is drawn dashed until the planner accepts
+//! it, a correction waits beside its block; nothing is overwritten without
+//! the planner.
+//!
+//! The outputs of a new task are copied from the template of its project
+//! ("Standard outputs", step 51.3): the default shape of the outputs, which
+//! the planner may change in each task.
 //!
 //! Plain data and its rules; stored by `db/evaluation_project/`.
 
@@ -27,6 +36,9 @@ pub const MAX_BLOCKS: usize = 1 + MAX_INPUTS + MAX_OUTPUTS;
 /// The longest name of a block.
 pub const NAME_MAX: usize = 200;
 
+/// The longest reason the AI gives for a proposal.
+pub const REASON_MAX: usize = 2000;
+
 /// The longest text of a field of a block (an expected evidence, the
 /// instructions for an agent, a target).
 pub const TEXT_MAX: usize = 10_000;
@@ -34,6 +46,12 @@ pub const TEXT_MAX: usize = 10_000;
 /// The farthest a block may be placed from the origin of the drawing, in
 /// either direction.
 pub const POSITION_MAX: i64 = 100_000;
+
+/// Where the outputs of a new task are placed: right of the requirement.
+pub const OUTPUT_X: i64 = 320;
+
+/// The distance of two blocks one below another in a new task.
+pub const ROW: i64 = 130;
 
 /// The kind of a block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -60,6 +78,35 @@ impl BlockKind {
 
     pub fn from_name(name: &str) -> Option<BlockKind> {
         BlockKind::ALL.into_iter().find(|kind| kind.name() == name)
+    }
+}
+
+/// The four text results of a requirement (user, 2026-10-17;
+/// `docs/oscal.md`, section 5): what the AI of the requirement writes when
+/// it has verified the inputs, and what goes to the outputs, where the AI of
+/// each output adapts it to its template. The verdict in the third one is a
+/// proposition: the evaluator decides (P1). In the plan they are empty
+/// places; they are filled in the Evaluation lab (step 52).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResultText {
+    Findings,
+    Analysis,
+    Assessment,
+    Vulnerabilities,
+}
+
+impl ResultText {
+    pub const ALL: [ResultText; 4] =
+        [ResultText::Findings, ResultText::Analysis, ResultText::Assessment, ResultText::Vulnerabilities];
+
+    /// The title shown to the planner and the evaluator.
+    pub fn title(self) -> &'static str {
+        match self {
+            ResultText::Findings => "Findings",
+            ResultText::Analysis => "Analysis",
+            ResultText::Assessment => "Assessment and verdict proposition",
+            ResultText::Vulnerabilities => "Vulnerabilities and notes",
+        }
     }
 }
 
@@ -156,6 +203,38 @@ pub struct Block {
     pub x: i64,
     pub y: i64,
     pub fields: BlockFields,
+    /// The reason of the AI while the block is only proposed; `None` for a
+    /// block the planner made or accepted.
+    pub proposal: Option<String>,
+}
+
+/// A correction of a block the AI proposes: the new name, evidence and
+/// instructions, and why; the other fields stay. Kept beside the block
+/// until the planner accepts or rejects it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Correction {
+    pub block: String,
+    pub name: String,
+    pub evidence: String,
+    pub instructions: String,
+    pub reason: String,
+}
+
+impl Correction {
+    /// The fields of the block once the correction is accepted.
+    ///
+    /// Called by: `task_scheme_accept`, `task_scheme_accept_all`
+    /// (`views/evaluation_plan/evaluation_plan.rs`).
+    pub fn applied(&self, fields: &BlockFields) -> BlockFields {
+        BlockFields {
+            name: self.name.clone(),
+            evidence: self.evidence.clone(),
+            instructions: self.instructions.clone(),
+            target: fields.target.clone(),
+            format: fields.format,
+            condition: fields.condition,
+        }
+    }
 }
 
 /// A connection of two blocks: an input to the requirement, or the
@@ -166,9 +245,26 @@ pub struct Connection {
     pub to: String,
 }
 
+/// An output of the template of a project ("Standard outputs"): the default
+/// shape of an output of every new task of the project.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StandardOutput {
+    pub uuid: String,
+    /// The fields of an output; `evidence` is empty.
+    pub fields: BlockFields,
+}
+
+/// The scheme of a new task, before it is stored.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewScheme {
+    pub blocks: Vec<Block>,
+    pub connections: Vec<Connection>,
+}
+
 /// The fields in their normal form: no spaces around them.
 ///
-/// Called by: `task_scheme_save_block` (`views/evaluation_plan/evaluation_plan.rs`).
+/// Called by: `task_scheme_save_block`, `standard_outputs_add` and
+/// `standard_outputs_save` (`views/evaluation_plan/evaluation_plan.rs`).
 pub fn normalized(fields: &BlockFields) -> BlockFields {
     BlockFields {
         name: fields.name.trim().to_owned(),
@@ -216,6 +312,101 @@ pub fn may_connect(from: BlockKind, to: BlockKind) -> bool {
     matches!((from, to), (BlockKind::Input, BlockKind::Requirement) | (BlockKind::Requirement, BlockKind::Output))
 }
 
+/// The scheme of a new task: the block of its requirement `requirement` at
+/// the origin and, in a column on its right, the outputs copied from the
+/// template of the project, each connected from the requirement. `outputs`
+/// are the UUIDs of the new blocks with the fields of the template; at most
+/// [`MAX_OUTPUTS`].
+///
+/// Called by: `task_scheme/scheme.rs` (`first`), when a task is added.
+pub fn new_scheme(requirement: &str, outputs: &[(String, BlockFields)]) -> Result<NewScheme, Invalid> {
+    ensure!(
+        outputs.len() <= MAX_OUTPUTS,
+        Invalid::new(Field::Kind, format!("a task has at most {MAX_OUTPUTS} outputs"))
+    );
+
+    let mut blocks = Vec::with_capacity(1 + outputs.len());
+    let mut connections = Vec::with_capacity(outputs.len());
+    let first = Block {
+        uuid: requirement.to_owned(),
+        kind: BlockKind::Requirement,
+        x: 0,
+        y: 0,
+        fields: BlockFields::empty(),
+        proposal: None,
+    };
+
+    blocks.push(first);
+
+    // The column of the outputs is centred on the requirement.
+    let mut y = -ROW * i64::try_from(outputs.len().saturating_sub(1)).unwrap_or(0) / 2;
+
+    for (uuid, fields) in outputs {
+        ensure!(uuid != requirement, Invalid::new(Field::Kind, "two blocks have one UUID"));
+
+        blocks.push(Block {
+            uuid: uuid.clone(),
+            kind: BlockKind::Output,
+            x: OUTPUT_X,
+            y,
+            fields: fields.clone(),
+            proposal: None,
+        });
+        connections.push(Connection { from: requirement.to_owned(), to: uuid.clone() });
+        y += ROW;
+    }
+
+    Ok(NewScheme { blocks, connections })
+}
+
+/// Whether the AI may correct a block of `kind`: an input or the
+/// requirement; the outputs come from the template of the project.
+///
+/// Called by: `task_scheme/propose.rs`.
+pub fn may_correct(kind: BlockKind) -> bool {
+    matches!(kind, BlockKind::Input | BlockKind::Requirement)
+}
+
+/// Checks a correction for a block of `kind`: the rules of the fields of
+/// the block, and a reason of at most [`REASON_MAX`] characters.
+///
+/// Called by: `task_scheme/propose.rs`.
+pub fn check_correction(kind: BlockKind, correction: &Correction) -> Result<(), Invalid> {
+    ensure!(may_correct(kind), Invalid::new(Field::Kind, "an output is not corrected by the AI"));
+
+    let mut fields = BlockFields::empty();
+    fields.name.clone_from(&correction.name);
+    fields.evidence.clone_from(&correction.evidence);
+    fields.instructions.clone_from(&correction.instructions);
+
+    check_fields(kind, &fields)?;
+    check_reason(&correction.reason)
+}
+
+/// Checks the reason of a proposal of the AI: at most [`REASON_MAX`]
+/// characters.
+///
+/// Called by: [`check_correction`], `task_scheme/propose.rs`.
+pub fn check_reason(reason: &str) -> Result<(), Invalid> {
+    check_text(Field::Text, reason, REASON_MAX, true)
+}
+
+/// The place of the next input added to `blocks`: left of the
+/// requirement, below the lowest input.
+///
+/// Called by: `task_scheme/propose.rs`, for the inputs the AI proposes.
+pub fn next_input_place(blocks: &[Block]) -> (i64, i64) {
+    let mut lowest = -ROW;
+
+    for block in blocks {
+        if block.kind == BlockKind::Input && block.y > lowest {
+            lowest = block.y;
+        }
+    }
+
+    (-OUTPUT_X, lowest + ROW)
+}
+
 /// Checks that a scheme with `blocks` may get one more block of `kind`:
 /// never a second requirement; at most [`MAX_INPUTS`] inputs and
 /// [`MAX_OUTPUTS`] outputs.
@@ -250,7 +441,7 @@ mod tests {
     use super::*;
 
     fn block(kind: BlockKind) -> Block {
-        Block { uuid: "b".to_owned(), kind, x: 0, y: 0, fields: BlockFields::empty() }
+        Block { uuid: "b".to_owned(), kind, x: 0, y: 0, fields: BlockFields::empty(), proposal: None }
     }
 
     #[test]
@@ -265,6 +456,14 @@ mod tests {
             assert_eq!(OutputCondition::from_name(condition.name()), Some(condition));
         }
         assert_eq!(BlockKind::from_name("tile"), None);
+    }
+
+    #[test]
+    fn the_four_results_have_four_titles() {
+        let titles: std::collections::BTreeSet<&str> = ResultText::ALL.into_iter().map(ResultText::title).collect();
+
+        assert_eq!(titles.len(), 4);
+        assert_eq!(ResultText::Assessment.title(), "Assessment and verdict proposition");
     }
 
     #[test]
@@ -299,6 +498,61 @@ mod tests {
         let full: Vec<Block> = (0..MAX_INPUTS).map(|_| block(BlockKind::Input)).collect();
         assert!(check_new_block(&full, BlockKind::Input).is_err());
         assert!(check_new_block(&full, BlockKind::Output).is_ok());
+    }
+
+    #[test]
+    fn a_new_task_has_its_requirement_and_the_outputs_of_the_template_connected() {
+        let mut report = BlockFields::empty();
+        report.name = "Observation Report".to_owned();
+        report.condition = OutputCondition::NotMet;
+        let outputs = [("o1".to_owned(), BlockFields::empty()), ("o2".to_owned(), report.clone())];
+
+        let scheme = new_scheme("r", &outputs).unwrap();
+
+        assert_eq!(scheme.blocks.len(), 3);
+        assert_eq!(scheme.blocks[0].kind, BlockKind::Requirement);
+        assert_eq!((scheme.blocks[2].kind, &scheme.blocks[2].fields), (BlockKind::Output, &report));
+        assert_eq!((scheme.blocks[1].y, scheme.blocks[2].y), (-ROW / 2, ROW / 2));
+        assert_eq!(scheme.connections[1], Connection { from: "r".to_owned(), to: "o2".to_owned() });
+        assert_eq!(new_scheme("r", &[]).unwrap().blocks.len(), 1);
+    }
+
+    #[test]
+    fn a_new_task_takes_no_more_outputs_than_a_task_holds() {
+        let outputs: Vec<(String, BlockFields)> =
+            (0..=MAX_OUTPUTS).map(|index| (format!("o{index}"), BlockFields::empty())).collect();
+
+        assert!(new_scheme("r", &outputs).is_err());
+        assert!(new_scheme("r", &[("r".to_owned(), BlockFields::empty())]).is_err());
+    }
+
+    #[test]
+    fn a_correction_changes_only_the_texts_and_never_an_output() {
+        let mut fields = BlockFields::empty();
+        fields.target = "pETR".to_owned();
+        let correction = Correction {
+            block: "b".to_owned(),
+            name: "Security Target".to_owned(),
+            evidence: "Section 6".to_owned(),
+            instructions: "Check the SFRs.".to_owned(),
+            reason: "The requirement names the SFRs.".to_owned(),
+        };
+
+        let applied = correction.applied(&fields);
+
+        assert_eq!((applied.name.as_str(), applied.target.as_str()), ("Security Target", "pETR"));
+        assert!(check_correction(BlockKind::Input, &correction).is_ok());
+        assert!(check_correction(BlockKind::Output, &correction).is_err());
+        assert!(check_correction(BlockKind::Input, &Correction { name: String::new(), ..correction }).is_err());
+    }
+
+    #[test]
+    fn the_next_input_goes_below_the_lowest_one() {
+        let mut input = block(BlockKind::Input);
+        input.y = 260;
+
+        assert_eq!(next_input_place(&[block(BlockKind::Requirement)]), (-OUTPUT_X, 0));
+        assert_eq!(next_input_place(&[block(BlockKind::Requirement), input]), (-OUTPUT_X, 260 + ROW));
     }
 
     #[test]

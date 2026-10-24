@@ -4,7 +4,7 @@ Documents for trying the program by hand. They are not used by the automatic tes
 
 ## CEM2022R1_work_units_catalog.json
 
-The **work units of the CEM:2022 Revision 1** (Common Methodology for Information Technology Security Evaluation, CCMB-2022-11-006, the methodology of Common Criteria, ISO/IEC 18045) as an **OSCAL 1.2.3 catalog**. It is imported in the window (Evaluation plan → OSCAL → Import an OSCAL document...) and opened in the editor of catalogs. It is checked against the schema of NIST and imported, exported and opened by the program without a change.
+The **work units of the CEM:2022 Revision 1** (Common Methodology for Information Technology Security Evaluation, CCMB-2022-11-006, the methodology of Common Criteria, ISO/IEC 18045) as an **OSCAL 1.2.3 catalog**. It is imported in the window (Evaluation plan → OSCAL documents → Import an OSCAL document…), opened in the editor of catalogs (Converter), and taken into a master project as the catalog of the methodology, whose work units the AI links to the requirements of CC Part 3 as related elements (step 51.4). It is checked against the schema of NIST and imported, exported and opened by the program without a change.
 
 Source: <https://www.commoncriteriaportal.org/files/ccfiles/CEM2022R1.pdf> (471 pages), SHA-256 `da5b991a457eb32040a15849bfe6d8da1870aef91f6b7255f767f0b186e89a83`. The catalog names this file in its back matter by the same SHA-256, as the catalogs made in the program do.
 

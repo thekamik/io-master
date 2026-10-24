@@ -9,7 +9,7 @@
 // The types mirror the view.rs of the elements (src/views/evaluation_plan/);
 // a change there needs the same change here.
 
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 import type { PartRowView } from "./components/part_rows";
 
@@ -56,6 +56,8 @@ export interface TaskView {
   control_id: string;
   label: string;
   title: string;
+  /** The name of the work package the task is in. */
+  package: string | null;
 }
 
 // standard_browser/view.rs
@@ -96,7 +98,26 @@ export interface BlockView {
   target: string;
   format: OutputFormat;
   condition: OutputCondition;
+  /** The reason of the AI while the block is only proposed (drawn dashed). */
+  proposal: string | null;
+  /** The correction the AI proposes for the block, waiting for the planner. */
+  correction: CorrectionView | null;
 }
+
+/** A correction of a block the AI proposes. */
+export interface CorrectionView {
+  name: string;
+  evidence: string;
+  instructions: string;
+  reason: string;
+}
+
+// components/ai_work/view.rs
+export type { AiEvent } from "./components/ai_work";
+import type { AiEvent } from "./components/ai_work";
+
+/** The instructions of a work of the AI of the view. */
+export type AiWork = "task_scheme" | "requirement_choice" | "related_elements";
 
 /** The fields of a block, as the page sends them. */
 export interface BlockForm {
@@ -114,6 +135,70 @@ export interface SchemeView {
   requirement: RequirementView;
   blocks: BlockView[];
   connections: { from: string; to: string }[];
+  /** The titles of the four text results of the requirement. */
+  results: string[];
+}
+
+// standard_outputs/view.rs
+/** An output of the template of a project ("Standard outputs"). */
+export interface StandardOutputView {
+  uuid: string;
+  name: string;
+  instructions: string;
+  target: string;
+  format: OutputFormat;
+  condition: OutputCondition;
+}
+
+/** The fields of an output of the template, as the page sends them. */
+export interface StandardOutputForm {
+  name: string;
+  instructions: string;
+  target: string;
+  format: OutputFormat;
+  condition: OutputCondition;
+}
+
+// task_proposals/view.rs
+/** A requirement the AI proposes as a task, with its reason. */
+export interface TaskProposalView {
+  catalog_uuid: string;
+  catalog_title: string;
+  control_id: string;
+  label: string;
+  title: string;
+  reason: string;
+}
+
+// task_links/view.rs
+/** An element of another catalog related to a task. */
+export interface TaskLinkView {
+  catalog_uuid: string;
+  catalog_title: string;
+  control_id: string;
+  label: string;
+  title: string;
+  reason: string;
+  /** Whether it is only proposed by the AI. */
+  proposed: boolean;
+}
+
+// work_packages/view.rs
+/** A work package: the tasks delegated to one evaluator. */
+export interface WorkPackageView {
+  uuid: string;
+  name: string;
+  evaluator: string;
+  note: string;
+  tasks: string[];
+}
+
+/** A work package, as the page sends it. */
+export interface WorkPackageForm {
+  name: string;
+  evaluator: string;
+  note: string;
+  tasks: string[];
 }
 
 // own_requirement/view.rs
@@ -287,4 +372,155 @@ export function taskSchemeConnect(from: string, to: string): Promise<SchemeView>
 /** Called by TaskScheme.svelte, a connection removed. */
 export function taskSchemeDisconnect(from: string, to: string): Promise<SchemeView> {
   return invoke("task_scheme_disconnect", { from, to });
+}
+
+/** Called by StandardOutputs.svelte, when a project opens. */
+export function standardOutputsGet(project: string): Promise<StandardOutputView[]> {
+  return invoke("standard_outputs_get", { project });
+}
+
+/** Called by StandardOutputs.svelte, "Add". */
+export function standardOutputsAdd(project: string, output: StandardOutputForm): Promise<StandardOutputView[]> {
+  return invoke("standard_outputs_add", { project, output });
+}
+
+/** Called by StandardOutputs.svelte, "Save". */
+export function standardOutputsSave(output: string, fields: StandardOutputForm): Promise<StandardOutputView[]> {
+  return invoke("standard_outputs_save", { output, fields });
+}
+
+/** Called by StandardOutputs.svelte, "Delete". */
+export function standardOutputsDelete(output: string): Promise<StandardOutputView[]> {
+  return invoke("standard_outputs_delete", { output });
+}
+
+/** Called by TaskScheme.svelte, "Propose with AI"; the events go to `onEvent`. */
+export function taskSchemePropose(task: string, onEvent: (event: AiEvent) => void): Promise<SchemeView> {
+  const channel = new Channel<AiEvent>();
+
+  channel.onmessage = onEvent;
+
+  return invoke("task_scheme_propose", { task, onEvent: channel });
+}
+
+/** Called by TaskScheme.svelte, TaskProposals.svelte, TaskLinks.svelte, "Stop". */
+export function evaluationPlanStop(): Promise<void> {
+  return invoke("evaluation_plan_stop");
+}
+
+/** Called by BlockForm.svelte, "Accept" of a proposal. */
+export function taskSchemeAccept(block: string): Promise<SchemeView> {
+  return invoke("task_scheme_accept", { block });
+}
+
+/** Called by BlockForm.svelte, "Reject" of a proposal. */
+export function taskSchemeReject(block: string): Promise<SchemeView> {
+  return invoke("task_scheme_reject", { block });
+}
+
+/** Called by TaskScheme.svelte, "Accept all". */
+export function taskSchemeAcceptAll(task: string): Promise<SchemeView> {
+  return invoke("task_scheme_accept_all", { task });
+}
+
+/** Called by TaskScheme.svelte, "Reject all". */
+export function taskSchemeRejectAll(task: string): Promise<SchemeView> {
+  return invoke("task_scheme_reject_all", { task });
+}
+
+/** Called by AiWorkInstructions.svelte, when it opens. */
+export function aiWorkInstructionsGet(which: AiWork): Promise<string> {
+  return invoke("ai_work_instructions_get", { which });
+}
+
+/** Called by AiWorkInstructions.svelte, "Save" and "Default" (an empty text). */
+export function aiWorkInstructionsSave(which: AiWork, text: string): Promise<string> {
+  return invoke("ai_work_instructions_save", { which, text });
+}
+
+/** Called by TaskProposals.svelte, when a project opens and after a change. */
+export function taskProposalsGet(project: string): Promise<TaskProposalView[]> {
+  return invoke("task_proposals_get", { project });
+}
+
+/** Called by TaskProposals.svelte, "Propose tasks with AI"; the events go to `onEvent`. */
+export function taskProposalsPropose(
+  project: string,
+  catalog: string,
+  onEvent: (event: AiEvent) => void,
+): Promise<TaskProposalView[]> {
+  const channel = new Channel<AiEvent>();
+
+  channel.onmessage = onEvent;
+
+  return invoke("task_proposals_propose", { project, catalog, onEvent: channel });
+}
+
+/** Called by TaskProposals.svelte, "Accept". */
+export function taskProposalsAccept(project: string, catalog: string, control: string): Promise<TaskProposalView[]> {
+  return invoke("task_proposals_accept", { project, catalog, control });
+}
+
+/** Called by TaskProposals.svelte, "Reject". */
+export function taskProposalsReject(project: string, catalog: string, control: string): Promise<TaskProposalView[]> {
+  return invoke("task_proposals_reject", { project, catalog, control });
+}
+
+/** Called by TaskProposals.svelte, "Accept all". */
+export function taskProposalsAcceptAll(project: string): Promise<void> {
+  return invoke("task_proposals_accept_all", { project });
+}
+
+/** Called by TaskProposals.svelte, "Reject all". */
+export function taskProposalsRejectAll(project: string): Promise<void> {
+  return invoke("task_proposals_reject_all", { project });
+}
+
+/** Called by TaskLinks.svelte, when a task opens. */
+export function taskLinksGet(task: string): Promise<TaskLinkView[]> {
+  return invoke("task_links_get", { task });
+}
+
+/** Called by TaskLinks.svelte, "Find with AI"; the events go to `onEvent`. */
+export function taskLinksPropose(task: string, onEvent: (event: AiEvent) => void): Promise<TaskLinkView[]> {
+  const channel = new Channel<AiEvent>();
+
+  channel.onmessage = onEvent;
+
+  return invoke("task_links_propose", { task, onEvent: channel });
+}
+
+/** Called by TaskLinks.svelte, "Accept". */
+export function taskLinksAccept(task: string, catalog: string, control: string): Promise<TaskLinkView[]> {
+  return invoke("task_links_accept", { task, catalog, control });
+}
+
+/** Called by TaskLinks.svelte, "Reject" and "Remove". */
+export function taskLinksRemove(task: string, catalog: string, control: string): Promise<TaskLinkView[]> {
+  return invoke("task_links_remove", { task, catalog, control });
+}
+
+/** Called by WorkPackages.svelte, when a project opens and after a change. */
+export function workPackagesGet(project: string): Promise<WorkPackageView[]> {
+  return invoke("work_packages_get", { project });
+}
+
+/** Called by WorkPackages.svelte, "Make". */
+export function workPackagesAdd(project: string, workPackage: WorkPackageForm): Promise<WorkPackageView[]> {
+  return invoke("work_packages_add", { project, package: workPackage });
+}
+
+/** Called by WorkPackages.svelte, "Save". */
+export function workPackagesSave(workPackage: string, fields: WorkPackageForm): Promise<WorkPackageView[]> {
+  return invoke("work_packages_save", { package: workPackage, fields });
+}
+
+/** Called by WorkPackages.svelte, "Delete". */
+export function workPackagesDelete(workPackage: string): Promise<WorkPackageView[]> {
+  return invoke("work_packages_delete", { package: workPackage });
+}
+
+/** Called by WorkPackages.svelte, "Export…"; false when no place was chosen. */
+export function workPackagesExport(workPackage: string): Promise<boolean> {
+  return invoke("work_packages_export", { package: workPackage });
 }

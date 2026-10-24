@@ -1,5 +1,5 @@
 <!--
-  The screen of a task of a master project (step 51.2 of docs/todo.md; its
+  The screen of a task of a master project (step 51.2 of docs/history.md; its
   commands task_scheme_* in src/views/evaluation_plan/evaluation_plan.rs):
   the scheme of the task drawn with Svelte Flow, the form of the block
   chosen (BlockForm), and the standard always beside it: the requirement as
@@ -13,6 +13,12 @@
     sent. A connection chosen can be removed.
   - When a block is added or removed, the drawing is fitted to the canvas
     (SchemeFit), so that the new block is seen.
+  - "Propose with AI" asks the AI for inputs and corrections (step 51.3):
+    the progress is shown as it comes; the proposals are dashed blocks and
+    corrections in the form of their block, accepted or rejected there or
+    all at once here. "Instructions…" opens the instructions of that AI.
+  - Beside the standard, the related elements of the task (TaskLinks, step
+    51.4): the work units and other elements the evaluator needs.
   - The program answers every change with the whole scheme as stored, so
     the drawing always shows what the program keeps.
 -->
@@ -26,7 +32,9 @@
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
   import BlockForm from "./BlockForm.svelte";
-  import BlockNode from "./BlockNode.svelte";
+  import BlockNode from "../../components/block_node/BlockNode.svelte";
+  import AiWorkInstructions from "./AiWorkInstructions.svelte";
+  import TaskLinks from "./TaskLinks.svelte";
   import SchemeFit from "./SchemeFit.svelte";
 
   let { task, onclose }: { task: string; onclose: () => void } = $props();
@@ -38,10 +46,16 @@
   let selectedConnection: { from: string; to: string } | null = $state(null);
   let quote: evaluationPlan.QuoteView | null = $state(null);
   let problem = $state("");
+  /** The question to the AI while it runs: the characters written so far. */
+  let asking: number | null = $state(null);
+  /** What the last question gave, for the planner. */
+  let report = $state("");
+  let instructions = $state(false);
 
   const nodeTypes = { block: BlockNode };
 
   let block = $derived(scheme?.blocks.find((candidate) => candidate.uuid === selected) ?? null);
+  let undecided = $derived(scheme?.blocks.some((candidate) => candidate.proposal !== null || candidate.correction) ?? false);
 
   onMount(async () => {
     try {
@@ -64,7 +78,7 @@
       id: candidate.uuid,
       type: "block",
       position: { x: candidate.x, y: candidate.y },
-      data: { block: candidate, label: next.task.label, title: next.task.title },
+      data: { block: candidate, label: next.task.label, title: next.task.title, results: next.results },
       selected: candidate.uuid === selected,
     }));
 
@@ -136,6 +150,34 @@
     }
   }
 
+  /** One event of the question to the AI. */
+  function follow(event: evaluationPlan.AiEvent) {
+    if (event.event === "writing") {
+      asking = event.characters;
+    } else if (event.event === "proposed") {
+      const dropped = event.dropped.length > 0 ? ` Left out: ${event.dropped.join("; ")}.` : "";
+      report = `The AI proposed ${event.added} input(s) and ${event.corrections} correction(s).${dropped}`;
+    } else if (event.event === "failed") {
+      problem = event.message;
+    } else if (event.event === "end" && event.stopped) {
+      report = "Stopped.";
+    }
+  }
+
+  async function propose() {
+    asking = 0;
+    report = "";
+    selected = null;
+    await act(() => evaluationPlan.taskSchemePropose(task, follow));
+    asking = null;
+  }
+
+  /** Accepts or rejects every proposal; the report of the question is done with then. */
+  async function decideAll(accept: boolean) {
+    await act(() => (accept ? evaluationPlan.taskSchemeAcceptAll(task) : evaluationPlan.taskSchemeRejectAll(task)));
+    report = "";
+  }
+
   function disconnect() {
     const connection = selectedConnection;
     selectedConnection = null;
@@ -155,13 +197,33 @@
 
 {#if problem}<p class="problem">{problem}</p>{/if}
 
+{#if instructions}<AiWorkInstructions which="task_scheme" onclose={() => (instructions = false)} />{/if}
+
 {#if scheme}
   <div class="scheme-body">
     <div class="scheme-canvas">
       <div class="buttons scheme-tools">
         <button type="button" class="small" onclick={() => add("input")}>+ Input</button>
         <button type="button" class="small" onclick={() => add("output")}>+ Output</button>
-        <span class="note">Connect two blocks by dragging from the handle on the right of one to the handle on the left of the other.</span>
+        {#if asking === null}
+          <button type="button" class="small" onclick={propose}>Propose with AI</button>
+        {:else}
+          <button type="button" class="small danger" onclick={() => evaluationPlan.evaluationPlanStop()}>Stop</button>
+        {/if}
+        <button type="button" class="small" onclick={() => (instructions = true)}>Instructions…</button>
+        {#if undecided}
+          <button type="button" class="small" onclick={() => decideAll(true)}>Accept all</button>
+          <button type="button" class="small danger" onclick={() => decideAll(false)}>Reject all</button>
+        {/if}
+        <p class="note scheme-note">
+        {#if asking !== null}
+          The AI is reading the requirement{asking > 0 ? `: ${asking} characters written` : "…"}
+        {:else if report}
+          {report}
+        {:else}
+          Connect two blocks by dragging from the handle on the right of one to the handle on the left of the other.
+        {/if}
+        </p>
       </div>
       <SvelteFlow
         bind:nodes
@@ -217,6 +279,7 @@
           </div>
         {/if}
       </div>
+      <TaskLinks {task} />
       {#if quote}
         <div class="scheme-pdf">
           <PdfViewer documentId={quote.document_id} page={quote.page} quote={quote.text} embedded />

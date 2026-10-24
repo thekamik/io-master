@@ -5,10 +5,6 @@
 //! bytes are written straight into the memory of the
 //! [`DatabaseKey`], so no other copy of them is made.
 
-// TODO: Remove when the database uses this file; until then the
-//       compiler sees no user of it.
-#![allow(dead_code)]
-
 use std::io;
 
 use crate::db::encryption::database_key::DatabaseKey;

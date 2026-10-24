@@ -2,13 +2,9 @@
 //!
 //! The key is 32 random bytes (256 bits), the size that SQLCipher
 //! and AES-256 use; it is created by `generate_key.rs`. It is never
-//! stored as it is: step 3 of `docs/todo.md` stores it encrypted
-//! with the password of the evaluator and the secret of the device
-//! (`docs/architecture.md`, section 5.2).
-
-// TODO: Remove when the database uses this file (step 3 of
-//       docs/todo.md); until then the compiler sees no user of it.
-#![allow(dead_code)]
+//! stored as it is: it is stored encrypted with the password of the
+//! evaluator, and a second time with the recovery code
+//! (`docs/architecture.md`, sections 5.2 and 5.4).
 
 use std::fmt;
 

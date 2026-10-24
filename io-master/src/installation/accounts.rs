@@ -15,7 +15,7 @@
 //! answer does not tell which names exist.
 //!
 //! An installation has one account, made at the first start (step 48
-//! of docs/todo.md); no further account can be added.
+//! of docs/history.md); no further account can be added.
 
 use crate::db::system;
 use std::fmt;
@@ -115,7 +115,7 @@ fn binding(name: &str) -> Vec<u8> {
 
 /// The key of a database wrapped twice for the account `name`: with the
 /// password, and with a new recovery code, which is given back to be shown
-/// once (step 49 of docs/todo.md).
+/// once (step 49 of docs/history.md).
 ///
 /// Called by: [`create`], [`change_password`], [`recover`].
 /// Calls: `keys::wrap`, `recovery::new_code`, `recovery::wrap`.

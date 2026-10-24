@@ -1,5 +1,5 @@
 //! A requirement of the laboratory's own, outside the standards (step 51.1e
-//! of docs/todo.md): its identifier, written by the planner as they choose
+//! of docs/history.md): its identifier, written by the planner as they choose
 //! (the program imposes no naming), its title and its statement. It is kept
 //! as a control in one shared catalog of OSCAL, "Requirements of the
 //! laboratory", so a task points to it as to a requirement of a standard.

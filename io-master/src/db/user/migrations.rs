@@ -1,5 +1,5 @@
 //! The changes of the layout of the database of an evaluator, by its
-//! version (`PRAGMA user_version`, step 40 of docs/todo.md).
+//! version (`PRAGMA user_version`, step 40 of docs/history.md).
 //!
 //! A new database starts at version 1 (`encryption/sqlcipher.rs`,
 //! `SCHEMA_VERSION`). When a database is opened, its missing tables
@@ -8,7 +8,7 @@
 //! the version is raised. A database already at [`VERSION`] runs
 //! nothing.
 //!
-//! **The history starts again at version 1** (step 48 of docs/todo.md,
+//! **The history starts again at version 1** (step 48 of docs/history.md,
 //! 2026-10-24: the user began with a fresh installation). The steps
 //! 2 to 4 of the development (the column of the template of a message,
 //! the tables of the model before OSCAL, the settings of the scanner of

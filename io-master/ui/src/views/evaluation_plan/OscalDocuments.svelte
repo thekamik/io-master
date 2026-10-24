@@ -2,7 +2,7 @@
   The element "documents of OSCAL" of the view Evaluation plan
   (its commands in src/views/evaluation_plan/evaluation_plan.rs): the catalogs, mappings, profiles and
   plans, imported, exported and deleted here. A catalog is made from the PDFs
-  of a standard, and edited, in the view Converter (step 50 of docs/todo.md).
+  of a standard, and edited, in the view Converter (step 50 of docs/history.md).
 -->
 <script lang="ts">
   import { onMount } from "svelte";

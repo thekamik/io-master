@@ -1,7 +1,8 @@
-//! An OSCAL assessment plan: the evaluation plan (function a of
-//! docs/oscal.md): the controls and objectives reviewed, the subjects,
-//! the tools, and the tasks with their order. Typed further in step
-//! 41.4; until then its parts are kept as they come.
+//! An OSCAL assessment plan: the controls and objectives reviewed, the
+//! subjects, the tools, and the tasks with their order. Imported,
+//! checked, kept and exported as a document (docs/oscal.md, section 1);
+//! the plan of the program is its own model (the master projects), so
+//! its parts are kept as they come.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

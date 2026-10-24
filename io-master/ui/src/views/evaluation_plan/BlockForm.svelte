@@ -4,12 +4,15 @@
   src/views/evaluation_plan/evaluation_plan.rs): an input (its name, the
   evidence expected, the instructions for its agent), the requirement (the
   instructions for its agent; its text is the standard's), an output (its
-  name, format, target, condition, the instructions for its AI). After a
-  change it gives the scheme back to the screen (onchanged).
+  name, format, target, condition, the instructions for its AI). What the
+  AI proposed for the block (the block itself, or a correction with its
+  reason) is shown above the fields, with Accept and Reject (step 51.3).
+  After a change it gives the scheme back to the screen (onchanged).
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
+  import OutputFields from "./OutputFields.svelte";
 
   let {
     block,
@@ -50,6 +53,14 @@
     }
   }
 
+  async function decide(accept: boolean) {
+    try {
+      onchanged(await (accept ? evaluationPlan.taskSchemeAccept(block.uuid) : evaluationPlan.taskSchemeReject(block.uuid)));
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
+
   async function remove() {
     try {
       onchanged(await evaluationPlan.taskSchemeRemoveBlock(block.uuid));
@@ -61,6 +72,33 @@
 
 <form class="block-form" onsubmit={save}>
   {#if problem}<p class="problem">{problem}</p>{/if}
+  {#if block.proposal !== null}
+    <div class="ai-proposal">
+      <strong>Proposed by the AI.</strong>
+      {#if block.proposal}<p>{block.proposal}</p>{/if}
+      <div class="buttons">
+        <button type="button" onclick={() => decide(true)}>Accept</button>
+        <button type="button" class="danger" onclick={() => decide(false)}>Reject</button>
+      </div>
+    </div>
+  {/if}
+  {#if block.correction}
+    <div class="ai-proposal">
+      <strong>The AI proposes a correction.</strong>
+      {#if block.correction.reason}<p>{block.correction.reason}</p>{/if}
+      <dl>
+        {#if block.kind === "input"}
+          <dt>Name</dt><dd>{block.correction.name}</dd>
+          <dt>Expected evidence</dt><dd>{block.correction.evidence}</dd>
+        {/if}
+        <dt>Instructions for its agent</dt><dd>{block.correction.instructions}</dd>
+      </dl>
+      <div class="buttons">
+        <button type="button" onclick={() => decide(true)}>Accept</button>
+        <button type="button" class="danger" onclick={() => decide(false)}>Reject</button>
+      </div>
+    </div>
+  {/if}
   {#if block.kind === "input"}
     <h3>Input</h3>
     <label>Name <input bind:value={form.name} required /></label>
@@ -74,34 +112,17 @@
     </label>
   {:else if block.kind === "requirement"}
     <h3>Requirement</h3>
-    <p class="note">Its text is the standard's, beside. The agent of the requirement assesses the inputs connected to it.</p>
+    <p class="note">
+      Its text is the standard's, beside. Its agent verifies the inputs connected to it, proposes whether the requirement is
+      met (the evaluator decides) and sums up in the four results, which go to the outputs.
+    </p>
     <label>
       Instructions for its agent
-      <textarea bind:value={form.instructions} rows="4" placeholder="What to assess"></textarea>
+      <textarea bind:value={form.instructions} rows="4" placeholder="What to check in the inputs and how to decide whether the requirement is met"></textarea>
     </label>
   {:else}
     <h3>Output</h3>
-    <label>Name <input bind:value={form.name} required placeholder="pETR, Observation Report, …" /></label>
-    <label>
-      Format
-      <select bind:value={form.format}>
-        <option value="text">a text file</option>
-        <option value="latex">a LaTeX template</option>
-      </select>
-    </label>
-    <label>
-      Filled
-      <select bind:value={form.condition}>
-        <option value="always">always</option>
-        <option value="not_met">only when the requirement is not met</option>
-        <option value="met">only when the requirement is met</option>
-      </select>
-    </label>
-    <label>Target <textarea bind:value={form.target} rows="2" placeholder="The file or the template, and its section"></textarea></label>
-    <label>
-      Instructions for its AI
-      <textarea bind:value={form.instructions} rows="3" placeholder="How to adapt the result to this document"></textarea>
-    </label>
+    <OutputFields bind:fields={form} />
   {/if}
   <div class="buttons">
     <button type="submit">Save</button>

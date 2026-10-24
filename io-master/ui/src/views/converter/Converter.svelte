@@ -1,7 +1,7 @@
 <!--
   The view Converter (src/views/converter/): the documents of a standard
   (PDF) converted into a catalog of NIST OSCAL with the help of the AI, its
-  only aim (step 50 of docs/todo.md). In two tabs:
+  only aim (step 50 of docs/history.md). In two tabs:
 
   - Catalogs: the catalogs of OSCAL; a new one is made from the PDFs, and
     each opens in its editor (catalog_editor/), where the AI proposes its

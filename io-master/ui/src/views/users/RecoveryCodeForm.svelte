@@ -2,7 +2,7 @@
   The element "recovery code form" of the view Users, on the page User (its
   command recovery_code_form_replace in src/views/users/users.rs): "Make a new
   recovery code", which needs the password (user, 2026-10-24); the new code is
-  shown here once and the old one stops working (step 49 of docs/todo.md).
+  shown here once and the old one stops working (step 49 of docs/history.md).
 -->
 <script lang="ts">
   import RecoveryCode from "../../components/recovery_code/RecoveryCode.svelte";

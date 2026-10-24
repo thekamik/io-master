@@ -42,7 +42,7 @@ use super::proposals::view::{self as proposal_view, ProposalView};
 
 /// How far the conversion of catalog `uuid` is: its stage, the pages of its
 /// table of contents, its groups with their pages and state, and what is
-/// left to check (step 50.2 of docs/todo.md).
+/// left to check (step 50.2 of docs/history.md).
 ///
 /// Called by the page: `ConversionWizard.svelte`, when the editor opens and
 /// after every change (`catalogEditor.conversionWizardGet(uuid)`).

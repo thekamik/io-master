@@ -5,7 +5,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::app::error::AppError;
-use crate::model::task_scheme::{Block, BlockFields, Connection, OutputCondition, OutputFormat};
+use crate::model::task_scheme::{
+    Block, BlockFields, Connection, Correction, OutputCondition, OutputFormat, ResultText,
+};
 
 use super::super::standard_browser::view::RequirementView;
 use super::super::task_list::view::TaskView;
@@ -26,10 +28,32 @@ pub struct BlockView {
     pub format: &'static str,
     /// `"always"`, `"not_met"` or `"met"`.
     pub condition: &'static str,
+    /// The reason of the AI while the block is only proposed (drawn dashed).
+    pub proposal: Option<String>,
+    /// The correction the AI proposes for the block, waiting for the planner.
+    pub correction: Option<CorrectionView>,
+}
+
+/// A correction of a block the AI proposes.
+#[derive(Debug, Serialize)]
+pub struct CorrectionView {
+    pub name: String,
+    pub evidence: String,
+    pub instructions: String,
+    pub reason: String,
 }
 
 impl BlockView {
-    pub fn new(block: Block) -> BlockView {
+    /// The block with the correction proposed for it, if any.
+    pub fn new(block: Block, correction: Option<Correction>) -> BlockView {
+        // A short closure: Option::map, which clippy asks for here.
+        let correction = correction.map(|found| CorrectionView {
+            name: found.name,
+            evidence: found.evidence,
+            instructions: found.instructions,
+            reason: found.reason,
+        });
+
         BlockView {
             uuid: block.uuid,
             kind: block.kind.name(),
@@ -41,6 +65,8 @@ impl BlockView {
             target: block.fields.target,
             format: block.fields.format.name(),
             condition: block.fields.condition.name(),
+            proposal: block.proposal,
+            correction,
         }
     }
 }
@@ -66,6 +92,22 @@ pub struct SchemeView {
     pub requirement: RequirementView,
     pub blocks: Vec<BlockView>,
     pub connections: Vec<ConnectionView>,
+    /// The titles of the four text results of the requirement, which its
+    /// block shows and the outputs get.
+    pub results: Vec<&'static str>,
+}
+
+/// The titles of the four text results, in their order.
+///
+/// Called by: `scheme::read`.
+pub fn result_titles() -> Vec<&'static str> {
+    let mut titles = Vec::with_capacity(ResultText::ALL.len());
+
+    for text in ResultText::ALL {
+        titles.push(text.title());
+    }
+
+    titles
 }
 
 /// The fields of a block, as the page sends them.

@@ -1,5 +1,5 @@
 //! The direction of the dependencies between the folders of the
-//! program (step 40 of docs/todo.md, docs/code_structure.md), checked
+//! program (step 40 of docs/history.md, docs/code_structure.md), checked
 //! on the source itself, so that an auditor sees the rule and its check
 //! in one place:
 //!

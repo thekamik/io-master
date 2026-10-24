@@ -14,9 +14,10 @@
      5. cards and tabs   11. dialogs and the viewer of a standard
      6. the frame (bars, sidebar, page head)
                          12. create evaluation scheme
-                         13. the editor of a catalog */
+                         13. the editor of a catalog
+                         14. the Evaluation lab */
 
-/* The sheets, in the order of the cascade (step 40 of docs/todo.md):
+/* The sheets, in the order of the cascade (step 40 of docs/history.md):
    one file per part of the window. */
 @import "./styles/01-tokens.css";
 @import "./styles/02-base.css";
@@ -30,3 +31,4 @@
 @import "./styles/11-dialogs.css";
 @import "./styles/12-schemes.css";
 @import "./styles/13-catalogs.css";
+@import "./styles/14-lab.css";

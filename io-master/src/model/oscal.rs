@@ -1,6 +1,6 @@
 //! The documents of NIST OSCAL (Open Security Controls Assessment
 //! Language), version 1.2.3: the format in which the program keeps the
-//! standards and the plans of evaluations (step 41 of docs/todo.md,
+//! standards and the plans of evaluations (step 41 of docs/history.md,
 //! docs/oscal.md).
 //!
 //! ```text

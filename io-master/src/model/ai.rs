@@ -394,6 +394,9 @@ impl Role {
     }
 }
 
+/// The longest instructions of a task the evaluator may write.
+pub const INSTRUCTIONS_MAX: usize = 20_000;
+
 /// A task of the AI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Task {
@@ -404,6 +407,23 @@ pub enum Task {
     CatalogOutline,
     /// The controls of a group of an OSCAL catalog, from its pages.
     CatalogSection,
+    /// The inputs of the scheme of a task and the corrections of its
+    /// blocks (step 51.3).
+    Scheme,
+    /// The requirements of a catalog a project has to cover (step 51.4).
+    RequirementChoice,
+    /// The elements of other catalogs related to the requirement of a task
+    /// (step 51.4).
+    RelatedElements,
+    /// A message of the chat of an input of the Evaluation lab (step 52).
+    InputChat,
+    /// The fragments of a piece of evidence that matter for a requirement
+    /// (step 52).
+    EvidenceFragments,
+    /// The four results and the verdict proposed for a requirement (step 52).
+    Assessment,
+    /// The text of an output from the results (step 52).
+    OutputDraft,
     /// A message of the chat.
     Chat,
     /// The check of a connection.
@@ -411,8 +431,20 @@ pub enum Task {
 }
 
 impl Task {
-    pub const ALL: [Task; 5] =
-        [Task::CatalogContents, Task::CatalogOutline, Task::CatalogSection, Task::Chat, Task::Check];
+    pub const ALL: [Task; 12] = [
+        Task::CatalogContents,
+        Task::CatalogOutline,
+        Task::CatalogSection,
+        Task::Scheme,
+        Task::RequirementChoice,
+        Task::RelatedElements,
+        Task::InputChat,
+        Task::EvidenceFragments,
+        Task::Assessment,
+        Task::OutputDraft,
+        Task::Chat,
+        Task::Check,
+    ];
 
     /// The name kept in the database and in the journal.
     pub fn name(self) -> &'static str {
@@ -420,6 +452,13 @@ impl Task {
             Task::CatalogContents => "catalog_contents",
             Task::CatalogOutline => "catalog_outline",
             Task::CatalogSection => "catalog_section",
+            Task::Scheme => "task_scheme",
+            Task::RequirementChoice => "requirement_choice",
+            Task::RelatedElements => "related_elements",
+            Task::InputChat => "input_chat",
+            Task::EvidenceFragments => "evidence_fragments",
+            Task::Assessment => "assessment",
+            Task::OutputDraft => "output_draft",
             Task::Chat => "chat",
             Task::Check => "check",
         }
@@ -432,8 +471,16 @@ impl Task {
     /// The role it is asked in; `None` for the check of a connection.
     pub fn role(self) -> Option<Role> {
         match self {
-            Task::CatalogContents | Task::CatalogOutline | Task::CatalogSection => Some(Role::TextAnalysis),
-            Task::Chat => Some(Role::Consultation),
+            Task::CatalogContents
+            | Task::CatalogOutline
+            | Task::CatalogSection
+            | Task::Scheme
+            | Task::RequirementChoice
+            | Task::RelatedElements
+            | Task::EvidenceFragments => Some(Role::TextAnalysis),
+            Task::InputChat | Task::Chat => Some(Role::Consultation),
+            Task::Assessment => Some(Role::FormalAnalysis),
+            Task::OutputDraft => Some(Role::Summary),
             Task::Check => None,
         }
     }

@@ -1,5 +1,5 @@
 //! The shared catalog of the requirements of the laboratory (step 51.1e of
-//! docs/todo.md): made at the first requirement, its UUID kept by
+//! docs/history.md): made at the first requirement, its UUID kept by
 //! `db/own_requirements/`; every requirement a control of it, written,
 //! changed and removed as the catalogs are (`db/oscal/`, checked against the
 //! schema of NIST).

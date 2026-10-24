@@ -1,6 +1,6 @@
 # IO Master: architecture
 
-This document records the concept of the program, as agreed from 2026-10-14 on (one user per installation on 2026-10-15; the desktop window on 2026-10-16; the layers of the code on 2026-10-17; the standards in NIST OSCAL on 2026-10-18; the framework for the evaluation with AI, without devices, a master, the TPM and the keyring, on 2026-10-24, step 48 of `todo.md`). It describes *what* the program is and *why* it is built this way. *Where* everything is in the code is in `code_structure.md`; the work with standards on NIST OSCAL in `oscal.md`; the functions of v0.2 that are being re-created are listed in `v0.2_functionality.md`.
+This document records the concept of the program, as agreed from 2026-10-14 on (one user per installation on 2026-10-15; the desktop window on 2026-10-16; the layers of the code on 2026-10-17; the standards in NIST OSCAL on 2026-10-18; the framework for the evaluation with AI, without devices, a master, the TPM and the keyring, on 2026-10-24, step 48; the Converter, the master projects and the Evaluation lab, steps 50 to 52 of the same day; all in `history.md`). It describes *what* the program is and *why* it is built this way. *Where* everything is in the code is in `code_structure.md`; the work with standards on NIST OSCAL in `oscal.md`; the open work in `todo.md`, the steps built in `history.md`.
 
 Status markers: **agreed** is decided; **open** still needs a decision; **TODO** is known work that must not be forgotten.
 
@@ -18,7 +18,7 @@ The program is installed **locally, on the computer of the evaluator**, in their
 
 ## 2. Principles
 
-Carried over from the design of v0.2; they are requirements, not preferences.
+Carried over from the first design of the program; they are requirements, not preferences.
 
 | # | Principle | Consequence |
 |---|---|---|
@@ -30,7 +30,7 @@ Carried over from the design of v0.2; they are requirements, not preferences.
 
 ## 3. One program, one user (agreed; changed 2026-10-24)
 
-There is one program, installed on the computer of the evaluator. **One Linux account, one installation, one user** (agreed 2026-10-15): an installation belongs to the Linux account that installed it, and it has exactly one user of the program; users cannot be added. The data of a laboratory is critical, so the installation is bound as tightly as possible to one person and one account. Evaluators share their results by the files the program exports (the report in the LaTeX template of the laboratory, step 28; backups, section 5.5), as the laboratory organises it (section 6).
+There is one program, installed on the computer of the evaluator. **One Linux account, one installation, one user** (agreed 2026-10-15): an installation belongs to the Linux account that installed it, and it has exactly one user of the program; users cannot be added. The data of a laboratory is critical, so the installation is bound as tightly as possible to one person and one account. Planners and evaluators share their work by the files the program exports (the work packages of the Evaluation plan, the report of the Evaluation lab; backups later, section 5.5), as the laboratory organises it (section 6).
 
 **No roles** (user, 2026-10-24, step 48): until then the first start chose between a *workstation* and a *master*, a separate machine that served the reset of forgotten passwords to the workstations. The user found it a strong overcomplication of the architecture: the master, its server mode and its rule "never on one computer" (section 3.1 until then) were removed before they were built. A forgotten password is recovered on the workstation itself (section 5.4).
 
@@ -45,16 +45,16 @@ The first start is the real moment of installation. **It is told by the system d
 - The setup is made in the window, by the person in front of it: the name of the user and the password (twice). The window opens no network port, so no other user or program of the computer can reach the setup.
 - The person who installs the program is its **only user**.
 - The data of an installation lives in its folder (the system database and the encrypted database of the user); all settings are in the databases.
-- **Removing the installation** is done in the window, after a login and a confirmation; it removes the databases. There is no console command for it: whoever can type in a terminal of the account must not be able to remove the work of the evaluator. TODO (step 12): `installation/uninstall.rs` is a console function marked "do not use" (not compiled) until it is reworked.
+- **Removing the installation** is done in the window, after a login and a confirmation; it removes the databases (step 54 of `todo.md`). There is no console command for it: whoever can type in a terminal of the account must not be able to remove the work of the evaluator.
 - **Until 2026-10-24** the location and a *secret of the application* were to be kept in the keyring of the Linux account (GNOME Keyring), which would also tell the first start; it was never built and was dropped (section 5.6).
 
 ## 4. User interface (agreed, changed 2026-10-16)
 
-- **A desktop window** (Tauri 2 with a page in Svelte, since 2026-10-16; step 14 of `todo.md`). The page is built into the program and talks to it through a fixed list of commands; **the program opens no network port for its interface**. The earlier web interface on 127.0.0.1 (with its Host and Origin checks against DNS rebinding and cross-site requests) was removed with step 14; it is in the git history (commit `acedc8b`).
+- **A desktop window** (Tauri 2 with a page in Svelte, since 2026-10-16; step 14 of `history.md`). The page is built into the program and talks to it through a fixed list of commands; **the program opens no network port for its interface**. The earlier web interface on 127.0.0.1 (with its Host and Origin checks against DNS rebinding and cross-site requests) was removed with step 14; it is in the git history (commit `acedc8b`).
 - **The program is started without parameters.** A parameter given anyway is refused. All configuration is made in the window.
 - **The program serves nothing on the network**; it is only a client of the AI services. A remote access to the interface does not exist: the evaluator works at the computer.
 - TLS 1.3 is used wherever data leaves the computer: the AI services.
-- **AI connections (agreed 2026-10-16, step 15 of `todo.md`).** The program knows no AI provider. It is meant for a local model of the laboratory; Anthropic serves only for the tests and is set up the same way. The evaluator describes each service completely on the tab AI of Settings: endpoint, model, optional API key and CA certificate, the headers and the JSON template of the request, and the paths to the text, the stop reason, an error, the model and the token counts in the answer (a stream of events or one JSON). Rules:
+- **AI connections (agreed 2026-10-16, step 15 of `history.md`).** The program knows no AI provider. It is meant for a local model of the laboratory; Anthropic serves only for the tests and is set up the same way. The evaluator describes each service completely on the tab AI of Settings: endpoint, model, optional API key and CA certificate, the headers and the JSON template of the request, and the paths to the text, the stop reason, an error, the model and the token counts in the answer (a stream of events or one JSON). Rules:
   - `https://` with TLS 1.3 and a verified certificate (the system's, or only the CA certificate of the connection); **plain `http://` only to the loopback** (`127.0.0.0/8`, `::1`, written as an IP address), because that traffic does not leave the computer; no redirects, no proxy of the environment.
   - The API key only where `{{api_key}}` stands in a header, never in the URL or the body; never shown back; masked in the report of a check; bound to the scheme, host and port it was entered for (a changed address removes it).
   - Placeholders of the body are whole JSON values, replaced as values: a message can never change the structure of the request.
@@ -63,9 +63,9 @@ The first start is the real moment of installation. **It is told by the system d
 - The pages, in this order in the navigation:
   1. **Chat**: the AI assistant, over the active AI connection.
   2. **Converter** (step 50, 2026-10-24): the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI, its only aim: the PDFs loaded and searched, a catalog made from them, its editor where the AI proposes groups and controls and the evaluator accepts them (section 7.1).
-  3. **Evaluation plan**: works only on the documents of OSCAL, in two tabs: **Master projects** (step 51: a master project holds the catalogs of a standard and all its tasks, each a whole requirement chosen in a browser of the standards; made once for a version of a standard and used again and again; later each task gets its scheme of input, requirement and output blocks, and packages of tasks are handed to the evaluators) and **OSCAL documents** (the list, the import, the export, the deletion).
-  4. **Evaluation lab**: an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
-  5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password; later the recovery code (section 5.4), an optional second factor of the login and the removal of the installation.
+  3. **Evaluation plan**: works only on the documents of OSCAL, in two tabs: **Master projects** (step 51: a master project holds the catalogs of a standard and all its tasks, each a whole requirement chosen in a browser of the standards or proposed by the AI; made once for a version of a standard and used again and again; each task has its scheme of input, requirement and output blocks; packages of tasks are exported to the evaluators) and **OSCAL documents** (the list, the import, the export, the deletion).
+  4. **Evaluation lab** (step 52): a work package of the Evaluation plan imported and carried out for one product: the evidence of the inputs, the fragments accepted, the results and the verdict of every requirement, the texts of the outputs, and the report exported out of the program.
+  5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password and the recovery code (section 5.4); later an optional second factor of the login and the removal of the installation (step 54).
   6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the backups and the removal of the installation).
 - **Logging in** with the name and the password; the keys of section 5.
 
@@ -78,7 +78,7 @@ The first start is the real moment of installation. **It is told by the system d
 - The program has its **own password**, independent of the password of the Linux account: 12 to 1024 characters, nothing else demanded (as NIST recommends).
 - The evaluator has **their own API keys** (one per AI connection), stored in the encrypted database of their installation.
 - Someone who copies the files can try passwords offline; Argon2id (64 MiB per try) and the minimum of 12 characters make that slow. The strength of the password is the protection of copied files.
-- **Dropped on 2026-10-24** (step 48), as the overcomplication of a simple program: the TPM 2.0 as a factor (step 8; its half-built code and the emulator `swtpm` removed), passkeys (step 9), the secret of the application in the keyring (section 5.6). For a few hours of the same day the login with the OpenPGP key of the evaluator (GnuPG) was considered; the user kept the password, since OpenPGP keys have no recovery of a forgotten passphrase either and the program is to be easy to use (`todo.md`, step 48).
+- **Dropped on 2026-10-24** (step 48), as the overcomplication of a simple program: the TPM 2.0 as a factor (step 8; its half-built code and the emulator `swtpm` removed), passkeys (step 9), the secret of the application in the keyring (section 5.6). For a few hours of the same day the login with the OpenPGP key of the evaluator (GnuPG) was considered; the user kept the password, since OpenPGP keys have no recovery of a forgotten passphrase either and the program is to be easy to use (`history.md`, step 48).
 
 ### 5.2 Key of the database
 
@@ -102,11 +102,11 @@ password of the evaluator ──► Argon2id ──► HKDF ──► unlocking 
 
 The system database is opened before anyone gives a password, so there is no key that could protect it: it therefore holds **nothing secret**. The key of the database of the evaluator it holds is encrypted and useless without the password.
 
-**The code (steps 37 and 40 of `todo.md`, 2026-10-17):** all SQL is in `src/db/`, one folder per area of data, each with its tables and its files of create, read, update and delete; all code of encryption is in `src/db/encryption/`, and `sqlcipher.rs` is the only place where a database file is opened or created. The connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile. The database of an evaluator is opened once at the login and kept in the session of the evaluator (`installation/session.rs`) until the logout; the key that opened it is wiped. The OSCAL documents are kept as their JSON, checked against the schema of NIST at every write, with tables of index for their UUIDs and ids (`db/oscal/`); the evaluation support has tables of its own (`db/evaluation_support/`). The commands of the views change them and write them through to the database at once. Details: `code_structure.md`.
+**The code (steps 37 and 40 of `history.md`, 2026-10-17):** all SQL is in `src/db/`, one folder per area of data, each with its tables and its files of create, read, update and delete; all code of encryption is in `src/db/encryption/`, and `sqlcipher.rs` is the only place where a database file is opened or created. The connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile. The database of an evaluator is opened once at the login and kept in the session of the evaluator (`installation/session.rs`) until the logout; the key that opened it is wiped. The OSCAL documents are kept as their JSON, checked against the schema of NIST at every write, with tables of index for their UUIDs and ids (`db/oscal/`); the evaluation support has tables of its own (`db/evaluation_support/`). The commands of the views change them and write them through to the database at once. Details: `code_structure.md`.
 
 Both databases are **SQLite files** (agreed, implemented in step 3), the database of the evaluator encrypted with SQLCipher: no separate database service, one file per database in the folder of the installation (section 3.2), transactions that survive an interrupted write, and a built-in way to copy a running database.
 
-### 5.4 Recovery of a forgotten password (agreed 2026-10-24; planned, step 49 of `todo.md`)
+### 5.4 Recovery of a forgotten password (agreed and built 2026-10-24, step 49)
 
 **No server and no master** (section 3). A forgotten password is recovered on the workstation with a **recovery code**, the mechanism of BitLocker, FileVault and LUKS (a second "slot" of the key), approved by the user on 2026-10-24:
 
@@ -122,7 +122,7 @@ key of the database ┤                                                         
 - **Limits, said in the window:** the code is a second key to the data (whoever finds it has the data); a lost password *and* a lost code mean lost data (only a backup is left); a replaced code protects the files on the computer, not copies of them taken earlier.
 - **Built in step 49** (2026-10-24): `model/recovery_code.rs` (the text of a code), `db/encryption/recovery.rs` (its copy of the key), `installation/accounts.rs` and `views/users/users.rs` (the operations), the component `recovery_code` of the page (the code shown once). The way of the key: section 12.
 
-### 5.5 Backup (agreed; later stage; changed 2026-10-24)
+### 5.5 Backup (agreed; step 55 of `todo.md`; changed 2026-10-24)
 
 The evaluator exports backups of the work (also the only way to move it to a new computer). **A backup can be encrypted with an OpenPGP key, optionally** (user, 2026-10-24): for the key of the evaluator and, if the laboratory wishes, for a key of the laboratory, a standard the laboratories use. **The key is never required**: without it the backup is not encrypted, and the window says so and recommends a key. (Open, decided when the function is built: whether a backup without encryption leaves out the API keys.)
 
@@ -132,25 +132,48 @@ Was: the location of the installation and a *secret of the application* (a "pepp
 
 ## 6. Collaboration (changed 2026-10-24)
 
-**No git in the program** (user, 2026-10-24, step 48): the laboratory manages its documents itself; not every laboratory uses git, and the configurations of the program would hold the work up. The program does not share data between evaluators. What leaves it is exported by the evaluator: the report filled into the LaTeX template of the laboratory (step 28), the documents of OSCAL, and backups (section 5.5). Everything else (API keys, chats, working results) stays in the encrypted database of the evaluator.
+**No git in the program** (user, 2026-10-24, step 48): the laboratory manages its documents itself; not every laboratory uses git, and the configurations of the program would hold the work up. The program does not share data between evaluators. What leaves it is exported, as a file the person chooses:
+
+```text
+planner (Evaluation plan)                          evaluator (Evaluation lab)
+  master project ──work package (.iomaster.json)──► evaluation of one product
+  (tasks, schemes, related elements,                 (evidence, fragments, results, verdicts)
+   the catalogs of OSCAL attached)                          │
+                                                            ▼
+                                                   the report: one file per output (.txt, .tex),
+                                                   for the template of the laboratory
+```
+
+Besides: the documents of OSCAL (export from the Evaluation plan) and backups later (section 5.5). Nothing returns from the Evaluation lab to the planner: the result of the work of the evaluator is the report (user, 2026-10-24). Everything else (API keys, chats, the work in progress) stays in the encrypted database of the evaluator.
 
 ## 7. Work on standards
 
 The program works on documents: the standards, the documentation of the client and what the evaluator delivers. **It does not talk to devices** (user, 2026-10-24, step 48): the scan of the serial ports and the planned work on UART and Bluetooth were removed; the results of the tests the laboratory carries out on a device are inputs of the evaluator, which the program reads but does not produce. The code of the scan is in the history of git (`history.md`, step 48).
 
-### 7.1 Standards: the evaluation plan and the evaluation on NIST OSCAL (agreed 2026-10-18, step 41 of `todo.md`)
+### 7.1 Standards, the evaluation plan and the evaluation (agreed 2026-10-18; changed 2026-10-24, steps 50 to 52)
 
-The program works against any **standard**, not only Common Criteria. **The data of the standards is stored in NIST OSCAL 1.2.3** (Open Security Controls Assessment Language), the published, machine-readable format of NIST for requirements and their assessment; every OSCAL document is checked against the JSON schemas of NIST (kept in the repository, `io-master/oscal/`) whenever it is written. The whole concept, with the decisions of the user and the examples of how Common Criteria and ETSI EN 303 645 are represented, is in **`oscal.md`**; this section gives its frame.
+The program works against any **standard**, not only Common Criteria. **The requirements of the standards are kept as catalogs of NIST OSCAL 1.2.3** (Open Security Controls Assessment Language), the published, machine-readable format of NIST; every document of OSCAL is checked against the JSON schemas of NIST (kept in the repository, `io-master/oscal/`) whenever it is written. How OSCAL is used, and where the program has a model of its own, is in **`oscal.md`**; this section gives the frame.
 
-- **Two functions.** The **evaluation plan** makes or loads the OSCAL scheme of a standard, shows it as a graph and hands it over; the **evaluation** takes a plan and, with the AI, provides the evidence, checks whether the requirements are met and makes the report. The results of the functional tests the laboratory carries out are inputs of the evaluation, not functions of the program (section 7). It supports the laboratory; it is not the whole process of certification.
-- **The models of OSCAL in use:** catalog (the requirements of a standard), mapping (relations between requirements, also of two standards), profile (the requirements chosen for one evaluation, their parameters set), assessment plan (the plan: tasks, activities, subjects, tools) and assessment results (observations, findings, risks, the log of the assessment). The system security plan and the component definition come with the documentation of the manufacturer (step 30).
-- **No solution of its own for one standard.** Every document that defines the work is an OSCAL document and can be taken into a plan: the criteria (CC Parts 1 to 5, ETSI EN 303 645), the methodology with its work units (the CEM), the Protection Profiles, test specifications (ETSI TS 103 701). Catalogs published in OSCAL (NIST SP 800-53, ...) are imported as they are; the others are made in the program.
+```text
+PDFs of a standard ──Converter──► CATALOG (OSCAL) ◄── imported (NIST SP 800-53, the CEM, ...)
+                                      │
+                      Evaluation plan ▼  (the program's own model, linked by UUIDs and ids)
+                    master project: tasks (a whole requirement each), the scheme of each task
+                    (inputs → requirement → outputs), related elements, work packages
+                                      │  work package (our format + the catalogs attached)
+                       Evaluation lab ▼
+                    evaluation of one product: evidence, fragments, four results, verdict,
+                    the texts of the outputs ──► the report
+```
+
+- **Three functions, three views.** The **Converter** makes a catalog from the PDFs of a standard, step by step with the AI (step 50). The **Evaluation plan** makes the master project of a standard: its tasks, the scheme of each task, the related elements (the work units of the CEM, ...), and the work packages delegated to the evaluators (step 51). The **Evaluation lab** carries out a work package for one product and exports the report (step 52). The results of the functional tests the laboratory carries out are inputs of the evaluator, not functions of the program (section 7). It supports the laboratory; it is not the whole process of certification.
+- **OSCAL where it is the standard, our model where OSCAL has no place for the work.** The requirements are catalogs of OSCAL; the documents of the other models (mapping, profile, assessment plan, assessment results) are imported, checked, kept and exported. The master projects, the schemes, the work packages and the evaluations are the program's own model, linked to the catalogs only by their UUIDs and the ids of their controls; an export of them as OSCAL profiles, assessment plans and assessment results is a reminder of `todo.md`.
+- **No solution of its own for one standard.** Every document that defines the work is a catalog and can be taken into a master project: the criteria (CC Parts 1 to 5, ETSI EN 303 645), the methodology with its work units (the CEM), the Protection Profiles, test specifications (ETSI TS 103 701). Catalogs published in OSCAL (NIST SP 800-53, ...) are imported as they are; the others are made in the Converter. A requirement of the laboratory, outside the standards, is a control of one shared catalog of its own (step 51.1e).
 - **Documents of a standard.** Its PDFs are loaded, read page by page (`pdftotext` of Poppler, the PDF on its standard input) and kept with their text in the encrypted database of the evaluator; a catalog names the PDFs it comes from as resources of its back matter, by the SHA-256 of the file. The viewer (pdf.js, built in) shows a quoted passage highlighted on its page.
-- **Catalogs made in the program.** The AI proposes the groups of a catalog from the table of contents and the controls of a group from its pages, part by part over the active AI connection; every proposal carries quotes, each checked on its page by the program. The evaluator accepts, corrects or rejects every proposal (P1) and edits the catalog by hand.
-- **The evaluation support (our own model).** What the program adds to OSCAL (the quotes of an object with their pages and the result of their check, the AI notes, the proposals of the AI and their state, the instructions to the AI and the prompts, the layout of the graph) is kept in tables of its own and linked to OSCAL objects only by their UUIDs and ids; **nothing of ours is written into an OSCAL document**, so an export is valid OSCAL and the evaluation support travels beside it.
-- **Where the text of a standard goes is the decision of the laboratory**: the program sends it over the connection the user chose and does not warn or block. Recommended: a local model for licensed standards (a connection to `http://127.0.0.1`, which never leaves the computer); a cloud service only where the licence of the standard and the rules of the laboratory allow it.
-- **The evaluation (step 41.5, then steps 31 to 36)** records its work as OSCAL assessment results. The decisions of the user of 2026-10-17 stand: the evaluator works on **one requirement at a time**; the documentation of the product is used in **two phases**, first the fragments that matter for the requirement (each an exact quote checked on its page, the explanation of the model in a separate *AI note*, never presented as a quote), then the assessment on **only the fragments the evaluator has accepted**, a methodological requirement that keeps the evaluation defensible in an audit; the program imposes **no list of verdicts**, each requirement gets four text results (*Findings*, *Analysis*, *Assessment and verdict proposition*, *Vulnerabilities and notes*), which map onto the findings, observations and risks of OSCAL (`oscal.md`, section 5); what the AI proposes becomes a result only when the evaluator accepts it; every step is logged. **Step 30:** the documentation of the manufacturer (Security Target, guidance, design) is analysed in a tool of its own. **Step 28:** the results are written into the LaTeX template of the laboratory.
-- **Before step 41** (steps 16 to 29, 2026-10-16 and 17) the program had a model of its own, the *test project*: schemes of tiles (inputs, requirements, outputs) and links per chapter, and an *evaluation project* copied from it. It was replaced by OSCAL and removed with its data in step 41.1 (`history.md`); the loading of the PDFs, the viewer, the check of quotes and the work of the AI part by part were kept.
+- **Catalogs made in the program.** The AI finds the table of contents, proposes the groups and, group by group, the controls; every proposal carries quotes, each checked on its page by the program. The evaluator accepts, corrects or rejects every proposal (P1) and edits the catalog by hand.
+- **The evaluation support (our own model).** What the program adds to OSCAL (the quotes and their checks, the proposals of the AI and their state, the instructions to the AI, the master projects, the evaluations) is kept in tables of its own; **nothing of ours is written into a document of OSCAL**, so an export is valid OSCAL.
+- **The evaluation** (step 52) carries out the decisions of the user of 2026-10-17: the evaluator works on **one requirement at a time**; the evidence is used in **two phases**, first the fragments that matter for the requirement (each an exact quote the program finds in the evidence, the explanation of the model in a separate *AI note*, never presented as a quote), then the assessment on **only the fragments the evaluator has accepted**, a methodological requirement that keeps the evaluation defensible in an audit; each requirement gets four text results (*Findings*, *Analysis*, *Assessment and verdict proposition*, *Vulnerabilities and notes*) and a verdict of three values (met, not met, inconclusive) that the evaluator sets; what the AI proposes becomes a result only when the evaluator accepts it; every question to the AI is in the journal.
+- **Where the text of a standard and of the evidence goes is the decision of the laboratory**: the program sends it over the connection the user chose and does not warn or block. Recommended: a local model for licensed standards and for the documents of the manufacturer under NDA (a connection to `http://127.0.0.1`, which never leaves the computer); a cloud service only where the licence and the rules of the laboratory allow it.
 
 ## 8. TODO
 
@@ -179,7 +202,7 @@ A **view** is a whole page of the window, the high-level display.
 | `chat` | chat | the panel with the chatbot (the AI in the role *consultation*) |
 | `converter` | konwerter | the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI (step 50): the documents of standards, the catalogs made from them, the editor of a catalog |
 | `evaluation_plan` | plan ewaluacji | only the documents of OSCAL: the master projects with their tasks (step 51), and the list, import, export and deletion of the documents of OSCAL |
-| `evaluation_lab` | evaluation lab | the structure of a standard joined with what the client and the laboratory deliver (the documentation of the manufacturer, the Security Target, the results of the tests), and the evidence assessed with the AI |
+| `evaluation_lab` | evaluation lab | a work package of the Evaluation plan carried out for one product (step 52): the evidence of the inputs, the fragments, the results and the verdicts, the outputs, the report |
 | `settings` | ustawienia | the settings panel |
 
 The view `evaluation_plan` is wider than the OSCAL document *assessment plan* it makes; the two are never called by the same name.
@@ -190,11 +213,14 @@ A **component** is a small element used more than once: several times in one vie
 
 | Name | The user's words | What it is |
 |---|---|---|
-| `pdf_viewer` | podgląd normy | a document of a standard, a quote highlighted on its page; in the evaluation plan and in the editor of a catalog |
-| `part_rows` | części obiektu | the parts of a group or a control as rows; the object chosen and the proposals of the AI |
-| `requirement` (planned, step 41.5) | wymaganie | a tile that describes one requirement of a standard; many times in a view and in several views; functions of the AI, such as the analysis of the requirement |
+| `pdf_viewer` | podgląd normy | a document of a standard, a quote highlighted on its page; in the Converter and beside the scheme of a task |
+| `part_rows` | części obiektu | the parts of a group or a control as rows; the object chosen, the proposals of the AI, the requirement beside a scheme |
+| `catalog_tree` | drzewo katalogu | the groups and controls of a catalog as rows; the editor of a catalog and the browser of the standards |
+| `recovery_code` | kod odzyskiwania | the recovery code, shown once; four elements of the view Users |
+| `block_node` | blok schematu | a block of the scheme of a task on the drawing (the page only); the Evaluation plan, where it is edited, and the Evaluation lab, where it is read only |
+| `ai_work` | praca AI | one question of a work of the AI with its events (progress, failure, end; Rust only); the works of the AI of the Evaluation plan and of the Evaluation lab |
 
-**Open (user, 2026-10-23): the tiles of the evidence.** Not thought through yet, so nothing is decided and nothing is built. The user's present idea: a requirement is linked to its **input** tiles, which say what is needed to satisfy it; a **proof** tile (dowód: a result of a test, quotes of a standard or of the Security Target) is linked to an input, and the AI in the input checks whether the proof meets the criteria to be that input of the requirement.
+The idea of the user of 2026-10-23 (the tiles of the evidence: a requirement linked to its inputs, a proof linked to an input, the AI of the input judging the proof) became the scheme of a task (step 51.2) and the inputs of the Evaluation lab (step 52).
 
 ### 10.3 Other terms
 
@@ -205,10 +231,17 @@ A **component** is a small element used more than once: several times in one vie
 | `routes.rs` | routes | the list of every command the page may call, as `urls.py` of Django; above the views it names |
 | command | komenda | a function of Rust the page calls through Tauri, named `<element>_<action>` |
 | `evaluation_project` | projekt master | the master project of a standard (step 51): its catalogs and all its tasks; made once for a version of a standard, used again and again |
-| `evaluation_task` | zadanie ewaluacji | a task of a master project: a whole requirement (a control of a catalog); later with its scheme of input, requirement and output blocks |
+| `evaluation_task` | zadanie ewaluacji | a task of a master project: a whole requirement (a control of a catalog), with its scheme of input, requirement and output blocks |
+| scheme of a task | schemat zadania | the blocks of a task: inputs (the evidence expected), the requirement (its agent, the four results, the verdict), outputs (where the result goes and when: always, only when met, only when not met) |
+| standard outputs | standardowe wyjścia | the template of the outputs of a master project, copied into every new task (step 51.3) |
+| related element | element powiązany | an element of another catalog of the project related to a task: a work unit of the CEM, a test case (step 51.4) |
 | requirement of the laboratory | wymaganie własne | a requirement outside the standards (step 51.1e): a control of the one shared catalog "Requirements of the laboratory"; its identifier is the planner's, whatever they choose |
-| `work_package` | pakiet pracy | tasks of a master project delegated to one evaluator and exported to them (step 51.5; planned) |
-| evaluation support | wsparcie ewaluacji | what the program adds to OSCAL (quotes, proposals of the AI, instructions, the layout of the graph), linked to OSCAL by UUID and id (section 7.1) |
+| `work_package` | pakiet pracy | tasks of a master project delegated to one evaluator and exported to them as one file (step 51.5) |
+| evaluation | ewaluacja | a work package imported into the Evaluation lab and carried out for one product (step 52) |
+| evidence, fragment | dowód, fragment | what the evaluator delivers to an input, kept as delivered; an exact quote of it that matters for the requirement, accepted by the evaluator |
+| verdict | werdykt | met, not met or inconclusive: set by the evaluator, proposed by the agent of the requirement |
+| report | raport | the accepted texts of every output, task by task, one file per output: the result of the evaluation |
+| evaluation support | wsparcie ewaluacji | what the program adds to OSCAL (quotes, proposals of the AI, instructions, the master projects and the evaluations), linked to OSCAL by UUID and id (section 7.1) |
 
 ## 11. The folders and their tasks (agreed 2026-10-17, 2026-10-21 and 2026-10-23)
 
@@ -380,6 +413,22 @@ ProjectList ──"New master project…"──► NewProject ──new_project_
      ──new_project_create(title, scope, catalogs)──► db/evaluation_project/ ──► "made" ──► the screen of the project
 the screen of a project (the screen of a task in place of it while a task is open):
   ├─► ProjectForm ──project_form_get(uuid)──► title, scope, catalogs; ──project_form_save──► (a catalog with tasks stays)
+  ├─► StandardOutputs (step 51.3) ──standard_outputs_get(project)──► the template of the outputs of its tasks
+  │     ──standard_outputs_add(project, output) / _save(output, fields) / _delete(output)──► db/evaluation_project/
+  │     (a new task gets a copy of the template as its outputs, connected from its requirement: scheme::first;
+  │      the tasks made before keep theirs)
+  ├─► WorkPackages (step 51.5) ──work_packages_get(project)──► the packages delegated to the evaluators
+  │     ──work_packages_add(project, package) / _save(package, fields) / _delete(package)──► db/evaluation_project/
+  │     (a task in one package at most; the list of tasks shows the package of each task)
+  │     ──work_packages_export(package)──► one JSON file chosen in a dialog of the system (work_packages/export.rs):
+  │     our format (the project, the package, the four results, every task with its accepted blocks and related
+  │     elements) and the documents of OSCAL of its catalogs as attachments, whole and unchanged
+  ├─► TaskProposals (step 51.4) ──task_proposals_get(project)──► the requirements the AI proposes as tasks
+  │     ──task_proposals_propose(project, catalog, onEvent)──► the undecided proposals of the catalog removed; the
+  │     requirements that are no task yet, word for word, part by part (ai/tasks/candidates.rs), one question of the
+  │     task requirement_choice per part through ai/api/ ──► the proposals with their reasons (db/evaluation_project/)
+  │     ──task_proposals_accept / _reject / _accept_all / _reject_all──► a task made with the outputs of the
+  │     template, or the proposal dropped ──► "changed" ──► every element reads again
   ├─► TaskList ──task_list_get(project)──► the tasks in order, each read from its catalog (db/oscal/)
   │     ──task_list_move(task, up) / task_list_remove(task)──► db/evaluation_project/
   └─► StandardBrowser: CatalogTree (component) ──catalog_tree_get(catalog)──► the tree of a catalog of the project
@@ -393,7 +442,8 @@ the screen of a project (the screen of a task in place of it while a task is ope
         ──own_requirement_delete(id)──► only while no task of any project points to it
   └─► TaskList ──"open"(task)──► TaskScheme, the screen of a task (step 51.2), in place of the screen of the project
 TaskScheme ──task_scheme_get(task)──► the task, its requirement read from its catalog (parts, quotes), its blocks
-     and connections (db/evaluation_project/); a task with no block of its requirement gets one at the origin
+     and connections (db/evaluation_project/), the titles of the four text results (model ResultText), which the
+     block of the requirement shows with its verdict (proposed by the AI, decided by the evaluator, P1)
   ├─► the drawing (Svelte Flow, BlockNode): "+ Input" / "+ Output" ──task_scheme_add_block(task, kind, x, y)──►
   │     a drag from the handle on the right of a block to the handle on the left of another
   │     ──task_scheme_connect(from, to)──► only input → requirement, requirement → output; the rest refused
@@ -401,6 +451,18 @@ TaskScheme ──task_scheme_get(task)──► the task, its requirement read f
   │     a connection chosen ──task_scheme_disconnect(from, to)──►
   ├─► BlockForm (the block chosen) ──task_scheme_save_block(block, fields)──► name, evidence, instructions,
   │     target, format, condition; ──task_scheme_remove_block(block)──► with its connections (not the requirement)
+  ├─► "Propose with AI" ──task_scheme_propose(task, onEvent)──► the undecided proposals removed; one question of the
+  │     task task_scheme (ai/tasks/task_scheme.rs: the requirement word for word, the scope, the blocks by short ids)
+  │     through ai/api/ into the journal ──► the inputs stored as dashed blocks connected to the requirement, the
+  │     corrections beside their blocks (db/evaluation_project/) ──► events writing / proposed / failed / end;
+  │     ──evaluation_plan_stop()──► "Stop"; the instructions ──ai_work_instructions_get / _save──► db/ai/instructions/
+  │     ──task_scheme_accept(block) / _reject(block) / _accept_all(task) / _reject_all(task)──► nothing is
+  │     overwritten without the planner (P1)
+  ├─► TaskLinks (step 51.4) ──task_links_get(task)──► the related elements (work units, test cases, ...)
+  │     ──task_links_propose(task, onEvent)──► the undecided proposals removed; the requirement and the elements of
+  │     the other catalogs of the project, part by part, one question of the task related_elements per part
+  │     ──► proposed elements with their reasons ──task_links_accept / _remove──► accepted (they travel with the
+  │     task, 51.5) or dropped
   └─► the standard, always beside: PartRows (component) and, for a quote, PdfViewer (component) at its page
      every command answers with the whole scheme as stored; the page draws it again from that answer
 the tab OSCAL documents ──► OscalDocuments ──oscal_documents_get()──► the finished documents of OSCAL
@@ -423,4 +485,28 @@ ApiKey ──api_key_store(id, key) / api_key_delete(id)──► the key in the
 ConnectionCheck ──connection_check_run(id)──► ai/api/checks: one short question, written into the journal ──► the report
 ```
 
-**`evaluation_lab` (planned, step 41.5; open).** Its flow is drawn when its concept is settled; the tiles of the evidence are still open (section 10.2). What stands: the plan is handed over from `evaluation_plan`, what the AI proposes becomes a result of the assessment (OSCAL) only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3).
+**`evaluation_lab`** (step 52; entry `views/evaluation_lab/evaluation_lab.rs`, page `ui/src/views/evaluation_lab/`). A work package of the Evaluation plan carried out for one product. What the AI proposes becomes a result only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3). Nothing returns to the planner: the result is the report.
+
+```text
+EvaluationList ──evaluation_list_get()──► the evaluations with their progress (db/evaluation/)
+  ──package_import_import(product)──► the file chosen in a dialog of the system (package_import/read.rs): its format and
+    version, the package checked by the rules of the plan, the catalogs attached checked against the schema of NIST and
+    stored when missing ──► an evaluation: a frozen copy of the tasks, their schemes and related elements
+  ──evaluation_list_delete(uuid)──►
+EvaluationScreen ──lab_tasks_get(evaluation)──► the package, the product, the tasks and their state
+  ──lab_tasks_state(evaluation, task, progress)──► to do / in progress / done
+  ──report_export(evaluation)──► a folder chosen in a dialog ──► one file per output (report/export.rs): the accepted
+    texts, task by task, of the tasks whose verdict makes its condition hold (.txt or .tex)
+LabTask ──lab_task_get(evaluation, task)──► the scheme read only (LabScheme, the component BlockNode), the requirement
+  from its catalog, the related elements, the inputs, the results, the outputs; every command answers with the screen
+  ├─► InputPanel ──evidence_add_file / _add_note / _delete──► the evidence kept as delivered (a PDF read by page)
+  │     ──input_chat_send(…, onEvent) / _clear──► the task input_chat through ai/api/ (the requirement, the input, the
+  │       start of the evidence, the last messages) ──► the question and the answer kept
+  │     ──fragments_propose(…, onEvent)──► the task evidence_fragments, part by part ──► quotes looked for in the
+  │       evidence (found or not), a note apart ──fragments_accept / _remove / _add──► only accepted ones are assessed
+  ├─► RequirementPanel ──assessment_propose(…, onEvent)──► the task assessment (formal analysis) on the accepted
+  │     fragments only ──► four results and a verdict proposed ──assessment_accept / _reject / _save──► the evaluator decides
+  └─► OutputPanel (only when its condition holds for the verdict) ──outputs_draft(…, onEvent)──► the task output_draft
+        from the four results ──outputs_accept / _reject / _save──► the text of the output
+the instructions of the four tasks ──evaluation_lab_instructions_get / _save──►; "Stop" ──evaluation_lab_stop()──►
+```

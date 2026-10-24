@@ -1,4 +1,4 @@
-//! The master project of an evaluation (step 51 of docs/todo.md): the
+//! The master project of an evaluation (step 51 of docs/history.md): the
 //! catalogs of a standard and all its tasks, each a whole requirement (a
 //! control of a catalog). It is made once for a version of a standard and
 //! used again and again; the packages handed to the evaluators are taken
@@ -20,6 +20,9 @@ pub const MAX_CATALOGS: usize = 20;
 /// The most tasks a project holds: a whole standard has some hundreds of
 /// requirements.
 pub const MAX_TASKS: usize = 5000;
+
+/// The most related elements of one task.
+pub const MAX_LINKS: usize = 100;
 
 /// The most projects an evaluator keeps.
 pub const MAX_PROJECTS: usize = 500;
@@ -56,6 +59,27 @@ pub struct EvaluationTask {
     pub uuid: String,
     pub catalog_uuid: String,
     pub control_id: String,
+}
+
+/// A requirement the AI proposes as a task of a project (step 51.4), with
+/// its reason; the planner accepts (it becomes a task) or rejects it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskProposal {
+    pub catalog_uuid: String,
+    pub control_id: String,
+    pub reason: String,
+}
+
+/// An element of another catalog related to the requirement of a task
+/// (step 51.4): a work unit of the CEM, a test case, ... Proposed by the AI
+/// with its reason; once the planner accepts it, it travels with the task.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskLink {
+    pub catalog_uuid: String,
+    pub control_id: String,
+    pub reason: String,
+    /// Whether it is only proposed by the AI.
+    pub proposed: bool,
 }
 
 /// The fields in their normal form: no spaces around them.
