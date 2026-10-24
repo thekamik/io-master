@@ -30,7 +30,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14h | **48: The evaluation with AI as the only aim: devices, the master and the extra factors removed** | **decided 2026-10-24; 48.1 and 48.3 built** (below) |
 | 14i | **49: The recovery code of a forgotten password** | **built 2026-10-24** (below) |
 | 14j | **50: The conversion of PDFs to OSCAL with the AI as a view of its own** | **decided 2026-10-24; 50.1 and 50.2 built** (below) |
-| 14k | **51: The evaluation plan: the evaluation project** | **described by the user 2026-10-24; concept proposed, waiting for the user** (below) |
+| 14k | **51: The evaluation plan: the evaluation project** | **settled 2026-10-24; 51.1 built** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -84,7 +84,7 @@ Legend: `[ ]` to do, `[x]` done.
     - [x] 51.1a the model (`model/evaluation_project.rs`) and the database (`db/evaluation_project/`);
     - [x] 51.1b the tree of a catalog as a component (`components/catalog_tree/`, the command `catalog_tree_get` moved there);
     - [x] 51.1c the twelve commands of the view (`project_list_*`, `new_project_*`, `project_form_*`, `task_list_*`, `standard_browser_*`), `Control::label`; a catalog used by a project cannot be deleted;
-    - [ ] 51.1d the page, the window, the documents.
+    - [x] 51.1d the page (the tabs Master projects and OSCAL documents; `ProjectList`, `NewProject`, `EvaluationProject` with `ProjectForm`, `TaskList`, `StandardBrowser`), tried in the window on a private display with the example catalog of NIST (a project made, requirements chosen in the tree and in the hits of a search, added as tasks, reordered); `architecture.md` sections 4, 10, 12.
 - **The evaluator sees a scheme exactly as the planner made it**: several inputs of the planner are several inputs for the evaluator; the same blocks, connections and layout.
 - **A requirement may have many inputs** (a fragment of the Security Target, the output of a program, a fragment of the documentation, ...).
 - **What the evaluator delivers to an input is kept exactly as delivered, the raw data** (the file as it was, the output of the program, the conversation), **and beside it, as an addition, the interpretation of the AI** (user, 2026-10-24). The interpretation never replaces the raw data: the assessment can always go back to what was delivered (P3, P5).

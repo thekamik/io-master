@@ -63,7 +63,7 @@ The first start is the real moment of installation. **It is told by the system d
 - The pages, in this order in the navigation:
   1. **Chat**: the AI assistant, over the active AI connection.
   2. **Converter** (step 50, 2026-10-24): the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI, its only aim: the PDFs loaded and searched, a catalog made from them, its editor where the AI proposes groups and controls and the evaluator accepts them (section 7.1).
-  3. **Evaluation plan**: only the documents of OSCAL (catalogs, mappings, profiles, assessment plans): the list, the import, the export, the deletion; later a document shown graphically and turned into the flow of data of the evaluation, which the Evaluation lab uses (step 50).
+  3. **Evaluation plan**: works only on the documents of OSCAL, in two tabs: **Master projects** (step 51: a master project holds the catalogs of a standard and all its tasks, each a whole requirement chosen in a browser of the standards; made once for a version of a standard and used again and again; later each task gets its scheme of input, requirement and output blocks, and packages of tasks are handed to the evaluators) and **OSCAL documents** (the list, the import, the export, the deletion).
   4. **Evaluation lab**: an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
   5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password; later the recovery code (section 5.4), an optional second factor of the login and the removal of the installation.
   6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the backups and the removal of the installation).
@@ -178,7 +178,7 @@ A **view** is a whole page of the window, the high-level display.
 | `shell` | shell | the frame of the window around every view: the navigation, the user menu |
 | `chat` | chat | the panel with the chatbot (the AI in the role *consultation*) |
 | `converter` | konwerter | the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI (step 50): the documents of standards, the catalogs made from them, the editor of a catalog |
-| `evaluation_plan` | plan ewaluacji | only the documents of OSCAL: the list, the import, the export, the deletion; later a document shown graphically and turned into the flow of data of the evaluation (profile, assessment plan), used by `evaluation_lab` (step 50) |
+| `evaluation_plan` | plan ewaluacji | only the documents of OSCAL: the master projects with their tasks (step 51), and the list, import, export and deletion of the documents of OSCAL |
 | `evaluation_lab` | evaluation lab | the structure of a standard joined with what the client and the laboratory deliver (the documentation of the manufacturer, the Security Target, the results of the tests), and the evidence assessed with the AI |
 | `settings` | ustawienia | the settings panel |
 
@@ -204,6 +204,9 @@ A **component** is a small element used more than once: several times in one vie
 | `app/` | app | what every view uses: the state of the window (`AppState`), the errors of the commands (`AppError`) |
 | `routes.rs` | routes | the list of every command the page may call, as `urls.py` of Django; above the views it names |
 | command | komenda | a function of Rust the page calls through Tauri, named `<element>_<action>` |
+| `evaluation_project` | projekt master | the master project of a standard (step 51): its catalogs and all its tasks; made once for a version of a standard, used again and again |
+| `evaluation_task` | zadanie ewaluacji | a task of a master project: a whole requirement (a control of a catalog); later with its scheme of input, requirement and output blocks |
+| `work_package` | pakiet pracy | tasks of a master project delegated to one evaluator and exported to them (step 51.5; planned) |
 | evaluation support | wsparcie ewaluacji | what the program adds to OSCAL (quotes, proposals of the AI, instructions, the layout of the graph), linked to OSCAL by UUID and id (section 7.1) |
 
 ## 11. The folders and their tasks (agreed 2026-10-17, 2026-10-21 and 2026-10-23)
@@ -368,11 +371,23 @@ the catalog and the pages (db/) ──prompt (ai/tasks/catalog_*.rs)──► th
   ──quotes checked on their pages, proposals stored (db/evaluation_support/)
 ```
 
-**`evaluation_plan`** (entry `views/evaluation_plan/evaluation_plan.rs`, page `ui/src/views/evaluation_plan/`). Only the documents of OSCAL; the graph and the flow of data of the evaluation come later (step 50):
+**`evaluation_plan`** (entry `views/evaluation_plan/evaluation_plan.rs`, page `ui/src/views/evaluation_plan/`). Only the documents of OSCAL: the master projects (step 51) and the documents:
 
 ```text
-the view opens ──► OscalDocuments ──oscal_documents_get()──► the documents of OSCAL by model and title
+the tab Master projects ──► ProjectList ──project_list_get()──► the projects, the newest change first (db/evaluation_project/)
+ProjectList ──"New master project…"──► NewProject ──new_project_catalogs()──► the finished catalogs (db/conversion/)
+     ──new_project_create(title, scope, catalogs)──► db/evaluation_project/ ──► "made" ──► the screen of the project
+the screen of a project:
+  ├─► ProjectForm ──project_form_get(uuid)──► title, scope, catalogs; ──project_form_save──► (a catalog with tasks stays)
+  ├─► TaskList ──task_list_get(project)──► the tasks in order, each read from its catalog (db/oscal/)
+  │     ──task_list_move(task, up) / task_list_remove(task)──► db/evaluation_project/
+  └─► StandardBrowser: CatalogTree (component) ──catalog_tree_get(catalog)──► the tree of a catalog of the project
+        ──standard_browser_get(project, catalog, id)──► the requirement, its parts and quotes, whether a task already
+        ──standard_browser_search(project, text)──► the requirements of all its catalogs that hold the text
+        ──task_list_add(project, catalog, control)──► a task at the end ──► "changed" ──► every element reads again
+the tab OSCAL documents ──► OscalDocuments ──oscal_documents_get()──► the finished documents of OSCAL
 OscalDocuments ──oscal_documents_import / _export / _delete──► the dialog ──► checked against the schema of NIST ──► db/oscal/
+     (a catalog a master project uses is not deleted)
 ```
 
 **`settings`** (entry `views/settings/settings.rs`, page `ui/src/views/settings/`): the settings of the program; those of the user are in `users`.

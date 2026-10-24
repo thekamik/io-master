@@ -153,3 +153,79 @@ ul.wizard-groups li.finished {
 ul.wizard-groups .range input[type="number"] {
     width: 5rem;
 }
+
+/* The screen of a master project (views/evaluation_plan/EvaluationProject.svelte):
+   the tasks beside the browser of the standards. */
+.project-form summary {
+    cursor: pointer;
+    font-weight: 650;
+}
+
+.project-body {
+    display: grid;
+    grid-template-columns: minmax(18rem, 1fr) minmax(30rem, 2fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.project-body > .card {
+    margin: 0;
+    max-height: calc(100vh - 14rem);
+    overflow: auto;
+}
+
+.task-list ol {
+    margin: 0;
+    padding-left: 1.4rem;
+}
+
+.task-list li {
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.task-list .task-text {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: baseline;
+}
+
+.task-list .task-actions {
+    display: flex;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+}
+
+.standard-browser .browser-head {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+    align-items: end;
+    margin-bottom: 0.8rem;
+}
+
+.standard-browser .browser-body {
+    display: grid;
+    grid-template-columns: minmax(14rem, 1fr) minmax(16rem, 1.4fr);
+    gap: 0.8rem;
+    align-items: start;
+}
+
+.standard-browser .browser-body > .card {
+    margin: 0;
+    max-height: calc(100vh - 22rem);
+    overflow: auto;
+}
+
+.standard-browser .hits {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    gap: 0.2rem;
+    margin-bottom: 0.8rem;
+}
+
+.standard-browser blockquote.missing {
+    border-left-color: var(--danger, #e06c75);
+}
