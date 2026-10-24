@@ -61,6 +61,14 @@ Legend: `[ ]` to do, `[x]` done.
 
 The user (2026-10-24): the conversion of the PDFs of a standard to OSCAL is today a part of the view Evaluation plan (`views/evaluation_plan/`: the documents of standards, a new catalog, the editor of a catalog with the AI). It becomes **a view of its own, whose only aim is the conversion of PDFs to OSCAL, supported by the AI**. The view Evaluation plan keeps the documents of OSCAL and the plan itself (step 41.4).
 
+**The new role of the view Evaluation plan (user, 2026-10-24):** it works only on documents of OSCAL: it shows a document graphically and turns it into the **flow of data of the evaluation**, which the view Evaluation lab then uses. Concept later; the converter comes first.
+
+**The answers taken (user, 2026-10-24: "first the converter"):** the view is named `converter` (the user's word; "Converter" in the navigation, after Chat); the view Evaluation plan shows only the list of the documents of OSCAL (no editor, no view of a catalog for now); the converter makes catalogs now, its name open to other models of OSCAL later; a guided flow step by step (50.2) is discussed after the move.
+
+**Phases**
+- [ ] 50.1 The move, the logic unchanged: `standard_documents/`, `document_search/`, `new_catalog/`, `catalog_editor/` from `views/evaluation_plan/` to `views/converter/` (Rust and the page), the entry `converter.rs` with their commands (names unchanged), `evaluation_plan.rs` keeps the documents of OSCAL; the navigation; the documents.
+- [ ] 50.2 The UX of the converter (concept first).
+
 ---
 
 ## Step 49: The recovery code of a forgotten password (2026-10-24)
