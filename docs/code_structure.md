@@ -24,7 +24,7 @@ io-master/src/
   db/                every operation on a database, as CRUD; depends only on model/ and security/
   ai/                the whole communication with AI services
   pdf/               reading PDFs with Poppler (pdfinfo, pdftotext): another program, in one place
-  security/          the building blocks of protection: random numbers, the TPM
+  security/          the building blocks of protection: random numbers, no memory dumps
   installation/      the installation, its one account and the session: the core of the protection
   app/               what the whole window shares: the state, the errors of the commands
   components/        the elements used more than once (by several views, or many times in one)
@@ -118,11 +118,11 @@ Until 2026-10-24 the scan of the serial ports and the settings of the scanner, w
 
 ### 2.5 `security/`
 
-`random.rs` (random bytes from the kernel) and `tpm/` (the TPM 2.0, the optional further factor). Later the keyring (step 13).
+`random.rs` (random bytes from the kernel) and `process.rs` (no memory dumps of the process). The TPM factor (`tpm/`) was removed in step 48.
 
 ### 2.5a `installation/`: the installation, the account, the session
 
-The core of the protection (moved from `business/` in step 42, unchanged): the first start and every later start (`lifecycle.rs`), the check before the window opens (`verify.rs`, called by `main.rs`), the account with the keys of its database (`accounts.rs`: Argon2id, the TPM factor), and the session of the logged-in evaluator (`session.rs`: the account and the database opened once at the login). It uses `db/`, `security/` and `model/`; the window (`app/state.rs`) and the views use it.
+The core of the protection (moved from `business/` in step 42, unchanged): the first start and every later start (`lifecycle.rs`), the check before the window opens (`verify.rs`, called by `main.rs`), the account with the keys of its database (`accounts.rs`: the password through Argon2id), and the session of the logged-in evaluator (`session.rs`: the account and the database opened once at the login). It uses `db/`, `security/` and `model/`; the window (`app/state.rs`) and the views use it.
 
 ### 2.6 `business/` (removed in step 42)
 
@@ -196,7 +196,7 @@ The modules of a view are declared in the map of `main.rs`; its flow of data is 
 
 | Topic | Rule |
 |---|---|
-| Names | No file repeats the name of its folder (`security/tpm/chip.rs`, not `tpm/tpm.rs`). Functions of a resource are verbs. |
+| Names | No file repeats the name of its folder (`db/system/schema.rs`, not `system/system.rs`). Functions of a resource are verbs. |
 | Modules | **`main.rs` is the map of the program** (step 45, user 2026-10-23): every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment that says which part of the project it is; a file that would only declare modules does not exist. A file with code that has modules of its own (`model/oscal.rs`) declares them itself. |
 | Rules of the code | CLAUDE.md, "The rules for Rust" (The Power of 10 adapted). A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error; never `assert!` outside the tests. |
 | Comments | Code comments and documentation in English, thorough; the head of every file says what it holds and, where it helps, draws the path of the data. |
@@ -221,7 +221,7 @@ model/                     The data of the program as plain Rust types, and the 
   api_key.rs                   The API key of an AI connection of one evaluator
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
-  installation.rs              What an installation is: its identifier and its role, chosen at
+  installation.rs              What an installation is: its identifier, made at the first start,
   oscal.rs/                    The documents of NIST OSCAL (Open Security Controls Assessment
     assessment_plan.rs           An OSCAL assessment plan: the evaluation plan (function a of
     assessment_results.rs        OSCAL assessment results: the evaluation (function b of
@@ -342,10 +342,6 @@ installation/              The installation of this Linux account, its one user 
 security/                  The building blocks of protection: random numbers from the system,
   process.rs                   The protection of the memory of the process: no memory dumps.
   random.rs                    Random bytes from the kernel.
-  tpm/                         The TPM 2.0, the optional further factor (`docs/architecture.md`,
-    chip.rs                      Talking to the TPM 2.0.
-    device_secret.rs             The secret of the device (`docs/architecture.md`, section 5.2).
-    emulator.rs                  The TPM 2.0 emulator used until the beta version.
 app/                       What the whole window shares (Tauri 2): the state the commands of the
   error.rs                     The errors the commands give back to the page, in kinds the page
   serializer/                  How an error of a command reaches the page (serde). The data of the

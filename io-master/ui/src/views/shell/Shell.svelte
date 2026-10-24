@@ -33,7 +33,6 @@
     evaluation_lab: "Carry out an evaluation plan for a product, with what the manufacturer and the laboratory deliver.",
     users: "Your account: the password that opens your encrypted database.",
     settings: "The connections to AI services, and this installation.",
-    admin: "The password resets of the workstations.",
   };
 </script>
 
@@ -58,9 +57,6 @@
       <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
       <circle cx="15" cy="7" r="2" />
       <circle cx="9" cy="17" r="2" />
-    {:else if name === "admin"}
-      <path d="M12 3.5l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9v-5z" />
-      <path d="M9.5 12l1.8 1.8 3.4-3.6" />
     {:else if name === "warning"}
       <path d="M12 4l9 16H3z" />
       <path d="M12 10v4M12 17h.01" />
@@ -78,7 +74,7 @@
       <span class="mark">IO</span>
       <div>
         <div class="name">IO Master</div>
-        <div class="role">{app.role}</div>
+        <div class="tagline">evaluation with AI</div>
       </div>
     </div>
 
@@ -108,9 +104,6 @@
       <Users user={app.user} />
     {:else if active === "settings"}
       <Settings {app} />
-    {:else if active === "admin"}
-      <!-- The panel of the master: not built yet (step 11 of docs/todo.md). -->
-      <p class="note">Password reset requests are approved here (step 11).</p>
     {/if}
   </main>
 </div>

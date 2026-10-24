@@ -4,16 +4,21 @@
 //! `encryption/keys.rs`).
 //!
 //! ```text
-//! installation   one row: identifier, role, time of the first start
-//! users          one row per account: name, time it was created,
+//! installation   one row: identifier, time of the first start
+//! users          one row: the account, its name, time it was created,
 //!                and the encrypted key of its database
 //! ```
+//!
+//! A database made before step 48 of docs/todo.md has two columns more,
+//! `installation.role` and `users.key_device` (the role master and the
+//! TPM factor, both removed). The program never reads them, and writes
+//! these tables only when the database is made, so such a database
+//! keeps working unchanged.
 
 /// The tables, created with the database.
 pub const SCHEMA: &str = "
     CREATE TABLE installation (
         id          BLOB    NOT NULL,
-        role        TEXT    NOT NULL,
         created     INTEGER NOT NULL
     );
 
@@ -26,8 +31,6 @@ pub const SCHEMA: &str = "
         key_salt        BLOB    NOT NULL,
         key_memory_kib  INTEGER NOT NULL,
         key_iterations  INTEGER NOT NULL,
-        -- 1 when the secret of the device (TPM) is a factor.
-        key_device      INTEGER NOT NULL,
         key_nonce       BLOB    NOT NULL,
         key_ciphertext  BLOB    NOT NULL,
         key_tag         BLOB    NOT NULL

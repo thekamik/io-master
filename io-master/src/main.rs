@@ -1,10 +1,7 @@
 //! Entry point of IO Master.
 //!
 //! IO Master is a desktop program: it is started without parameters
-//! and opens a window. All configuration is made in the window, also
-//! the network functions of a later step (the reset service of a
-//! master and its client, step 11 of docs/todo.md), which are
-//! started from there and not from the command line.
+//! and opens a window. All configuration is made in the window.
 //!
 //! `main` has two tasks, and does each by calling the module that
 //! owns it:
@@ -16,12 +13,8 @@
 //!    is closed.
 //!
 //! At the first start nothing is installed: the window asks for the
-//! user and the role of the installation.
-//!
-//! TODO (step 13 of docs/todo.md): the location of the installation
-//! and the secret of the application come from the keyring of the
-//! Linux account; one Linux account holds one installation with one
-//! user (docs/architecture.md, sections 3 and 5.6).
+//! one user of the installation. One Linux account holds one
+//! installation with one user (docs/architecture.md, section 3).
 
 // The check `ensure!` (rule 5 of CLAUDE.md), declared before the
 // folders so that every one of them knows it by its name alone.
@@ -52,19 +45,11 @@ mod model {
 }
 
 // security/: the building blocks of protection: random numbers from the
-// system, and the TPM 2.0, the optional further factor. The encryption of
-// the databases is in db/encryption/.
+// system, and the protection of the memory of the process. The encryption
+// of the databases is in db/encryption/.
 mod security {
     pub mod process;
     pub mod random;
-    // security/tpm/: the TPM 2.0 (docs/architecture.md, section 5.1).
-    pub mod tpm {
-        pub mod chip;
-        pub mod device_secret;
-        pub mod emulator;
-        #[cfg(test)]
-        pub mod test_support;
-    }
 }
 
 // db/: every operation on a database, as CRUD, one folder per area of data
@@ -416,24 +401,6 @@ use app::state::AppState;
 use installation::lifecycle::Opened;
 use installation::verify::{InstallationState, verify_installation};
 use tauri::{Manager, RunEvent};
-
-// The two entries of the installation in the keyring of the Linux
-// account (docs/architecture.md, section 5.6). These constants are
-// the *names* under which the entries are stored, not their
-// values: the location and the secret are read from the keyring
-// at every start and never written into the program.
-//
-// TODO (step 13 of docs/todo.md): move both to
-// installation/verify.rs, where the keyring will be read; unused
-// until then.
-
-/// Name of the keyring entry with the location of the installation
-/// (the folder that holds its databases).
-const KEYRING_DATA_DIR_ENTRY: &str = "io-master.data-dir";
-
-/// Name of the keyring entry with the secret of the application
-/// (32 random bytes, also the recovery code).
-const KEYRING_APP_SECRET_ENTRY: &str = "io-master.app-secret";
 
 // ok kk
 fn main() -> ExitCode {

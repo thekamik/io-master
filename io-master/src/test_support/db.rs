@@ -13,7 +13,7 @@ use crate::db::user::database::UserDb;
 use crate::model::ai::Connection;
 use crate::model::api_key::ApiKey;
 use crate::model::evaluation_support::{ProposalKind, QuoteDraft};
-use crate::model::installation::{ID_LENGTH, Installation, Role};
+use crate::model::installation::{ID_LENGTH, Installation};
 use crate::model::oscal::OscalDocument;
 use crate::test_support::TempDir;
 
@@ -85,9 +85,9 @@ pub fn basic_catalog() -> OscalDocument {
     OscalDocument::from_json(include_str!("../../oscal/examples/basic-catalog.json")).unwrap()
 }
 
-/// The installation of the tests: a workstation.
+/// The installation of the tests.
 pub fn installation() -> Installation {
-    Installation { id: [5; ID_LENGTH], role: Role::Workstation }
+    Installation { id: [5; ID_LENGTH] }
 }
 
 /// A wrapped key of an account, as the system database keeps it.
@@ -96,7 +96,6 @@ pub fn wrapped_key() -> WrappedKey {
         salt: vec![1; 16],
         memory_kib: 256,
         iterations: 1,
-        with_device_secret: false,
         nonce: vec![2; 12],
         ciphertext: vec![3; 32],
         tag: vec![4; 16],

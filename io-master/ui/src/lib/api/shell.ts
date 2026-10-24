@@ -20,7 +20,6 @@ export interface WarningView {
 /** The state of the program. */
 export interface ProgramView {
   installed: boolean;
-  role: "workstation" | "master" | null;
   user: string | null;
   pages: PageView[];
   warnings: WarningView[];

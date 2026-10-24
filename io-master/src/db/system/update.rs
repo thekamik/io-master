@@ -12,9 +12,9 @@ use super::database::SystemDb;
 pub fn replace_user_key(db: &SystemDb, id: i64, key: &WrappedKey) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE users SET key_salt = :key_salt, key_memory_kib = :key_memory_kib, key_iterations = :key_iterations,
-                          key_device = :key_device, key_nonce = :key_nonce, key_ciphertext = :key_ciphertext, key_tag = :key_tag
+                          key_nonce = :key_nonce, key_ciphertext = :key_ciphertext, key_tag = :key_tag
          WHERE id = :id",
-        named_params! { ":id": id, ":key_salt": key.salt, ":key_memory_kib": key.memory_kib, ":key_iterations": key.iterations, ":key_device": key.with_device_secret, ":key_nonce": key.nonce, ":key_ciphertext": key.ciphertext, ":key_tag": key.tag },
+        named_params! { ":id": id, ":key_salt": key.salt, ":key_memory_kib": key.memory_kib, ":key_iterations": key.iterations, ":key_nonce": key.nonce, ":key_ciphertext": key.ciphertext, ":key_tag": key.tag },
     )?;
 
     if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "users", id }) }

@@ -1,6 +1,6 @@
 <!--
   The element "setup form" of the view Users (its command setup_form_install in src/views/users/users.rs):
-  the first start, the user and the role of the installation. When it is
+  the first start: the one user of the installation. When it is
   done it tells the application (ondone), which reads the state of the
   program again.
 
@@ -16,8 +16,6 @@
   let name = $state("");
   let password = $state("");
   let passwordRepeat = $state("");
-  let role = $state("");
-  let roleConfirmed = $state(false);
   let problem = $state("");
   let busy = $state(false);
 
@@ -27,7 +25,7 @@
     busy = true;
 
     try {
-      await setupFormInstall({ name, password, passwordRepeat, role, roleConfirmed });
+      await setupFormInstall({ name, password, passwordRepeat });
       ondone();
     } catch (error) {
       problem = sentence(error);
@@ -41,8 +39,7 @@
   <div class="mark large">IO</div>
   <h1>Install IO Master</h1>
   <p class="note">
-    This is the first start. The person who installs IO Master is its user. The role decides what this installation
-    is for, and it cannot be changed later.
+    This is the first start. The person who installs IO Master is its only user.
   </p>
 
   {#if problem}<p class="problem">{problem}</p>{/if}
@@ -56,23 +53,6 @@
     <label>
       Password again
       <input type="password" bind:value={passwordRepeat} autocomplete="new-password" minlength="12" required />
-    </label>
-
-    <fieldset>
-      <legend>Role of this installation</legend>
-      <label class="choice">
-        <input type="radio" bind:group={role} value="workstation" />
-        <strong>Workstation</strong>: the computer of an evaluator. AI, chats, evaluations.
-      </label>
-      <label class="choice">
-        <input type="radio" bind:group={role} value="master" />
-        <strong>Master</strong>: a separate machine that only serves password resets.
-      </label>
-    </fieldset>
-
-    <label class="choice">
-      <input type="checkbox" bind:checked={roleConfirmed} />
-      I understand that the role cannot be changed later.
     </label>
 
     <button type="submit" disabled={busy}>{busy ? "Installing…" : "Install"}</button>

@@ -3,15 +3,14 @@
 use rusqlite::OptionalExtension;
 
 use crate::db::error::{Corrupt, DbError};
-use crate::model::installation::{ID_LENGTH, Installation, InstallationId, Role};
+use crate::model::installation::{ID_LENGTH, Installation, InstallationId};
 
 use super::database::SystemDb;
 use super::rows::{UserRecord, user_from_row};
 
 /// The record of the installation.
 pub fn installation(db: &SystemDb) -> Result<Installation, DbError> {
-    let (id, role): (Vec<u8>, String) =
-        db.connection().query_row("SELECT id, role FROM installation", [], |row| Ok((row.get(0)?, row.get(1)?)))?;
+    let id: Vec<u8> = db.connection().query_row("SELECT id FROM installation", [], |row| row.get(0))?;
 
     let id: InstallationId = id.try_into().map_err(|id: Vec<u8>| {
         DbError::Corrupt(Corrupt {
@@ -21,10 +20,7 @@ pub fn installation(db: &SystemDb) -> Result<Installation, DbError> {
         })
     })?;
 
-    let role = Role::from_name(&role)
-        .ok_or_else(|| DbError::Corrupt(Corrupt { table: "installation", column: "role", value: role.clone() }))?;
-
-    Ok(Installation { id, role })
+    Ok(Installation { id })
 }
 
 /// The names of all accounts, the oldest first.

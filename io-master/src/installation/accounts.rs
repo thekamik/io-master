@@ -9,14 +9,13 @@
 //! users/<id>.db  the data of the evaluator, encrypted with that key
 //! ```
 //!
-//! Logging in means opening that key with the password, and with
-//! the secret of the device when the optional TPM factor is used
+//! Logging in means opening that key with the password
 //! (`db/encryption/keys.rs`). A wrong password, a wrong name, and an
 //! account that does not exist all give the same answer, so the
 //! answer does not tell which names exist.
 //!
-//! On a workstation every logged-in user may add further users; a
-//! master keeps the one user who installed it.
+//! An installation has one account, made at the first start (step 48
+//! of docs/todo.md); no further account can be added.
 
 use crate::db::system;
 use std::fmt;
@@ -29,7 +28,6 @@ use crate::db::error::DbError;
 use crate::db::system::database::SystemDb;
 use crate::db::user::database as user_db;
 use crate::model::installation::{self, InvalidUserName};
-use crate::security::tpm::device_secret::DeviceSecret;
 
 /// A logged-in account.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -50,8 +48,6 @@ pub enum AccountError {
     WeakPassword(String),
     /// The name or the password is wrong.
     WrongCredentials,
-    /// The installation does not allow it: a master has one user.
-    NotAllowed,
     /// The key of a database could not be made or opened.
     Key(KeyError),
     /// A database failed.
@@ -65,7 +61,6 @@ impl fmt::Display for AccountError {
             AccountError::NameTaken => formatter.write_str("an account of that name exists"),
             AccountError::WeakPassword(reason) => write!(formatter, "{reason}"),
             AccountError::WrongCredentials => formatter.write_str("wrong name or password"),
-            AccountError::NotAllowed => formatter.write_str("a master has only one user"),
             AccountError::Key(error) => write!(formatter, "{error}"),
             AccountError::Db(error) => write!(formatter, "{error}"),
         }
@@ -105,39 +100,16 @@ fn binding(name: &str) -> Vec<u8> {
 /// Creates the first account, at the first start.
 pub fn create_first(
     system_db: &SystemDb,
-    device_secret: Option<&DeviceSecret>,
     data_dir: &Path,
     name: &str,
     password: &str,
 ) -> Result<Account, AccountError> {
-    create(system_db, device_secret, data_dir, name, password)
-}
-
-/// Adds an account on behalf of a logged-in user. Allowed only on
-/// a workstation.
-pub fn add(
-    system_db: &SystemDb,
-    device_secret: Option<&DeviceSecret>,
-    data_dir: &Path,
-    name: &str,
-    password: &str,
-) -> Result<Account, AccountError> {
-    if !system::read::installation(system_db)?.role.can_add_users() {
-        return Err(AccountError::NotAllowed);
-    }
-
-    create(system_db, device_secret, data_dir, name, password)
+    create(system_db, data_dir, name, password)
 }
 
 /// Creates an account: a new random key, the database it opens,
 /// and the key stored encrypted with the password.
-fn create(
-    system_db: &SystemDb,
-    device_secret: Option<&DeviceSecret>,
-    data_dir: &Path,
-    name: &str,
-    password: &str,
-) -> Result<Account, AccountError> {
+fn create(system_db: &SystemDb, data_dir: &Path, name: &str, password: &str) -> Result<Account, AccountError> {
     installation::check_user_name(name)?;
     keys::check_password(password)?;
 
@@ -146,7 +118,7 @@ fn create(
     }
 
     let key = generate_database_key().map_err(|error| AccountError::Key(KeyError::Failed(error.to_string())))?;
-    let wrapped = keys::wrap(&key, password, device_secret, &binding(name))?;
+    let wrapped = keys::wrap(&key, password, &binding(name))?;
 
     let id = system::create::add_user(system_db, name, &wrapped)?;
 
@@ -166,7 +138,6 @@ fn create(
 /// the session keeps until logout.
 pub fn log_in(
     system_db: &SystemDb,
-    device_secret: Option<&DeviceSecret>,
     data_dir: &Path,
     name: &str,
     password: &str,
@@ -175,7 +146,7 @@ pub fn log_in(
         return Err(AccountError::WrongCredentials);
     };
 
-    let key = keys::unwrap(&user.key, password, device_secret, &binding(&user.name))?;
+    let key = keys::unwrap(&user.key, password, &binding(&user.name))?;
 
     // The database must open with the key; otherwise the account
     // is damaged, which is reported as such.
@@ -189,7 +160,6 @@ pub fn log_in(
 /// database itself is not touched.
 pub fn change_password(
     system_db: &SystemDb,
-    device_secret: Option<&DeviceSecret>,
     name: &str,
     old_password: &str,
     new_password: &str,
@@ -200,8 +170,8 @@ pub fn change_password(
         return Err(AccountError::WrongCredentials);
     };
 
-    let key = keys::unwrap(&user.key, old_password, device_secret, &binding(&user.name))?;
-    let wrapped = keys::wrap(&key, new_password, device_secret, &binding(&user.name))?;
+    let key = keys::unwrap(&user.key, old_password, &binding(&user.name))?;
+    let wrapped = keys::wrap(&key, new_password, &binding(&user.name))?;
 
     system::update::replace_user_key(system_db, user.id, &wrapped)?;
 
@@ -210,34 +180,31 @@ pub fn change_password(
 
 #[cfg(test)]
 mod tests {
-    //! Unit tests of `accounts.rs`, with the password as the only
-    //! factor, as the program runs by default.
+    //! Unit tests of `accounts.rs`.
 
     use super::*;
     use crate::db::system;
 
-    use crate::model::installation::{Installation, Role};
+    use crate::model::installation::Installation;
     use crate::test_support::TempDir;
 
     const PASSWORD: &str = "correct horse battery";
 
-    /// A system database of the given role in a temporary directory.
-    /// The third value is the secret of the device: none, as by
-    /// default.
-    fn setup(role: Role) -> (TempDir, SystemDb, Option<&'static DeviceSecret>) {
+    /// A system database in a temporary directory.
+    fn setup() -> (TempDir, SystemDb) {
         let directory = TempDir::new();
-        let installation = Installation { id: [1; 16], role };
+        let installation = Installation { id: [1; 16] };
         let db = SystemDb::create(directory.path(), &installation).unwrap();
 
-        (directory, db, None)
+        (directory, db)
     }
 
     #[test]
     fn a_created_account_logs_in_and_opens_its_database() {
-        let (directory, db, device) = setup(Role::Workstation);
+        let (directory, db) = setup();
 
-        let created = create_first(&db, device, directory.path(), "Anna", PASSWORD).unwrap();
-        let (account, key) = log_in(&db, device, directory.path(), "anna", PASSWORD).unwrap();
+        let created = create_first(&db, directory.path(), "Anna", PASSWORD).unwrap();
+        let (account, key) = log_in(&db, directory.path(), "anna", PASSWORD).unwrap();
 
         // The name as it was given, whatever was typed at login.
         assert_eq!(account, created);
@@ -247,99 +214,56 @@ mod tests {
 
     #[test]
     fn a_wrong_password_and_an_unknown_name_look_the_same() {
-        let (directory, db, device) = setup(Role::Workstation);
+        let (directory, db) = setup();
 
-        create_first(&db, device, directory.path(), "anna", PASSWORD).unwrap();
+        create_first(&db, directory.path(), "anna", PASSWORD).unwrap();
 
         assert!(matches!(
-            log_in(&db, device, directory.path(), "anna", "wrong horse battery"),
+            log_in(&db, directory.path(), "anna", "wrong horse battery"),
             Err(AccountError::WrongCredentials)
         ));
-        assert!(matches!(
-            log_in(&db, device, directory.path(), "nobody", PASSWORD),
-            Err(AccountError::WrongCredentials)
-        ));
-    }
-
-    #[test]
-    fn every_account_has_its_own_database_and_key() {
-        let (directory, db, device) = setup(Role::Workstation);
-
-        create_first(&db, device, directory.path(), "anna", PASSWORD).unwrap();
-        add(&db, device, directory.path(), "jan", "another good password").unwrap();
-
-        let (anna, anna_key) = log_in(&db, device, directory.path(), "anna", PASSWORD).unwrap();
-        let (jan, jan_key) = log_in(&db, device, directory.path(), "jan", "another good password").unwrap();
-
-        assert_ne!(anna_key.expose(), jan_key.expose());
-
-        // The key of one account does not open the database of another.
-        assert!(user_db::open(directory.path(), jan.id, &anna_key).is_err());
-        assert!(user_db::open(directory.path(), anna.id, &jan_key).is_err());
-    }
-
-    #[test]
-    fn a_master_keeps_its_one_user() {
-        let (directory, db, device) = setup(Role::Master);
-
-        create_first(&db, device, directory.path(), "admin", PASSWORD).unwrap();
-
-        assert!(matches!(add(&db, device, directory.path(), "mallory", PASSWORD), Err(AccountError::NotAllowed)));
+        assert!(matches!(log_in(&db, directory.path(), "nobody", PASSWORD), Err(AccountError::WrongCredentials)));
     }
 
     #[test]
     fn names_and_passwords_are_checked() {
-        let (directory, db, device) = setup(Role::Workstation);
+        let (directory, db) = setup();
 
-        create_first(&db, device, directory.path(), "anna", PASSWORD).unwrap();
-
-        assert!(matches!(add(&db, device, directory.path(), "ANNA", PASSWORD), Err(AccountError::NameTaken)));
-        assert!(matches!(add(&db, device, directory.path(), " ", PASSWORD), Err(AccountError::InvalidName(_))));
-        assert!(matches!(add(&db, device, directory.path(), "jan", "short"), Err(AccountError::WeakPassword(_))));
+        assert!(matches!(create_first(&db, directory.path(), " ", PASSWORD), Err(AccountError::InvalidName(_))));
+        assert!(matches!(create_first(&db, directory.path(), "jan", "short"), Err(AccountError::WeakPassword(_))));
 
         // Refused accounts leave nothing behind.
-        assert_eq!(system::read::user_names(&db).unwrap(), ["anna"]);
+        assert!(system::read::user_names(&db).unwrap().is_empty());
+
+        create_first(&db, directory.path(), "anna", PASSWORD).unwrap();
+        assert!(matches!(create_first(&db, directory.path(), "ANNA", PASSWORD), Err(AccountError::NameTaken)));
     }
 
     #[test]
     fn a_changed_password_opens_the_same_database() {
-        let (directory, db, device) = setup(Role::Workstation);
+        let (directory, db) = setup();
 
-        create_first(&db, device, directory.path(), "anna", PASSWORD).unwrap();
-        let (_, before) = log_in(&db, device, directory.path(), "anna", PASSWORD).unwrap();
+        create_first(&db, directory.path(), "anna", PASSWORD).unwrap();
+        let (_, before) = log_in(&db, directory.path(), "anna", PASSWORD).unwrap();
 
-        change_password(&db, device, "anna", PASSWORD, "a brand new password").unwrap();
+        change_password(&db, "anna", PASSWORD, "a brand new password").unwrap();
 
-        let (_, after) = log_in(&db, device, directory.path(), "anna", "a brand new password").unwrap();
+        let (_, after) = log_in(&db, directory.path(), "anna", "a brand new password").unwrap();
         assert_eq!(before.expose(), after.expose());
-        assert!(log_in(&db, device, directory.path(), "anna", PASSWORD).is_err());
+        assert!(log_in(&db, directory.path(), "anna", PASSWORD).is_err());
     }
 
     #[test]
     fn a_password_is_changed_only_with_the_current_one() {
-        let (directory, db, device) = setup(Role::Workstation);
+        let (directory, db) = setup();
 
-        create_first(&db, device, directory.path(), "anna", PASSWORD).unwrap();
+        create_first(&db, directory.path(), "anna", PASSWORD).unwrap();
 
         assert!(matches!(
-            change_password(&db, device, "anna", "not the password", "a brand new password"),
+            change_password(&db, "anna", "not the password", "a brand new password"),
             Err(AccountError::WrongCredentials)
         ));
-        assert!(matches!(change_password(&db, device, "anna", PASSWORD, "short"), Err(AccountError::WeakPassword(_))));
-        assert!(log_in(&db, device, directory.path(), "anna", PASSWORD).is_ok());
-    }
-
-    #[test]
-    fn an_account_can_use_the_device_as_a_further_factor() {
-        let (directory, db, _) = setup(Role::Workstation);
-        let device = DeviceSecret::from_bytes([7; 32]);
-
-        create_first(&db, Some(&device), directory.path(), "anna", PASSWORD).unwrap();
-
-        assert!(log_in(&db, Some(&device), directory.path(), "anna", PASSWORD).is_ok());
-        assert!(matches!(
-            log_in(&db, None, directory.path(), "anna", PASSWORD),
-            Err(AccountError::Key(KeyError::DeviceSecretMissing))
-        ));
+        assert!(matches!(change_password(&db, "anna", PASSWORD, "short"), Err(AccountError::WeakPassword(_))));
+        assert!(log_in(&db, directory.path(), "anna", PASSWORD).is_ok());
     }
 }

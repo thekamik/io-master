@@ -8,18 +8,15 @@ use std::path::Path;
 use serde::Serialize;
 
 use crate::installation::accounts::Account;
-use crate::model::installation::Role;
 
 /// The state of the program, as the page sees it.
 #[derive(Debug, Serialize)]
 pub struct ProgramView {
     /// `false` at the first start: the page shows the setup.
     pub installed: bool,
-    /// `"workstation"` or `"master"`; `None` before the setup.
-    pub role: Option<&'static str>,
     /// The name of the logged-in evaluator; `None`: the login page.
     pub user: Option<String>,
-    /// The pages of the role, in the order of the navigation.
+    /// The pages, in the order of the navigation.
     pub pages: Vec<PageView>,
     /// The bars at the top of every page, the most serious first.
     pub warnings: Vec<WarningView>,
@@ -46,64 +43,50 @@ pub struct WarningView {
     pub text: &'static str,
 }
 
-/// The pages of a role.
-fn pages(role: Role) -> Vec<PageView> {
-    match role {
-        Role::Workstation => vec![
-            PageView { id: "chat", title: "Chat" },
-            PageView { id: "evaluation_plan", title: "Evaluation plan" },
-            // A placeholder until step 41.5 of docs/todo.md; it holds the
-            // documentation of the manufacturer as well (step 30).
-            PageView { id: "evaluation_lab", title: "Evaluation lab" },
-            PageView { id: "users", title: "User" },
-            PageView { id: "settings", title: "Settings" },
-        ],
-        Role::Master => vec![PageView { id: "admin", title: "Password reset" }],
-    }
-}
-
-/// The warnings. Both are always shown so far: neither the TPM
-/// factor nor the reset service can be configured yet.
-///
-/// TODO (step 8 of docs/todo.md): the red bar only while the TPM
-/// factor is off; its text once the secret of the application
-/// exists (step 13). TODO (step 11): the orange bar only while no
-/// reset service is configured.
-fn warnings() -> Vec<WarningView> {
+/// The pages of the navigation.
+fn pages() -> Vec<PageView> {
     vec![
-        WarningView {
-            level: "danger",
-            text: "No TPM is configured: the databases are protected by the passwords alone. \
-                   Whoever copies the files can try to guess them.",
-        },
-        WarningView {
-            level: "warning",
-            text: "No password reset is configured: a forgotten password means lost data.",
-        },
+        PageView { id: "chat", title: "Chat" },
+        PageView { id: "evaluation_plan", title: "Evaluation plan" },
+        // A placeholder until step 41.5 of docs/todo.md; it holds the
+        // documentation of the manufacturer as well (step 30).
+        PageView { id: "evaluation_lab", title: "Evaluation lab" },
+        PageView { id: "users", title: "User" },
+        PageView { id: "settings", title: "Settings" },
     ]
 }
 
+/// The warnings. Always shown so far: the password cannot be recovered
+/// yet.
+///
+/// TODO (step 49 of docs/todo.md): the bar only while no recovery code
+/// exists.
+fn warnings() -> Vec<WarningView> {
+    vec![WarningView {
+        level: "warning",
+        text: "Your password cannot be recovered: a forgotten password means lost data.",
+    }]
+}
+
 impl ProgramView {
-    /// The view of the program with the given role (`None` before
-    /// the setup), logged-in evaluator and folder of the installation.
-    pub fn new(role: Option<Role>, user: Option<Account>, data_dir: &Path) -> ProgramView {
-        let Some(role) = role else {
+    /// The view of the program: whether it is installed, the logged-in
+    /// evaluator and the folder of the installation.
+    pub fn new(installed: bool, user: Option<Account>, data_dir: &Path) -> ProgramView {
+        if !installed {
             return ProgramView {
                 installed: false,
-                role: None,
                 user: None,
                 pages: Vec::new(),
                 warnings: Vec::new(),
                 version: env!("CARGO_PKG_VERSION"),
                 data_dir: data_dir.display().to_string(),
             };
-        };
+        }
 
         ProgramView {
             installed: true,
-            role: Some(role.name()),
             user: name_of(user),
-            pages: pages(role),
+            pages: pages(),
             warnings: warnings(),
             version: env!("CARGO_PKG_VERSION"),
             data_dir: data_dir.display().to_string(),
@@ -119,7 +102,7 @@ fn name_of(user: Option<Account>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     //! The pages of the navigation agree with the page of the frame
-    //! (`ui/src/views/shell/Shell.svelte`): every page of a role has its icon,
+    //! (`ui/src/views/shell/Shell.svelte`): every page has its icon,
     //! its subtitle and its view there, and the frame has nothing for a page
     //! that does not exist. The ids are the contract between the two projects,
     //! as the names of the commands are (`command_lists_tests.rs`); a page
@@ -157,14 +140,12 @@ mod tests {
             .collect()
     }
 
-    /// The ids of the pages of both roles.
+    /// The ids of the pages.
     fn page_ids() -> Vec<String> {
         let mut ids = Vec::new();
 
-        for role in [Role::Workstation, Role::Master] {
-            for page in pages(role) {
-                ids.push(page.id.to_owned());
-            }
+        for page in pages() {
+            ids.push(page.id.to_owned());
         }
 
         ids

@@ -29,7 +29,7 @@ These are requirements of the design, not preferences (`docs/architecture.md`, s
 
 ## What works today
 
-- **Installation and login.** At the first start the window asks for the user and the role of the installation (workstation or master). One Linux account holds one installation with one user. The data of the evaluator is in a database encrypted with SQLCipher, whose key opens only with their password (Argon2id).
+- **Installation and login.** At the first start the window asks for the user and the password. One Linux account holds one installation with one user. The data of the evaluator is in a database encrypted with SQLCipher, whose key opens only with their password (Argon2id).
 - **AI connections.** The program knows no provider: a connection is described completely in the window (endpoint, model, headers, the template of the request, where the answer is), meant first of all for a local model of the laboratory, with presets for known services. HTTPS with TLS 1.3 and a verified certificate, or plain HTTP only to the loopback; an API key is bound to the address it was entered for. Every question to a model, from any part of the program, is written into the journal of the AI.
 - **Chat** with the AI, kept in the encrypted database.
 - **Documents of standards.** PDFs loaded page by page (Poppler), searched, and shown in a built-in viewer with the quoted passages highlighted.
@@ -41,36 +41,34 @@ These are requirements of the design, not preferences (`docs/architecture.md`, s
 
 - The evaluation plan as a profile and an assessment plan, shown as a graph; the CEM and the Protection Profiles as OSCAL documents a plan can take (`docs/todo.md`, step 41.4).
 - The evaluation as OSCAL assessment results (step 41.5), and its work with the AI: the fragments of the documentation of the product that matter for a requirement, then the assessment on the fragments the evaluator accepted (steps 31 to 36).
-- A tool for the documentation of the manufacturer (step 30) and reports in the LaTeX template of the laboratory, committed to its git (step 28).
-- Protection: the keyring of the Linux account and the secret of the application (step 13), the TPM 2.0 and passkeys as optional further factors (steps 8 and 9), and the master with an optional password reset (steps 4 and 11).
+- A tool for the documentation of the manufacturer (step 30) and reports in the LaTeX template of the laboratory (step 28).
+- A recovery code for a forgotten password, made at the setup and kept outside the computer (step 49); backups, optionally encrypted with an OpenPGP key; later perhaps an optional second factor of the login.
 
 ## Requirements
 
-- Linux with a graphical desktop session and a keyring through the Secret Service interface (GNOME Keyring; GNOME and XFCE are the supported desktops).
+- Linux with a graphical desktop session (XFCE on X11 is the tested one).
 - **System:** Debian 13 (trixie), the target system and the only one tested. Other distributions may work but are not tested.
 - Poppler (`pdfinfo`, `pdftotext`) to load the documents of standards.
-- For building: Rust (stable, edition 2024) from rustup, Node.js 20.19 or newer with npm, and the libraries of Tauri 2 on Linux (WebKitGTK 4.1 and its companions), OpenSSL (used by SQLCipher), D-Bus (the keyring) and tpm2-tss (the TPM library; needed to build even without a TPM).
+- For building: Rust (stable, edition 2024) from rustup, Node.js 20.19 or newer with npm, and the libraries of Tauri 2 on Linux (WebKitGTK 4.1 and its companions), OpenSSL (used by SQLCipher) and D-Bus (used by the window library of Tauri).
 
-The packages, in three groups: to run the program, to build it, and for the tests (the window on a private display and the emulator of the TPM).
+The packages, in three groups: to run the program, to build it, and for the tests (the window on a private display).
 
 | Needed for | Debian 13 (`apt`) |
 |---|---|
-| running | `poppler-utils gnome-keyring libpam-gnome-keyring` |
-| building | `build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libdbus-1-dev libtss2-dev nodejs npm` |
-| tests | `xvfb xclip imagemagick x11-utils libxtst6 libsecret-tools swtpm swtpm-tools python3` |
+| running | `poppler-utils` |
+| building | `build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libdbus-1-dev nodejs npm` |
+| tests | `xvfb xclip imagemagick x11-utils libxtst6 python3` |
 
 All at once (the plain repositories of Debian, no backports):
 
 ```bash
-sudo apt install poppler-utils gnome-keyring libpam-gnome-keyring \
+sudo apt install poppler-utils \
     build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev \
-    libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libdbus-1-dev libtss2-dev nodejs npm \
-    xvfb xclip imagemagick x11-utils libxtst6 libsecret-tools swtpm swtpm-tools python3
+    libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libdbus-1-dev nodejs npm \
+    xvfb xclip imagemagick x11-utils libxtst6 python3
 ```
 
 Rust comes from rustup (the installer of https://rustup.rs), then `rustup default stable`. Do not install the `rustc` and `cargo` packages of the system beside it: two compilers in `PATH` build with one and run clippy with the other, which fails (E0514). After a change of compiler, run `cargo clean` once.
-
-On XFCE the keyring is unlocked at the login only with its PAM module (`libpam-gnome-keyring`), a display manager that calls it (LightDM does), and "Launch GNOME services on startup" switched on in the settings of the session; otherwise it asks for its password at the first use.
 
 ## Building and testing
 

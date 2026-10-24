@@ -2,20 +2,18 @@
 //! (`docs/architecture.md`, section 5.2).
 //!
 //! ```text
-//! password ──Argon2id──┐
-//!                      ├─HKDF─► unlocking key ──AES-256-GCM──► key of an evaluator's
-//! [secret of the device]┘                                       database (random)
+//! password ──Argon2id──HKDF─► unlocking key ──AES-256-GCM──► key of an evaluator's
+//!                                                            database (random)
 //! ```
 //!
 //! - The database of an **evaluator** has a random key. That key is
 //!   stored only encrypted ([`WrappedKey`]) with an unlocking key.
 //!   The password itself is never stored: a wrong password simply
 //!   fails to decrypt (GCM detects it).
-//! - **Factors.** The password is the only factor that is always
-//!   needed. Every further factor is added to the unlocking key and
-//!   makes it stronger: today the optional secret of the device,
-//!   sealed by the TPM (`security/tpm/`). A [`WrappedKey`] records which
-//!   factors it needs.
+//! - **The password is the only factor** (step 48 of docs/todo.md: the
+//!   TPM factor was removed). HKDF after Argon2id stays, so that a
+//!   further factor can be added to the unlocking key later, and the
+//!   keys wrapped before step 48 open unchanged.
 //! - Changing the password encrypts the same random key again; the
 //!   database itself is not touched.
 //!
@@ -33,7 +31,6 @@ use sha2::Sha256;
 use zeroize::Zeroizing;
 
 use crate::security::random::fill_random;
-use crate::security::tpm::device_secret::DeviceSecret;
 
 use super::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 
@@ -76,12 +73,8 @@ const TAG_LENGTH: usize = 16;
 pub enum KeyError {
     /// The password does not follow the rules; holds the reason.
     WeakPassword(String),
-    /// The password (or the secret of the device) does not open
-    /// the key.
+    /// The password does not open the key.
     WrongPassword,
-    /// The key needs the secret of the device, which is not there:
-    /// the TPM factor is not available.
-    DeviceSecretMissing,
     /// A stored key does not have the expected form.
     Damaged,
     /// No random bytes or no key could be made; holds the reason.
@@ -93,9 +86,6 @@ impl fmt::Display for KeyError {
         match self {
             KeyError::WeakPassword(reason) => write!(formatter, "the password is too weak: {reason}"),
             KeyError::WrongPassword => formatter.write_str("wrong password"),
-            KeyError::DeviceSecretMissing => {
-                formatter.write_str("the key needs the secret of the device (TPM), which is not available")
-            }
             KeyError::Damaged => formatter.write_str("a stored key is damaged"),
             KeyError::Failed(reason) => write!(formatter, "no key could be made: {reason}"),
         }
@@ -122,8 +112,8 @@ pub fn check_password(password: &str) -> Result<(), KeyError> {
 }
 
 /// The key of a database, encrypted with an unlocking key.
-/// Everything needed to open it again, except the password and the
-/// secret of the device; none of it is secret.
+/// Everything needed to open it again, except the password; none of
+/// it is secret.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WrappedKey {
     /// The random salt of Argon2id.
@@ -132,9 +122,6 @@ pub struct WrappedKey {
     /// later without locking out existing accounts.
     pub memory_kib: u32,
     pub iterations: u32,
-    /// Whether the secret of the device (the TPM factor) is part of
-    /// the unlocking key.
-    pub with_device_secret: bool,
     /// The nonce of AES-GCM: random, used once.
     pub nonce: Vec<u8>,
     /// The encrypted key and its authentication tag.
@@ -142,54 +129,39 @@ pub struct WrappedKey {
     pub tag: Vec<u8>,
 }
 
-/// Derives the unlocking key from a password and, when given, the
-/// secret of the device.
+/// Derives the unlocking key from a password.
 fn unlocking_key(
     password: &str,
     salt: &[u8],
     memory_kib: u32,
     iterations: u32,
-    device_secret: Option<&DeviceSecret>,
 ) -> Result<Zeroizing<[u8; 32]>, KeyError> {
     let params =
         Params::new(memory_kib, iterations, 1, Some(32)).map_err(|error| KeyError::Failed(error.to_string()))?;
 
-    // Argon2id of the password, then together with the further
-    // factors through HKDF.
+    // Argon2id of the password, then through HKDF (the place where a
+    // further factor would join it).
     let mut stretched = Zeroizing::new([0u8; 32]);
 
     Argon2::new(Algorithm::Argon2id, Version::V0x13, params)
         .hash_password_into(password.as_bytes(), salt, &mut *stretched)
         .map_err(|error| KeyError::Failed(error.to_string()))?;
 
-    let mut material = Zeroizing::new(Vec::with_capacity(64));
-    material.extend_from_slice(&*stretched);
-
-    if let Some(device_secret) = device_secret {
-        material.extend_from_slice(device_secret.expose());
-    }
-
     let mut key = Zeroizing::new([0u8; 32]);
 
-    Hkdf::<Sha256>::new(Some(salt), &material)
+    Hkdf::<Sha256>::new(Some(salt), &*stretched)
         .expand(UNLOCKING_KEY_PURPOSE, &mut *key)
         .map_err(|error| KeyError::Failed(error.to_string()))?;
 
     Ok(key)
 }
 
-/// Encrypts the key of a database with a password and, when given,
-/// the secret of the device as a further factor.
+/// Encrypts the key of a database with a password.
 ///
 /// `binding` ties the result to one account (for example its
 /// name): an encrypted key copied to another account does not open
 /// there.
-pub fn wrap(
-    key: &DatabaseKey,
-    password: &str,
-    device_secret: Option<&DeviceSecret>,
-    binding: &[u8],
-) -> Result<WrappedKey, KeyError> {
+pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<WrappedKey, KeyError> {
     check_password(password)?;
 
     let mut salt = vec![0u8; SALT_LENGTH];
@@ -198,7 +170,7 @@ pub fn wrap(
     fill_random(&mut salt).map_err(|error| KeyError::Failed(error.to_string()))?;
     fill_random(&mut nonce).map_err(|error| KeyError::Failed(error.to_string()))?;
 
-    let unlocking = unlocking_key(password, &salt, ARGON2_MEMORY_KIB, ARGON2_ITERATIONS, device_secret)?;
+    let unlocking = unlocking_key(password, &salt, ARGON2_MEMORY_KIB, ARGON2_ITERATIONS)?;
     let cipher = Aes256Gcm::new(&Key::<Aes256Gcm>::from(*unlocking));
 
     // Encrypted in place: the copy that becomes the ciphertext.
@@ -212,31 +184,16 @@ pub fn wrap(
         salt,
         memory_kib: ARGON2_MEMORY_KIB,
         iterations: ARGON2_ITERATIONS,
-        with_device_secret: device_secret.is_some(),
         nonce: nonce.to_vec(),
         ciphertext: buffer,
         tag: tag.to_vec(),
     })
 }
 
-/// Opens the key of a database with the password and the factors it
-/// was wrapped with. Fails with [`KeyError::WrongPassword`] when
-/// they do not fit, or when `binding` is not the one used by
-/// [`wrap`], and with [`KeyError::DeviceSecretMissing`] when the key
-/// needs the secret of the device and none is given.
-pub fn unwrap(
-    wrapped: &WrappedKey,
-    password: &str,
-    device_secret: Option<&DeviceSecret>,
-    binding: &[u8],
-) -> Result<DatabaseKey, KeyError> {
-    // Exactly the factors the key was made with.
-    let device_secret = match (wrapped.with_device_secret, device_secret) {
-        (true, None) => return Err(KeyError::DeviceSecretMissing),
-        (true, Some(secret)) => Some(secret),
-        (false, _) => None,
-    };
-
+/// Opens the key of a database with the password. Fails with
+/// [`KeyError::WrongPassword`] when it does not fit, or when `binding`
+/// is not the one used by [`wrap`].
+pub fn unwrap(wrapped: &WrappedKey, password: &str, binding: &[u8]) -> Result<DatabaseKey, KeyError> {
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| KeyError::Damaged)?;
     let tag: [u8; TAG_LENGTH] = wrapped.tag.as_slice().try_into().map_err(|_| KeyError::Damaged)?;
 
@@ -244,7 +201,7 @@ pub fn unwrap(
         return Err(KeyError::Damaged);
     }
 
-    let unlocking = unlocking_key(password, &wrapped.salt, wrapped.memory_kib, wrapped.iterations, device_secret)?;
+    let unlocking = unlocking_key(password, &wrapped.salt, wrapped.memory_kib, wrapped.iterations)?;
     let cipher = Aes256Gcm::new(&Key::<Aes256Gcm>::from(*unlocking));
 
     // Decrypted straight into the memory of the new key.
@@ -259,15 +216,9 @@ pub fn unwrap(
 
 #[cfg(test)]
 mod tests {
-    //! Unit tests of `keys.rs`. The secret of the device is a fixed
-    //! test value, so no TPM is needed.
+    //! Unit tests of `keys.rs`.
 
     use super::*;
-
-    /// A secret of a device for the tests.
-    fn device() -> DeviceSecret {
-        DeviceSecret::from_bytes([7; 32])
-    }
 
     /// A database key with known bytes.
     fn database_key() -> DatabaseKey {
@@ -282,9 +233,9 @@ mod tests {
 
     #[test]
     fn a_wrapped_key_opens_with_its_password() {
-        let wrapped = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
+        let wrapped = wrap(&database_key(), PASSWORD, b"anna").unwrap();
 
-        assert_eq!(unwrap(&wrapped, PASSWORD, Some(&device()), b"anna").unwrap().expose(), &[0x42; 32]);
+        assert_eq!(unwrap(&wrapped, PASSWORD, b"anna").unwrap().expose(), &[0x42; 32]);
 
         // The stored form does not contain the key.
         assert_ne!(wrapped.ciphertext, vec![0x42; 32]);
@@ -292,33 +243,22 @@ mod tests {
 
     #[test]
     fn a_wrong_password_does_not_open_the_key() {
-        let wrapped = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
+        let wrapped = wrap(&database_key(), PASSWORD, b"anna").unwrap();
 
-        assert_eq!(
-            unwrap(&wrapped, "wrong horse battery", Some(&device()), b"anna").unwrap_err(),
-            KeyError::WrongPassword
-        );
-    }
-
-    #[test]
-    fn another_device_does_not_open_the_key() {
-        let wrapped = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
-        let other = DeviceSecret::from_bytes([8; 32]);
-
-        assert_eq!(unwrap(&wrapped, PASSWORD, Some(&other), b"anna").unwrap_err(), KeyError::WrongPassword);
+        assert_eq!(unwrap(&wrapped, "wrong horse battery", b"anna").unwrap_err(), KeyError::WrongPassword);
     }
 
     #[test]
     fn a_key_of_one_account_does_not_open_for_another() {
-        let wrapped = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
+        let wrapped = wrap(&database_key(), PASSWORD, b"anna").unwrap();
 
-        assert_eq!(unwrap(&wrapped, PASSWORD, Some(&device()), b"jan").unwrap_err(), KeyError::WrongPassword);
+        assert_eq!(unwrap(&wrapped, PASSWORD, b"jan").unwrap_err(), KeyError::WrongPassword);
     }
 
     #[test]
     fn every_wrapping_is_different() {
-        let first = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
-        let second = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
+        let first = wrap(&database_key(), PASSWORD, b"anna").unwrap();
+        let second = wrap(&database_key(), PASSWORD, b"anna").unwrap();
 
         // New salt and nonce every time.
         assert_ne!(first.salt, second.salt);
@@ -328,16 +268,16 @@ mod tests {
 
     #[test]
     fn a_damaged_wrapped_key_is_refused() {
-        let mut wrapped = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
+        let mut wrapped = wrap(&database_key(), PASSWORD, b"anna").unwrap();
 
         wrapped.tag.pop();
-        assert_eq!(unwrap(&wrapped, PASSWORD, Some(&device()), b"anna").unwrap_err(), KeyError::Damaged);
+        assert_eq!(unwrap(&wrapped, PASSWORD, b"anna").unwrap_err(), KeyError::Damaged);
 
-        let mut changed = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
+        let mut changed = wrap(&database_key(), PASSWORD, b"anna").unwrap();
         changed.ciphertext[0] ^= 1;
 
         // A changed bit is detected, not turned into a wrong key.
-        assert_eq!(unwrap(&changed, PASSWORD, Some(&device()), b"anna").unwrap_err(), KeyError::WrongPassword);
+        assert_eq!(unwrap(&changed, PASSWORD, b"anna").unwrap_err(), KeyError::WrongPassword);
     }
 
     #[test]
@@ -346,33 +286,6 @@ mod tests {
         assert!(check_password("ąęćśżźółńąęć").is_ok());
         assert!(matches!(check_password("eleven char"), Err(KeyError::WeakPassword(_))));
         assert!(matches!(check_password(&"x".repeat(PASSWORD_MAX + 1)), Err(KeyError::WeakPassword(_))));
-        assert!(matches!(wrap(&database_key(), "short", Some(&device()), b"anna"), Err(KeyError::WeakPassword(_))));
-    }
-
-    #[test]
-    fn the_password_alone_is_the_default_factor() {
-        let wrapped = wrap(&database_key(), PASSWORD, None, b"anna").unwrap();
-
-        assert!(!wrapped.with_device_secret);
-        assert_eq!(unwrap(&wrapped, PASSWORD, None, b"anna").unwrap().expose(), &[0x42; 32]);
-        assert_eq!(unwrap(&wrapped, "wrong horse battery", None, b"anna").unwrap_err(), KeyError::WrongPassword);
-    }
-
-    #[test]
-    fn a_key_with_the_device_factor_needs_the_device() {
-        let wrapped = wrap(&database_key(), PASSWORD, Some(&device()), b"anna").unwrap();
-
-        assert!(wrapped.with_device_secret);
-        assert_eq!(unwrap(&wrapped, PASSWORD, None, b"anna").unwrap_err(), KeyError::DeviceSecretMissing);
-    }
-
-    #[test]
-    fn the_factors_give_different_keys() {
-        // The same salt and password with and without the device: the
-        // unlocking keys differ, so the device really adds a factor.
-        let with = unlocking_key(PASSWORD, &[1; SALT_LENGTH], 256, 1, Some(&device())).unwrap();
-        let without = unlocking_key(PASSWORD, &[1; SALT_LENGTH], 256, 1, None).unwrap();
-
-        assert_ne!(*with, *without);
+        assert!(matches!(wrap(&database_key(), "short", b"anna"), Err(KeyError::WeakPassword(_))));
     }
 }

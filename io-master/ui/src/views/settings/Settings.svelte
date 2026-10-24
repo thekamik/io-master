@@ -4,8 +4,7 @@
   User, src/views/users/):
 
   - AI: the connections to AI services (AiTab.svelte);
-  - Program: what this installation is and how it is protected (later the
-    TPM factor, step 8).
+  - Program: what this installation is and how it is protected.
 
   Which tab is open is presentation, kept here.
 -->

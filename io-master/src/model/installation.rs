@@ -1,5 +1,5 @@
-//! What an installation is: its identifier and its role, chosen at
-//! the first start, and where its data lives.
+//! What an installation is: its identifier, made at the first start,
+//! and the rules of the name of its one user.
 //!
 //! The record itself is kept in the system database
 //! (`db/system/`). Whether this is the first start, and the
@@ -14,52 +14,13 @@ pub const USER_NAME_MAX: usize = 64;
 pub const ID_LENGTH: usize = 16;
 
 /// The identifier of an installation: random, created at the first
-/// start, and kept both in the system database and in the marker
-/// of the TPM, so that the two can be matched.
+/// start, and kept in the system database.
 pub type InstallationId = [u8; ID_LENGTH];
 
-/// The role of the installation (`docs/architecture.md`,
-/// section 3).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Role {
-    /// The computer of an evaluator: every function except the
-    /// master panel. Any number of users with equal rights.
-    Workstation,
-    /// The password reset service: only its panel, and only the
-    /// user who installed it.
-    Master,
-}
-
-impl Role {
-    /// The name of the role as stored and shown.
-    pub fn name(self) -> &'static str {
-        match self {
-            Role::Workstation => "workstation",
-            Role::Master => "master",
-        }
-    }
-
-    /// The role with the given name.
-    pub fn from_name(name: &str) -> Option<Role> {
-        match name {
-            "workstation" => Some(Role::Workstation),
-            "master" => Some(Role::Master),
-            _ => None,
-        }
-    }
-
-    /// Tells whether users may add further users: on a workstation
-    /// they may; a master has only the user who installed it.
-    pub fn can_add_users(self) -> bool {
-        self == Role::Workstation
-    }
-}
-
-/// What was chosen at the first start.
+/// What the first start made.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Installation {
     pub id: InstallationId,
-    pub role: Role,
 }
 
 /// A user name that is not allowed; holds the reason.
@@ -109,16 +70,5 @@ mod tests {
         for name in ["", " anna", "anna ", "an\nna", too_long.as_str()] {
             assert!(check_user_name(name).is_err(), "{name:?}");
         }
-    }
-
-    #[test]
-    fn roles_have_names_and_rights() {
-        for role in [Role::Workstation, Role::Master] {
-            assert_eq!(Role::from_name(role.name()), Some(role));
-        }
-
-        assert_eq!(Role::from_name("admin"), None);
-        assert!(Role::Workstation.can_add_users());
-        assert!(!Role::Master.can_add_users());
     }
 }

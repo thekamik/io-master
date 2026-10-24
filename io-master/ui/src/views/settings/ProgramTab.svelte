@@ -14,8 +14,6 @@
   <dl class="facts">
     <dt>Version</dt>
     <dd>IO Master {app.version}</dd>
-    <dt>Role</dt>
-    <dd>{app.role === "master" ? "Master" : "Workstation"}</dd>
     <dt>User</dt>
     <dd>{app.user}</dd>
     <dt>Folder of the data</dt>
@@ -35,7 +33,6 @@
     </ul>
   {/if}
   <p class="note">
-    Coming in later steps: the TPM as a further factor, the secret of the application in the keyring of your Linux
-    account, the password reset through the master, and the removal of the installation.
+    Coming in later steps: a recovery code for a forgotten password, backups, and the removal of the installation.
   </p>
 </div>

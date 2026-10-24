@@ -14,17 +14,17 @@ use super::program::view::ProgramView;
 
 // ── When the view opens ───────────────────────────────────────────────
 
-/// The state of the program: whether it is installed, its role, who is
+/// The state of the program: whether it is installed, who is
 /// logged in, the pages, the warnings, the version and the folder.
 ///
 /// Called by the page: `App.svelte`, when the window opens and after every
 /// change of the state (the setup, the login, the logout) (`shell.programGet()`).
-/// Calls: `ProgramView::new` (the pages and the warnings of the role).
+/// Calls: `ProgramView::new` (the pages and the warnings).
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn program_get(state: State<'_, AppState>) -> ProgramView {
-    ProgramView::new(state.role(), state.current_user(), &state.data_dir)
+    ProgramView::new(state.running().is_some(), state.current_user(), &state.data_dir)
 }
 
 // ── The actions of the elements ───────────────────────────────────────
@@ -43,7 +43,6 @@ mod tests {
         let program = first_start_window().call("program_get", json!({})).unwrap();
 
         assert_eq!(program["installed"], false);
-        assert_eq!(program["role"], json!(null));
         assert_eq!(program["pages"], json!([]));
         assert_eq!(program["warnings"], json!([]));
     }
@@ -57,7 +56,7 @@ mod tests {
         assert_eq!(program["pages"][3], json!({ "id": "users", "title": "User" }));
         assert_eq!(program["pages"][1], json!({ "id": "evaluation_plan", "title": "Evaluation plan" }));
         assert_eq!(program["pages"][2], json!({ "id": "evaluation_lab", "title": "Evaluation lab" }));
-        assert_eq!(program["warnings"].as_array().unwrap().len(), 2);
+        assert_eq!(program["warnings"].as_array().unwrap().len(), 1);
         assert_ne!(program["version"], "");
     }
 }

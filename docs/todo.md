@@ -8,7 +8,7 @@ The number of a step is its name and never changes, so that references in the co
 |---|---|---|
 | 1 | 0: Put the current state in order | done (`history.md`) |
 | 2 | 1: Web server skeleton | done; replaced by the window of step 14 (`history.md`) |
-| 3 | 2: Secrets in the TPM (now an optional factor, see step 8) | done (`history.md`) |
+| 3 | 2: Secrets in the TPM (now an optional factor, see step 8) | done (`history.md`); its code removed in step 48 |
 | 4 | 3: Databases, accounts and the management of users | done (`history.md`) |
 | 5 | 5: Scan page | done (`history.md`) |
 | 6 | 7: AI chat with Anthropic | built; its connection replaced by step 15 (`history.md`) |
@@ -27,18 +27,19 @@ The number of a step is its name and never changes, so that references in the co
 | 14e | **45: The tree of the modules in `main.rs`** | **built 2026-10-23, in the phases 45.1 to 45.4** (below) |
 | 14f | **46: The entry of a view** | **built 2026-10-23, in the phases 46.1 to 46.7** (below) |
 | 14g | **47: The view `users`: the account, the session and the encryption in one place** | **built 2026-10-23, in the phases 47.1 to 47.3** (below) |
-| 14h | **48: The evaluation with AI as the only aim: devices, the master and the extra factors removed** | **decided 2026-10-24; 48.1 built** (below) |
+| 14h | **48: The evaluation with AI as the only aim: devices, the master and the extra factors removed** | **decided 2026-10-24; 48.1 and 48.3 built** (below) |
+| 14i | **49: The recovery code of a forgotten password** | **concept approved 2026-10-24** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
 | later | 28: Reports in the LaTeX template of the laboratory | with or after step 23 |
-| 16 | 13: Start: keyring, secret of the application, one user per account | after the review |
+| 16 | 13: Start: keyring, secret of the application, one user per account | dropped 2026-10-24 (step 48) |
 | 17 | 6: Port permissions | dropped 2026-10-24 (step 48) |
-| 18 | 8: The TPM as an optional factor | |
-| 19 | 9: Passkeys as an optional factor | |
+| 18 | 8: The TPM as an optional factor | dropped 2026-10-24 (step 48) |
+| 19 | 9: Passkeys as an optional factor | dropped 2026-10-24 (step 48) |
 | 20 | 10: Before release of the workstation | |
-| 21 | 4: The TLS server of the reset service (changed 2026-10-16) | before the master |
-| 22 | 11: Master and password reset | last |
+| 21 | 4: The TLS server of the reset service (changed 2026-10-16) | dropped 2026-10-24 (step 48) |
+| 22 | 11: Master and password reset | dropped 2026-10-24 (step 48) |
 
 ## How every step is done
 
@@ -53,9 +54,23 @@ Legend: `[ ]` to do, `[x]` done.
 
 ---
 
+## Step 49: The recovery code of a forgotten password (2026-10-24)
+
+**State: concept approved by the user 2026-10-24** ("a sensible mechanism, and probably the only sensible option"). The design: `architecture.md`, section 5.4.
+
+The key of the database is wrapped a second time, with a random recovery code (160 bits, groups of characters without 0, O, 1, I, with a check sum), the mechanism of BitLocker, FileVault and LUKS: no server.
+
+**Tasks**
+- [ ] `db/encryption/keys.rs`: the wrapping with the recovery code (HKDF, AES-256-GCM, its own purpose of HKDF); the code made, written and read as text with its check sum (`model/`).
+- [ ] `system.db`: the second copy of the key (columns of its own; a migration of the system database, its first).
+- [ ] `views/users/users.rs`: the code shown once at the setup and confirmed by a group; "I do not remember my password" on the login page (the code, then the new password; the code replaced); the replacement of the code on the page User, after the password.
+- [ ] The warning of the window only while no recovery code exists; an installation made before step 49 is offered to make one.
+
+---
+
 ## Step 48: The evaluation with AI as the only aim (2026-10-24)
 
-**State: decided 2026-10-24; 48.1 built, the rest needs its concept.**
+**State: decided 2026-10-24; 48.1 and 48.3 built; 48.2 (the documents of the framework) partly done with them.**
 
 The user (2026-10-24): the project tried to catch too many magpies by the tail. **IO Master is a framework for the evaluation with the help of AI**: it works with the documentation of the client and the inputs of the evaluator, and its output is the report. The name stays: IO is the input and the output, and the flow of the data between them is to be done masterfully.
 
@@ -76,8 +91,8 @@ The user (2026-10-24): the project tried to catch too many magpies by the tail. 
 
 **Phases** (one commit each, pushed, every test passing; the documents with each)
 - [x] 48.1 The devices removed: `hardware_tests/`, `views/devices/`, `db/scan_settings/` (the version 4 of the database of the evaluator removes its two settings), the three commands in their four lists, the page (`ui/src/views/devices/`, `lib/api/devices.ts`, `styles/09-devices.css`, the navigation), the feature `fs` of `rustix`; the documents.
-- [ ] 48.2 The documents describe the framework: `README.md`, `architecture.md` (sections 1, 3, 5, 6, 8), `CLAUDE.md`; the steps dropped marked so in this file; `v0.2_functionality.md`.
-- [ ] 48.3 The role master, more users, the TPM and the constants of the keyring removed; the password stays (decided 2026-10-24). **The concept on GnuPG below is withdrawn** (kept for the record: the analysis of the flow of GnuPG may serve the backup).
+- [ ] 48.2 The documents describe the framework (README, `architecture.md` and `CLAUDE.md` brought up to date with 48.1 and 48.3; left: a read of the whole for the framework, `oscal.md`, `history.md`): `README.md`, `architecture.md` (sections 1, 3, 5, 6, 8), `CLAUDE.md`; the steps dropped marked so in this file; `v0.2_functionality.md`.
+- [x] 48.3 The role master, more users, the TPM and the constants of the keyring removed; the password stays (decided 2026-10-24): `Role` and the choice of the role at the setup, the page of the master, `accounts::add`, `security/tpm/` and `tss-esapi`, the factor of the device in `db/encryption/keys.rs` (the keys wrapped before open unchanged: the derivation without a device is the same), the columns `role` and `key_device` no longer written (an older `system.db` keeps working), `base64` (used by nothing); one warning instead of two; `architecture.md` sections 3, 5, 6, 8, 9. **The concept on GnuPG below is withdrawn** (kept for the record: the analysis of the flow of GnuPG may serve the backup).
 
 ### The concept of 48.3 on GnuPG (proposed by Claude 2026-10-24; withdrawn the same day, the user chose the password)
 
@@ -341,6 +356,8 @@ Built on the analysis of the code of 2026-10-17 and the guidelines of the user. 
 
 ## Step 4: The TLS server of the reset service (changed 2026-10-16)
 
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
+
 **Changed on 2026-10-16:** the program is a desktop program started without parameters (step 14). The TLS server for a remote access to the interface (`--address`) is **dropped**: there is no remote access to the interface, the evaluator works at the computer. `--port`, `--address` and the parser of the command line were removed from `main.rs`. What remains for this step is the network part of the password reset: done right before the master (step 11) and together with it.
 
 **Decisions**
@@ -415,6 +432,8 @@ The concept changed several times while steps 0 to 7 were built (CLI removed, TP
 
 ## Step 13: Start: keyring, secret of the application, one user per account
 
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
+
 Agreed with the user on 2026-10-15 during the review (step 12); the concept is in `architecture.md`, sections 3, 3.2, 5.1, 5.2, 5.6 and 9. It replaces the first start told by the system database alone, the data directory chosen with `--data-dir`, and the removal with `--uninstall`.
 
 **Decisions**
@@ -452,6 +471,8 @@ Agreed with the user on 2026-10-15 during the review (step 12); the concept is i
 
 ## Step 8: The TPM as an optional factor
 
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
+
 Comes after the functions of the workstation (steps 4–7). The program authenticates with passwords only by default (`architecture.md`, section 5). The TPM, built in step 2, becomes a further factor that can be switched on where a TPM exists, for the whole installation.
 
 **Decisions**
@@ -472,6 +493,8 @@ Comes after the functions of the workstation (steps 4–7). The program authenti
 ---
 
 ## Step 9: Passkeys as an optional factor
+
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
 
 A further factor next to the TPM, chosen by each user for their own account (`architecture.md`, section 5.1). The TPM binds the data to the computer, a passkey to the person; either, both or neither can be used.
 
@@ -501,6 +524,8 @@ A further factor next to the TPM, chosen by each user for their own account (`ar
 ---
 
 ## Step 11: Master and password reset (last stage)
+
+**Dropped 2026-10-24 (step 48 of this file)**: the program has no master, no TPM, no passkeys and no keyring. Kept below as it was.
 
 The workstation is the core of the program and is completed first (steps 0–10). The master comes last.
 

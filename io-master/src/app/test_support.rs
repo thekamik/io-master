@@ -2,7 +2,6 @@
 //! installation (databases, accounts) in a temporary directory.
 
 use crate::installation::lifecycle::{self, Opened};
-use crate::model::installation::Role;
 use crate::test_support::TempDir;
 
 use super::state::AppState;
@@ -29,16 +28,16 @@ pub fn first_start() -> TestState {
     TestState { directory, state }
 }
 
-/// A workstation installed by "anna", nobody logged in yet.
+/// The program installed by "anna", nobody logged in yet.
 pub fn installed() -> TestState {
     let directory = TempDir::new();
-    let (running, _) = lifecycle::install(directory.path(), Role::Workstation, "anna", PASSWORD).unwrap();
+    let (running, _) = lifecycle::install(directory.path(), "anna", PASSWORD).unwrap();
     let state = AppState::new(directory.path().to_owned(), Opened::Installed(running));
 
     TestState { directory, state }
 }
 
-/// A workstation with "anna" logged in.
+/// The program with "anna" logged in.
 pub async fn logged_in() -> TestState {
     let test = installed();
     log_in(&test.state, PASSWORD);
@@ -49,9 +48,7 @@ pub async fn logged_in() -> TestState {
 /// Logs "anna" in with `password`, as the login form does.
 pub fn log_in(state: &AppState, password: &str) {
     let running = state.installed().unwrap();
-    let (account, key) =
-        accounts::log_in(&running.system_db, running.device_secret.as_ref(), &state.data_dir, "anna", password)
-            .unwrap();
+    let (account, key) = accounts::log_in(&running.system_db, &state.data_dir, "anna", password).unwrap();
 
     state.log_in(Session::open(&state.data_dir, account, key).unwrap());
 }

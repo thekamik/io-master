@@ -1,20 +1,17 @@
 //! The system database: `system.db` in the data directory.
 //!
 //! It is the record of the installation (`docs/architecture.md`,
-//! sections 3.2 and 5.3): which installation this is, its role,
-//! and its accounts. Its existence decides whether this is the
+//! sections 3.2 and 5.3): which installation this is and its
+//! account. Its existence decides whether this is the
 //! first start.
 //!
 //! **Protection: NOT encrypted.** The program opens it at every
 //! start, before anyone has given a password, so no key could open
 //! it (`encryption/sqlcipher.rs`, `create_plain`). It therefore holds
-//! nothing secret: names, a role, and the keys of the databases of
-//! the evaluators only in encrypted form (`encryption/keys.rs`), which
+//! nothing secret: a name and the key of the database of
+//! the evaluator only in encrypted form (`encryption/keys.rs`), which
 //! are useless without the passwords. The file is readable only by
 //! the user.
-//!
-//! TODO (step 8 of docs/todo.md): with the optional TPM factor it
-//! can be encrypted with a key from the secret of the device.
 //!
 //! ```text
 //! database.rs   the file: create, open, remove; the lock

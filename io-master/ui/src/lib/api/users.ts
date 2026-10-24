@@ -13,8 +13,6 @@ export function setupFormInstall(fields: {
   name: string;
   password: string;
   passwordRepeat: string;
-  role: string;
-  roleConfirmed: boolean;
 }): Promise<void> {
   return invoke("setup_form_install", fields);
 }

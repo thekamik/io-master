@@ -20,7 +20,6 @@ pub(super) fn user_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<UserRec
             salt: row.get("key_salt")?,
             memory_kib: row.get("key_memory_kib")?,
             iterations: row.get("key_iterations")?,
-            with_device_secret: row.get("key_device")?,
             nonce: row.get("key_nonce")?,
             ciphertext: row.get("key_ciphertext")?,
             tag: row.get("key_tag")?,

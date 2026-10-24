@@ -5,25 +5,18 @@ edition = "2024"
 
 [dependencies]
 # System calls without unsafe code: reading random bytes from the
-# kernel (getrandom(2), "rand"), forbidding the memory dumps of the
-# process (prctl(2), "process") and stopping a leftover TPM emulator
-# (kill(2), "process").
+# kernel (getrandom(2), "rand") and forbidding the memory dumps of the
+# process (prctl(2), "process").
 rustix = { version = "1.1.5", default-features = false, features = ["std", "rand", "process"] }
 
 # Overwriting secrets in memory with zeros when they are no
 # longer needed, in a way the compiler cannot optimize away.
 zeroize = "1.9.1"
 
-# The TPM 2.0: sealing the secret of the device and keeping the
-# marker of the installation (security/tpm/). A Rust wrapper of tpm2-tss,
-# the TPM library of the system (package libtss2-dev).
-tss-esapi = "7.7.0"
-
 # JSON read and written by hand into plain values, so that the types
 # of the program carry no serialization code: the requests and
 # answers of the AI services (ai/api/provider/), the answers of the
-# tasks of the AI (ai/tasks/), the file of a test project
-# (business/test_projects/exchange/). For the templates of the AI
+# tasks of the AI (ai/tasks/). For the templates of the AI
 # connections (ai/api/connection.rs), "preserve_order" keeps the fields of a template in the order the
 # evaluator wrote them, in the request and in the report of a check
 # (without it they come out sorted by name).
@@ -82,11 +75,6 @@ jsonschema = { version = "=0.58.5", default-features = false }
 # "custom-protocol" serves the page built into the program also in
 # development builds, so that no development server is needed.
 tauri = { version = "2.12.4", features = ["custom-protocol"] }
-
-# The PDFs carried in an exported scheme, as text in its JSON
-# (business/test_projects/exchange/). The standard crate for it; already used
-# by Tauri, so it adds no new code.
-base64 = "0.22.1"
 
 # The dialogs of the system to choose files (the PDFs of a standard,
 # the files of OSCAL; src/views/evaluation_plan/). The
