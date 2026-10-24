@@ -1,8 +1,8 @@
-//! The entry of the editor of a catalog, a screen of the view Evaluation
-//! plan: a catalog of OSCAL made in the program from the documents (PDF) of
+//! The entry of the editor of a catalog, a screen of the view Converter: a
+//! catalog of OSCAL made in the program from the documents (PDF) of
 //! its standard, group by group and control by control, with the AI (page:
-//! `ui/src/views/evaluation_plan/catalog_editor/`, its commands in
-//! `ui/src/lib/api/evaluation_plan/catalog_editor.ts`). Which object is
+//! `ui/src/views/converter/catalog_editor/`, its commands in
+//! `ui/src/lib/api/converter/catalog_editor.ts`). Which object is
 //! chosen, and what the viewer shows, are presentation, kept by the page;
 //! every element that changes the catalog or its evaluation support tells
 //! the editor, which asks every element to read its data again. Nothing the
@@ -462,7 +462,7 @@ mod tests {
     use crate::db::evaluation_support as db_evaluation_support;
     use crate::db::evaluation_support::create::NewProposal;
     use crate::model::evaluation_support::{ProposalKind, QuoteDraft};
-    use crate::views::evaluation_plan::catalog_editor::test_support::{add_control, add_group, with_catalog};
+    use crate::views::converter::catalog_editor::test_support::{add_control, add_group, with_catalog};
     use crate::views::test_support::{TestWindow, logged_in_window};
 
     #[test]

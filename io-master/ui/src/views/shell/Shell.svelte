@@ -11,6 +11,7 @@
   import type { ProgramView } from "../../lib/api/shell";
   import Chat from "../chat/Chat.svelte";
   import EvaluationLab from "../evaluation_lab/EvaluationLab.svelte";
+  import Converter from "../converter/Converter.svelte";
   import EvaluationPlan from "../evaluation_plan/EvaluationPlan.svelte";
   import Settings from "../settings/Settings.svelte";
   import UserMenu from "../users/UserMenu.svelte";
@@ -29,7 +30,8 @@
   /** The line under the title of each page. */
   const subtitles: Record<string, string> = {
     chat: "Ask the model of your active AI connection.",
-    evaluation_plan: "The standards in NIST OSCAL and the plan of an evaluation, with the documents of the standards they come from.",
+    converter: "The documents of a standard (PDF) converted into a catalog of NIST OSCAL, with the help of the AI.",
+    evaluation_plan: "The documents of NIST OSCAL, and the plan of an evaluation made from them.",
     evaluation_lab: "Carry out an evaluation plan for a product, with what the manufacturer and the laboratory deliver.",
     users: "Your account: the password that opens your encrypted database, and your recovery code.",
     settings: "The connections to AI services, and this installation.",
@@ -45,6 +47,9 @@
       <path d="M9 4h6v3H9z" />
       <path d="M7 5.5H5.5v14h13v-14H17" />
       <path d="M8.5 13l2.2 2.2 4.8-4.7" />
+    {:else if name === "converter"}
+      <path d="M6 3.5h7l4 4V20.5H6z" />
+      <path d="M13 3.5v4h4M9 12.5h5M12 10l2 2.5-2 2.5" />
     {:else if name === "evaluation_plan"}
       <rect x="3.5" y="4" width="6" height="5" rx="1.2" />
       <rect x="14.5" y="4" width="6" height="5" rx="1.2" />
@@ -96,6 +101,8 @@
 
     {#if active === "chat"}
       <Chat />
+    {:else if active === "converter"}
+      <Converter />
     {:else if active === "evaluation_plan"}
       <EvaluationPlan />
     {:else if active === "evaluation_lab"}

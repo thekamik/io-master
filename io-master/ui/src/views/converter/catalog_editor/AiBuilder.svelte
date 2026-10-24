@@ -1,6 +1,6 @@
 <!--
   The element "the AI" of the editor of a catalog
-  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): the AI reads a table of contents
+  (its commands in src/views/converter/catalog_editor/catalog_editor.rs): the AI reads a table of contents
   and proposes the groups, or the pages of a group (the group chosen in
   the tree, else the top) and proposes its controls. Its events arrive
   while it works, and "Stop" ends it after its step. When it is over it
@@ -11,8 +11,8 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../../lib/api/errors";
-  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
-  import type { Which } from "../../../lib/api/evaluation_plan/catalog_editor";
+  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
+  import type { Which } from "../../../lib/api/converter/catalog_editor";
 
   let {
     uuid,

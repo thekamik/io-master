@@ -1,13 +1,13 @@
 <!--
   The element "quotes" of the editor of a catalog
-  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): the passages of the standard
+  (its commands in src/views/converter/catalog_editor/catalog_editor.rs): the passages of the standard
   the object comes from, each looked for on its page. Showing a quote and
   "Add a quote…" only tell the view, which opens the viewer; the view
   gives back the passage selected there (add(), below).
 -->
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
-  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
+  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
 
   let {
     uuid,

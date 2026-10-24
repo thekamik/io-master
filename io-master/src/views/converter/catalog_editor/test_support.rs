@@ -12,8 +12,8 @@ use crate::ai::api::test_support::{FakeService, completions as connection_to};
 use crate::app::test_support::{TestState, logged_in};
 use crate::model::api_key::ApiKey;
 use crate::test_support::standards::load;
-use crate::views::evaluation_plan::catalog_editor::ai_builder::view::BuildEvent;
-use crate::views::evaluation_plan::new_catalog::made;
+use crate::views::converter::catalog_editor::ai_builder::view::BuildEvent;
+use crate::views::converter::new_catalog::made;
 use crate::views::test_support::{TestWindow, logged_in_window};
 
 /// A window with "anna" logged in, the small standard and an empty

@@ -89,7 +89,7 @@ mod tests {
 
     use crate::db::evaluation_support::create::NewProposal;
     use crate::model::evaluation_support::QuoteDraft;
-    use crate::views::evaluation_plan::catalog_editor::test_support::{add_group, with_catalog};
+    use crate::views::converter::catalog_editor::test_support::{add_group, with_catalog};
 
     /// Stores a proposal of `kind` with `content`, under `parent`, with one
     /// quote of page 2 of `source`; returns its id.

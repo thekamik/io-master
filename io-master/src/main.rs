@@ -320,23 +320,36 @@ mod views {
         }
     }
 
-    // views/evaluation_plan/: the view Evaluation plan: the documents of the
-    // standards in NIST OSCAL and the documents of standards (PDF) they quote.
+    // views/evaluation_plan/: the view Evaluation plan: it works only on the
+    // documents of OSCAL (the list, the import, the export, the deletion;
+    // later the document shown graphically and turned into the flow of data
+    // of the evaluation).
     pub mod evaluation_plan {
         #[allow(clippy::module_inception)]
         pub mod evaluation_plan;
 
+        pub mod oscal_documents {
+            pub mod dialog;
+            pub mod file;
+            pub mod view;
+        }
+    }
+
+    // views/converter/: the view Converter: the documents of a standard (PDF)
+    // converted into a catalog of OSCAL with the help of the AI.
+    pub mod converter {
+        #[allow(clippy::module_inception)]
+        pub mod converter;
+
+        pub mod catalog_list {
+            pub mod view;
+        }
         pub mod document_search {
             pub mod search;
             pub mod view;
         }
         pub mod new_catalog {
             pub mod made;
-            pub mod view;
-        }
-        pub mod oscal_documents {
-            pub mod dialog;
-            pub mod file;
             pub mod view;
         }
         pub mod standard_documents {
@@ -346,7 +359,7 @@ mod views {
             pub mod view;
         }
 
-        // views/evaluation_plan/catalog_editor/: the editor of a catalog, a
+        // views/converter/catalog_editor/: the editor of a catalog, a
         // screen of the view, with an entry of its own.
         pub mod catalog_editor {
             #[allow(clippy::module_inception)]

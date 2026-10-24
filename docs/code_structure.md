@@ -106,7 +106,7 @@ ai/presets/      the ready settings of known services, and the help for the fiel
 
 - **Every question is in the journal of the AI**: `completions::ask` asks and writes the entry itself, also when the reply was stopped or failed; the caller learns only whether the entry could be written. The check of a connection writes its entry the same way.
 - A key is given out only for the address it was entered for (`db/ai/connection/read.rs`, checked at every use).
-- A task works on plain data of `model/` and gives back plain data (`ai/tasks/catalog_outline.rs`, `catalog_section.rs`: groups and controls of OSCAL); applying a proposal is the work of the view editor of a catalog (`views/evaluation_plan/catalog_editor/proposals/accept.rs`).
+- A task works on plain data of `model/` and gives back plain data (`ai/tasks/catalog_outline.rs`, `catalog_section.rs`: groups and controls of OSCAL); applying a proposal is the work of the view editor of a catalog (`views/converter/catalog_editor/proposals/accept.rs`).
 
 ### 2.4 `hardware_tests/` (removed in step 48)
 
@@ -114,7 +114,7 @@ Until 2026-10-24 the scan of the serial ports and the settings of the scanner, w
 
 ### 2.4a `pdf/`: reading PDFs
 
-`poppler.rs`: the number of pages and the title of a PDF (`pdfinfo`), and the text of a range of pages (`pdftotext`), the PDF given on the standard input, never through a shell. It uses nothing of the program; the loading of the documents of a standard (`views/evaluation_plan/standard_documents/load.rs`) reads a document part by part with it, reports every part and can stop between them.
+`poppler.rs`: the number of pages and the title of a PDF (`pdfinfo`), and the text of a range of pages (`pdftotext`), the PDF given on the standard input, never through a shell. It uses nothing of the program; the loading of the documents of a standard (`views/converter/standard_documents/load.rs`) reads a document part by part with it, reports every part and can stop between them.
 
 ### 2.5 `security/`
 
@@ -126,7 +126,7 @@ The core of the protection (moved from `business/` in step 42, unchanged): the f
 
 ### 2.6 `business/` (removed in step 42)
 
-Until step 42 the business logic was a folder of its own, as resources and operations named after REST verbs; the commands of `tauri_ui/` called it. Both are replaced by the commands of the elements (section 2.9). Where its parts went: the catalogs and their editor to `views/evaluation_plan/catalog_editor/` (the changes of a catalog in memory to `model/oscal/catalog/`, the new UUIDs and times to `db/oscal/ids.rs`, a new catalog to `views/evaluation_plan/new_catalog/made.rs`), the loading of PDFs to `views/evaluation_plan/standard_documents/`, the chat to `views/chat/conversation/`, the installation and the session to `installation/`.
+Until step 42 the business logic was a folder of its own, as resources and operations named after REST verbs; the commands of `tauri_ui/` called it. Both are replaced by the commands of the elements (section 2.9). Where its parts went: the catalogs and their editor to `views/evaluation_plan/catalog_editor/` (the changes of a catalog in memory to `model/oscal/catalog/`, the new UUIDs and times to `db/oscal/ids.rs`, a new catalog to `views/evaluation_plan/new_catalog/made.rs`), the loading of PDFs to `views/evaluation_plan/standard_documents/`, the chat to `views/chat/conversation/`, the installation and the session to `installation/` (the parts of `views/evaluation_plan/` named here moved to `views/converter/` in step 50).
 
 ### 2.7 `app/`: what the whole window shares
 
@@ -164,7 +164,7 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 
 ### 2.8a `components/`: the components (step 43)
 
-A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Evaluation plan and by its editor of a catalog, the parts of an object (`part_rows/`), shown twice by the editor of a catalog, and the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users; a component that only shows data the elements give it has no entry, only its `view.rs`.
+A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Converter and by its editor of a catalog, the parts of an object (`part_rows/`), shown twice by the editor of a catalog, and the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users; a component that only shows data the elements give it has no entry, only its `view.rs`.
 
 ### 2.9 `views/`: the views of the window (steps 42 and 46)
 
@@ -184,7 +184,7 @@ The modules of a view are declared in the map of `main.rs`; its flow of data is 
 - **A command is named `<element>_<action>`** (`chat_list_get`, `connection_form_save`) and lives in the entry of its view; a test (`src/command_lists_tests.rs`) checks both.
 - **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `pdf/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
 - **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Settings: a connection is saved, the list of connections reads again).
-- **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/evaluation_plan/standard_documents/load.rs`).
+- **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/converter/standard_documents/load.rs`).
 - **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`) through a `Channel` of Tauri, stop on the stop signal of `app/state.rs`, and hold no lock of the session while they wait for files or for the model.
 - **Documents of OSCAL** (step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction (`db/oscal/`); the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
 - **Tests call a command as the page does**: by name, with JSON, through the IPC of Tauri, in a window of its mock runtime (`views/test_support.rs`, the feature `test` of Tauri), on a real installation in a temporary folder.
@@ -368,9 +368,11 @@ views/                     The views of the window, one folder per view and one 
       stored.rs                    What a chat keeps (`db/ai/chats/`, tables `chats` and `messages`, in
       turn.rs                      One turn of a chat: the message of the evaluator is checked and
       view.rs                      The data of the conversation as the page gets it: an open chat, and
-  evaluation_plan/             The view Evaluation plan: the documents of the standards in NIST OSCAL
-    evaluation_plan.rs           The entry of the view Evaluation plan: every command the page calls
-    catalog_editor/              The editor of a catalog, a part of the view Evaluation plan: a catalog
+  converter/                   The view Converter: the documents of a standard (PDF) converted into a
+    converter.rs                 The entry of the view Converter: the conversion of the documents of a
+    catalog_list/                The element "list of catalogs" of the view Converter: the catalogs of
+      view.rs                      The data of the list of catalogs of the view Converter, as the page gets
+    catalog_editor/              The editor of a catalog, a part of the view Converter: a catalog
       catalog_editor.rs            The entry of the editor of a catalog: every command the page calls
       ai_builder/                  The element "the AI" of the editor of a catalog: the AI reads a table
         controls.rs                  The controls of a group of a catalog proposed by the AI from the pages
@@ -391,21 +393,23 @@ views/                     The views of the window, one folder per view and one 
       proposals/                   The element "proposals" of the editor of a catalog: what the AI
         accept.rs                    A proposal of the AI accepted into its catalog.
         view.rs                      The data of the proposals, as the page gets it.
-    document_search/             The element "search" of the view Evaluation plan: the text of the
+    document_search/             The element "search" of the view Converter: the text of the
       search.rs                    The search of the text of the documents of standards: in the one form
       view.rs                      The data of the search, as the page gets it.
-    new_catalog/                 The element "new catalog" of the view Evaluation plan: a catalog of
+    new_catalog/                 The element "new catalog" of the view Converter: a catalog of
       made.rs                      A new, empty catalog of OSCAL: its metadata, and the documents of the
       view.rs                      The data of a new catalog, as the page gets it: the documents it can
-    oscal_documents/             The element "documents of OSCAL" of the view Evaluation plan: the
-      dialog.rs                    The dialogs of the system for a file of OSCAL: import, export.
-      file.rs                      A file of OSCAL (JSON) read into the database, and written from it:
-      view.rs                      The data of the list of documents of OSCAL, as the page gets it.
-    standard_documents/          The element "documents of standards" of the view Evaluation plan: the
+    standard_documents/          The element "documents of standards" of the view Converter: the
       dialog.rs                    The dialog of the system for the PDFs of a standard.
       load.rs                      The loading of documents of standards from PDF files: a long work.
       stored.rs                    What is stored of a document of a standard, with its rules: a file is
       view.rs                      The data of the list of documents of standards, as the page gets and
+  evaluation_plan/             The view Evaluation plan: it works only on the documents of OSCAL
+    evaluation_plan.rs           The entry of the view Evaluation plan: it works only on the documents of
+    oscal_documents/             The element "documents of OSCAL" of the view Evaluation plan: the
+      dialog.rs                    The dialogs of the system for a file of OSCAL: import, export.
+      file.rs                      A file of OSCAL (JSON) read into the database, and written from it:
+      view.rs                      The data of the list of documents of OSCAL, as the page gets it.
   settings/                    The view Settings: the settings of the program, the connections to
     settings.rs                  The entry of the view Settings: every command the page calls for it
     api_key/                     The element "API key" of the view Settings, tab AI: the key of one

@@ -52,10 +52,11 @@ mod tests {
         let program = logged_in_window().call("program_get", json!({})).unwrap();
 
         assert_eq!(program["user"], "anna");
-        assert_eq!(program["pages"].as_array().unwrap().len(), 5);
-        assert_eq!(program["pages"][3], json!({ "id": "users", "title": "User" }));
-        assert_eq!(program["pages"][1], json!({ "id": "evaluation_plan", "title": "Evaluation plan" }));
-        assert_eq!(program["pages"][2], json!({ "id": "evaluation_lab", "title": "Evaluation lab" }));
+        assert_eq!(program["pages"].as_array().unwrap().len(), 6);
+        assert_eq!(program["pages"][1], json!({ "id": "converter", "title": "Converter" }));
+        assert_eq!(program["pages"][2], json!({ "id": "evaluation_plan", "title": "Evaluation plan" }));
+        assert_eq!(program["pages"][3], json!({ "id": "evaluation_lab", "title": "Evaluation lab" }));
+        assert_eq!(program["pages"][4], json!({ "id": "users", "title": "User" }));
         assert_eq!(program["warnings"], json!([]));
         assert_ne!(program["version"], "");
     }

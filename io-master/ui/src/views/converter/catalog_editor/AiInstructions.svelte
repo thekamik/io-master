@@ -1,6 +1,6 @@
 <!--
   The element "instructions to the AI" of the editor of a catalog
-  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): a dialog with the
+  (its commands in src/views/converter/catalog_editor/catalog_editor.rs): a dialog with the
   instructions of the task that proposes the groups or the controls.
   Saving an empty text brings back the default ones.
 -->
@@ -8,7 +8,7 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../../lib/api/errors";
-  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
+  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
 
   let { which, onclose }: { which: catalogEditor.Which; onclose: () => void } = $props();
 

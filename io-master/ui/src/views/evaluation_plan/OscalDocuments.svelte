@@ -1,17 +1,14 @@
 <!--
   The element "documents of OSCAL" of the view Evaluation plan
   (its commands in src/views/evaluation_plan/evaluation_plan.rs): the catalogs, mappings, profiles and
-  plans, imported, exported and deleted here. "Open" and "New catalog…"
-  only tell the view (onopen, onnew). The view asks it to read the list
-  again after a catalog was made or closed (reload(), below).
+  plans, imported, exported and deleted here. A catalog is made from the PDFs
+  of a standard, and edited, in the view Converter (step 50 of docs/todo.md).
 -->
 <script lang="ts">
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
-
-  let { onopen, onnew }: { onopen: (uuid: string) => void; onnew: () => void } = $props();
 
   let documents: evaluationPlan.OscalDocumentView[] = $state([]);
   let confirmDelete: string | null = $state(null);
@@ -71,7 +68,6 @@
 {#if notice}<p class="done">{notice}</p>{/if}
 
 <div class="buttons section-actions">
-  <button type="button" class="primary" onclick={onnew}>New catalog…</button>
   <button type="button" onclick={importFile}>Import an OSCAL document…</button>
 </div>
 
@@ -81,13 +77,13 @@
     <p class="note">
       The evaluation plan is built on NIST OSCAL: the requirements of a standard as a catalog, the relations between
       documents as a mapping, the choice for one evaluation as a profile, the plan as an assessment plan. Make a catalog
-      of a standard from its documents (PDF), with the help of the AI, or import a document of OSCAL (JSON, version
-      1.x). Every document is checked against the schema of NIST.
+      of a standard from its documents (PDF) in the view Converter, with the help of the AI, or import a document of
+      OSCAL (JSON, version 1.x). Every document is checked against the schema of NIST.
     </p>
   </div>
 {:else}
   <div class="table-card">
-    <table class="ports documents">
+    <table class="data documents">
       <thead>
         <tr><th>Model</th><th>Title</th><th>Version</th><th>OSCAL</th><th>Last modified</th><th></th></tr>
       </thead>
@@ -100,9 +96,6 @@
             <td class="note">{document.oscal_version}</td>
             <td class="note">{document.last_modified}</td>
             <td class="actions">
-              {#if document.model === "catalog"}
-                <button type="button" class="small" onclick={() => onopen(document.uuid)}>Open</button>
-              {/if}
               <button type="button" class="small" onclick={() => exportFile(document)}>Export</button>
               {#if confirmDelete === document.uuid}
                 <button type="button" class="small danger" onclick={() => remove(document.uuid)}>Delete</button>

@@ -38,6 +38,7 @@
     "allow-new-catalog-sources",
     "allow-new-catalog-create",
     "allow-standard-documents-get",
+    "allow-catalog-list-get",
     "allow-standard-documents-load",
     "allow-standard-documents-stop",
     "allow-standard-documents-update",

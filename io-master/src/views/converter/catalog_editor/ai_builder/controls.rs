@@ -200,7 +200,7 @@ mod tests {
 
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions_events};
     use crate::model::oscal::catalog::edit::Place;
-    use crate::views::evaluation_plan::catalog_editor::test_support::{collector, ready};
+    use crate::views::converter::catalog_editor::test_support::{collector, ready};
 
     #[tokio::test]
     async fn the_controls_of_a_group_are_proposed_and_wait() {

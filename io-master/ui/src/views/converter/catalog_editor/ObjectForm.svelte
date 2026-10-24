@@ -1,6 +1,6 @@
 <!--
   The element "object" of the editor of a catalog
-  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): the group or control chosen,
+  (its commands in src/views/converter/catalog_editor/catalog_editor.rs): the group or control chosen,
   its parts as the standard reads, and its own fields as JSON of OSCAL,
   changed and saved here (what it holds stays). Its quotes come in
   between (children, the element "quotes"). A change tells the view
@@ -11,8 +11,8 @@
   import type { Snippet } from "svelte";
 
   import { sentence } from "../../../lib/api/errors";
-  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
-  import type { Place } from "../../../lib/api/evaluation_plan/catalog_editor";
+  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
+  import type { Place } from "../../../lib/api/converter/catalog_editor";
   import PartRows from "../../../components/part_rows/PartRows.svelte";
 
   let {

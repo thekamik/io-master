@@ -1,10 +1,10 @@
-// The commands of the editor of a catalog, a screen of the view Evaluation
-// plan, one function per command of its entry in the program
-// (src/views/evaluation_plan/catalog_editor/catalog_editor.rs), named as the
+// The commands of the editor of a catalog, a screen of the view Converter,
+// one function per command of its entry in the program
+// (src/views/converter/catalog_editor/catalog_editor.rs), named as the
 // command: `catalogTreeGet` calls `catalog_tree_get`.
 //
 // The types mirror the view.rs of the elements
-// (src/views/evaluation_plan/catalog_editor/); a change there needs the same
+// (src/views/converter/catalog_editor/); a change there needs the same
 // change here.
 
 import { Channel, invoke } from "@tauri-apps/api/core";

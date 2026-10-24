@@ -1,13 +1,13 @@
 <!--
   The element "tree" of the editor of a catalog
-  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): the groups and controls, as
+  (its commands in src/views/converter/catalog_editor/catalog_editor.rs): the groups and controls, as
   the rows the program gives with their level, drawn without recursion.
   Choosing an object, and "+ Group", "+ Control", only tell the view. It
   reads the tree again when the view says the catalog changed (version).
 -->
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
-  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
+  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
 
   let {
     uuid,

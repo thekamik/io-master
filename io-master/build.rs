@@ -42,6 +42,7 @@ fn main() {
         "new_catalog_sources",
         "new_catalog_create",
         "standard_documents_get",
+        "catalog_list_get",
         "standard_documents_load",
         "standard_documents_stop",
         "standard_documents_update",

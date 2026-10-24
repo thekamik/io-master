@@ -1,18 +1,18 @@
 <!--
-  The element "search" of the view Evaluation plan
-  (its commands in src/views/evaluation_plan/evaluation_plan.rs): the text of the documents of
+  The element "search" of the view Converter
+  (its commands in src/views/converter/converter.rs): the text of the documents of
   standards searched. Opening a hit only tells the view (onopen), which
   shows it in the viewer.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
-  import * as evaluationPlan from "../../lib/api/evaluation_plan";
+  import * as converter from "../../lib/api/converter";
 
   let { onopen }: { onopen: (documentId: number, page: number, quote: string) => void } = $props();
 
   let query = $state("");
   let searched = $state("");
-  let hits: evaluationPlan.HitView[] = $state([]);
+  let hits: converter.HitView[] = $state([]);
   let problem = $state("");
 
   async function search(event: SubmitEvent) {
@@ -20,7 +20,7 @@
     problem = "";
 
     try {
-      hits = await evaluationPlan.documentSearchRun(query, null);
+      hits = await converter.documentSearchRun(query, null);
       searched = query;
     } catch (error) {
       problem = sentence(error);

@@ -1,6 +1,6 @@
 <!--
-  The element "documents of standards" of the view Evaluation plan
-  (its commands in src/views/evaluation_plan/evaluation_plan.rs): the PDFs of the standards, loaded
+  The element "documents of standards" of the view Converter
+  (its commands in src/views/converter/converter.rs): the PDFs of the standards, loaded
   into the encrypted database with the text of their pages, their fields
   changed and deleted here. "View" only tells the view (onview), which
   shows the document in the viewer.
@@ -12,12 +12,12 @@
   import { onMount } from "svelte";
 
   import { sentence } from "../../lib/api/errors";
-  import * as evaluationPlan from "../../lib/api/evaluation_plan";
+  import * as converter from "../../lib/api/converter";
 
   let { onview }: { onview: (documentId: number) => void } = $props();
 
-  let documents: evaluationPlan.DocumentView[] = $state([]);
-  let editing: evaluationPlan.DocumentView | null = $state(null);
+  let documents: converter.DocumentView[] = $state([]);
+  let editing: converter.DocumentView | null = $state(null);
   let problem = $state("");
 
   let loading = $state(false);
@@ -26,7 +26,7 @@
 
   async function reload() {
     try {
-      documents = await evaluationPlan.standardDocumentsGet();
+      documents = await converter.standardDocumentsGet();
     } catch (error) {
       problem = sentence(error);
     }
@@ -34,11 +34,11 @@
 
   onMount(reload);
 
-  function title(document: evaluationPlan.DocumentView): string {
+  function title(document: converter.DocumentView): string {
     return `${document.title}${document.part ? ` — ${document.part}` : ""}`;
   }
 
-  function loadEvent(event: evaluationPlan.LoadEvent) {
+  function loadEvent(event: converter.LoadEvent) {
     switch (event.event) {
       case "file":
         progress = `Reading ${event.name} (${event.index} of ${event.count})…`;
@@ -64,7 +64,7 @@
     log = [];
 
     try {
-      await evaluationPlan.standardDocumentsLoad(loadEvent);
+      await converter.standardDocumentsLoad(loadEvent);
       await reload();
     } catch (error) {
       problem = sentence(error);
@@ -78,7 +78,7 @@
 
     if (editing) {
       try {
-        await evaluationPlan.standardDocumentsUpdate(editing.id, { title: editing.title, part: editing.part, version: editing.version });
+        await converter.standardDocumentsUpdate(editing.id, { title: editing.title, part: editing.part, version: editing.version });
         editing = null;
         await reload();
       } catch (error) {
@@ -89,7 +89,7 @@
 
   async function remove(id: number) {
     try {
-      await evaluationPlan.standardDocumentsDelete(id);
+      await converter.standardDocumentsDelete(id);
       await reload();
     } catch (error) {
       problem = `The document was not deleted: ${sentence(error)}`;
@@ -110,7 +110,7 @@
       <div class={line.done ? "done" : "problem"}>{line.text}</div>
     {/each}
     {#if loading}
-      <button type="button" class="small danger" onclick={evaluationPlan.standardDocumentsStop}>Stop</button>
+      <button type="button" class="small danger" onclick={converter.standardDocumentsStop}>Stop</button>
     {:else}
       <button type="button" class="small" onclick={() => (log = [])}>Close</button>
     {/if}
@@ -127,7 +127,7 @@
   </div>
 {:else}
   <div class="table-card">
-    <table class="ports documents">
+    <table class="data documents">
       <thead>
         <tr><th>Title</th><th>Part</th><th>Version</th><th>Pages</th><th>File</th><th></th></tr>
       </thead>

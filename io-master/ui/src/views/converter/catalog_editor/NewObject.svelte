@@ -1,12 +1,12 @@
 <!--
   The element "new object" of the editor of a catalog
-  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): a dialog that adds a group or a
+  (its commands in src/views/converter/catalog_editor/catalog_editor.rs): a dialog that adds a group or a
   control, written as JSON of OSCAL, at a place of the catalog. When it is
   added it tells the view (ondone, with its id).
 -->
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
-  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
+  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
 
   let {
     uuid,

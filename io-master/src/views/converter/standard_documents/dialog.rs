@@ -17,7 +17,7 @@ use super::load::MAX_FILES;
 /// the dialog was closed. The dialog waits for the evaluator, so it runs
 /// on a thread for blocking work (`spawn_blocking` takes a closure).
 ///
-/// Called by: `standard_documents_load` (`evaluation_plan.rs`).
+/// Called by: `standard_documents_load` (`converter.rs`).
 /// Calls: the dialog of the system (`tauri_plugin_dialog`), on a thread for blocking work.
 pub async fn choose_files<R: Runtime>(app: AppHandle<R>) -> Result<Vec<PathBuf>, AppError> {
     let chosen = tokio::task::spawn_blocking(move || {

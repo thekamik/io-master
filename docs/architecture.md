@@ -62,10 +62,11 @@ The first start is the real moment of installation. **It is told by the system d
 - Minimal layout: **navigation on the left**, the selected page on the right. **One theme only, dark** (user, 2026-10-23): it does not follow the preference of the system; no light theme is planned.
 - The pages, in this order in the navigation:
   1. **Chat**: the AI assistant, over the active AI connection.
-  2. **Evaluation plan**: the OSCAL documents of the standards (catalogs made in the program or loaded, mappings, profiles, assessment plans), and the documents of standards (PDF) they quote (section 7.1).
-  3. **Evaluation lab**: an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
-  4. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password; later the recovery code (section 5.4), an optional second factor of the login and the removal of the installation.
-  5. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the backups and the removal of the installation).
+  2. **Converter** (step 50, 2026-10-24): the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI, its only aim: the PDFs loaded and searched, a catalog made from them, its editor where the AI proposes groups and controls and the evaluator accepts them (section 7.1).
+  3. **Evaluation plan**: only the documents of OSCAL (catalogs, mappings, profiles, assessment plans): the list, the import, the export, the deletion; later a document shown graphically and turned into the flow of data of the evaluation, which the Evaluation lab uses (step 50).
+  4. **Evaluation lab**: an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
+  5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password; later the recovery code (section 5.4), an optional second factor of the login and the removal of the installation.
+  6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the backups and the removal of the installation).
 - **Logging in** with the name and the password; the keys of section 5.
 
 ## 5. Secrets and encryption (agreed)
@@ -176,7 +177,8 @@ A **view** is a whole page of the window, the high-level display.
 | `users` (was `start`) | użytkownicy | the account of the evaluator, its session and the encryption of its database in one place (step 47): the setup that makes the user, the login, the page User (the password), the user menu (the logout) |
 | `shell` | shell | the frame of the window around every view: the navigation, the user menu |
 | `chat` | chat | the panel with the chatbot (the AI in the role *consultation*) |
-| `evaluation_plan` | plan ewaluacji | everything from the PDFs of a standard to OSCAL: the documents of standards, catalogs made from them (the editor of a catalog), OSCAL documents loaded, the scheme of the evaluation (profile, assessment plan) |
+| `converter` | konwerter | the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI (step 50): the documents of standards, the catalogs made from them, the editor of a catalog |
+| `evaluation_plan` | plan ewaluacji | only the documents of OSCAL: the list, the import, the export, the deletion; later a document shown graphically and turned into the flow of data of the evaluation (profile, assessment plan), used by `evaluation_lab` (step 50) |
 | `evaluation_lab` | evaluation lab | the structure of a standard joined with what the client and the laboratory deliver (the documentation of the manufacturer, the Security Target, the results of the tests), and the evidence assessed with the AI |
 | `settings` | ustawienia | the settings panel |
 
@@ -322,20 +324,20 @@ Conversation ──conversation_stop() / conversation_delete(id)
 Conversation ──"changed"──► the view ──► ChatList ──chat_list_get()──► the list again
 ```
 
-**`evaluation_plan`** (entry `views/evaluation_plan/evaluation_plan.rs`, page `ui/src/views/evaluation_plan/`). The documents of standards (PDF), the documents of OSCAL, and the editor of a catalog:
+**`converter`** (entry `views/converter/converter.rs`, page `ui/src/views/converter/`; step 50). The documents of standards (PDF), the catalogs made from them, and the editor of a catalog:
 
 ```text
-the view opens ──► OscalDocuments ──oscal_documents_get()──► the documents of OSCAL by model and title
+the view opens ──► CatalogList ──catalog_list_get()──► the catalogs of OSCAL by title
 the tab Documents of standards ──► StandardDocuments ──standard_documents_get()──► the PDFs by title and part
 StandardDocuments ──standard_documents_load()──► the dialog ──► pdf/: the text, part by part ──► db/standards/
                      (events LoadEvent: file, pages, end; standard_documents_stop())
 StandardDocuments ──standard_documents_update / _delete──► db/standards/ (refused while a catalog quotes it)
-OscalDocuments ──oscal_documents_import / _export / _delete──► the dialog ──► checked against the schema of NIST ──► db/oscal/
-NewCatalog ──new_catalog_sources()──► the PDFs it can come from; ──new_catalog_create(title, sources)──► db/oscal/
-     └── "made" ──► the view opens it in the editor
+CatalogList ──"New catalog…"──► NewCatalog ──new_catalog_sources()──► the PDFs it can come from;
+     ──new_catalog_create(title, sources)──► db/oscal/ ──► "made" ──► the view opens it in the editor
+CatalogList ──"Open"──► the view opens the editor
 DocumentSearch ──document_search_run(text)──► the hits ──► the view ──► the viewer (component) ──► the PDF, the quote on its page
 
-the editor of a catalog (entry views/evaluation_plan/catalog_editor/catalog_editor.rs):
+the editor of a catalog (entry views/converter/catalog_editor/catalog_editor.rs):
 the editor opens ──► CatalogTree ──catalog_tree_get(uuid)──► the rows of the tree (no recursion in the page)
                  ├─► Proposals ──proposals_get(uuid)──► what the AI proposed, waiting
                  └─► AiBuilder ──ai_builder_sources()──► the documents the AI can read
@@ -354,6 +356,13 @@ the catalog and the pages (db/) ──prompt (ai/tasks/catalog_*.rs)──► th
   ──ai/api/completions::ask──► the model, and the journal of the AI
   ──read (ai/tasks/catalog_*.rs)──► groups or controls of OSCAL
   ──quotes checked on their pages, proposals stored (db/evaluation_support/)
+```
+
+**`evaluation_plan`** (entry `views/evaluation_plan/evaluation_plan.rs`, page `ui/src/views/evaluation_plan/`). Only the documents of OSCAL; the graph and the flow of data of the evaluation come later (step 50):
+
+```text
+the view opens ──► OscalDocuments ──oscal_documents_get()──► the documents of OSCAL by model and title
+OscalDocuments ──oscal_documents_import / _export / _delete──► the dialog ──► checked against the schema of NIST ──► db/oscal/
 ```
 
 **`settings`** (entry `views/settings/settings.rs`, page `ui/src/views/settings/`): the settings of the program; those of the user are in `users`.

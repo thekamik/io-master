@@ -123,7 +123,7 @@ mod tests {
     use serde_json::json;
 
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions_events};
-    use crate::views::evaluation_plan::catalog_editor::test_support::{collector, ready};
+    use crate::views::converter::catalog_editor::test_support::{collector, ready};
 
     #[tokio::test]
     async fn the_groups_of_a_table_of_contents_are_proposed_and_wait() {

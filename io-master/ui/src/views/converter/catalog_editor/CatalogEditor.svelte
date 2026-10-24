@@ -1,5 +1,5 @@
 <!--
-  The view "editor of a catalog" (src/views/evaluation_plan/catalog_editor/): a catalog of
+  The view "editor of a catalog" (src/views/converter/catalog_editor/): a catalog of
   OSCAL made in the program from the documents (PDF) of its standard.
 
   - On the left the tree of the catalog.
@@ -15,9 +15,9 @@
   element reads its data again.
 -->
 <script lang="ts">
-  import type { Which } from "../../../lib/api/evaluation_plan/catalog_editor";
-  import type { CatalogTreeView } from "../../../lib/api/evaluation_plan/catalog_editor";
-  import type { Place } from "../../../lib/api/evaluation_plan/catalog_editor";
+  import type { Which } from "../../../lib/api/converter/catalog_editor";
+  import type { CatalogTreeView } from "../../../lib/api/converter/catalog_editor";
+  import type { Place } from "../../../lib/api/converter/catalog_editor";
   import PdfViewer from "../../../components/pdf_viewer/PdfViewer.svelte";
   import AiBuilder from "./AiBuilder.svelte";
   import AiInstructions from "./AiInstructions.svelte";

@@ -1,13 +1,13 @@
 <!--
   The element "proposals" of the editor of a catalog
-  (its commands in src/views/evaluation_plan/catalog_editor/catalog_editor.rs): what the AI proposed, waiting for
+  (its commands in src/views/converter/catalog_editor/catalog_editor.rs): what the AI proposed, waiting for
   the evaluator, who accepts it (as it is, or corrected as JSON of OSCAL)
   or rejects it (P1: the evaluator decides). A change tells the view
   (onchanged); showing a quote only tells the view (onview).
 -->
 <script lang="ts">
   import { sentence } from "../../../lib/api/errors";
-  import * as catalogEditor from "../../../lib/api/evaluation_plan/catalog_editor";
+  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
   import PartRows from "../../../components/part_rows/PartRows.svelte";
 
   let {

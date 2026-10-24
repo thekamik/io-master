@@ -6,8 +6,8 @@
 //! model/standards.rs                       the types, the rules of the fields (this file)
 //! model/standards/quote.rs                 one normal form of text; is a quote on its page
 //! pdf/poppler.rs                           the text of a PDF page by page (Poppler)
-//! views/evaluation_plan/standard_documents/          the list, the loading of PDFs, a change, the deletion
-//! views/evaluation_plan/document_search/             the search of their text
+//! views/converter/standard_documents/          the list, the loading of PDFs, a change, the deletion
+//! views/converter/document_search/             the search of their text
 //! ```
 //!
 //! A standard often comes in several documents (CC Part 1 to 5 and
@@ -73,7 +73,7 @@ impl Document {
 }
 
 /// A part of the text of one document of a standard, sent in one
-/// question to the AI (`views/evaluation_plan/catalog_editor/ai_builder/parts.rs`).
+/// question to the AI (`views/converter/catalog_editor/ai_builder/parts.rs`).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Part {
     pub document_id: i64,
