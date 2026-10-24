@@ -30,6 +30,7 @@ The number of a step is its name and never changes, so that references in the co
 | 14h | **48: The evaluation with AI as the only aim: devices, the master and the extra factors removed** | **decided 2026-10-24; 48.1 and 48.3 built** (below) |
 | 14i | **49: The recovery code of a forgotten password** | **built 2026-10-24** (below) |
 | 14j | **50: The conversion of PDFs to OSCAL with the AI as a view of its own** | **decided 2026-10-24; 50.1 built** (below) |
+| 14k | **51: The evaluation plan: the evaluation project** | **described by the user 2026-10-24; concept proposed, waiting for the user** (below) |
 | 15 | 12: Review, order and functional hardening of the whole code | started anew on the code of step 40 (`review.md`) |
 | next | 23: Evaluation with AI: carrying out an evaluation plan, built as steps 29 to 36 | plan agreed (2026-10-17); step 29 built on the test projects and removed in step 41.1 (`history.md`); rebuilt on OSCAL assessment results in step 41.5, then step 31 |
 | later | 30: Tool "Manufacturer documentation" | designed later (user); a part of the view Evaluation lab (step 43); needed by steps 32 to 34 |
@@ -52,6 +53,20 @@ The number of a step is its name and never changes, so that references in the co
 Each step lists its **decisions** (to settle in the concept), its **tasks**, and when it is **done**. Prerequisites the user has to provide (packages, permissions) are marked **needs**.
 
 Legend: `[ ]` to do, `[x]` done.
+
+---
+
+## Step 51: The evaluation plan: the evaluation project (2026-10-24)
+
+**State: described by the user 2026-10-24; Claude's ordered concept is in the chat, waiting for the user's answers.** It gives the step 41.4 (profile and assessment plan as a graph) its form.
+
+**The user's description (2026-10-24), in order:**
+1. The **author of the plan** browses the standard (in OSCAL, from the converter or imported) and searches it for requirements.
+2. **An option of the AI** reviews the document and proposes a list of requirements, which the author accepts (P1).
+3. Every requirement accepted is moved into the **evaluation project**: an element of the view Evaluation plan, and what is **exported to the evaluator**.
+4. The evaluation project holds the list of requirements, **shown graphically** (the drawings of the schemes of steps 16 to 27, Svelte Flow, move here).
+5. A requirement chosen in the plan shows a **scheme of the inputs the evaluator has to deliver**.
+6. When the author adds a requirement, **the AI proposes its scheme**, the inputs that represent it; the author accepts or corrects it.
 
 ---
 
