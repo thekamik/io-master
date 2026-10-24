@@ -84,6 +84,7 @@ Legend: `[ ]` to do, `[x]` done.
     - [x] 51.1a the model (`model/evaluation_project.rs`) and the database (`db/evaluation_project/`);
     - [x] 51.1b the tree of a catalog as a component (`components/catalog_tree/`, the command `catalog_tree_get` moved there);
     - [x] 51.1c the twelve commands of the view (`project_list_*`, `new_project_*`, `project_form_*`, `task_list_*`, `standard_browser_*`), `Control::label`; a catalog used by a project cannot be deleted;
+    - [ ] 51.1e **Requirements of one's own** (user, 2026-10-24): a project is not based on the standard alone; the planner may add a requirement of their own, outside the standard, as a task. Concept proposed in the chat, waiting for the user.
     - [x] 51.1d the page (the tabs Master projects and OSCAL documents; `ProjectList`, `NewProject`, `EvaluationProject` with `ProjectForm`, `TaskList`, `StandardBrowser`), tried in the window on a private display with the example catalog of NIST (a project made, requirements chosen in the tree and in the hits of a search, added as tasks, reordered); `architecture.md` sections 4, 10, 12.
 - **The evaluator sees a scheme exactly as the planner made it**: several inputs of the planner are several inputs for the evaluator; the same blocks, connections and layout.
 - **A requirement may have many inputs** (a fragment of the Security Target, the output of a program, a fragment of the documentation, ...).
