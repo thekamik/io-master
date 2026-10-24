@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 use crate::app::error::AppError;
+use crate::db::conversion as db_conversion;
 use crate::db::error::DbError;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
@@ -52,10 +53,11 @@ pub fn export(db: &UserDb, uuid: &str) -> Result<String, OscalError> {
     }
 }
 
-/// Deletes document `uuid` with its evaluation support; returns whether
-/// it existed.
+/// Deletes document `uuid` with its evaluation support and, for a catalog,
+/// its conversion; returns whether it existed.
 pub fn delete(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
     db_evaluation_support::delete::of_document(db, uuid)?;
+    db_conversion::delete::of_catalog(db, uuid)?;
     db_oscal::delete::document(db, uuid)
 }
 

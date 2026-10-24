@@ -2,6 +2,7 @@
 //! standard it comes from as resources of its back matter (the file name,
 //! the SHA-256), so that an exported catalog names its sources.
 
+use crate::db::conversion as db_conversion;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
 use crate::db::oscal::ids::{new_uuid, now_date_time};
@@ -50,6 +51,10 @@ pub fn create(db: &UserDb, title: &str, version: &str, sources: &[i64]) -> Resul
 
     let document = OscalDocument::Catalog(catalog);
     db_oscal::create::document(db, &document)?;
+
+    // The conversion of the catalog starts (step 50.2 of docs/todo.md): it
+    // is shown in the view Evaluation plan only when it is finished.
+    db_conversion::create::conversion(db, document.uuid())?;
 
     Ok(document.summary())
 }

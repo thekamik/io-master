@@ -68,6 +68,12 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::converter::converter::document_search_run,
         // The editor of a catalog, a part of the view Converter
         // (views/converter/catalog_editor/).
+        crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_get,
+        crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_find_contents,
+        crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_contents,
+        crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_stage,
+        crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_group_pages,
+        crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_group_state,
         crate::views::converter::catalog_editor::catalog_editor::catalog_tree_get,
         crate::views::converter::catalog_editor::catalog_editor::object_form_get,
         crate::views::converter::catalog_editor::catalog_editor::object_form_save_group,

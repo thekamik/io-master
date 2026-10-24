@@ -397,6 +397,9 @@ impl Role {
 /// A task of the AI.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Task {
+    /// The pages of the table of contents of a document of a standard
+    /// (step 50.2).
+    CatalogContents,
     /// The groups of an OSCAL catalog, from a table of contents.
     CatalogOutline,
     /// The controls of a group of an OSCAL catalog, from its pages.
@@ -408,11 +411,13 @@ pub enum Task {
 }
 
 impl Task {
-    pub const ALL: [Task; 4] = [Task::CatalogOutline, Task::CatalogSection, Task::Chat, Task::Check];
+    pub const ALL: [Task; 5] =
+        [Task::CatalogContents, Task::CatalogOutline, Task::CatalogSection, Task::Chat, Task::Check];
 
     /// The name kept in the database and in the journal.
     pub fn name(self) -> &'static str {
         match self {
+            Task::CatalogContents => "catalog_contents",
             Task::CatalogOutline => "catalog_outline",
             Task::CatalogSection => "catalog_section",
             Task::Chat => "chat",
@@ -427,7 +432,7 @@ impl Task {
     /// The role it is asked in; `None` for the check of a connection.
     pub fn role(self) -> Option<Role> {
         match self {
-            Task::CatalogOutline | Task::CatalogSection => Some(Role::TextAnalysis),
+            Task::CatalogContents | Task::CatalogOutline | Task::CatalogSection => Some(Role::TextAnalysis),
             Task::Chat => Some(Role::Consultation),
             Task::Check => None,
         }

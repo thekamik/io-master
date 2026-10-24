@@ -32,12 +32,18 @@ impl OscalDocumentView {
     }
 }
 
-/// The views of `summaries`, in their order.
-pub fn all(summaries: Vec<OscalSummary>) -> Vec<OscalDocumentView> {
+/// The views of `summaries`, in their order, without the catalogs still in
+/// conversion (`unfinished`, their UUIDs): the view Evaluation plan works
+/// only on what the converter finished (user, 2026-10-24).
+///
+/// Called by: `oscal_documents_get` (`evaluation_plan.rs`).
+pub fn all(summaries: Vec<OscalSummary>, unfinished: &[String]) -> Vec<OscalDocumentView> {
     let mut views = Vec::with_capacity(summaries.len());
 
     for summary in summaries {
-        views.push(OscalDocumentView::new(summary));
+        if !unfinished.contains(&summary.uuid) {
+            views.push(OscalDocumentView::new(summary));
+        }
     }
 
     views

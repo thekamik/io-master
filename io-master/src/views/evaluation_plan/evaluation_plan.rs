@@ -12,6 +12,7 @@ use tauri::{AppHandle, Runtime, State};
 
 use crate::app::error::AppError;
 use crate::app::state::AppState;
+use crate::db::conversion as db_conversion;
 use crate::db::oscal as db_oscal;
 
 use super::oscal_documents::dialog::{choose_file, choose_place};
@@ -24,14 +25,27 @@ use super::oscal_documents::view::{self as oscal_view, OscalDocumentView};
 ///
 /// Called by the page: `OscalDocuments.svelte`, when the view opens and after
 /// a change (`evaluation_plan.oscalDocumentsGet()`).
-/// Calls: `db_oscal::read::summaries`, `oscal_view::all`.
+/// Only the finished documents: a catalog still in conversion is shown only
+/// in the view Converter (user, 2026-10-24).
+///
+/// Calls: `db_oscal::read::summaries`, `db_conversion::read::finished`,
+/// `oscal_view::all`.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn oscal_documents_get(state: State<'_, AppState>) -> Result<Vec<OscalDocumentView>, AppError> {
     let session = state.session()?;
+    let db = session.db();
+    let summaries = db_oscal::read::summaries(&db)?;
+    let mut unfinished = Vec::new();
 
-    Ok(oscal_view::all(db_oscal::read::summaries(&session.db())?))
+    for summary in &summaries {
+        if !db_conversion::read::finished(&db, &summary.uuid)? {
+            unfinished.push(summary.uuid.clone());
+        }
+    }
+
+    Ok(oscal_view::all(summaries, &unfinished))
 }
 
 // ── The actions of the elements ───────────────────────────────────────

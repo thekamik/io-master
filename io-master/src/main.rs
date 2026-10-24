@@ -36,6 +36,7 @@ mod model {
     pub mod ai;
     pub mod api_key;
     pub mod chats;
+    pub mod conversion;
     pub mod evaluation_support;
     pub mod installation;
     pub mod oscal;
@@ -147,6 +148,16 @@ mod db {
         pub mod schema;
         pub mod update;
     }
+    // db/conversion/: the conversions of the documents of standards into
+    // catalogs of OSCAL, step by step (the database of the evaluator).
+    pub mod conversion {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
     // db/evaluation_support/: what the program adds to OSCAL, linked by
     // UUIDs and ids (the database of the evaluator).
     pub mod evaluation_support {
@@ -186,6 +197,7 @@ mod ai {
     // ai/tasks/: for each task of the AI, the question sent to the model and
     // the reading of its answer, on plain data of model/.
     pub mod tasks {
+        pub mod catalog_contents;
         pub mod catalog_outline;
         pub mod catalog_section;
         pub mod chat;
@@ -375,6 +387,12 @@ mod views {
                 pub mod view;
             }
             pub mod catalog_tree {
+                pub mod view;
+            }
+            pub mod conversion_wizard {
+                pub mod contents;
+                pub mod locate;
+                pub mod progress;
                 pub mod view;
             }
             pub mod new_object {

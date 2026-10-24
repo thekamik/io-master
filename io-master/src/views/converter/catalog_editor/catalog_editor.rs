@@ -17,16 +17,20 @@ use tauri::ipc::Channel;
 use crate::ai::api::tasks;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
+use crate::db::conversion as db_conversion;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
 use crate::db::standards as db_standards;
 use crate::model::ai::Task;
+use crate::model::conversion::{GroupState, Stage};
 use crate::model::oscal::catalog::{Control, Group};
 
 use super::ai_builder::view::{self as builder_view, BuildEvent, PageRange, SourceView};
 use super::ai_builder::{controls, groups};
 use super::catalog_tree::view::CatalogTreeView;
+use super::conversion_wizard::view::{PagesForm, WizardView};
+use super::conversion_wizard::{contents, locate, progress};
 use super::new_object::view::PlaceForm;
 use super::object_form::oscal_object;
 use super::object_form::view::ObjectView;
@@ -36,6 +40,22 @@ use super::proposals::accept;
 use super::proposals::view::{self as proposal_view, ProposalView};
 
 // ── When the view opens ───────────────────────────────────────────────
+
+/// How far the conversion of catalog `uuid` is: its stage, the pages of its
+/// table of contents, its groups with their pages and state, and what is
+/// left to check (step 50.2 of docs/todo.md).
+///
+/// Called by the page: `ConversionWizard.svelte`, when the editor opens and
+/// after every change (`catalogEditor.conversionWizardGet(uuid)`).
+/// Calls: `progress::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn conversion_wizard_get(state: State<'_, AppState>, uuid: String) -> Result<WizardView, AppError> {
+    let session = state.session()?;
+
+    progress::read(&session.db(), &uuid)
+}
 
 /// Catalog `uuid` as a tree of rows.
 ///
@@ -404,6 +424,159 @@ pub async fn ai_builder_controls(
     controls::propose(&session, &uuid, group.as_deref(), &ranges, part_size, &stop, &on_event).await
 }
 
+/// The AI reads the first pages of document `document_id` and names the
+/// pages of its table of contents, kept for the conversion of `uuid` for the
+/// evaluator to confirm; the events arrive through `on_event`.
+///
+/// Called by the page: `ConversionWizard.svelte`, stage "Table of contents",
+/// "Find it with the AI" (`catalogEditor.conversionWizardFindContents(...)`).
+/// Calls: `AppState::start_work`, `contents::find` (one question through
+/// `ai/api/`), `progress::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+pub async fn conversion_wizard_find_contents(
+    state: State<'_, AppState>,
+    uuid: String,
+    document_id: i64,
+    on_event: Channel<BuildEvent>,
+) -> Result<WizardView, AppError> {
+    let session = state.session()?;
+    let stop = state.start_work();
+
+    contents::find(&session, &uuid, document_id, &stop, &on_event).await?;
+
+    progress::read(&session.db(), &uuid)
+}
+
+/// Sets the pages of the table of contents of the conversion of `uuid`, as
+/// the evaluator confirmed or corrected them.
+///
+/// Called by the page: `ConversionWizard.svelte`, stage "Table of contents",
+/// "Keep these pages" (`catalogEditor.conversionWizardContents(...)`).
+/// Calls: `progress::checked_pages`, `db_conversion::update::contents`,
+/// `progress::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn conversion_wizard_contents(
+    state: State<'_, AppState>,
+    uuid: String,
+    pages: PagesForm,
+) -> Result<WizardView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let pages = progress::checked_pages(&db, &pages)?;
+
+    db_conversion::update::contents(&db, &uuid, pages)?;
+
+    progress::read(&db, &uuid)
+}
+
+/// Moves the conversion of `uuid` to `stage`. Entering the controls, the
+/// program finds where every group starts after the table of contents
+/// (`locate.rs`), keeping what the evaluator gave a group before; a
+/// conversion is finished only from its review.
+///
+/// Called by the page: `ConversionWizard.svelte`, "Next" and "Back" of every
+/// stage, "Finish" (`catalogEditor.conversionWizardStage(uuid, stage)`).
+/// Calls: `db_conversion::read`, `locate::locate` and `merge`,
+/// `db_conversion::update::groups` and `stage`, `progress::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn conversion_wizard_stage(
+    state: State<'_, AppState>,
+    uuid: String,
+    stage: String,
+) -> Result<WizardView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let Some(stage) = Stage::from_name(&stage) else {
+        return Err(AppError::Invalid("there is no such stage".to_owned()));
+    };
+
+    let Some(current) = db_conversion::read::conversion(&db, &uuid)? else {
+        return Err(AppError::Invalid("the catalog is not in conversion".to_owned()));
+    };
+
+    ensure!(
+        stage != Stage::Finished || current.stage == Stage::Review,
+        AppError::Invalid("a conversion is finished from its review".to_owned())
+    );
+
+    if stage == Stage::Controls {
+        let Some(pages) = current.contents else {
+            return Err(AppError::Invalid("first the pages of the table of contents".to_owned()));
+        };
+
+        let catalog = db_oscal::read::catalog(&db, &uuid)?;
+        let found = locate::locate(&db, &catalog, pages)?;
+        let known = db_conversion::read::groups(&db, &uuid)?;
+
+        db_conversion::update::groups(&db, &uuid, &locate::merge(found, &known))?;
+    }
+
+    db_conversion::update::stage(&db, &uuid, stage)?;
+
+    progress::read(&db, &uuid)
+}
+
+/// Sets the pages of group `group` of the conversion of `uuid`, as the
+/// evaluator corrected them.
+///
+/// Called by the page: `ConversionWizard.svelte`, stage "Controls", the pages
+/// of a group (`catalogEditor.conversionWizardGroupPages(...)`).
+/// Calls: `progress::checked_pages`, `db_conversion::update::group_pages`,
+/// `progress::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn conversion_wizard_group_pages(
+    state: State<'_, AppState>,
+    uuid: String,
+    group: String,
+    pages: PagesForm,
+) -> Result<WizardView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let pages = progress::checked_pages(&db, &pages)?;
+
+    db_conversion::update::group_pages(&db, &uuid, &group, pages)?;
+
+    progress::read(&db, &uuid)
+}
+
+/// Sets the state of group `group` of the conversion of `uuid`: proposed
+/// (the AI read its pages) or done (the evaluator says so).
+///
+/// Called by the page: `ConversionWizard.svelte`, stage "Controls", after the
+/// AI read a group and "This group is done"
+/// (`catalogEditor.conversionWizardGroupState(...)`).
+/// Calls: `GroupState::from_name`, `db_conversion::update::group_state`,
+/// `progress::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn conversion_wizard_group_state(
+    state: State<'_, AppState>,
+    uuid: String,
+    group: String,
+    group_state: String,
+) -> Result<WizardView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let Some(group_state) = GroupState::from_name(&group_state) else {
+        return Err(AppError::Invalid("there is no such state of a group".to_owned()));
+    };
+
+    db_conversion::update::group_state(&db, &uuid, &group, group_state)?;
+
+    progress::read(&db, &uuid)
+}
+
 /// Stops the work of the AI, if one runs.
 ///
 /// Called by the page: `AiBuilder.svelte`, "Stop" (`catalogEditor.aiBuilderStop()`).
@@ -443,7 +616,7 @@ fn instructions_task(which: &str) -> Result<Task, AppError> {
     };
 
     ensure!(
-        matches!(task, Task::CatalogOutline | Task::CatalogSection),
+        matches!(task, Task::CatalogContents | Task::CatalogOutline | Task::CatalogSection),
         AppError::Invalid("there are no such instructions".to_owned())
     );
 
@@ -682,6 +855,106 @@ mod tests {
             )
             .unwrap_err();
 
+        assert_eq!(error["kind"], "invalid");
+    }
+
+    /// Adds a group `id` titled `title` at the top, as the dialog of a new
+    /// object does.
+    fn add_titled_group(window: &TestWindow, uuid: &str, id: &str, title: &str) {
+        let group = json!({ "id": id, "title": title });
+
+        window
+            .call("new_object_add_group", json!({ "uuid": uuid, "place": { "kind": "top" }, "group": group }))
+            .unwrap();
+    }
+
+    #[test]
+    fn a_new_catalog_starts_its_conversion_at_the_table_of_contents() {
+        let (window, uuid, _) = with_catalog();
+
+        let wizard = window.call("conversion_wizard_get", json!({ "uuid": uuid })).unwrap();
+
+        assert_eq!(wizard["stage"], "contents");
+        assert_eq!(wizard["contents"], json!(null));
+        assert_eq!(wizard["groups"], json!([]));
+
+        // Not finished: the view Evaluation plan does not show it yet.
+        assert_eq!(window.call("oscal_documents_get", json!({})).unwrap(), json!([]));
+    }
+
+    #[test]
+    fn the_wizard_goes_from_the_contents_to_the_controls_of_every_group() {
+        let (window, uuid, source) = with_catalog();
+        add_titled_group(&window, &uuid, "adv_fsp", "Complete functional specification");
+        add_titled_group(&window, &uuid, "ate_ind", "Independent testing");
+        let pages = |first: u32, last: u32| json!({ "document_id": source, "first_page": first, "last_page": last });
+
+        // The controls need the table of contents first.
+        let early = window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "controls" })).unwrap_err();
+        assert_eq!(early["kind"], "invalid");
+
+        window.call("conversion_wizard_contents", json!({ "uuid": uuid, "pages": pages(1, 1) })).unwrap();
+        let wizard = window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "controls" })).unwrap();
+
+        // Every group starts where its heading is found.
+        assert_eq!(wizard["stage"], "controls");
+        assert_eq!(wizard["groups"][0]["id"], "adv_fsp");
+        assert_eq!(wizard["groups"][0]["pages"], pages(2, 2));
+        assert_eq!(wizard["groups"][1]["pages"], pages(3, 3));
+        assert_eq!(wizard["groups"][0]["state"], "todo");
+
+        let call = json!({ "uuid": uuid, "group": "ate_ind", "pages": pages(2, 3) });
+        window.call("conversion_wizard_group_pages", call).unwrap();
+        let call = json!({ "uuid": uuid, "group": "adv_fsp", "groupState": "done" });
+        let wizard = window.call("conversion_wizard_group_state", call).unwrap();
+
+        assert_eq!(wizard["groups"][0]["state"], "done");
+        assert_eq!(wizard["groups"][1]["pages"], pages(2, 3));
+        assert_eq!(wizard["review"]["groups_without_controls"], 2);
+
+        // Back to the groups and forward again: what the evaluator gave stays.
+        window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "groups" })).unwrap();
+        let wizard = window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "controls" })).unwrap();
+        assert_eq!(wizard["groups"][0]["state"], "done");
+        assert_eq!(wizard["groups"][1]["pages"], pages(2, 3));
+    }
+
+    #[test]
+    fn pages_outside_the_document_are_refused() {
+        let (window, uuid, source) = with_catalog();
+        let pages = json!({ "document_id": source, "first_page": 2, "last_page": 99 });
+
+        let error = window.call("conversion_wizard_contents", json!({ "uuid": uuid, "pages": pages })).unwrap_err();
+
+        assert_eq!(error["kind"], "invalid");
+    }
+
+    #[test]
+    fn a_conversion_is_finished_from_its_review_and_then_shown_in_the_plan() {
+        let (window, uuid, _) = with_catalog();
+
+        let early = window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "finished" })).unwrap_err();
+        assert_eq!(early["kind"], "invalid");
+
+        window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "review" })).unwrap();
+        let wizard = window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "finished" })).unwrap();
+
+        assert_eq!(wizard["stage"], "finished");
+        assert_eq!(window.call("oscal_documents_get", json!({})).unwrap()[0]["uuid"], uuid);
+    }
+
+    #[test]
+    fn an_imported_catalog_is_finished_and_not_in_conversion() {
+        let window = logged_in_window();
+        let uuid = {
+            let session = window.session();
+            let catalog = crate::test_support::db::basic_catalog();
+            crate::db::oscal::create::document(&session.db(), &catalog).unwrap();
+            catalog.uuid().to_owned()
+        };
+
+        assert_eq!(window.call("conversion_wizard_get", json!({ "uuid": uuid })).unwrap()["stage"], "finished");
+        let error = window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "groups" })).unwrap_err();
         assert_eq!(error["kind"], "invalid");
     }
 }

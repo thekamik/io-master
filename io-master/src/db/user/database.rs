@@ -15,6 +15,7 @@
 //! db/standards/       documents of standards
 //! db/oscal/           documents of NIST OSCAL
 //! db/evaluation_support/  quotes and proposals linked to them
+//! db/conversion/      the conversions of documents of standards into catalogs
 //! ```
 //!
 //! ```text
@@ -43,7 +44,7 @@ use rusqlite::Connection;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
-use crate::db::{ai, evaluation_support, oscal, standards};
+use crate::db::{ai, conversion, evaluation_support, oscal, standards};
 
 use super::{migrations, schema};
 
@@ -76,6 +77,7 @@ impl UserDb {
         connection.execute_batch(standards::schema::SCHEMA)?;
         connection.execute_batch(oscal::schema::SCHEMA)?;
         connection.execute_batch(evaluation_support::schema::SCHEMA)?;
+        connection.execute_batch(conversion::schema::SCHEMA)?;
         migrations::run(&connection)?;
 
         Ok(UserDb { connection })

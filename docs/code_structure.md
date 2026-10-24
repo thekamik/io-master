@@ -87,7 +87,7 @@ Plain types of every area, their rules of validity (`check`) and their normal fo
 ### 2.2 `db/`: the databases
 
 - **SQL lives only here** (the connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile).
-- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `oscal/`, `evaluation_support/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
+- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `oscal/`, `evaluation_support/`, `conversion/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
 - **Free functions everywhere:** `db::<area>::<operation>::<object>(db, ...)`. A caller imports the area as `db_<area>` and calls `db_<area>::<operation>::<object>`, so that every call shows which operation on which data it is.
 - **Columns are read by their names; statements with more than one parameter name them** (`:title`); every statement is in the function that runs it.
 - **A value the program never writes is an error**, `DbError::Corrupt { table, column, value }`, never replaced in silence. `DbError::Sql` is SQLite only; `NoRow` for a change of a row that does not exist; `Inconsistent` for input that does not hold together.
@@ -220,6 +220,7 @@ model/                     The data of the program as plain Rust types, and the 
   ai.rs                        The data of the communication with AI services: a connection as
   api_key.rs                   The API key of an AI connection of one evaluator
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the
+  conversion.rs                The conversion of the documents of a standard (PDF) into a catalog of
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
   recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/todo.md): 160
@@ -267,6 +268,13 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
       read.rs                      Reading which connection a role of the AI uses.
       schema.rs                    The table of the roles of the AI, in the database of an evaluator:
       update.rs                    Giving a role of the AI a connection of its own, or taking it away.
+  conversion/                  The conversions of the documents of standards into catalogs (step 50.2).
+    create.rs                    Starting the conversion of a catalog.
+    delete.rs                    Deleting a conversion.
+    read.rs                      Reading the conversions.
+    rows.rs                      The rows of the conversions and the types of `model/conversion.rs` they
+    schema.rs                    The tables of the conversions of the documents of standards into
+    update.rs                    Changing a conversion: its stage, the pages of its table of contents,
   encryption/                  All code of encryption of the databases.
     database_key.rs              The key that encrypts a database of the program.
     generate_key.rs              Generating the key that encrypts the database.
@@ -329,6 +337,7 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
   presets.rs/                  Presets: ready settings of well-known AI services, to fill the
     field_help.rs                Instructions for a chatbot: help to fill one field of an AI
   tasks/                       The tasks of the AI: for each, the question sent to the model and
+    catalog_contents.rs          The task `catalog_contents` of the AI (role *text analysis*, step 50.2
     catalog_outline.rs           The task `catalog_outline` of the AI (role *text analysis*): the
     catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a
@@ -382,6 +391,11 @@ views/                     The views of the window, one folder per view and one 
         view.rs                      The data of the AI of the editor, as the page gets and sends it, and
       catalog_tree/                The element "tree" of the editor of a catalog: its groups and controls
         view.rs                      The data of the tree, as the page gets it.
+      conversion_wizard/           The element "wizard" of the editor of a catalog: the conversion step by
+        contents.rs                  The AI finds the table of contents of a document of a standard (step
+        locate.rs                    Where every group of a catalog starts in its document (step 50.2 of
+        progress.rs                  How far a conversion is, read for the page: the stage and the pages of
+        view.rs                      The data of the wizard of a conversion, as the page gets it and sends
       new_object/                  The element "new object" of the editor of a catalog: a dialog that adds
         view.rs                      The place of a new object, as the page sends it.
       object_form/                 The element "object" of the editor of a catalog: the group or control
