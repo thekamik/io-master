@@ -7,6 +7,7 @@ use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{
     EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_PROJECTS, MAX_TASKS, ProjectSummary,
 };
+use crate::model::task_scheme::{Block, Connection, MAX_BLOCKS};
 
 use super::rows;
 
@@ -117,6 +118,57 @@ pub fn catalog_has_tasks(db: &UserDb, project: &str, catalog: &str) -> Result<bo
     )?)
 }
 
+/// The blocks of the scheme of task `task`: its requirement first, then the
+/// inputs and the outputs in the order they were added; at most
+/// `MAX_BLOCKS`.
+///
+/// Called by: `task_scheme_get` and the commands that change a scheme
+/// (`evaluation_plan.rs`).
+pub fn blocks(db: &UserDb, task: &str) -> Result<Vec<Block>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection.prepare(
+        "SELECT * FROM task_blocks WHERE task_uuid = ?1
+         ORDER BY kind = 'requirement' DESC, rowid LIMIT ?2",
+    )?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![task, limit(MAX_BLOCKS)?], |row| Ok(rows::block(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The connections of the blocks of task `task`.
+///
+/// Called by: `task_scheme_get` and the commands that change a scheme.
+pub fn connections(db: &UserDb, task: &str) -> Result<Vec<Connection>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection.prepare("SELECT * FROM task_connections WHERE task_uuid = ?1 LIMIT ?2")?;
+    let max = MAX_BLOCKS * MAX_BLOCKS;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![task, limit(max)?], |row| Ok(rows::connection(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// Block `uuid` and the task it belongs to; `None` when it does not exist.
+///
+/// Called by: the commands that change a block (`evaluation_plan.rs`).
+pub fn block(db: &UserDb, uuid: &str) -> Result<Option<(String, Block)>, DbError> {
+    let mut statement = db.connection().prepare("SELECT * FROM task_blocks WHERE uuid = ?1")?;
+    let found =
+        statement.query_row([uuid], |row| Ok((row.get::<_, String>("task_uuid"), rows::block(row)))).optional()?;
+
+    match found {
+        Some((task, block)) => Ok(Some((task?, block?))),
+        None => Ok(None),
+    }
+}
+
 /// Whether a task of any project points to control `control` of catalog
 /// `catalog` (a requirement of the laboratory is not deleted then).
 ///
@@ -145,7 +197,7 @@ mod tests {
         let fields = ProjectFields { title: "CC".to_owned(), description: String::new() };
         create::project(&test.db, "p", &fields, &["c3".to_owned(), "c2".to_owned()]).unwrap();
         let added = EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c3".to_owned(), control_id: "x".to_owned() };
-        create::task(&test.db, "p", &added).unwrap();
+        create::task(&test.db, "p", &added, &format!("b-{}", added.uuid)).unwrap();
 
         let list = projects(&test.db).unwrap();
 

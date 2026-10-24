@@ -24,6 +24,7 @@ use super::oscal_documents::file::{self, read_file, safe_name};
 use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
 use crate::model::own_requirement;
+use crate::model::task_scheme::{self, Block, BlockFields, BlockKind};
 
 use super::new_project::catalogs;
 use super::new_project::view::CatalogChoiceView;
@@ -36,6 +37,8 @@ use super::standard_browser::requirement;
 use super::standard_browser::search;
 use super::standard_browser::view::{HitView, RequirementView};
 use super::task_list::view::{self as task_view, TaskView};
+use super::task_scheme::scheme;
+use super::task_scheme::view::{BlockForm, SchemeView};
 
 // ── When the view opens ───────────────────────────────────────────────
 
@@ -323,7 +326,7 @@ pub fn task_list_add(
     }
 
     let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog, control_id: control };
-    db_evaluation_project::create::task(&db, &project, &task)?;
+    db_evaluation_project::create::task(&db, &project, &task, &new_uuid()?)?;
 
     task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
 }
@@ -467,7 +470,7 @@ pub fn own_requirement_add(
     db_evaluation_project::update::add_catalog(&db, &project, &catalog)?;
 
     let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog, control_id: control };
-    db_evaluation_project::create::task(&db, &project, &task)?;
+    db_evaluation_project::create::task(&db, &project, &task, &new_uuid()?)?;
 
     task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
 }
@@ -524,6 +527,175 @@ pub fn own_requirement_delete(state: State<'_, AppState>, id: String) -> Result<
     );
 
     own_catalog::remove(&db, &catalog, &id)
+}
+
+/// The scheme of task `task`: its requirement as the standard writes it,
+/// its blocks and connections (step 51.2 of docs/todo.md).
+///
+/// Called by the page: `TaskScheme.svelte`, when a task opens and after a
+/// change (`evaluationPlan.taskSchemeGet(task)`).
+/// Calls: `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_get(state: State<'_, AppState>, task: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+
+    scheme::read(&session.db(), &task)
+}
+
+/// Adds a block of `kind` (`"input"` or `"output"`) at `x`, `y` to the
+/// scheme of task `task`; the planner names and connects it.
+///
+/// Called by the page: `TaskScheme.svelte`, "+ Input" and "+ Output"
+/// (`evaluationPlan.taskSchemeAddBlock(task, kind, x, y)`).
+/// Calls: `task_scheme::check_position` and `check_new_block`,
+/// `db_evaluation_project::create::block`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_add_block(
+    state: State<'_, AppState>,
+    task: String,
+    kind: String,
+    x: i64,
+    y: i64,
+) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    let kind = match BlockKind::from_name(&kind) {
+        Some(kind @ (BlockKind::Input | BlockKind::Output)) => kind,
+        _ => return Err(AppError::Invalid("only an input or an output is added".to_owned())),
+    };
+
+    task_scheme::check_position(x, y).map_err(|error| AppError::Invalid(error.to_string()))?;
+    let blocks = db_evaluation_project::read::blocks(&db, &task)?;
+    task_scheme::check_new_block(&blocks, kind).map_err(|error| AppError::Invalid(error.to_string()))?;
+
+    let mut fields = BlockFields::empty();
+    fields.name = if kind == BlockKind::Input { "Input".to_owned() } else { "Output".to_owned() };
+
+    let block = Block { uuid: new_uuid()?, kind, x, y, fields };
+    db_evaluation_project::create::block(&db, &task, &block)?;
+
+    scheme::read(&db, &task)
+}
+
+/// Saves the fields of block `block`.
+///
+/// Called by the page: `BlockForm.svelte`, "Save"
+/// (`evaluationPlan.taskSchemeSaveBlock(block, fields)`).
+/// Calls: `scheme::block`, `task_scheme::normalized` and `check_fields`,
+/// `db_evaluation_project::update::block_fields`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_save_block(
+    state: State<'_, AppState>,
+    block: String,
+    fields: BlockForm,
+) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, found) = scheme::block(&db, &block)?;
+    let fields = task_scheme::normalized(&fields.fields()?);
+
+    task_scheme::check_fields(found.kind, &fields).map_err(|error| AppError::Invalid(error.to_string()))?;
+    db_evaluation_project::update::block_fields(&db, &block, &fields)?;
+
+    scheme::read(&db, &task)
+}
+
+/// Places block `block` at `x`, `y`: where a drag ended (only the end is
+/// sent, never the steps of the drag).
+///
+/// Called by the page: `TaskScheme.svelte`, the end of a drag
+/// (`evaluationPlan.taskSchemeMoveBlock(block, x, y)`).
+/// Calls: `task_scheme::check_position`, `scheme::block`,
+/// `db_evaluation_project::update::block_position`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_move_block(state: State<'_, AppState>, block: String, x: i64, y: i64) -> Result<(), AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    task_scheme::check_position(x, y).map_err(|error| AppError::Invalid(error.to_string()))?;
+    scheme::block(&db, &block)?;
+    db_evaluation_project::update::block_position(&db, &block, x, y)?;
+
+    Ok(())
+}
+
+/// Removes block `block` (an input or an output) with its connections; the
+/// requirement stays.
+///
+/// Called by the page: `BlockForm.svelte`, "Remove"
+/// (`evaluationPlan.taskSchemeRemoveBlock(block)`).
+/// Calls: `scheme::block`, `db_evaluation_project::delete::block`,
+/// `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_remove_block(state: State<'_, AppState>, block: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, found) = scheme::block(&db, &block)?;
+
+    ensure!(found.kind != BlockKind::Requirement, AppError::Invalid("the requirement stays in its task".to_owned()));
+    ensure!(
+        db_evaluation_project::delete::block(&db, &block)?,
+        AppError::Invalid("the block does not exist".to_owned())
+    );
+
+    scheme::read(&db, &task)
+}
+
+/// Connects block `from` to block `to` of one task: an input to the
+/// requirement, or the requirement to an output.
+///
+/// Called by the page: `TaskScheme.svelte`, a connection drawn
+/// (`evaluationPlan.taskSchemeConnect(from, to)`).
+/// Calls: `scheme::block`, `task_scheme::may_connect`,
+/// `db_evaluation_project::create::connection`, `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_connect(state: State<'_, AppState>, from: String, to: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, start) = scheme::block(&db, &from)?;
+    let (other_task, end) = scheme::block(&db, &to)?;
+
+    ensure!(task == other_task, AppError::Invalid("the blocks belong to two tasks".to_owned()));
+    ensure!(
+        task_scheme::may_connect(start.kind, end.kind),
+        AppError::Invalid("an input connects to the requirement, the requirement to an output".to_owned())
+    );
+
+    db_evaluation_project::create::connection(&db, &task, &from, &to)?;
+
+    scheme::read(&db, &task)
+}
+
+/// Removes the connection of block `from` to block `to`.
+///
+/// Called by the page: `TaskScheme.svelte`, a connection removed
+/// (`evaluationPlan.taskSchemeDisconnect(from, to)`).
+/// Calls: `scheme::block`, `db_evaluation_project::delete::connection`,
+/// `scheme::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_scheme_disconnect(state: State<'_, AppState>, from: String, to: String) -> Result<SchemeView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let (task, _) = scheme::block(&db, &from)?;
+
+    db_evaluation_project::delete::connection(&db, &from, &to)?;
+
+    scheme::read(&db, &task)
 }
 
 // ── Helpers of the commands above ─────────────────────────────────────
@@ -777,5 +949,74 @@ mod tests {
         let error =
             window.call("own_requirement_add", json!({ "project": project, "requirement": empty })).unwrap_err();
         assert_eq!(error["kind"], "invalid");
+    }
+
+    /// A project with one task (`s1.1.1`); gives the window and the task.
+    fn with_task() -> (crate::views::test_support::TestWindow, String) {
+        let (window, catalog, project) = with_project();
+        let tasks = window
+            .call("task_list_add", json!({ "project": project, "catalog": catalog, "control": "s1.1.1" }))
+            .unwrap();
+
+        (window, tasks[0]["uuid"].as_str().unwrap().to_owned())
+    }
+
+    fn fields(name: &str, format: &str, condition: &str) -> serde_json::Value {
+        json!({ "name": name, "evidence": "The Security Target, section 6.", "instructions": "Check it is complete.",
+                "target": "pETR, section 4", "format": format, "condition": condition })
+    }
+
+    #[test]
+    fn a_task_opens_with_only_its_requirement_from_the_standard() {
+        let (window, task) = with_task();
+
+        let scheme = window.call("task_scheme_get", json!({ "task": task })).unwrap();
+
+        assert_eq!(scheme["blocks"].as_array().unwrap().len(), 1);
+        assert_eq!(scheme["blocks"][0]["kind"], "requirement");
+        assert_eq!(scheme["requirement"]["title"], "Information security roles and responsibilities");
+        assert_eq!(scheme["connections"], json!([]));
+    }
+
+    #[test]
+    fn inputs_and_outputs_are_added_named_connected_and_removed() {
+        let (window, task) = with_task();
+        let add = |kind: &str| {
+            window.call("task_scheme_add_block", json!({ "task": task, "kind": kind, "x": -300, "y": 20 }))
+        };
+
+        let requirement = window.call("task_scheme_get", json!({ "task": task })).unwrap()["blocks"][0]["uuid"].clone();
+        let input = add("input").unwrap()["blocks"][1]["uuid"].clone();
+        let output = add("output").unwrap()["blocks"][2]["uuid"].clone();
+        assert_eq!(add("requirement").unwrap_err()["kind"], "invalid");
+
+        let saved = window
+            .call(
+                "task_scheme_save_block",
+                json!({ "block": output, "fields": fields("Observation Report", "latex", "not_met") }),
+            )
+            .unwrap();
+        assert_eq!(saved["blocks"][2]["condition"], "not_met");
+        assert_eq!(saved["blocks"][2]["format"], "latex");
+        let nameless =
+            window.call("task_scheme_save_block", json!({ "block": input, "fields": fields(" ", "text", "always") }));
+        assert_eq!(nameless.unwrap_err()["kind"], "invalid");
+
+        window.call("task_scheme_connect", json!({ "from": input, "to": requirement })).unwrap();
+        let connected = window.call("task_scheme_connect", json!({ "from": requirement, "to": output })).unwrap();
+        assert_eq!(connected["connections"].as_array().unwrap().len(), 2);
+        let wrong = window.call("task_scheme_connect", json!({ "from": input, "to": output }));
+        assert_eq!(wrong.unwrap_err()["kind"], "invalid");
+
+        window.call("task_scheme_move_block", json!({ "block": input, "x": -400, "y": 60 })).unwrap();
+        let moved = window.call("task_scheme_disconnect", json!({ "from": input, "to": requirement })).unwrap();
+        assert_eq!((moved["blocks"][1]["x"].clone(), moved["connections"].as_array().unwrap().len()), (json!(-400), 1));
+
+        let left = window.call("task_scheme_remove_block", json!({ "block": output })).unwrap();
+        assert_eq!((left["blocks"].as_array().unwrap().len(), left["connections"].clone()), (2, json!([])));
+        assert_eq!(
+            window.call("task_scheme_remove_block", json!({ "block": requirement })).unwrap_err()["kind"],
+            "invalid"
+        );
     }
 }

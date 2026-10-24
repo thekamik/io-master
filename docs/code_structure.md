@@ -225,6 +225,7 @@ model/                     The data of the program as plain Rust types, and the 
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
   own_requirement.rs           A requirement of the laboratory's own, outside the standards (step 51.1e
+  task_scheme.rs               The scheme of a task of a master project (step 51.2): its blocks
   recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/todo.md): 160
   oscal.rs/                    The documents of NIST OSCAL (Open Security Controls Assessment
     assessment_plan.rs           An OSCAL assessment plan: the evaluation plan (function a of
@@ -284,6 +285,8 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     rows.rs                      The rows of the master projects and the types of
     schema.rs                    The tables of the master projects of the evaluations
     update.rs                    Changing master projects: their fields and catalogs, the order of their
+                                 tasks, the fields and places of the blocks of a scheme (the tables
+                                 task_blocks and task_connections of schema.rs, step 51.2)
   encryption/                  All code of encryption of the databases.
     database_key.rs              The key that encrypts a database of the program.
     generate_key.rs              Generating the key that encrypts the database.
@@ -454,6 +457,9 @@ views/                     The views of the window, one folder per view and one 
       view.rs                      The data of the browser of the standards of a master project, as the
     task_list/                   The element "list of tasks" of the view Evaluation plan.
       view.rs                      The data of the list of tasks of a master project, as the page gets it:
+    task_scheme/                 The element "scheme of a task": its blocks input, requirement, output.
+      scheme.rs                    The scheme of a task read for the page: the task with its requirement
+      view.rs                      The data of the scheme of a task, as the page gets it and sends it: the
   settings/                    The view Settings: the settings of the program, the connections to
     settings.rs                  The entry of the view Settings: every command the page calls for it
     api_key/                     The element "API key" of the view Settings, tab AI: the key of one

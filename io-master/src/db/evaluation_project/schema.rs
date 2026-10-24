@@ -9,6 +9,9 @@
 //! evaluation_projects   a master project: its title and description
 //! project_catalogs      the catalogs a project uses, in the order chosen
 //! evaluation_tasks      its tasks, each a control of one of its catalogs, in order
+//! task_blocks           the blocks of the scheme of a task (step 51.2): its
+//!                       requirement, its inputs, its outputs, placed in the drawing
+//! task_connections      the connections of the blocks of a task
 //! ```
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
@@ -36,5 +39,28 @@ pub const SCHEMA: &str = "
         control_id      TEXT NOT NULL,
         position        INTEGER NOT NULL,
         UNIQUE (project_uuid, catalog_uuid, control_id)
+    );
+
+    -- kind, format, condition: model/task_scheme.rs (BlockKind, OutputFormat,
+    -- OutputCondition). The fields a kind does not use are empty.
+    CREATE TABLE IF NOT EXISTS task_blocks (
+        uuid            TEXT PRIMARY KEY,
+        task_uuid       TEXT NOT NULL,
+        kind            TEXT NOT NULL,
+        x               INTEGER NOT NULL,
+        y               INTEGER NOT NULL,
+        name            TEXT NOT NULL,
+        evidence        TEXT NOT NULL,
+        instructions    TEXT NOT NULL,
+        target          TEXT NOT NULL,
+        format          TEXT NOT NULL,
+        condition       TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS task_connections (
+        task_uuid       TEXT NOT NULL,
+        from_block      TEXT NOT NULL,
+        to_block        TEXT NOT NULL,
+        PRIMARY KEY (from_block, to_block)
     );
 ";

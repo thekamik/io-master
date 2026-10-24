@@ -44,6 +44,7 @@ mod model {
     pub mod own_requirement;
     pub mod recovery_code;
     pub mod standards;
+    pub mod task_scheme;
     pub mod text;
     pub mod time;
 }
@@ -393,6 +394,10 @@ mod views {
             pub mod view;
         }
         pub mod task_list {
+            pub mod view;
+        }
+        pub mod task_scheme {
+            pub mod scheme;
             pub mod view;
         }
     }

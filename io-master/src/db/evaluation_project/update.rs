@@ -6,6 +6,7 @@ use rusqlite::{OptionalExtension, named_params};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{MAX_CATALOGS, ProjectFields};
+use crate::model::task_scheme::BlockFields;
 use crate::model::time::now;
 
 /// Replaces the fields and the catalogs of project `uuid`, in one
@@ -73,6 +74,39 @@ pub fn add_catalog(db: &UserDb, project: &str, catalog: &str) -> Result<(), DbEr
     transaction.commit()?;
 
     Ok(())
+}
+
+/// Replaces the fields of block `uuid`.
+///
+/// Called by: `task_scheme_save_block` (`evaluation_plan.rs`).
+pub fn block_fields(db: &UserDb, uuid: &str, fields: &BlockFields) -> Result<(), DbError> {
+    let changed = db.connection().execute(
+        "UPDATE task_blocks SET name = :name, evidence = :evidence, instructions = :instructions, target = :target,
+                                format = :format, condition = :condition
+         WHERE uuid = :uuid",
+        named_params! {
+            ":uuid": uuid,
+            ":name": fields.name,
+            ":evidence": fields.evidence,
+            ":instructions": fields.instructions,
+            ":target": fields.target,
+            ":format": fields.format.name(),
+            ":condition": fields.condition.name(),
+        },
+    )?;
+
+    if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "task_blocks", id: 0 }) }
+}
+
+/// Places block `uuid` at `x`, `y` in the drawing (where a drag ended).
+///
+/// Called by: `task_scheme_move_block` (`evaluation_plan.rs`).
+pub fn block_position(db: &UserDb, uuid: &str, x: i64, y: i64) -> Result<(), DbError> {
+    let changed = db
+        .connection()
+        .execute("UPDATE task_blocks SET x = ?1, y = ?2 WHERE uuid = ?3", rusqlite::params![x, y, uuid])?;
+
+    if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "task_blocks", id: 0 }) }
 }
 
 /// Moves task `uuid` one place up (towards the start) or down in its list,
@@ -158,7 +192,7 @@ mod tests {
         for (uuid, control) in [("t1", "a"), ("t2", "b"), ("t3", "c")] {
             let task =
                 EvaluationTask { uuid: uuid.to_owned(), catalog_uuid: "c".to_owned(), control_id: control.to_owned() };
-            create::task(&test.db, "p", &task).unwrap();
+            create::task(&test.db, "p", &task, &format!("b-{}", task.uuid)).unwrap();
         }
 
         assert!(move_task(&test.db, "t3", true).unwrap());
@@ -168,5 +202,26 @@ mod tests {
 
         let order: Vec<String> = read::tasks(&test.db, "p").unwrap().into_iter().map(|task| task.uuid).collect();
         assert_eq!(order, ["t1", "t3", "t2"]);
+    }
+
+    #[test]
+    fn the_fields_and_the_place_of_a_block_are_kept() {
+        use crate::model::task_scheme::{BlockFields, OutputCondition, OutputFormat};
+
+        let test = database();
+        create::project(&test.db, "p", &fields("p"), &["c".to_owned()]).unwrap();
+        let task = EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c".to_owned(), control_id: "x".to_owned() };
+        create::task(&test.db, "p", &task, "req").unwrap();
+
+        let mut written = BlockFields::empty();
+        written.instructions = "Assess the interfaces.".to_owned();
+        written.format = OutputFormat::Latex;
+        written.condition = OutputCondition::NotMet;
+        block_fields(&test.db, "req", &written).unwrap();
+        block_position(&test.db, "req", 40, -12).unwrap();
+
+        let found = read::block(&test.db, "req").unwrap().unwrap().1;
+        assert_eq!((found.fields, found.x, found.y), (written, 40, -12));
+        assert!(block_position(&test.db, "none", 0, 0).is_err());
     }
 }

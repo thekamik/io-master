@@ -91,6 +91,11 @@ Legend: `[ ]` to do, `[x]` done.
   - **The document of the standard stays visible** in the screen the whole time, so the planner can check the scheme against the text of the requirement.
   - **Outputs: as many as needed, added and connected by the planner.** Example of the user: one output writes a text file, another fills a LaTeX template; in Common Criteria the results go to at least two documents of different structure and similar content, the **Observation Report** (only when the requirement is not met) and the **pETR**. So **an output has its rules**: its kind (a text file, a LaTeX template), its target, **its condition (always, only when the requirement is not met, only when it is met)** and the instructions with which its AI fills it.
   - The fields of the input (name, expected evidence, instructions for its agent) and of the requirement (instructions for its agent; its text from the catalog) are approved.
+  - **Phases of 51.2:**
+    - [x] 51.2a the model (`model/task_scheme.rs`: the kinds, the formats and conditions of an output, the rules of the connections and the limits) and the tables `task_blocks`, `task_connections` in `db/evaluation_project/` (a new task gets its block of the requirement; a task and a project go with their schemes);
+    - [x] 51.2b the seven commands `task_scheme_*` (get, add a block, save its fields, move it, remove it, connect, disconnect);
+    - [ ] 51.2c the page: the screen of a task with the drawing (Svelte Flow), the form of the block chosen, the standard always beside;
+    - [ ] 51.2d tried in the window; the documents.
 - **The evaluator sees a scheme exactly as the planner made it**: several inputs of the planner are several inputs for the evaluator; the same blocks, connections and layout.
 - **A requirement may have many inputs** (a fragment of the Security Target, the output of a program, a fragment of the documentation, ...).
 - **What the evaluator delivers to an input is kept exactly as delivered, the raw data** (the file as it was, the output of the program, the conversation), **and beside it, as an addition, the interpretation of the AI** (user, 2026-10-24). The interpretation never replaces the raw data: the assessment can always go back to what was delivered (P3, P5).

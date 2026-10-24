@@ -5,6 +5,7 @@ use rusqlite::named_params;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{EvaluationTask, MAX_TASKS, ProjectFields};
+use crate::model::task_scheme::{Block, BlockFields, BlockKind, MAX_BLOCKS};
 use crate::model::time::now;
 
 /// Stores a new project `uuid` with its fields and its catalogs, in one
@@ -34,12 +35,15 @@ pub fn project(db: &UserDb, uuid: &str, fields: &ProjectFields, catalogs: &[Stri
     Ok(())
 }
 
-/// Adds `task` at the end of the list of project `project`, in one
-/// transaction; refused when the project holds [`MAX_TASKS`] already or the
-/// control is a task of it already (the table keeps a control once).
+/// Adds `task` at the end of the list of project `project` with the block of
+/// its requirement (`requirement_block`, placed at the origin: the scheme of
+/// a new task, step 51.2), in one transaction; refused when the project
+/// holds [`MAX_TASKS`] already or the control is a task of it already (the
+/// table keeps a control once).
 ///
-/// Called by: `task_list_add` (`views/evaluation_plan/evaluation_plan.rs`).
-pub fn task(db: &UserDb, project: &str, task: &EvaluationTask) -> Result<(), DbError> {
+/// Called by: `task_list_add`, `own_requirement_add`
+/// (`views/evaluation_plan/evaluation_plan.rs`).
+pub fn task(db: &UserDb, project: &str, task: &EvaluationTask, requirement_block: &str) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 
     let (count, last): (i64, Option<i64>) = transaction.query_row(
@@ -65,9 +69,80 @@ pub fn task(db: &UserDb, project: &str, task: &EvaluationTask) -> Result<(), DbE
             ":position": last.unwrap_or(0) + 1,
         },
     )?;
+    insert_block(
+        &transaction,
+        &task.uuid,
+        &Block {
+            uuid: requirement_block.to_owned(),
+            kind: BlockKind::Requirement,
+            x: 0,
+            y: 0,
+            fields: BlockFields::empty(),
+        },
+    )?;
     transaction
         .execute("UPDATE evaluation_projects SET modified = ?1 WHERE uuid = ?2", rusqlite::params![now(), project])?;
     transaction.commit()?;
+
+    Ok(())
+}
+
+/// Adds `block` (an input or an output) to the scheme of task `task`;
+/// refused when the scheme holds `MAX_BLOCKS` already.
+///
+/// Called by: `task_scheme_add_block` (`evaluation_plan.rs`), and
+/// `task_scheme_get` for a task made before its block of the requirement
+/// existed.
+pub fn block(db: &UserDb, task: &str, block: &Block) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let count: i64 =
+        transaction.query_row("SELECT COUNT(*) FROM task_blocks WHERE task_uuid = ?1", [task], |row| row.get(0))?;
+    let limit = i64::try_from(MAX_BLOCKS).map_err(|error| DbError::Inconsistent(error.to_string()))?;
+
+    if count >= limit {
+        return Err(DbError::Inconsistent(format!("a task holds at most {MAX_BLOCKS} blocks")));
+    }
+
+    insert_block(&transaction, task, block)?;
+    transaction.commit()?;
+
+    Ok(())
+}
+
+/// Inserts `block` of task `task` in the transaction of the caller.
+///
+/// Called by: [`task`], [`block`].
+fn insert_block(transaction: &rusqlite::Transaction<'_>, task: &str, block: &Block) -> Result<(), DbError> {
+    transaction.execute(
+        "INSERT INTO task_blocks (uuid, task_uuid, kind, x, y, name, evidence, instructions, target, format, condition)
+         VALUES (:uuid, :task, :kind, :x, :y, :name, :evidence, :instructions, :target, :format, :condition)",
+        named_params! {
+            ":uuid": block.uuid,
+            ":task": task,
+            ":kind": block.kind.name(),
+            ":x": block.x,
+            ":y": block.y,
+            ":name": block.fields.name,
+            ":evidence": block.fields.evidence,
+            ":instructions": block.fields.instructions,
+            ":target": block.fields.target,
+            ":format": block.fields.format.name(),
+            ":condition": block.fields.condition.name(),
+        },
+    )?;
+
+    Ok(())
+}
+
+/// Connects block `from` to block `to` of task `task`; a connection made
+/// twice is kept once.
+///
+/// Called by: `task_scheme_connect` (`evaluation_plan.rs`).
+pub fn connection(db: &UserDb, task: &str, from: &str, to: &str) -> Result<(), DbError> {
+    db.connection().execute(
+        "INSERT OR IGNORE INTO task_connections (task_uuid, from_block, to_block) VALUES (?1, ?2, ?3)",
+        [task, from, to],
+    )?;
 
     Ok(())
 }
@@ -105,11 +180,11 @@ mod tests {
         let test = database();
         project(&test.db, "p", &fields(), &["c3".to_owned()]).unwrap();
 
-        task(&test.db, "p", &a_task("t1", "adv_fsp.4")).unwrap();
-        task(&test.db, "p", &a_task("t2", "ate_ind.2")).unwrap();
+        task(&test.db, "p", &a_task("t1", "adv_fsp.4"), "b1").unwrap();
+        task(&test.db, "p", &a_task("t2", "ate_ind.2"), "b2").unwrap();
 
         let tasks = read::tasks(&test.db, "p").unwrap();
         assert_eq!((tasks[0].uuid.as_str(), tasks[1].uuid.as_str()), ("t1", "t2"));
-        assert!(task(&test.db, "p", &a_task("t3", "adv_fsp.4")).is_err());
+        assert!(task(&test.db, "p", &a_task("t3", "adv_fsp.4"), "b3").is_err());
     }
 }
