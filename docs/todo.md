@@ -82,7 +82,7 @@ The user (2026-10-24): the conversion of the PDFs of a standard to OSCAL is toda
 
 **Phases**
 - [x] 50.1 The move, the logic unchanged (with a list of the catalogs of its own in the converter, `catalog_list/` and `catalog_list_get`, since the editor no longer opens from the view Evaluation plan and a view never uses another; the styles of the tables restored, lost in 48.1 with the sheet of the view Devices): `standard_documents/`, `document_search/`, `new_catalog/`, `catalog_editor/` from `views/evaluation_plan/` to `views/converter/` (Rust and the page), the entry `converter.rs` with their commands (names unchanged), `evaluation_plan.rs` keeps the documents of OSCAL; the navigation; the documents.
-- [ ] 50.2 The UX of the converter (concept first).
+- [ ] 50.2 The UX of the converter (concept first). **The user (2026-10-24): the conversion is best led step by step, interactively** (variant a: the PDFs, a new catalog, the AI proposes the structure, then the controls group by group, the review; the evaluator confirms every stage).
 
 ---
 
