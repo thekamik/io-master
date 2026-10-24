@@ -409,8 +409,8 @@ export function taskSchemePropose(task: string, onEvent: (event: AiEvent) => voi
 }
 
 /** Called by TaskScheme.svelte, TaskProposals.svelte, TaskLinks.svelte, "Stop". */
-export function aiWorkStop(): Promise<void> {
-  return invoke("ai_work_stop");
+export function evaluationPlanStop(): Promise<void> {
+  return invoke("evaluation_plan_stop");
 }
 
 /** Called by BlockForm.svelte, "Accept" of a proposal. */

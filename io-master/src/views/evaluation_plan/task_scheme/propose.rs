@@ -23,8 +23,8 @@ use crate::model::ai::{Role, Task};
 use crate::model::task_scheme::{self, Block, BlockKind};
 use crate::model::text::Invalid;
 
-use super::super::ai_work::ask::{self, Asked};
-use super::super::ai_work::view::AiEvent;
+use crate::components::ai_work::ask::{self, Asked};
+use crate::components::ai_work::view::AiEvent;
 
 /// Asks the AI about the scheme of task `task` and stores its proposals;
 /// the events go to `events`, `stop` ends the question.

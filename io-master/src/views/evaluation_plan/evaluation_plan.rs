@@ -15,6 +15,7 @@ use tauri::{AppHandle, Runtime, State};
 use crate::ai::api::tasks;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
+use crate::components::ai_work::view::AiEvent;
 use crate::db::conversion as db_conversion;
 use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
@@ -23,15 +24,13 @@ use crate::db::user::database::UserDb;
 
 use super::oscal_documents::dialog::{choose_file, choose_place};
 use super::oscal_documents::file::{self, read_file, safe_name};
-use crate::model::ai::INSTRUCTIONS_MAX;
+use crate::model::ai::{INSTRUCTIONS_MAX, Task};
 use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
 use crate::model::own_requirement;
 use crate::model::task_scheme::{self, Block, BlockFields, BlockKind, StandardOutput};
 use crate::model::work_package::{self, WorkPackage};
 
-use super::ai_work::ask as ai_ask;
-use super::ai_work::view::AiEvent;
 use super::new_project::catalogs;
 use super::new_project::view::CatalogChoiceView;
 use super::oscal_documents::view::{self as oscal_view, OscalDocumentView};
@@ -1164,12 +1163,12 @@ pub async fn task_scheme_propose(
 /// scheme, of the tasks or of the related elements.
 ///
 /// Called by the page: `TaskScheme.svelte`, `TaskProposals.svelte`,
-/// `TaskLinks.svelte`, "Stop" (`evaluationPlan.aiWorkStop()`).
+/// `TaskLinks.svelte`, "Stop" (`evaluationPlan.evaluationPlanStop()`).
 /// Calls: `AppState::stop_work`.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn ai_work_stop(state: State<'_, AppState>) {
+pub fn evaluation_plan_stop(state: State<'_, AppState>) {
     state.stop_work();
 }
 
@@ -1289,14 +1288,14 @@ pub fn task_scheme_reject_all(state: State<'_, AppState>, task: String) -> Resul
 ///
 /// Called by the page: `AiWorkInstructions.svelte`, when its dialog opens
 /// (`evaluationPlan.aiWorkInstructionsGet(which)`).
-/// Calls: `ai_ask::task_of`, `tasks::instructions`.
+/// Calls: [`ai_task_of`], `tasks::instructions`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn ai_work_instructions_get(state: State<'_, AppState>, which: String) -> Result<String, AppError> {
     let session = state.session()?;
 
-    Ok(tasks::instructions(&session.db(), ai_ask::task_of(&which)?)?.unwrap_or_default())
+    Ok(tasks::instructions(&session.db(), ai_task_of(&which)?)?.unwrap_or_default())
 }
 
 /// Stores the instructions `which`; an empty text brings the default ones
@@ -1304,13 +1303,13 @@ pub fn ai_work_instructions_get(state: State<'_, AppState>, which: String) -> Re
 ///
 /// Called by the page: `AiWorkInstructions.svelte`, "Save" and "Default"
 /// (`evaluationPlan.aiWorkInstructionsSave(which, text)`).
-/// Calls: `ai_ask::task_of`, `tasks::set_instructions`.
+/// Calls: [`ai_task_of`], `tasks::set_instructions`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
 pub fn ai_work_instructions_save(state: State<'_, AppState>, which: String, text: String) -> Result<String, AppError> {
     let session = state.session()?;
-    let task = ai_ask::task_of(&which)?;
+    let task = ai_task_of(&which)?;
 
     ensure!(text.len() <= INSTRUCTIONS_MAX, AppError::Invalid("the instructions are too long".to_owned()));
 
@@ -1318,6 +1317,24 @@ pub fn ai_work_instructions_save(state: State<'_, AppState>, which: String, text
 }
 
 // ── Helpers of the commands above ─────────────────────────────────────
+
+/// The task of the AI whose instructions are `which`: one of the tasks of
+/// the view; refused for any other.
+///
+/// Called by: `ai_work_instructions_get`, `ai_work_instructions_save`.
+/// Calls: `Task::from_name`.
+fn ai_task_of(which: &str) -> Result<Task, AppError> {
+    let Some(task) = Task::from_name(which) else {
+        return Err(AppError::Invalid("there are no such instructions".to_owned()));
+    };
+
+    ensure!(
+        matches!(task, Task::Scheme | Task::RequirementChoice | Task::RelatedElements),
+        AppError::Invalid("there are no such instructions".to_owned())
+    );
+
+    Ok(task)
+}
 
 /// The project of work package `uuid`; refused when it does not exist.
 ///
@@ -1858,7 +1875,7 @@ mod tests {
 
     #[test]
     fn the_instructions_of_the_scheme_are_changed_and_restored() {
-        use crate::model::ai::INSTRUCTIONS_MAX;
+        use crate::model::ai::{INSTRUCTIONS_MAX, Task};
 
         let window = logged_in_window();
         let default = window.call("ai_work_instructions_get", json!({ "which": "task_scheme" })).unwrap();

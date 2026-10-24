@@ -56,6 +56,34 @@ Legend: `[ ]` to do, `[x]` done.
 
 ---
 
+## Step 52: The Evaluation lab: a work package carried out (2026-10-24)
+
+**State: concept approved by the user 2026-10-24 ("we may implement the whole of point 52"); built by stages without a stop between them.**
+
+```text
+file of a package (.iomaster.json) ──import──► an evaluation (its tasks) ──► a task: its scheme, read only
+   input: evidence (kept raw) + the chat of the input + fragments (quotes checked in the evidence, accepted)
+   requirement: the agent of the AI on the accepted fragments ──► four results + a verdict proposed ──► the evaluator decides
+   outputs: their condition against the verdict ──► the AI adapts the four results to the template (text / LaTeX) ──► files
+```
+
+**The answers of the user (2026-10-24):**
+1. At the import the evaluator gives **the product (TOE) and its version** (both optional).
+2. **Three verdicts: met, not met, inconclusive.** The verdict is the evaluator's (P1); while it is inconclusive or not set, the outputs with a condition wait, the outputs "always" do not.
+3. **The evidence: a PDF, a text file, a pasted text** (the notes of an interview, the output of a tool). Other formats (images, ...) are a reminder below.
+4. **Nothing returns to the planner: the result of the work of the evaluator is the report**, data exported out of the program (the files of the outputs).
+5. The whole step at once.
+
+**Stages:**
+- [ ] **52.1 The import and the list of evaluations.** "Import a work package…": the file chosen in the dialog of the system, its format, version and size checked, the documents of OSCAL attached checked against the schema of NIST (a catalog stored already stays as it is); an **evaluation** is made: a frozen copy of the tasks, their schemes and related elements (the evaluator does not change a scheme); a package is imported once. The list shows every evaluation with its progress.
+- [ ] **52.2 The screen of an evaluation.** The tasks with their state (to do, in progress, done); a task opens its scheme read only, beside it the requirement as the standard writes it and its related elements. The drawing of a scheme becomes a component of the page, used by both views.
+- [ ] **52.3 The inputs.** The evaluator delivers evidence: a file (PDF, text) or a pasted text, kept exactly as delivered (the text of a PDF read page by page for the AI); **the chat of the input** (the instructions of the plan, the evidence) helps to judge whether the evidence is ready; the AI proposes **fragments**: exact quotes the program finds in the text of the evidence, with a separate *AI note*; the evaluator accepts them or adds his own (decisions of 2026-10-17).
+- [ ] **52.4 The requirement.** Its agent of the AI (role *formal analysis*) reads the requirement, its instructions and **only the accepted fragments**, and proposes the four results and a verdict, with its reason; the evaluator corrects and accepts them and sets the verdict.
+- [ ] **52.5 The outputs and the report.** An output whose condition holds for the verdict is drafted by its AI from the four results (its target, format and instructions), corrected and accepted by the evaluator. **The report**: the accepted texts of every output, task by task, written into one file per output (`.txt` or `.tex`) in a folder the evaluator chooses.
+- [ ] **52.6** Tried in the window with a fake AI; the documents.
+
+**Reminders:** other forms of evidence (images, office documents, archives) later; the import of a new version of a package into an evaluation begun.
+
 ## Step 51: The evaluation plan: the evaluation project (2026-10-24)
 
 **State: described by the user 2026-10-24 and settled by their answers the same day (below); built 2026-10-24 (51.1 to 51.5). Next: step 52 (the Evaluation lab: the import of a work package and the work of the evaluator).** It gives the step 41.4 (profile and assessment plan as a graph) its form.
@@ -109,7 +137,7 @@ Legend: `[ ]` to do, `[x]` done.
 - **51.4 and 51.5 (the user, 2026-10-24: "you may implement all the functions of step 51"; the concept below written by Claude and carried out without a stop between the stages, the user reviews it afterwards):**
   - **51.4a, the AI proposes the tasks** (point 2 of the description of the user): on the screen of a project, "Propose tasks with AI" for one catalog of the project. The AI reads the scope of the project and the requirements of the catalog that are no task yet (identifier, title, statement), in parts of a bounded size, and proposes the requirements to evaluate, each with its reason. The proposals wait in a list above the tasks: "Accept" makes the task (with the outputs of the template), "Reject" drops it; "Accept all", "Reject all". A new question for a catalog replaces its undecided proposals.
   - **51.4b, the AI finds the related elements of a task** (the work units of the CEM for a requirement of CC Part 3, the test cases of a test specification, ...): on the screen of a task, "Find with AI" reads the requirement and the requirements of the other catalogs of the project, in parts, and proposes the related ones with their reasons; the planner accepts or rejects each; an accepted one is shown beside the standard and travels with the task to the evaluator, and can be removed.
-  - **One shared way to the AI in the view** (`views/evaluation_plan/ai_work/`): one kind of events (part, writing, proposed, failed, end), one "Stop", and the instructions of the three tasks of the AI of the view (`task_scheme`, `requirement_choice`, `related_elements`) behind one pair of commands. The texts of the requirements given to the AI for a choice are cut into parts by `ai/tasks/candidates.rs`, shared by the two new tasks.
+  - **One shared way to the AI in the view** (`components/ai_work/`): one kind of events (part, writing, proposed, failed, end), one "Stop", and the instructions of the three tasks of the AI of the view (`task_scheme`, `requirement_choice`, `related_elements`) behind one pair of commands. The texts of the requirements given to the AI for a choice are cut into parts by `ai/tasks/candidates.rs`, shared by the two new tasks.
   - **51.5a, the work packages** (`work_package`): a folded card on the screen of a project; a package has a name, the evaluator it goes to, a note and its tasks (chosen from the tasks of the master project; **a task is in one package at most**, so that nothing is delegated twice); created, changed, deleted; the list of tasks shows the package of each task.
   - **51.5b, the export of a package** (format b, user 2026-10-24): one JSON file chosen in the dialog of the system: our format (the project, the package, the four results, every task with its requirement, its scheme of **accepted** blocks only and its accepted related elements, linked to the catalogs by their UUIDs and ids) and, as **attachments**, the documents of OSCAL of every catalog it points to, whole and unchanged. A picture of the state at the moment of the export; the import is the work of the Evaluation lab (step 52).
   - **Phases:** [x] 51.4a (`ai_work/`, `ai/tasks/candidates.rs` and `requirement_choice.rs`, the table `task_proposals`, the element `task_proposals/` with six commands, `TaskProposals.svelte`; tested with a fake AI), [x] 51.4b (`ai/tasks/related_elements.rs`, the table `task_links`, the element `task_links/` with four commands, `TaskLinks.svelte` beside the standard; tested with a fake AI), [x] 51.5a (`model/work_package.rs`, the tables `work_packages` and `package_tasks`, the element `work_packages/` with four commands, the package of each task in the list, `WorkPackages.svelte`), [x] 51.5b (`work_packages/export.rs`, `work_packages_export`, the dialog of a place shared with the export of a document of OSCAL), [x] tried in the window on a private display with a fake AI service (2026-10-24): a second catalog (a copy of the NIST catalog standing for a methodology) added to the project; the AI proposed two tasks, one accepted (made with the output of the template), one rejected; on the screen of a task the AI found a related element in the other catalog, accepted; a work package made for "Anna" and exported, the file checked (the accepted blocks only, the related element, both catalogs attached). `architecture.md`, section 12.

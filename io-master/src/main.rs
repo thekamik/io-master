@@ -270,6 +270,13 @@ mod app {
 // the file of its name. The views use the components; a component never uses
 // a view (checked by architecture_tests.rs).
 mod components {
+    // components/ai_work/: one question of a work of the AI with its events
+    // (the progress, a failure, the end); the works of the AI of the views
+    // Evaluation plan and Evaluation lab. No command of its own.
+    pub mod ai_work {
+        pub mod ask;
+        pub mod view;
+    }
     // components/part_rows/: the parts of a group or a control as rows with
     // their level; the object chosen and the proposals of the editor of a
     // catalog. No command: the elements give its rows with their data.
@@ -374,10 +381,6 @@ mod views {
         #[allow(clippy::module_inception)]
         pub mod evaluation_plan;
 
-        pub mod ai_work {
-            pub mod ask;
-            pub mod view;
-        }
         pub mod new_project {
             pub mod catalogs;
             pub mod view;

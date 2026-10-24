@@ -77,7 +77,7 @@ fn main() {
         "task_scheme_connect",
         "task_scheme_disconnect",
         "task_scheme_propose",
-        "ai_work_stop",
+        "evaluation_plan_stop",
         "task_scheme_accept",
         "task_scheme_reject",
         "task_scheme_accept_all",

@@ -26,8 +26,8 @@ use crate::model::evaluation_project::{MAX_LINKS, TaskLink};
 use crate::model::oscal::catalog::Control;
 use crate::model::task_scheme::check_reason;
 
-use super::super::ai_work::ask::{self, Asked};
-use super::super::ai_work::view::AiEvent;
+use crate::components::ai_work::ask::{self, Asked};
+use crate::components::ai_work::view::AiEvent;
 
 /// What a question needs: the model, the instructions, the requirement of
 /// the task as the question shows it, and the elements offered.

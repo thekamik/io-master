@@ -95,7 +95,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::evaluation_plan::evaluation_plan::task_scheme_connect,
         crate::views::evaluation_plan::evaluation_plan::task_scheme_disconnect,
         crate::views::evaluation_plan::evaluation_plan::task_scheme_propose,
-        crate::views::evaluation_plan::evaluation_plan::ai_work_stop,
+        crate::views::evaluation_plan::evaluation_plan::evaluation_plan_stop,
         crate::views::evaluation_plan::evaluation_plan::task_scheme_accept,
         crate::views::evaluation_plan::evaluation_plan::task_scheme_reject,
         crate::views::evaluation_plan::evaluation_plan::task_scheme_accept_all,

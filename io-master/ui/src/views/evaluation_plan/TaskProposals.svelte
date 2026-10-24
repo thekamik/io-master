@@ -118,7 +118,7 @@
     {#if asking === null}
       <button type="button" class="small" onclick={propose} disabled={catalog === ""}>Propose tasks with AI</button>
     {:else}
-      <button type="button" class="small danger" onclick={() => evaluationPlan.aiWorkStop()}>Stop</button>
+      <button type="button" class="small danger" onclick={() => evaluationPlan.evaluationPlanStop()}>Stop</button>
     {/if}
     <button type="button" class="small" onclick={() => (instructions = true)}>Instructions…</button>
     {#if proposals.length > 0}

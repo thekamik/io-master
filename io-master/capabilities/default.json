@@ -73,7 +73,7 @@
     "allow-task-scheme-connect",
     "allow-task-scheme-disconnect",
     "allow-task-scheme-propose",
-    "allow-ai-work-stop",
+    "allow-evaluation-plan-stop",
     "allow-task-scheme-accept",
     "allow-task-scheme-reject",
     "allow-task-scheme-accept-all",

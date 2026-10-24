@@ -1,6 +1,6 @@
-//! The events of a work of the AI of the view Evaluation plan, as the page
-//! gets them: the proposals of a scheme, of the tasks of a project and of the
-//! related elements of a task (step 51.3 and 51.4 of docs/todo.md).
+//! The events of a work of the AI, as the page gets them (steps 51.3, 51.4
+//! and 52 of docs/todo.md): the proposals of the Evaluation plan, the
+//! fragments, the assessment and the outputs of the Evaluation lab.
 
 use serde::Serialize;
 

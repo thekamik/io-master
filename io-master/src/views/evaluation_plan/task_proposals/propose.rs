@@ -24,8 +24,8 @@ use crate::model::ai::{Role, Task};
 use crate::model::evaluation_project::TaskProposal;
 use crate::model::task_scheme::check_reason;
 
-use super::super::ai_work::ask::{self, Asked};
-use super::super::ai_work::view::AiEvent;
+use crate::components::ai_work::ask::{self, Asked};
+use crate::components::ai_work::view::AiEvent;
 
 /// What a question needs: the model, the instructions, the scope of the
 /// project, the title of the catalog and the requirements offered.

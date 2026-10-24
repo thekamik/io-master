@@ -387,6 +387,10 @@ app/                       What the whole window shares (Tauri 2): the state the
     error_view.rs                How an error of a command reaches the page:
   state.rs                     The state of the desktop interface, kept in Rust and never in
 components/                The components of the window: small elements used more than once,
+  ai_work/                     One question of a work of the AI with its events (steps 51 and 52):
+                                 the views Evaluation plan and Evaluation lab.
+    ask.rs                       One question of a work of the AI, with its events.
+    view.rs                      The events of a work of the AI, as the page gets them.
   catalog_tree/                The component "tree of a catalog": its groups and controls as rows (step
     catalog_tree.rs              The entry of the component "tree of a catalog": the groups and controls
     view.rs                      The data of the component "tree of a catalog", as the page gets it.
@@ -470,10 +474,6 @@ views/                     The views of the window, one folder per view and one 
     standard_outputs/            The element "standard outputs": the template of the outputs of the
                                  tasks of a master project (step 51.3).
       view.rs                      The data of the template, as the page gets it and sends it.
-    ai_work/                     What the works of the AI of the view share (step 51.4): one question
-                                 with its events, the tasks whose instructions the planner may change.
-      ask.rs                       One question of a work of the AI, with its events.
-      view.rs                      The events of a work of the AI, as the page gets them.
     task_links/                  The element "related elements" of a task (step 51.4).
       propose.rs                   The AI finds the elements of other catalogs related to a task.
       view.rs                      The related elements, as the page gets them.
