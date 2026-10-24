@@ -67,14 +67,14 @@ The user (2026-10-24): the project tried to catch too many magpies by the tail. 
 - [x] **No TPM factor and no passkeys** (steps 8 and 9 dropped): OpenPGP makes them unnecessary.
 - [x] **No git in the program** (`architecture.md`, section 6): the laboratory manages its documents itself; not every laboratory uses git, and the configurations would hold the work up.
 - [x] **The export to LaTeX stays** (step 28): the results go straight into the report template of the laboratory.
-- [x] **The protection is built on GnuPG** (user, 2026-10-24): the key of the database is encrypted for the OpenPGP key of the evaluator instead of the password; it simplifies the project and makes many mechanisms unnecessary. The details (the keyring, a recovery key of the laboratory, the cards) are settled in the concept of 48.3.
+- [x] ~~The protection is built on GnuPG~~ (user, 2026-10-24, morning). **Withdrawn the same day** (user, 2026-10-24): an open source program must be easy to use, and OpenPGP keys have no recovery of a passphrase either, so the **simple login with a password stays, as it was designed and built** (the password, Argon2id, the key of the database wrapped with AES-256-GCM, `db/encryption/keys.rs`). What follows from it for the master, the TPM, the keyring and the backup: below, to be confirmed.
 
 **Phases** (one commit each, pushed, every test passing; the documents with each)
 - [x] 48.1 The devices removed: `hardware_tests/`, `views/devices/`, `db/scan_settings/` (the version 4 of the database of the evaluator removes its two settings), the three commands in their four lists, the page (`ui/src/views/devices/`, `lib/api/devices.ts`, `styles/09-devices.css`, the navigation), the feature `fs` of `rustix`; the documents.
 - [ ] 48.2 The documents describe the framework: `README.md`, `architecture.md` (sections 1, 3, 5, 6, 8), `CLAUDE.md`; the steps dropped marked so in this file; `v0.2_functionality.md`.
-- [ ] 48.3 The protection on GnuPG, the role master and the TPM removed: **concept proposed 2026-10-24 (below), waiting for the decisions of the user** (the user decides them the next day).
+- [ ] 48.3 The role master, more users and the TPM removed; the password stays. **The concept on GnuPG below is withdrawn** (kept for the record: the analysis of the flow of GnuPG may serve the backup).
 
-### The concept of 48.3 (proposed by Claude 2026-10-24; not approved yet)
+### The concept of 48.3 on GnuPG (proposed by Claude 2026-10-24; withdrawn the same day, the user chose the password)
 
 Found in the code: the keyring was never built (step 13): only two unused constants in `main.rs`. `accounts::add` (more users) is dead code. The TPM factor is half built (`device_secret` always `None`). GnuPG 2.4.7 and `pinentry-gnome3` are on Debian 13.
 
