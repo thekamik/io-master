@@ -2,7 +2,8 @@
   A block of the scheme of a task on the drawing (TaskScheme.svelte), drawn
   by Svelte Flow: its kind and name; the requirement also its verdict and
   the four text results it gives to the outputs (empty in the plan, filled
-  in the Evaluation lab). An input has a handle on its right (it
+  in the Evaluation lab). A block the AI only proposed is dashed; a block
+  with a correction of the AI waiting is marked. An input has a handle on its right (it
   goes to the requirement), an output one on its left (it comes from the
   requirement), the requirement both. Which blocks may be connected is
   decided by the program (model/task_scheme.rs), which refuses the rest.
@@ -21,10 +22,14 @@
   let block = $derived(data.block);
 </script>
 
-<div class="tile {block.kind}" class:selected>
+<div class="tile {block.kind}" class:selected class:proposed={block.proposal !== null}>
   {#if block.kind !== "input"}<Handle type="target" position={Position.Left} />{/if}
 
-  <div class="tile-head"><span class="tile-kind">{titles[block.kind]}</span></div>
+  <div class="tile-head">
+    <span class="tile-kind">{titles[block.kind]}</span>
+    {#if block.proposal !== null}<span class="tile-ai">proposed by the AI</span>{/if}
+    {#if block.correction}<span class="tile-ai">correction of the AI</span>{/if}
+  </div>
   {#if block.kind === "requirement"}
     <div class="tile-id">{data.label}</div>
     <div class="tile-title">{data.title}</div>

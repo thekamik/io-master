@@ -358,10 +358,10 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
     catalog_contents.rs          The task `catalog_contents` of the AI (role *text analysis*, step 50.2
     catalog_outline.rs           The task `catalog_outline` of the AI (role *text analysis*): the
     catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
-    task_scheme.rs               The task `task_scheme` of the AI (role *text analysis*, step 51.3): the
-                                 inputs of the scheme of a task and corrections of its blocks
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a
     json.rs                      The JSON object in an answer of a model, and its texts.
+    task_scheme.rs               The task `task_scheme` of the AI (role *text analysis*, step 51.3): the
+                                 inputs of the scheme of a task and corrections of its blocks
 pdf/                       Reading PDFs with the tools of Poppler (`pdfinfo`, `pdftotext`): the
   poppler.rs                   Reading the text of a PDF, page by page, with the tools of
 installation/              The installation of this Linux account, its one user and the

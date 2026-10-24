@@ -9,7 +9,7 @@
 // The types mirror the view.rs of the elements (src/views/evaluation_plan/);
 // a change there needs the same change here.
 
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 import type { PartRowView } from "./components/part_rows";
 
@@ -96,7 +96,26 @@ export interface BlockView {
   target: string;
   format: OutputFormat;
   condition: OutputCondition;
+  /** The reason of the AI while the block is only proposed (drawn dashed). */
+  proposal: string | null;
+  /** The correction the AI proposes for the block, waiting for the planner. */
+  correction: CorrectionView | null;
 }
+
+/** A correction of a block the AI proposes. */
+export interface CorrectionView {
+  name: string;
+  evidence: string;
+  instructions: string;
+  reason: string;
+}
+
+/** An event of a question to the AI about a scheme. */
+export type ProposalEvent =
+  | { event: "writing"; characters: number }
+  | { event: "proposed"; inputs: number; corrections: number; dropped: string[] }
+  | { event: "failed"; message: string }
+  | { event: "end"; stopped: boolean };
 
 /** The fields of a block, as the page sends them. */
 export interface BlockForm {
@@ -329,4 +348,48 @@ export function standardOutputsSave(output: string, fields: StandardOutputForm):
 /** Called by StandardOutputs.svelte, "Delete". */
 export function standardOutputsDelete(output: string): Promise<StandardOutputView[]> {
   return invoke("standard_outputs_delete", { output });
+}
+
+/** Called by TaskScheme.svelte, "Propose with AI"; the events go to `onEvent`. */
+export function taskSchemePropose(task: string, onEvent: (event: ProposalEvent) => void): Promise<SchemeView> {
+  const channel = new Channel<ProposalEvent>();
+
+  channel.onmessage = onEvent;
+
+  return invoke("task_scheme_propose", { task, onEvent: channel });
+}
+
+/** Called by TaskScheme.svelte, "Stop". */
+export function taskSchemeStop(): Promise<void> {
+  return invoke("task_scheme_stop");
+}
+
+/** Called by BlockForm.svelte, "Accept" of a proposal. */
+export function taskSchemeAccept(block: string): Promise<SchemeView> {
+  return invoke("task_scheme_accept", { block });
+}
+
+/** Called by BlockForm.svelte, "Reject" of a proposal. */
+export function taskSchemeReject(block: string): Promise<SchemeView> {
+  return invoke("task_scheme_reject", { block });
+}
+
+/** Called by TaskScheme.svelte, "Accept all". */
+export function taskSchemeAcceptAll(task: string): Promise<SchemeView> {
+  return invoke("task_scheme_accept_all", { task });
+}
+
+/** Called by TaskScheme.svelte, "Reject all". */
+export function taskSchemeRejectAll(task: string): Promise<SchemeView> {
+  return invoke("task_scheme_reject_all", { task });
+}
+
+/** Called by SchemeInstructions.svelte, when it opens. */
+export function taskSchemeInstructionsGet(): Promise<string> {
+  return invoke("task_scheme_instructions_get");
+}
+
+/** Called by SchemeInstructions.svelte, "Save" and "Default" (an empty text). */
+export function taskSchemeInstructionsSave(text: string): Promise<string> {
+  return invoke("task_scheme_instructions_save", { text });
 }

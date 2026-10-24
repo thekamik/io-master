@@ -4,8 +4,10 @@
   src/views/evaluation_plan/evaluation_plan.rs): an input (its name, the
   evidence expected, the instructions for its agent), the requirement (the
   instructions for its agent; its text is the standard's), an output (its
-  name, format, target, condition, the instructions for its AI). After a
-  change it gives the scheme back to the screen (onchanged).
+  name, format, target, condition, the instructions for its AI). What the
+  AI proposed for the block (the block itself, or a correction with its
+  reason) is shown above the fields, with Accept and Reject (step 51.3).
+  After a change it gives the scheme back to the screen (onchanged).
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
@@ -51,6 +53,14 @@
     }
   }
 
+  async function decide(accept: boolean) {
+    try {
+      onchanged(await (accept ? evaluationPlan.taskSchemeAccept(block.uuid) : evaluationPlan.taskSchemeReject(block.uuid)));
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
+
   async function remove() {
     try {
       onchanged(await evaluationPlan.taskSchemeRemoveBlock(block.uuid));
@@ -62,6 +72,33 @@
 
 <form class="block-form" onsubmit={save}>
   {#if problem}<p class="problem">{problem}</p>{/if}
+  {#if block.proposal !== null}
+    <div class="ai-proposal">
+      <strong>Proposed by the AI.</strong>
+      {#if block.proposal}<p>{block.proposal}</p>{/if}
+      <div class="buttons">
+        <button type="button" onclick={() => decide(true)}>Accept</button>
+        <button type="button" class="danger" onclick={() => decide(false)}>Reject</button>
+      </div>
+    </div>
+  {/if}
+  {#if block.correction}
+    <div class="ai-proposal">
+      <strong>The AI proposes a correction.</strong>
+      {#if block.correction.reason}<p>{block.correction.reason}</p>{/if}
+      <dl>
+        {#if block.kind === "input"}
+          <dt>Name</dt><dd>{block.correction.name}</dd>
+          <dt>Expected evidence</dt><dd>{block.correction.evidence}</dd>
+        {/if}
+        <dt>Instructions for its agent</dt><dd>{block.correction.instructions}</dd>
+      </dl>
+      <div class="buttons">
+        <button type="button" onclick={() => decide(true)}>Accept</button>
+        <button type="button" class="danger" onclick={() => decide(false)}>Reject</button>
+      </div>
+    </div>
+  {/if}
   {#if block.kind === "input"}
     <h3>Input</h3>
     <label>Name <input bind:value={form.name} required /></label>
