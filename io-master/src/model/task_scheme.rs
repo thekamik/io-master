@@ -73,6 +73,35 @@ impl BlockKind {
     }
 }
 
+/// The four text results of a requirement (user, 2026-10-17;
+/// `docs/oscal.md`, section 5): what the AI of the requirement writes when
+/// it has verified the inputs, and what goes to the outputs, where the AI of
+/// each output adapts it to its template. The verdict in the third one is a
+/// proposition: the evaluator decides (P1). In the plan they are empty
+/// places; they are filled in the Evaluation lab (step 52).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ResultText {
+    Findings,
+    Analysis,
+    Assessment,
+    Vulnerabilities,
+}
+
+impl ResultText {
+    pub const ALL: [ResultText; 4] =
+        [ResultText::Findings, ResultText::Analysis, ResultText::Assessment, ResultText::Vulnerabilities];
+
+    /// The title shown to the planner and the evaluator.
+    pub fn title(self) -> &'static str {
+        match self {
+            ResultText::Findings => "Findings",
+            ResultText::Analysis => "Analysis",
+            ResultText::Assessment => "Assessment and verdict proposition",
+            ResultText::Vulnerabilities => "Vulnerabilities and notes",
+        }
+    }
+}
+
 /// What an output writes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputFormat {
@@ -326,6 +355,14 @@ mod tests {
             assert_eq!(OutputCondition::from_name(condition.name()), Some(condition));
         }
         assert_eq!(BlockKind::from_name("tile"), None);
+    }
+
+    #[test]
+    fn the_four_results_have_four_titles() {
+        let titles: std::collections::BTreeSet<&str> = ResultText::ALL.into_iter().map(ResultText::title).collect();
+
+        assert_eq!(titles.len(), 4);
+        assert_eq!(ResultText::Assessment.title(), "Assessment and verdict proposition");
     }
 
     #[test]

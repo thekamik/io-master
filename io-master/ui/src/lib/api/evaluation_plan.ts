@@ -114,6 +114,8 @@ export interface SchemeView {
   requirement: RequirementView;
   blocks: BlockView[];
   connections: { from: string; to: string }[];
+  /** The titles of the four text results of the requirement. */
+  results: string[];
 }
 
 // standard_outputs/view.rs

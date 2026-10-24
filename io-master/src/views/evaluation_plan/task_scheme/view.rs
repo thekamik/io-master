@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::app::error::AppError;
-use crate::model::task_scheme::{Block, BlockFields, Connection, OutputCondition, OutputFormat};
+use crate::model::task_scheme::{Block, BlockFields, Connection, OutputCondition, OutputFormat, ResultText};
 
 use super::super::standard_browser::view::RequirementView;
 use super::super::task_list::view::TaskView;
@@ -66,6 +66,22 @@ pub struct SchemeView {
     pub requirement: RequirementView,
     pub blocks: Vec<BlockView>,
     pub connections: Vec<ConnectionView>,
+    /// The titles of the four text results of the requirement, which its
+    /// block shows and the outputs get.
+    pub results: Vec<&'static str>,
+}
+
+/// The titles of the four text results, in their order.
+///
+/// Called by: `scheme::read`.
+pub fn result_titles() -> Vec<&'static str> {
+    let mut titles = Vec::with_capacity(ResultText::ALL.len());
+
+    for text in ResultText::ALL {
+        titles.push(text.title());
+    }
+
+    titles
 }
 
 /// The fields of a block, as the page sends them.

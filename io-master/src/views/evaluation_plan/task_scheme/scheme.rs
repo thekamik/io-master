@@ -12,7 +12,7 @@ use crate::model::task_scheme::{self, Block, NewScheme};
 use super::super::own_requirement::catalog as own_catalog;
 use super::super::standard_browser::requirement;
 use super::super::task_list::view as task_view;
-use super::view::{BlockView, ConnectionView, SchemeView};
+use super::view::{BlockView, ConnectionView, SchemeView, result_titles};
 
 /// The scheme of task `task`.
 ///
@@ -47,7 +47,7 @@ pub fn read(db: &UserDb, task: &str) -> Result<SchemeView, AppError> {
         connections.push(ConnectionView::new(connection));
     }
 
-    Ok(SchemeView { task: task_shown, requirement: shown, blocks: block_views, connections })
+    Ok(SchemeView { task: task_shown, requirement: shown, blocks: block_views, connections, results: result_titles() })
 }
 
 /// The first scheme of a new task of project `project`: the block of its

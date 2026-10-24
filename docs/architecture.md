@@ -397,7 +397,8 @@ the screen of a project (the screen of a task in place of it while a task is ope
         ──own_requirement_delete(id)──► only while no task of any project points to it
   └─► TaskList ──"open"(task)──► TaskScheme, the screen of a task (step 51.2), in place of the screen of the project
 TaskScheme ──task_scheme_get(task)──► the task, its requirement read from its catalog (parts, quotes), its blocks
-     and connections (db/evaluation_project/); a task with no block of its requirement gets one at the origin
+     and connections (db/evaluation_project/), the titles of the four text results (model ResultText), which the
+     block of the requirement shows with its verdict (proposed by the AI, decided by the evaluator, P1)
   ├─► the drawing (Svelte Flow, BlockNode): "+ Input" / "+ Output" ──task_scheme_add_block(task, kind, x, y)──►
   │     a drag from the handle on the right of a block to the handle on the left of another
   │     ──task_scheme_connect(from, to)──► only input → requirement, requirement → output; the rest refused

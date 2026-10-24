@@ -64,7 +64,7 @@
       id: candidate.uuid,
       type: "block",
       position: { x: candidate.x, y: candidate.y },
-      data: { block: candidate, label: next.task.label, title: next.task.title },
+      data: { block: candidate, label: next.task.label, title: next.task.title, results: next.results },
       selected: candidate.uuid === selected,
     }));
 

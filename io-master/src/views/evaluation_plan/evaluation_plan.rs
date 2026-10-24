@@ -1087,6 +1087,7 @@ mod tests {
         assert_eq!(scheme["blocks"][0]["kind"], "requirement");
         assert_eq!(scheme["requirement"]["title"], "Information security roles and responsibilities");
         assert_eq!(scheme["connections"], json!([]));
+        assert_eq!(scheme["results"].as_array().unwrap().len(), 4);
     }
 
     #[test]

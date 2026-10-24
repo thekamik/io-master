@@ -75,10 +75,13 @@
     </label>
   {:else if block.kind === "requirement"}
     <h3>Requirement</h3>
-    <p class="note">Its text is the standard's, beside. The agent of the requirement assesses the inputs connected to it.</p>
+    <p class="note">
+      Its text is the standard's, beside. Its agent verifies the inputs connected to it, proposes whether the requirement is
+      met (the evaluator decides) and sums up in the four results, which go to the outputs.
+    </p>
     <label>
       Instructions for its agent
-      <textarea bind:value={form.instructions} rows="4" placeholder="What to assess"></textarea>
+      <textarea bind:value={form.instructions} rows="4" placeholder="What to check in the inputs and how to decide whether the requirement is met"></textarea>
     </label>
   {:else}
     <h3>Output</h3>
