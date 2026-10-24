@@ -368,13 +368,20 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
   presets.rs/                  Presets: ready settings of well-known AI services, to fill the
     field_help.rs                Instructions for a chatbot: help to fill one field of an AI
   tasks/                       The tasks of the AI: for each, the question sent to the model and
+    assessment.rs                The task `assessment` of the AI (step 52): the four results and a
+                                 verdict proposed, on the accepted fragments only.
     candidates.rs                The requirements given to the AI for a choice, word for word under
                                  short references, in parts of a bounded size (step 51.4).
     catalog_contents.rs          The task `catalog_contents` of the AI (role *text analysis*, step 50.2
     catalog_outline.rs           The task `catalog_outline` of the AI (role *text analysis*): the
     catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a
+    evidence_fragments.rs        The task `evidence_fragments` of the AI (step 52): the exact quotes of
+                                 a piece of evidence that matter for a requirement.
+    evidence_text.rs             The text of the evidence in a question: by page, in bounded parts.
+    input_chat.rs                The task `input_chat` of the AI (step 52): the chat of an input.
     json.rs                      The JSON object in an answer of a model, and its texts.
+    output_draft.rs              The task `output_draft` of the AI (step 52): the text of an output.
     related_elements.rs          The task `related_elements` of the AI (step 51.4): the work units and
                                  other elements related to the requirement of a task.
     requirement_choice.rs        The task `requirement_choice` of the AI (step 51.4): the requirements

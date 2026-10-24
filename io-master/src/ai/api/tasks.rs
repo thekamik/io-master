@@ -10,6 +10,10 @@
 //! task_scheme       text_analysis   ai/tasks/task_scheme.rs (the inputs of a task, corrections of its blocks)
 //! requirement_choice text_analysis  ai/tasks/requirement_choice.rs (the requirements a project covers)
 //! related_elements  text_analysis   ai/tasks/related_elements.rs (the work units of a requirement, ...)
+//! input_chat        consultation    ai/tasks/input_chat.rs (the chat of an input of the Evaluation lab)
+//! evidence_fragments text_analysis  ai/tasks/evidence_fragments.rs (the quotes of the evidence that matter)
+//! assessment        formal_analysis ai/tasks/assessment.rs (the four results and a verdict proposed)
+//! output_draft      summary         ai/tasks/output_draft.rs (the text of an output from the results)
 //! chat              consultation    none here: the system prompt of the connection
 //! check             none            none: the check of a connection (checks.rs)
 //! ```
@@ -20,7 +24,8 @@
 //! ```
 
 use crate::ai::tasks::{
-    catalog_contents, catalog_outline, catalog_section, related_elements, requirement_choice, task_scheme,
+    assessment, catalog_contents, catalog_outline, catalog_section, evidence_fragments, input_chat, output_draft,
+    related_elements, requirement_choice, task_scheme,
 };
 use crate::db::ai::instructions as db_instructions;
 use crate::db::error::DbError;
@@ -38,6 +43,10 @@ pub fn default_instructions(task: Task) -> Option<&'static str> {
         Task::Scheme => Some(task_scheme::DEFAULT_INSTRUCTIONS),
         Task::RequirementChoice => Some(requirement_choice::DEFAULT_INSTRUCTIONS),
         Task::RelatedElements => Some(related_elements::DEFAULT_INSTRUCTIONS),
+        Task::InputChat => Some(input_chat::DEFAULT_INSTRUCTIONS),
+        Task::EvidenceFragments => Some(evidence_fragments::DEFAULT_INSTRUCTIONS),
+        Task::Assessment => Some(assessment::DEFAULT_INSTRUCTIONS),
+        Task::OutputDraft => Some(output_draft::DEFAULT_INSTRUCTIONS),
         Task::Chat | Task::Check => None,
     }
 }

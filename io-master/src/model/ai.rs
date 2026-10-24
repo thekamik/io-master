@@ -415,6 +415,15 @@ pub enum Task {
     /// The elements of other catalogs related to the requirement of a task
     /// (step 51.4).
     RelatedElements,
+    /// A message of the chat of an input of the Evaluation lab (step 52).
+    InputChat,
+    /// The fragments of a piece of evidence that matter for a requirement
+    /// (step 52).
+    EvidenceFragments,
+    /// The four results and the verdict proposed for a requirement (step 52).
+    Assessment,
+    /// The text of an output from the results (step 52).
+    OutputDraft,
     /// A message of the chat.
     Chat,
     /// The check of a connection.
@@ -422,13 +431,17 @@ pub enum Task {
 }
 
 impl Task {
-    pub const ALL: [Task; 8] = [
+    pub const ALL: [Task; 12] = [
         Task::CatalogContents,
         Task::CatalogOutline,
         Task::CatalogSection,
         Task::Scheme,
         Task::RequirementChoice,
         Task::RelatedElements,
+        Task::InputChat,
+        Task::EvidenceFragments,
+        Task::Assessment,
+        Task::OutputDraft,
         Task::Chat,
         Task::Check,
     ];
@@ -442,6 +455,10 @@ impl Task {
             Task::Scheme => "task_scheme",
             Task::RequirementChoice => "requirement_choice",
             Task::RelatedElements => "related_elements",
+            Task::InputChat => "input_chat",
+            Task::EvidenceFragments => "evidence_fragments",
+            Task::Assessment => "assessment",
+            Task::OutputDraft => "output_draft",
             Task::Chat => "chat",
             Task::Check => "check",
         }
@@ -459,8 +476,11 @@ impl Task {
             | Task::CatalogSection
             | Task::Scheme
             | Task::RequirementChoice
-            | Task::RelatedElements => Some(Role::TextAnalysis),
-            Task::Chat => Some(Role::Consultation),
+            | Task::RelatedElements
+            | Task::EvidenceFragments => Some(Role::TextAnalysis),
+            Task::InputChat | Task::Chat => Some(Role::Consultation),
+            Task::Assessment => Some(Role::FormalAnalysis),
+            Task::OutputDraft => Some(Role::Summary),
             Task::Check => None,
         }
     }

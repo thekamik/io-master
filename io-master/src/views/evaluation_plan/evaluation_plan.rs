@@ -1875,7 +1875,7 @@ mod tests {
 
     #[test]
     fn the_instructions_of_the_scheme_are_changed_and_restored() {
-        use crate::model::ai::{INSTRUCTIONS_MAX, Task};
+        use crate::model::ai::INSTRUCTIONS_MAX;
 
         let window = logged_in_window();
         let default = window.call("ai_work_instructions_get", json!({ "which": "task_scheme" })).unwrap();
