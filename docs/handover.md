@@ -15,7 +15,7 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 
 The user chooses (`docs/todo.md`). The candidates:
 1. **Step 12, the user's review**, file by file: Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.
-2. **Step 53, zero warnings**: the unused code of earlier steps, each a decision of the user (use it or remove it); eslint on the page.
+2. **Step 53, zero warnings**: the unused code was removed (2026-10-24), rustc and clippy are clean; eslint on the page is open.
 3. The reminders of the Evaluation lab (a viewer of the evidence, other forms of evidence), steps 54 (removal of the installation) and 55 (backups).
 
 ## Rules that are easy to forget
@@ -46,7 +46,7 @@ npm run check               # svelte-check, must be clean
 npm run build               # copies pdf.js data, builds ui/dist (needed before cargo build)
 cargo fmt --check
 cargo build && cargo test   # also the test of the architecture and of the command lists
-cargo clippy --all-targets  # must be clean (rule 10 of CLAUDE.md); the 15 known warnings of unused code: step 53
+cargo clippy --all-targets  # must be clean (rule 10 of CLAUDE.md)
 ```
 
 The packages of the system for running, building and testing, on Debian 13: `README.md`, section "Requirements". Rust comes from rustup (stable, 1.99.1 on 2026-10-21), never from the packages `rustc`/`cargo` of the system beside it: two compilers in `PATH` make clippy fail with E0514 on a build made by the other one; check with `rustc --version` and `which cargo` (`~/.cargo/bin/cargo`); after a change of compiler, `cargo clean` once.

@@ -1,11 +1,17 @@
 //! Reading the journal of the AI.
 
+#[cfg(test)]
 use crate::db::error::DbError;
+#[cfg(test)]
 use crate::db::user::database::UserDb;
 
+#[cfg(test)]
 use super::rows::{COLUMNS, Entry, entry_from_row};
 
-/// The last `count` entries, the newest first.
+/// The last `count` entries, the newest first. Used by the tests only (they
+/// check that every question is in the journal, P3); the program writes the
+/// journal and has no page that reads it yet (a reminder of `docs/todo.md`).
+#[cfg(test)]
 pub fn last(db: &UserDb, count: usize) -> Result<Vec<Entry>, DbError> {
     let mut statement =
         db.connection().prepare(&format!("SELECT {COLUMNS} FROM ai_journal ORDER BY id DESC LIMIT ?1"))?;

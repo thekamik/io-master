@@ -11,11 +11,10 @@
 use tauri::State;
 use tauri::ipc::Channel;
 
-use crate::ai::api::{connections, roles};
+use crate::ai::api::connections;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::db::ai::chats as db_chats;
-use crate::model::ai::Role;
 
 use super::chat_list::view::ChatSummaryView;
 use super::connection_line::view::ConnectionLineView;
@@ -28,9 +27,7 @@ use super::conversation::view::{ChatView, ReplyEvent};
 ///
 /// Called by the page: `ConnectionLine.svelte`, when the view opens
 /// (`chat.connectionLineGet()`).
-/// Calls: `roles::connection` (the connection of the role *consultation*),
-/// `connections::active` (when the role has none of its own),
-/// `connections::get`, `ConnectionLineView::new`.
+/// Calls: `connections::active`, `connections::get`, `ConnectionLineView::new`.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
@@ -38,10 +35,7 @@ pub fn connection_line_get(state: State<'_, AppState>) -> Result<Option<Connecti
     let session = state.session()?;
     let db = session.db();
 
-    let assigned = roles::connection(&db, Role::Consultation)?;
-    let id = if assigned.is_some() { assigned } else { connections::active(&db)? };
-
-    let Some(id) = id else {
+    let Some(id) = connections::active(&db)? else {
         return Ok(None);
     };
 

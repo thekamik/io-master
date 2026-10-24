@@ -8,7 +8,7 @@
 |---|---|---|
 | 12 | Review, order and functional hardening of the whole code | the user's review, file by file (`review.md`); open |
 | 10 | Before the release | open |
-| 53 | Zero warnings: the unused code of earlier steps, and eslint on the page | open |
+| 53 | Zero warnings: the unused code removed; eslint on the page | eslint open |
 | 54 | The removal of the installation in the window | open |
 | 55 | Backups, optionally encrypted with OpenPGP | open (`architecture.md`, section 5.5) |
 | 56 | The rule of the comments for the whole code | open |
@@ -63,19 +63,15 @@ The whole code is gone through once, module by module, so that it matches `archi
 
 ## Step 53: Zero warnings
 
-Rule 10 of `CLAUDE.md`: the code compiles without warnings and clippy is clean. Left from earlier steps (2026-10-24, 15 warnings of rustc, no other finding of clippy):
-- [ ] `model/ai.rs`: `AnswerForm`, `MemoryRule` and the methods of `Role` they serve (`answer`, `quotes_checked`, `memory`, `ALL`, `from_name`, `title`), designed in step 38 and never read; decide: use them (the roles shown on the page, the memory of the chat by role) or remove them.
-- [ ] `model/text.rs`: variants of `Field` and the enum `Entity` no rule names any more.
-- [ ] `db/ai/roles/update.rs::connection`, `ai/api/roles.rs::list` and `set_connection`: a role with a connection of its own, never offered on the page; decide: a tab on Settings, or remove.
-- [ ] `db/ai/journal/read.rs::last` and its rows: the journal of the AI is written and only read by the tests; decide: a page of the journal (P3: everything traceable), or keep it only for the tests.
-- [ ] `db/system/read.rs::user_names`; `installation/lifecycle.rs::uninstall` and `db/user/database.rs::remove_all` (step 54).
+Rule 10 of `CLAUDE.md`: the code compiles without warnings and clippy is clean. The unused code of earlier steps was removed on 2026-10-24 ("nieużywane funkcje usuwamy"): the forms of the answer and the rules of memory of the roles (`model/ai.rs`), the fields and objects no rule names (`model/text.rs`), the connection of its own for a role (`db/ai/roles/`, removed: every role uses the active connection), the removal of the installation (`lifecycle::uninstall`, `user_db::remove_all`, written anew in step 54). Kept only for the tests, under `#[cfg(test)]`: `db/system/read.rs::user_names` and the reading of the journal of the AI (`db/ai/journal/read.rs::last`), until a page of the journal exists.
+- [x] rustc and `cargo clippy --all-targets`: zero warnings.
 - [ ] eslint on the page (`CLAUDE.md`, rule 10 for the page): only svelte-check runs today.
 
 ---
 
 ## Step 54: The removal of the installation in the window
 
-The removal is done in the window only (`architecture.md`, section 3.2): after the login, the password and a typed confirmation, it removes the databases of the installation. `lifecycle::uninstall` and `user_db::remove_all` are kept for it; the old console version was removed on 2026-10-24.
+The removal is done in the window only (`architecture.md`, section 3.2): after the login, the password and a typed confirmation, it removes the databases of the installation. Its functions are written anew for it: the console version was removed on 2026-10-24, and the unused `lifecycle::uninstall` and `user_db::remove_all` in step 53.
 
 ---
 
@@ -97,5 +93,5 @@ The evaluator exports backups of the work (also the only way to move it to a new
 - **The Evaluation plan:** a manual addition of a related element (from the browser of the standards), besides the AI.
 - **OSCAL beyond catalogs:** the plan and the results are kept in the program's own model (`oscal.md`); an export of an evaluation as OSCAL assessment results, and of a master project as a profile and an assessment plan, when a laboratory or a scheme asks for it.
 - **The login:** an optional second factor (`architecture.md`, section 5.1).
-- **The journal of the AI:** how long its entries are kept (they go only with the whole database today, `db/ai/journal/schema.rs`), and a page to read it (step 53).
+- **The journal of the AI:** how long its entries are kept (they go only with the whole database today, `db/ai/journal/schema.rs`), and a page to read it (its reading is kept for the tests only, step 53).
 - **Few resources** (`architecture.md`, section 9): the program measured on a virtual machine of 8 GB RAM with a large catalog (the CEM, 813 work units) and a large PDF.

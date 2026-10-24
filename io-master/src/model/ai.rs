@@ -323,73 +323,14 @@ pub enum Role {
     FormalAnalysis,
 }
 
-/// The form of the answer a role expects.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AnswerForm {
-    /// One JSON object, read by the task (the tasks of the catalogs, step 41).
-    Json,
-    /// Free text.
-    Text,
-    /// Text for named fields (the four results of a requirement).
-    Fields,
-}
-
-/// What the memory may do with the text a role works on.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MemoryRule {
-    /// Word for word, never shortened: quotes of a standard,
-    /// fragments of a document.
-    Verbatim,
-    /// May be shortened or summarised, only as its parameters say.
-    ByParameters,
-}
-
 impl Role {
-    /// Every role.
-    pub const ALL: [Role; 4] = [Role::TextAnalysis, Role::Summary, Role::Consultation, Role::FormalAnalysis];
-
-    /// The name kept in the database.
+    /// The name kept in the journal of the AI.
     pub fn name(self) -> &'static str {
         match self {
             Role::TextAnalysis => "text_analysis",
             Role::Summary => "summary",
             Role::Consultation => "consultation",
             Role::FormalAnalysis => "formal_analysis",
-        }
-    }
-
-    pub fn from_name(name: &str) -> Option<Role> {
-        Role::ALL.into_iter().find(|role| role.name() == name)
-    }
-
-    /// The title shown to the evaluator.
-    pub fn title(self) -> &'static str {
-        match self {
-            Role::TextAnalysis => "Analysis of a text and its fragments",
-            Role::Summary => "Summary",
-            Role::Consultation => "Consultation",
-            Role::FormalAnalysis => "Formal analysis",
-        }
-    }
-
-    pub fn answer(self) -> AnswerForm {
-        match self {
-            Role::TextAnalysis => AnswerForm::Json,
-            Role::Summary | Role::Consultation => AnswerForm::Text,
-            Role::FormalAnalysis => AnswerForm::Fields,
-        }
-    }
-
-    /// Whether the quotes of its answers are checked against their
-    /// pages.
-    pub fn quotes_checked(self) -> bool {
-        matches!(self, Role::TextAnalysis | Role::FormalAnalysis)
-    }
-
-    pub fn memory(self) -> MemoryRule {
-        match self {
-            Role::TextAnalysis | Role::FormalAnalysis => MemoryRule::Verbatim,
-            Role::Summary | Role::Consultation => MemoryRule::ByParameters,
         }
     }
 }

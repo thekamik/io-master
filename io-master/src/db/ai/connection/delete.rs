@@ -6,9 +6,8 @@ use crate::db::user::database::UserDb;
 
 use super::rows::{ACTIVE, key_name};
 
-/// Deletes a connection with its key; returns whether it existed. A
-/// role that used it uses the active connection again (`db/ai/roles/`,
-/// `ON DELETE SET NULL`). One transaction.
+/// Deletes a connection with its key; returns whether it existed.
+/// One transaction.
 pub fn connection(db: &UserDb, id: i64) -> Result<bool, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
 

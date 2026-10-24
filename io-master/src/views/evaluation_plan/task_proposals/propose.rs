@@ -20,7 +20,7 @@ use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{Role, Task};
+use crate::model::ai::Task;
 use crate::model::evaluation_project::TaskProposal;
 use crate::model::task_scheme::check_reason;
 
@@ -124,7 +124,7 @@ fn question(db: &UserDb, project: &str, catalog: &str) -> Result<Question, AppEr
     }
 
     Ok(Question {
-        model: Arc::new(roles::model(db, Role::TextAnalysis)?),
+        model: Arc::new(roles::model(db)?),
         instructions: tasks::instructions(db, Task::RequirementChoice)?.unwrap_or_default(),
         scope: found.fields.description,
         catalog_title: document.metadata.title.clone(),

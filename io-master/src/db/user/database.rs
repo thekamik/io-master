@@ -10,7 +10,7 @@
 //!
 //! ```text
 //! db/user/            settings, secrets            (this folder)
-//! db/ai/              AI: connections, chats, roles,
+//! db/ai/              AI: connections, chats,
 //!                     instructions, journal, presets
 //! db/standards/       documents of standards
 //! db/oscal/           documents of NIST OSCAL
@@ -34,8 +34,7 @@
 //! gets the tables it lacks; other changes of the layout are the steps
 //! of `migrations.rs`.
 
-use std::fs::{self, DirBuilder};
-use std::io;
+use std::fs::DirBuilder;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -72,7 +71,6 @@ impl UserDb {
         connection.execute_batch(schema::SCHEMA)?;
         connection.execute_batch(ai::connection::schema::SCHEMA)?;
         connection.execute_batch(ai::chats::schema::SCHEMA)?;
-        connection.execute_batch(ai::roles::schema::SCHEMA)?;
         connection.execute_batch(ai::instructions::schema::SCHEMA)?;
         connection.execute_batch(ai::journal::schema::SCHEMA)?;
         connection.execute_batch(standards::schema::SCHEMA)?;
@@ -140,23 +138,13 @@ pub fn open(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<UserDb, 
     UserDb::from(sqlcipher::open(&path(data_dir, user_id), key)?)
 }
 
-/// Removes the databases of all accounts; used when the program is
-/// uninstalled. A missing folder is not an error.
-pub fn remove_all(data_dir: &Path) -> Result<(), DbError> {
-    let directory = data_dir.join(DIRECTORY);
-
-    match fs::remove_dir_all(&directory) {
-        Err(source) if source.kind() != io::ErrorKind::NotFound => Err(DbError::Io { path: directory, source }),
-        _ => Ok(()),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     //! Tests of the database of an evaluator: made, opened, kept, removed.
 
     use super::*;
 
+    use std::fs;
     use std::os::unix::fs::PermissionsExt;
 
     use crate::db::user::{read, update};
@@ -188,18 +176,5 @@ mod tests {
         // Kept in the file, and readable only with the key.
         let db = open(directory.path(), 1, &key).unwrap();
         assert_eq!(read::setting(&db, "scan.columns").unwrap().as_deref(), Some("path"));
-    }
-
-    #[test]
-    fn all_databases_are_removed() {
-        let directory = TempDir::new();
-        let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
-
-        create(directory.path(), 1, &key).unwrap();
-        create(directory.path(), 2, &key).unwrap();
-        remove_all(directory.path()).unwrap();
-
-        assert!(!directory.path().join(DIRECTORY).exists());
-        remove_all(directory.path()).unwrap();
     }
 }

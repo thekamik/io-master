@@ -8,7 +8,7 @@
 //! history to the context of a model, summaries and other operations
 //! on text. They are always controlled by parameters, and text that
 //! must stay word for word is never touched: the quotes of a standard,
-//! the fragments of a document (`ai/api/roles.rs`, `MemoryRule`).
+//! the fragments of a document.
 
 use crate::model::ai::Turn;
 
