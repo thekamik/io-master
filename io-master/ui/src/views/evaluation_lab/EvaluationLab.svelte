@@ -1,5 +1,5 @@
 <!--
-  The view Evaluation lab (step 52 of docs/todo.md; its commands in
+  The view Evaluation lab (step 52 of docs/history.md; its commands in
   src/views/evaluation_lab/evaluation_lab.rs): a work package of the
   Evaluation plan imported and carried out for one product. The list of
   evaluations (EvaluationList) or one evaluation (EvaluationScreen), whose

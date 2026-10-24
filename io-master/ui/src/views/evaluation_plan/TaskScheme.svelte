@@ -1,5 +1,5 @@
 <!--
-  The screen of a task of a master project (step 51.2 of docs/todo.md; its
+  The screen of a task of a master project (step 51.2 of docs/history.md; its
   commands task_scheme_* in src/views/evaluation_plan/evaluation_plan.rs):
   the scheme of the task drawn with Svelte Flow, the form of the block
   chosen (BlockForm), and the standard always beside it: the requirement as

@@ -10,7 +10,7 @@ use super::database::SystemDb;
 
 /// Stores both copies of the key of an account anew, in one statement:
 /// after a change of the password, which also makes a new recovery code,
-/// so that the old code stops working (step 49 of docs/todo.md).
+/// so that the old code stops working (step 49 of docs/history.md).
 ///
 /// Called by: `installation/accounts.rs` (`change_password`, `recover`).
 pub fn replace_user_keys(

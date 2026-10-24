@@ -2,7 +2,7 @@
   The element "setup form" of the view Users (its command setup_form_install in src/views/users/users.rs):
   the first start: the one user of the installation. The first recovery code
   comes with the setup and is shown at once, as BitLocker shows its key (step
-  49 of docs/todo.md); when the evaluator has confirmed it, the form tells the
+  49 of docs/history.md); when the evaluator has confirmed it, the form tells the
   application (ondone), which reads the state of the program again.
 
   Unlike the web interface there is no one-time setup code: it

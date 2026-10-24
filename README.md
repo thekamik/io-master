@@ -1,19 +1,20 @@
 # IO Master
 
-**A desktop tool for evaluation laboratories: it turns a standard into an evaluation plan in NIST OSCAL, and carries the evaluation of a product through it with the help of AI, while every decision stays with the evaluator.**
+**A desktop tool for evaluation laboratories: it turns a standard into a catalog of NIST OSCAL, plans its evaluation as tasks with a scheme each, and carries the evaluation of a product through it with the help of AI, while every decision stays with the evaluator.**
 
-IO Master is installed on the computer of an evaluator, in their own Linux account, and used through one desktop window. It knows no particular standard. The requirements of a standard, the plan of their evaluation and its results are kept in **NIST OSCAL 1.2.3** (Open Security Controls Assessment Language), the published, machine-readable format of NIST, and every document is checked against the JSON schemas of NIST. Catalogs published in OSCAL are imported as they are; standards that are not (Common Criteria with the CEM, ETSI EN 303 645, ...) are made into OSCAL catalogs in the program, from their PDFs, with the help of AI, and every part traced back to the passage it comes from.
+IO Master is installed on the computer of an evaluator, in their own Linux account, and used through one desktop window. It knows no particular standard: the requirements of a standard are kept as catalogs of **NIST OSCAL 1.2.3** (Open Security Controls Assessment Language), every document checked against the JSON schemas of NIST. Catalogs published in OSCAL are imported as they are; standards that are not (Common Criteria with the CEM, ETSI EN 303 645, ...) are made into catalogs in the program, from their PDFs, with the help of AI, and every part traced back to the passage it comes from.
 
-**Project status:** early development (no releases and no version numbers yet; `main` holds the tested state, the work goes on in `test_branch`). The functions listed under "What works today" are built and tested; the evaluation itself and the release hardening are planned.
+**Project status:** early development, experimental (no releases and no version numbers yet; `main` holds the tested state, the work goes on in `test_branch`; the data of the tests is not kept between versions until version 1). A high-level overview of the functions: `docs/presentation.md`.
 
 ## Aims
 
-1. **Support the evaluation of a product against a standard**, in two functions:
-   - **the evaluation plan:** the requirements of the standard as an OSCAL catalog (made in the program or loaded), the ones chosen for one evaluation as a profile, and the plan of the work as an OSCAL assessment plan, shown as a graph;
-   - **the evaluation:** the plan carried out for one product, requirement by requirement: the evidence, the checks whether each requirement is met, and the report, recorded as OSCAL assessment results.
+1. **Support the evaluation of a product against a standard** (Common Criteria with the CEM and ETSI EN 303 645 first; any standard the same way, by the same code):
+   - **the catalog**: the requirements of the standard in OSCAL, made from its PDFs with the AI or imported;
+   - **the evaluation plan**: a master project of the standard, its tasks (each a whole requirement), the scheme of each task (the evidence expected, the instructions of the agents of the AI, the outputs and when they are written), and the work packages delegated to the evaluators;
+   - **the evaluation**: a work package carried out for one product, requirement by requirement: the evidence, the fragments of it that matter, the four results and the verdict, the texts of the outputs, and the report.
 
-   The AI reads the standard and the documentation of the product and proposes; the evaluator accepts, corrects or rejects. Common Criteria (ISO/IEC 15408 with the CEM, ISO/IEC 18045) and ETSI EN 303 645 are the first targets, but every standard is represented the same way, in OSCAL, by the same code.
-2. **Carry the inputs to the output.** IO stands for input and output: the inputs are the documentation of the client and the work of the evaluator (results of tests, notes, assessments), the output is the report in the template of the laboratory. The program does not talk to the device under evaluation; what the laboratory finds on it enters as an input of the evaluator.
+   The AI reads and proposes; the evaluator accepts, corrects or rejects.
+2. **Carry the inputs to the output.** IO stands for input and output: the inputs are the documentation of the client and the work of the evaluator (results of tests, notes, assessments), the output is the report for the template of the laboratory. The program does not talk to the device under evaluation; what the laboratory finds on it enters as evidence.
 
 ## Principles
 
@@ -23,26 +24,23 @@ These are requirements of the design, not preferences (`docs/architecture.md`, s
 |---|---|---|
 | P1 | **The evaluator decides.** | The program never issues a verdict. It proposes, with its reasons and its sources; the evaluator accepts. |
 | P2 | *Removed (step 48): the program no longer works with devices.* | |
-| P3 | **Everything is traceable.** | Every question to the AI and its answer is in the journal of the AI; every step of an evaluation in its journal, which is only ever added to. |
+| P3 | **Everything is traceable.** | Every question to the AI and its answer is in the journal of the AI. |
 | P4 | **The standard is data, not code.** | Standards are kept as OSCAL documents; nothing about a standard is written into the program. |
-| P5 | **The model reads; it does not invent sources.** | Every passage the AI proposes is checked against the page it names; a passage that is not there is shown as such. |
+| P5 | **The model reads; it does not invent sources.** | Every quote the AI proposes is looked for by the program in the page or the evidence it names; a quote that is not there is shown as such. |
 
 ## What works today
 
-- **Installation and login.** At the first start the window asks for the user and the password. One Linux account holds one installation with one user. The data of the evaluator is in a database encrypted with SQLCipher, whose key opens only with their password (Argon2id).
-- **AI connections.** The program knows no provider: a connection is described completely in the window (endpoint, model, headers, the template of the request, where the answer is), meant first of all for a local model of the laboratory, with presets for known services. HTTPS with TLS 1.3 and a verified certificate, or plain HTTP only to the loopback; an API key is bound to the address it was entered for. Every question to a model, from any part of the program, is written into the journal of the AI.
+- **Installation, login and recovery.** One Linux account holds one installation with one user. The data of the evaluator is in a database encrypted with SQLCipher, whose key opens only with their password (Argon2id); a **recovery code** (160 bits, shown once at the setup and after every change of the password) opens it when the password is forgotten.
+- **AI connections.** The program knows no provider: a connection is described completely in the window (endpoint, model, headers, the template of the request, where the answer is), meant first of all for a local model of the laboratory, with presets for known services. HTTPS with TLS 1.3 and a verified certificate, or plain HTTP only to the loopback; an API key is bound to the address it was entered for. Every question to a model is written into the journal of the AI.
 - **Chat** with the AI, kept in the encrypted database.
-- **Documents of standards.** PDFs loaded page by page (Poppler), searched, and shown in a built-in viewer with the quoted passages highlighted.
-- **OSCAL documents.** Catalogs, mappings, profiles, assessment plans and assessment results of OSCAL 1.2.3 imported from a file, exported and deleted; every document is checked against the schema of NIST when it is written, and kept in the encrypted database.
-- **Catalogs made in the program.** A standard that is not published in OSCAL is made into a catalog in an editor: a tree of its groups and controls, each with the passages of the standard it comes from (checked on their pages, shown in the viewer) and its fields as JSON of OSCAL. The AI proposes the groups from the table of contents and the controls from the pages of a group, with progress and a Stop button; the evaluator accepts, corrects or rejects every proposal.
-- **The evaluation support.** What the program adds to OSCAL (the quotes and their checks, the proposals of the AI, the instructions to the AI) is kept apart, in its own tables, and linked to the OSCAL objects only by their UUIDs and ids, so that nothing of ours is written into an OSCAL document.
+- **Converter.** The PDFs of a standard loaded page by page (Poppler), searched and shown in a built-in viewer; a catalog of OSCAL made from them step by step: the AI finds the table of contents, proposes the groups and, group by group, the controls, each with quotes the program checks on their pages; the evaluator accepts, corrects or rejects every proposal, or edits the catalog by hand.
+- **Evaluation plan.** The documents of OSCAL (catalogs, mappings, profiles, assessment plans and results) imported, exported and deleted. **Master projects** of a standard: the tasks chosen in a browser of the standards or proposed by the AI from the scope of the project; requirements of the laboratory outside the standards; the **scheme of every task** drawn as blocks (inputs → requirement → outputs, each output with its format, text or LaTeX, and its condition: always, only when the requirement is met, only when not met), proposed or corrected by the AI; a template of the outputs of the project; the **related elements** of a task (the work units of the CEM, ...) found by the AI; **work packages** delegated to the evaluators and exported as one file with the catalogs attached.
+- **Evaluation lab.** A work package imported for one product. For every task: the **evidence** of each input (PDF, text file, pasted notes), kept as delivered; a **chat** about whether the evidence is ready; the **fragments** that matter (exact quotes the program finds in the evidence, with a separate note of the AI), accepted by the evaluator; the **agent of the requirement**, which assesses only the accepted fragments and proposes the four results (findings, analysis, assessment and verdict proposition, vulnerabilities and notes) and a verdict (met, not met, inconclusive), which the evaluator decides; the **outputs** whose condition holds, drafted by the AI from the results and accepted by the evaluator; the **report**, one file per output (`.txt` or `.tex`).
+- **The evaluation support.** What the program adds to OSCAL (quotes, proposals of the AI, instructions, master projects, evaluations) is kept in tables of its own, linked to the documents of OSCAL only by UUIDs and ids, so that nothing of ours is written into a document of OSCAL.
 
 ## Planned
 
-- The evaluation plan as a profile and an assessment plan, shown as a graph; the CEM and the Protection Profiles as OSCAL documents a plan can take (`docs/todo.md`, step 41.4).
-- The evaluation as OSCAL assessment results (step 41.5), and its work with the AI: the fragments of the documentation of the product that matter for a requirement, then the assessment on the fragments the evaluator accepted (steps 31 to 36).
-- A tool for the documentation of the manufacturer (step 30) and reports in the LaTeX template of the laboratory (step 28).
-- A recovery code for a forgotten password, made at the setup and kept outside the computer (step 49); backups, optionally encrypted with an OpenPGP key; later perhaps an optional second factor of the login.
+`docs/todo.md`: the review of the code by the user and its hardening, zero warnings, the removal of the installation in the window, backups optionally encrypted with OpenPGP, a viewer of the evidence, an export of the plan and of the results as OSCAL documents, the package for Debian.
 
 ## Requirements
 
@@ -90,22 +88,23 @@ The program is started without parameters; everything is set in its window.
 ```text
 io-master/          the program (Rust, Tauri 2 + Svelte 5)
   src/              the core and the window, in layers: model, db, ai,
-                    security, pdf, installation, app, views (docs/code_structure.md);
-                    one folder per view and per element of the window in views
+                    security, pdf, installation, app, components, views
+                    (docs/code_structure.md); one folder per view and per element
   ui/               the page of the window, a separate project
   oscal/            the JSON schemas of OSCAL 1.2.3 and example documents of NIST
 docs/
-  architecture.md   what the program is and why: roles, secrets, AI, standards, collaboration
-  oscal.md          the evaluation plan and the evaluation on NIST OSCAL: the concept of step 41
+  presentation.md   a high-level overview of the functions
+  architecture.md   what the program is and why: the account, the keys, the AI, the standards, the flow of data
+  oscal.md          how NIST OSCAL is used, and where the program has a model of its own
   code_structure.md where everything is in the code, and the rules that keep it in order
-  todo.md           the steps of the work: a heap of reminders, not an order
-  history.md        the steps already built, with their decisions
+  todo.md           the open work: a heap of reminders, not an order
+  history.md        the steps already built, dropped or replaced, with their decisions
   handover.md       the state of the work, for a new working session
-v0.2_functionality.md   the functions of version 0.2 (C), the catalogue the new version re-creates
+testing_documents/  documents for trying the program by hand (the CEM:2022 as an OSCAL catalog)
 review.md           the state of the code review
 ```
 
-Version 0.2, written in C with console shells for UART, Bluetooth and an AI chat, is in the history of git (commit `6cc4091`); the later web interface in commit `acedc8b`.
+The earlier versions (0.2 in C with console shells, the later web interface) are in the history of git; `docs/history.md` names the commits.
 
 ## License
 

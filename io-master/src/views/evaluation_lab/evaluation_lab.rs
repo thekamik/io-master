@@ -1,4 +1,4 @@
-//! The entry of the view Evaluation lab (step 52 of docs/todo.md; page:
+//! The entry of the view Evaluation lab (step 52 of docs/history.md; page:
 //! `ui/src/views/evaluation_lab/`, its commands in
 //! `ui/src/lib/api/evaluation_lab.ts`): a work package of the Evaluation
 //! plan imported and carried out for one product. The evaluator delivers

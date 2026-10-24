@@ -1,4 +1,4 @@
-//! A work package of a master project (step 51.5 of docs/todo.md): the
+//! A work package of a master project (step 51.5 of docs/history.md): the
 //! tasks the planner delegates to one evaluator, with a name and a note. A
 //! package only points to tasks of its master, so a scheme is made once; a
 //! task is in one package at most, so that nothing is delegated twice. Its

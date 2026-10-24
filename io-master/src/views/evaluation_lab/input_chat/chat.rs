@@ -1,4 +1,4 @@
-//! The chat of an input (step 52 of docs/todo.md): the evaluator asks the
+//! The chat of an input (step 52 of docs/history.md): the evaluator asks the
 //! AI whether the evidence of the input is ready to be assessed. The
 //! question goes through `ai/api/` into the journal of the AI, with the
 //! instructions of the plan, the requirement and the start of the evidence

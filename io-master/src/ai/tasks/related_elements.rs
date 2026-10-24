@@ -1,5 +1,5 @@
 //! The task `related_elements` of the AI (role *text analysis*, step 51.4
-//! of docs/todo.md): the question with the requirement of a task and a part
+//! of docs/history.md): the question with the requirement of a task and a part
 //! of the requirements of the other catalogs of its project
 //! (`candidates.rs`); the answer, read by `candidates::read_choices`, names
 //! the related ones (the work units of the CEM for a requirement of CC

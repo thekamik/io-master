@@ -1,5 +1,5 @@
 //! Reading which catalog is the shared catalog of the requirements of the
-//! laboratory (step 51.1e of docs/todo.md). Its UUID is a setting of the
+//! laboratory (step 51.1e of docs/history.md). Its UUID is a setting of the
 //! evaluator (`db/user/`, table `settings`), so this area has no table of
 //! its own; the catalog itself is a document of OSCAL (`db/oscal/`).
 

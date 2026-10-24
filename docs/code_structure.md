@@ -1,14 +1,11 @@
 # IO Master: the structure of the code
 
-This document says **where** everything is in the code and **which rules keep it in order**. *What* the program is and *why* it is built so is in `architecture.md`; the plan of the work in `todo.md`. The structure was set by step 40 of `todo.md` (2026-10-17), on the guidelines of the user:
+This document says **where** everything is in the code and **which rules keep it in order**. *What* the program is and *why* it is built so is in `architecture.md`; the open work in `todo.md`, the steps built in `history.md`. The structure was set by step 40 (2026-10-17) on the guidelines of the user, and changed by step 42 (2026-10-21: the views instead of a layer of business logic and a layer of commands) and step 43 (2026-10-23: one vocabulary, the components):
 
-1. `tauri_ui/` is a minimal intermediate layer that only joins the back end and the front end (renamed `app/` in step 43, 2026-10-23).
-2. The business logic is in a folder of its own (`business/`), reached by the interface in the form of a REST API: no server, but the functions are designed as resources and operations.
+1. `app/` is a minimal layer that only joins the back end and the front end: what every view uses, as the session and the error handling of a web framework.
+2. The work of the window is done by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view and one per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back.
 3. Every operation on a database is in `db/`, ordered as CRUD.
 4. All communication with AI is in `ai/`, the intermediary between the external services and the program: one folder for the whole integration, for the audit.
-5. Everything that talks to hardware is in `hardware_tests/` (removed in step 48, 2026-10-24: the program no longer works with devices).
-
-**Changed on 2026-10-21 (step 42 of `todo.md`, user):** `business/` and the commands of `tauri_ui/` were two layers that did the same thing (one action of the page went through three Rust functions of the same name). They are replaced by the **views** (`views/`, section 2.9), built like the views of Django: one folder per view of the window and one folder per interactive element, whose commands take the parameters from the page, do the work with the folders below and give the data back. The page (`ui/`) stays a separate project with the same names. **Every view is moved** (Scan, the pilot; Start, Shell, Chat, Settings, Evaluation plan, the editor of a catalog): `business/` and the commands of `tauri_ui/` are removed.
 
 ---
 
@@ -61,7 +58,7 @@ At every moment it is clear where the information the program works on is (the u
 
 ```text
 the page (ui/src/views/<view>/<Element>.svelte)   what it shows; no secret, no state that matters
-  │  a command of the element (ui/src/lib/api/<view>/<element>.ts), its arguments as JSON
+  │  a command of the element (ui/src/lib/api/<view>.ts), its arguments as JSON
   ▼
 views/<view>/<view>.rs               the entry of the view: its command, the parameters checked, the work done:
   ├──► model/                        the rules of the data
@@ -87,7 +84,7 @@ Plain types of every area, their rules of validity (`check`) and their normal fo
 ### 2.2 `db/`: the databases
 
 - **SQL lives only here** (the connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile).
-- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `oscal/`, `evaluation_support/`, `conversion/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
+- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `oscal/`, `evaluation_support/`, `conversion/`, `own_requirements/`, `evaluation_project/`, `evaluation/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
 - **Free functions everywhere:** `db::<area>::<operation>::<object>(db, ...)`. A caller imports the area as `db_<area>` and calls `db_<area>::<operation>::<object>`, so that every call shows which operation on which data it is.
 - **Columns are read by their names; statements with more than one parameter name them** (`:title`); every statement is in the function that runs it.
 - **A value the program never writes is an error**, `DbError::Corrupt { table, column, value }`, never replaced in silence. `DbError::Sql` is SQLite only; `NoRow` for a change of a row that does not exist; `Inconsistent` for input that does not hold together.
@@ -108,29 +105,21 @@ ai/presets/      the ready settings of known services, and the help for the fiel
 - A key is given out only for the address it was entered for (`db/ai/connection/read.rs`, checked at every use).
 - A task works on plain data of `model/` and gives back plain data (`ai/tasks/catalog_outline.rs`, `catalog_section.rs`: groups and controls of OSCAL); applying a proposal is the work of the view editor of a catalog (`views/converter/catalog_editor/proposals/accept.rs`).
 
-### 2.4 `hardware_tests/` (removed in step 48)
-
-Until 2026-10-24 the scan of the serial ports and the settings of the scanner, with the view Devices and `db/scan_settings/`. The program no longer works with devices (`architecture.md`, section 7); the code is in the history of git (`history.md`, step 48).
-
 ### 2.4a `pdf/`: reading PDFs
 
 `poppler.rs`: the number of pages and the title of a PDF (`pdfinfo`), and the text of a range of pages (`pdftotext`), the PDF given on the standard input, never through a shell. It uses nothing of the program; the loading of the documents of a standard (`views/converter/standard_documents/load.rs`) reads a document part by part with it, reports every part and can stop between them.
 
 ### 2.5 `security/`
 
-`random.rs` (random bytes from the kernel) and `process.rs` (no memory dumps of the process). The TPM factor (`tpm/`) was removed in step 48.
+`random.rs` (random bytes from the kernel) and `process.rs` (no memory dumps of the process).
 
 ### 2.5a `installation/`: the installation, the account, the session
 
-The core of the protection (moved from `business/` in step 42, unchanged): the first start and every later start (`lifecycle.rs`), the check before the window opens (`verify.rs`, called by `main.rs`), the account with the keys of its database (`accounts.rs`: the password through Argon2id), and the session of the logged-in evaluator (`session.rs`: the account and the database opened once at the login). It uses `db/`, `security/` and `model/`; the window (`app/state.rs`) and the views use it.
-
-### 2.6 `business/` (removed in step 42)
-
-Until step 42 the business logic was a folder of its own, as resources and operations named after REST verbs; the commands of `tauri_ui/` called it. Both are replaced by the commands of the elements (section 2.9). Where its parts went: the catalogs and their editor to `views/evaluation_plan/catalog_editor/` (the changes of a catalog in memory to `model/oscal/catalog/`, the new UUIDs and times to `db/oscal/ids.rs`, a new catalog to `views/evaluation_plan/new_catalog/made.rs`), the loading of PDFs to `views/evaluation_plan/standard_documents/`, the chat to `views/chat/conversation/`, the installation and the session to `installation/` (the parts of `views/evaluation_plan/` named here moved to `views/converter/` in step 50).
+The core of the protection: the first start and every later start (`lifecycle.rs`), the check before the window opens (`verify.rs`, called by `main.rs`), the account with the keys of its database (`accounts.rs`: the password through Argon2id), and the session of the logged-in evaluator (`session.rs`: the account and the database opened once at the login). It uses `db/`, `security/` and `model/`; the window (`app/state.rs`) and the views use it.
 
 ### 2.7 `app/`: what the whole window shares
 
-Named `tauri_ui/` until step 43 (2026-10-23), its types `UiState` and `UiError` until 43.2: it is no interface, but what every view uses, as the session and the error handling of a web framework.
+It is no interface, but what every view uses, as the session and the error handling of a web framework.
 
 ```text
 state.rs        the installation, the session of the evaluator, the stop signals; nothing else
@@ -146,18 +135,16 @@ serializer/     how an error reaches the page (serde)
 ```text
 ui/src/views/<view>/  the views: the view and one component per element, named as the folders
                       of src/views/ (Chat.svelte, ChatList.svelte, Conversation.svelte)
-ui/src/lib/api/<view>/<element>.ts
-                      the commands of one element as typed functions; the types mirror its view.rs
+ui/src/lib/api/<view>.ts
+                      the commands of one view as typed functions, named as the commands; the types
+                      mirror the view.rs of its elements
 ui/src/lib/api/errors.ts
                       the error of a command, as app/serializer/error_view.rs sends it
 ui/src/components/<component>/
                       the components: one folder each, with its Svelte component and what only
                       it uses (pdf_viewer/: PdfViewer.svelte, and pdf.ts, the code of pdf.js)
 ui/src/lib/api/components/<component>.ts
-                      the commands of one component, as those of an element
-ui/src/views/evaluation_lab/
-                      the view Evaluation lab: a placeholder until step 41.5 (no folder in src/views/
-                      yet: it has no element and no command)
+                      the commands and the types of one component (block_node.ts, ai_work.ts: types only)
 ui/src/styles/        the style, one sheet per part of the window, in the order of the cascade
                       (style.css lists them)
 ```
@@ -185,8 +172,8 @@ The modules of a view are declared in the map of `main.rs`; its flow of data is 
 - **A command does its work with the folders below** (`model/`, `db/`, `ai/`, `pdf/`), never through a layer in between. What two elements need goes down to those folders; what only joins them for one view is a file of the view.
 - **The flow between elements goes through the owner of the data:** an element that changed data gets back its own data and tells the view; the element that shows the data reads it again with its own command (Settings: a connection is saved, the list of connections reads again).
 - **Commands run off the thread of the window:** `#[tauri::command(async)]` on a plain function runs it on a thread of the runtime of Tauri: the work of milliseconds (the database) and Argon2id at the login. A work that waits for the model is an `async fn` command that awaits `ai/api/` (the chat, the AI of the editor of a catalog); the reading of PDFs runs on the threads for blocking work (`spawn_blocking`, `views/converter/standard_documents/load.rs`).
-- **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`) through a `Channel` of Tauri, stop on the stop signal of `app/state.rs`, and hold no lock of the session while they wait for files or for the model.
-- **Documents of OSCAL** (step 41, `docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction (`db/oscal/`); the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
+- **Long works** (the loading of PDFs, the AI of the editor of a catalog, a message of the chat, the works of the AI of the Evaluation plan and the Evaluation lab) report their progress as an enum of their own (`LoadEvent`, `BuildEvent`, `ReplyEvent`, `AiEvent` of the component `ai_work`) through a `Channel` of Tauri, stop on the stop signal of `app/state.rs`, and hold no lock of the session while they wait for files or for the model.
+- **Documents of OSCAL** (`docs/oscal.md`): every change is made on the document read from the database, checked against the schema of NIST and written back at once, in one transaction (`db/oscal/`); the page always gets the document as stored. What the program adds (quotes, proposals of the AI) is the evaluation support, in tables of its own, linked by UUID and id.
 - **Tests call a command as the page does**: by name, with JSON, through the IPC of Tauri, in a window of its mock runtime (`views/test_support.rs`, the feature `test` of Tauri), on a real installation in a temporary folder.
 - No `mod.rs` and no file that only declares modules: the modules of the views and their elements are written in the map of `main.rs` (steps 45 and 46).
 
@@ -227,14 +214,14 @@ model/                     The data of the program as plain Rust types, and the 
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
   own_requirement.rs           A requirement of the laboratory's own, outside the standards (step 51.1e
-  work_package.rs              A work package of a master project (step 51.5): the tasks delegated
-                                 to one evaluator; a task in one package at most.
+  recovery_code.rs             The recovery code of a forgotten password (step 49): 160 random bits
   task_scheme.rs               The scheme of a task of a master project (step 51.2), the template of the
                                  outputs of a project and the first scheme of a new task (step 51.3): its blocks
-  recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/todo.md): 160
+  work_package.rs              A work package of a master project (step 51.5): the tasks delegated
+                                 to one evaluator; a task in one package at most.
   oscal.rs/                    The documents of NIST OSCAL (Open Security Controls Assessment
-    assessment_plan.rs           An OSCAL assessment plan: the evaluation plan (function a of
-    assessment_results.rs        OSCAL assessment results: the evaluation (function b of
+    assessment_plan.rs           An OSCAL assessment plan: the controls and objectives reviewed, the
+    assessment_results.rs        OSCAL assessment results: observations (the evidence), findings per
     catalog.rs/                  An OSCAL catalog: the requirements (controls) of a standard, in
       edit.rs                      The changes of a catalog in memory: a group or a control added,
       tree.rs                      Where the objects of a catalog are, and the walk through all of them,
@@ -394,7 +381,6 @@ installation/              The installation of this Linux account, its one user 
   accounts.rs                  The accounts of the evaluators: creating them, logging in, and
   lifecycle.rs                 The life of an installation: the first start, every later
   session.rs                   The logged-in evaluator (step 40): their account, their database,
-  uninstall.rs                 (not compiled: "DO NOT USE: TO BE REWORKED", step 12)
   verify.rs                    The check of the installation at the start of the program.
 security/                  The building blocks of protection: random numbers from the system,
   process.rs                   The protection of the memory of the process: no memory dumps.

@@ -1,6 +1,6 @@
 //! The routes of the window: the list of every command the page may
 //! call, as `urls.py` of Django lists the views (step 43 of
-//! docs/todo.md). It is above `views/`, which it names, and below
+//! docs/history.md). It is above `views/`, which it names, and below
 //! `main.rs`, which gives it to the window; the tests of the commands use
 //! the same list (`views/test_support.rs`), so there is one list only.
 //!

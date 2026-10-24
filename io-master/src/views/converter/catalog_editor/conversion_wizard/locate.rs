@@ -1,5 +1,5 @@
 //! Where every group of a catalog starts in its document (step 50.2 of
-//! docs/todo.md): the heading of each group whose controls are read (the
+//! docs/history.md): the heading of each group whose controls are read (the
 //! groups that hold no group) is looked for in the text of the pages after
 //! the table of contents, in the order of the document, as the quotes are
 //! checked (`model/standards/quote.rs`). The program finds the pages itself;

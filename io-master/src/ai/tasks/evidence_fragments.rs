@@ -1,5 +1,5 @@
 //! The task `evidence_fragments` of the AI (role *text analysis*, step 52 of
-//! docs/todo.md): the question with the requirement word for word, what an
+//! docs/history.md): the question with the requirement word for word, what an
 //! input expects and a part of a piece of its evidence
 //! (`evidence_text.rs`); the answer gives the fragments that matter for the
 //! requirement: exact quotes with their pages, and a note apart. The

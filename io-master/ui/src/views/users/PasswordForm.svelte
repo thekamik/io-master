@@ -3,7 +3,7 @@
   command password_form_change in src/views/users/users.rs). The passwords are
   cleared from the page as soon as they were sent. A change of the password
   makes a new recovery code, shown here once; the old one stops working (step
-  49 of docs/todo.md).
+  49 of docs/history.md).
 -->
 <script lang="ts">
   import RecoveryCode from "../../components/recovery_code/RecoveryCode.svelte";

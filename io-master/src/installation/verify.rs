@@ -16,7 +16,7 @@
 //! The location is the usual data directory, and the state is told by
 //! the system database alone (`lifecycle::open`). (The keyring of the
 //! Linux account planned for both was dropped in step 48 of
-//! docs/todo.md.)
+//! docs/history.md.)
 
 use std::fmt;
 use std::path::PathBuf;

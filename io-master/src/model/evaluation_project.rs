@@ -1,4 +1,4 @@
-//! The master project of an evaluation (step 51 of docs/todo.md): the
+//! The master project of an evaluation (step 51 of docs/history.md): the
 //! catalogs of a standard and all its tasks, each a whole requirement (a
 //! control of a catalog). It is made once for a version of a standard and
 //! used again and again; the packages handed to the evaluators are taken

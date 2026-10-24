@@ -1,4 +1,4 @@
-//! The data of the related elements of a task (step 51.4 of docs/todo.md),
+//! The data of the related elements of a task (step 51.4 of docs/history.md),
 //! as the page gets it: every element with its requirement read from its
 //! catalog, the reason of the AI, and whether it is only proposed.
 

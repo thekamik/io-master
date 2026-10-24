@@ -2,7 +2,7 @@
   The component "recovery code" (src/components/recovery_code/): the recovery
   code of a forgotten password, shown once, after the setup, after a change or
   a recovery of the password and after "Make a new recovery code" (step 49 of
-  docs/todo.md). The evaluator confirms that it was written down by typing one
+  docs/history.md). The evaluator confirms that it was written down by typing one
   of its groups; only then can they go on (onconfirmed), and the code is
   forgotten with the component. Presentation only; no command. It is the one
   secret the page ever shows (CLAUDE.md, "State lives in the core").

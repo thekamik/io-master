@@ -1,5 +1,5 @@
 //! The conversion of the documents of a standard (PDF) into a catalog of
-//! OSCAL, led step by step (step 50.2 of docs/todo.md): where a conversion
+//! OSCAL, led step by step (step 50.2 of docs/history.md): where a conversion
 //! is, the pages of its table of contents, and the pages and the state of
 //! every group whose controls the AI reads. Plain data and its rules; it is
 //! stored by `db/conversion/`, linked to its catalog by the UUID, and never

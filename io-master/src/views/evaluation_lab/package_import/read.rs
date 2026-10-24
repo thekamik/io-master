@@ -1,5 +1,5 @@
 //! A file of a work package read for the Evaluation lab (step 52 of
-//! docs/todo.md): its format and version checked, our part turned into a
+//! docs/history.md): its format and version checked, our part turned into a
 //! `Package` of `model/evaluation.rs` (checked by its rules), and its
 //! attachments read as documents of OSCAL (checked against the schema of
 //! NIST). The format is written by the Evaluation plan

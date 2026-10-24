@@ -1,5 +1,5 @@
 //! The requirements given to the AI for a choice (step 51.4 of
-//! docs/todo.md): the tasks of a project (`requirement_choice.rs`) and the
+//! docs/history.md): the tasks of a project (`requirement_choice.rs`) and the
 //! related elements of a task (`related_elements.rs`). Each requirement is
 //! shown word for word under a short reference ("r1", "r2", ...), never its
 //! id alone, since two catalogs may use one id; the list is cut into parts

@@ -1,5 +1,5 @@
 //! The data of the tasks the AI proposes for a master project (step 51.4 of
-//! docs/todo.md), as the page gets it: every proposal with its requirement
+//! docs/history.md), as the page gets it: every proposal with its requirement
 //! read from its catalog, and the reason of the AI.
 
 use serde::Serialize;

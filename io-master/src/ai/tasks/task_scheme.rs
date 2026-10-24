@@ -1,5 +1,5 @@
 //! The task `task_scheme` of the AI (role *text analysis*, step 51.3 of
-//! docs/todo.md): the question with a requirement word for word, the scope
+//! docs/history.md): the question with a requirement word for word, the scope
 //! of the evaluation and the blocks of the scheme of its task, and the
 //! reading of the answer: the inputs the AI proposes and its corrections of
 //! the blocks already there. The planner accepts or rejects every one

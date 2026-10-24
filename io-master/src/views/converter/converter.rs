@@ -1,6 +1,6 @@
 //! The entry of the view Converter: the conversion of the documents of a
 //! standard (PDF) into a catalog of OSCAL with the help of the AI, its only
-//! aim (step 50 of docs/todo.md; page: `ui/src/views/converter/`, its
+//! aim (step 50 of docs/history.md; page: `ui/src/views/converter/`, its
 //! commands in `ui/src/lib/api/converter.ts`). The PDFs are loaded,
 //! searched and shown in the viewer of a standard (`components/pdf_viewer/`);
 //! a catalog is made from them and opens in its editor

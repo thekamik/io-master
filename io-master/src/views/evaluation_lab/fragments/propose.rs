@@ -1,5 +1,5 @@
 //! The AI proposes the fragments of the evidence of an input (step 52 of
-//! docs/todo.md): every piece of its evidence, part by part
+//! docs/history.md): every piece of its evidence, part by part
 //! (`ai/tasks/evidence_text.rs`), one question of the task
 //! `evidence_fragments` per part through `ai/api/`. The program looks for
 //! every quote in the evidence (`quote_found`) and keeps it with the answer;

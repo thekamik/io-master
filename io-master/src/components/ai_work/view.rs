@@ -1,5 +1,5 @@
 //! The events of a work of the AI, as the page gets them (steps 51.3, 51.4
-//! and 52 of docs/todo.md): the proposals of the Evaluation plan, the
+//! and 52 of docs/history.md): the proposals of the Evaluation plan, the
 //! fragments, the assessment and the outputs of the Evaluation lab.
 
 use serde::Serialize;

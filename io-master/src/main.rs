@@ -27,7 +27,7 @@ mod checks;
 // (docs/code_structure.md, section 1; checked by architecture_tests.rs).
 // The comment of a group says which part of the project it is; what each
 // file holds is said at its functions. Since steps 45 and 46 of
-// docs/todo.md every module is written here, except those of a file with code
+// docs/history.md every module is written here, except those of a file with code
 // that has modules of its own (model/oscal.rs), which declares them itself.
 
 // model/: the data of the program as plain Rust types and the rules of
@@ -258,8 +258,6 @@ mod pdf {
 
 // installation/: the installation of this Linux account, its one user and
 // the session of that user: the core of the protection of the program.
-// uninstall.rs is not compiled ("DO NOT USE: TO BE REWORKED", step 12 of
-// docs/todo.md).
 mod installation {
     pub mod accounts;
     pub mod lifecycle;
@@ -310,7 +308,7 @@ mod components {
     }
     // components/recovery_code/: the recovery code, shown once after the
     // setup, a change or a recovery of the password, and a new code (step 49
-    // of docs/todo.md). No command: the commands of the view Users give it.
+    // of docs/history.md). No command: the commands of the view Users give it.
     pub mod recovery_code {
         pub mod view;
     }
@@ -326,7 +324,7 @@ mod components {
 
 // views/: the views of the window, one folder per view. The entry of a view
 // is the file of its name in its folder: every command the page calls for
-// it (step 46 of docs/todo.md); the folders of its elements around it hold
+// it (step 46 of docs/history.md); the folders of its elements around it hold
 // their data and logic. The entry has the name of its folder, so its
 // module has the name of its parent: clippy's `module_inception` is
 // allowed there, on purpose.

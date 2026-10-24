@@ -1,4 +1,4 @@
-//! The AI drafts the text of an output (step 52 of docs/todo.md): one
+//! The AI drafts the text of an output (step 52 of docs/history.md): one
 //! question of the task `output_draft` through `ai/api/`, with the four
 //! results and the verdict the evaluator decided, as the output asks (its
 //! target, format and instructions). Only an output whose condition holds

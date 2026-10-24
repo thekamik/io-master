@@ -1,4 +1,4 @@
-//! The report of an evaluation (step 52 of docs/todo.md): the result of the
+//! The report of an evaluation (step 52 of docs/history.md): the result of the
 //! work of the evaluator, exported out of the program (user, 2026-10-24).
 //! One file for every output (by its name and format): the accepted texts
 //! of that output, task by task in the order of the package, for the tasks

@@ -1,5 +1,5 @@
 // pdf.js of Mozilla for the viewer of standards (step 18 of
-// docs/todo.md): the page of a PDF drawn on a canvas, with a layer of
+// docs/history.md): the page of a PDF drawn on a canvas, with a layer of
 // its text above it, in which a quote is highlighted and from which
 // text is selected.
 //

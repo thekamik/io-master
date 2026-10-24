@@ -1,4 +1,4 @@
-//! Evidence delivered for an input (step 52 of docs/todo.md): a PDF (its
+//! Evidence delivered for an input (step 52 of docs/history.md): a PDF (its
 //! text read page by page with Poppler), a text file, or a text pasted by
 //! the evaluator. The bytes are kept exactly as delivered; the text is what
 //! the AI reads and where the quotes of the fragments are looked for.

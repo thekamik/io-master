@@ -1,5 +1,5 @@
 //! A connection to an AI service, as the evaluator sets it up on the
-//! tab AI of Settings (step 15 of `docs/todo.md`), and the rules it must
+//! tab AI of Settings (step 15 of `docs/history.md`), and the rules it must
 //! keep.
 //!
 //! The program knows no provider. Everything about the service is in

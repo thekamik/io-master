@@ -1,4 +1,4 @@
-//! An evaluation of the Evaluation lab (step 52 of docs/todo.md): a work
+//! An evaluation of the Evaluation lab (step 52 of docs/history.md): a work
 //! package imported from the Evaluation plan and carried out for one
 //! product. The tasks, their schemes and their related elements are a frozen
 //! copy of the package; what the evaluator adds is the evidence of the

@@ -1,7 +1,8 @@
-//! OSCAL assessment results: the evaluation (function b of
-//! docs/oscal.md): observations (the evidence), findings per objective,
-//! risks, and the log of the assessment. Typed further in step 41.5;
-//! until then its parts are kept as they come.
+//! OSCAL assessment results: observations (the evidence), findings per
+//! objective, risks, and the log of the assessment. Imported, checked,
+//! kept and exported as a document (docs/oscal.md, section 1); the
+//! evaluation of the program is its own model (the Evaluation lab), so
+//! its parts are kept as they come.
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

@@ -1,5 +1,5 @@
 //! The AI finds the elements of the other catalogs of a project related to
-//! the requirement of a task (step 51.4 of docs/todo.md): the work units of
+//! the requirement of a task (step 51.4 of docs/history.md): the work units of
 //! the CEM, the test cases of a test specification, ... It reads the
 //! requirement and the elements not related yet, part by part
 //! (`ai/tasks/candidates.rs`), one question of the task `related_elements`

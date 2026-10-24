@@ -1,5 +1,5 @@
 //! The AI proposes the inputs of the scheme of a task and corrections of
-//! its blocks (step 51.3 of docs/todo.md): one question of the task
+//! its blocks (step 51.3 of docs/history.md): one question of the task
 //! `task_scheme` through `ai/api/`, written into the journal of the AI. The
 //! proposals left undecided are removed first; what the AI proposes is
 //! stored as proposals (dashed blocks, corrections beside their blocks),

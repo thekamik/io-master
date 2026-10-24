@@ -1,5 +1,5 @@
 //! The task `input_chat` of the AI (role *consultation*, step 52 of
-//! docs/todo.md): the chat of an input of the Evaluation lab. The first
+//! docs/history.md): the chat of an input of the Evaluation lab. The first
 //! message gives the model the instructions, the requirement word for word,
 //! what the input expects and the start of its evidence
 //! (`evidence_text::excerpt`); then the conversation so far (its last

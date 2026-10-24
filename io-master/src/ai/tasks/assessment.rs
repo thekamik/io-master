@@ -1,5 +1,5 @@
 //! The task `assessment` of the AI (role *formal analysis*, step 52 of
-//! docs/todo.md): the agent of a requirement. The question holds the
+//! docs/history.md): the agent of a requirement. The question holds the
 //! requirement word for word, what the planner asks to check, and **only
 //! the fragments the evaluator accepted**, by input (decisions of the user,
 //! 2026-10-17); the answer gives the four results and a verdict proposed,

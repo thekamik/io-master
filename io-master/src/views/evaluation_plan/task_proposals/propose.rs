@@ -1,5 +1,5 @@
 //! The AI proposes the tasks of a master project (step 51.4 of
-//! docs/todo.md): it reads the scope of the project and the requirements of
+//! docs/history.md): it reads the scope of the project and the requirements of
 //! one of its catalogs that are no task yet, part by part
 //! (`ai/tasks/candidates.rs`), one question of the task `requirement_choice`
 //! per part through `ai/api/`; the requirements it chooses are stored as

@@ -1,5 +1,5 @@
 //! The task `output_draft` of the AI (role *summary*, step 52 of
-//! docs/todo.md): the text of one output of a task, written from the four
+//! docs/history.md): the text of one output of a task, written from the four
 //! results and the verdict decided by the evaluator, as the output asks
 //! (its name, format, target and instructions: the template of the
 //! laboratory). The evaluator corrects and accepts it.

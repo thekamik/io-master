@@ -1,5 +1,5 @@
 //! The text of the evidence of an input as a question shows it (step 52 of
-//! docs/todo.md): every page under a line "=== Page N ===", word for word,
+//! docs/history.md): every page under a line "=== Page N ===", word for word,
 //! cut into parts of a bounded size by whole pages (a page is never cut).
 //! Shared by the chat of an input, the fragments and the assessment.
 

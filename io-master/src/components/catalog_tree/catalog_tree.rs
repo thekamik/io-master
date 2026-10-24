@@ -3,7 +3,7 @@
 //! recursion (page: `ui/src/components/catalog_tree/`, its command in
 //! `ui/src/lib/api/components/catalog_tree.ts`). Used by the editor of a
 //! catalog of the view Converter and by the browser of the standards of the
-//! view Evaluation plan (step 51.1 of docs/todo.md). The object chosen is
+//! view Evaluation plan (step 51.1 of docs/history.md). The object chosen is
 //! presentation, kept by the page.
 
 use tauri::State;

@@ -1,5 +1,5 @@
 //! The task `requirement_choice` of the AI (role *text analysis*, step 51.4
-//! of docs/todo.md): the question with the scope of a master project and a
+//! of docs/history.md): the question with the scope of a master project and a
 //! part of the requirements of one of its catalogs (`candidates.rs`); the
 //! answer, read by `candidates::read_choices`, names the requirements to
 //! evaluate, each with its reason. The planner accepts or rejects each

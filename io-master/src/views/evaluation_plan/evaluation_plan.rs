@@ -1,7 +1,7 @@
 //! The entry of the view Evaluation plan: it works only on the documents of
 //! OSCAL (page: `ui/src/views/evaluation_plan/`, its commands in
 //! `ui/src/lib/api/evaluation_plan.ts`): the master projects (step 51 of
-//! docs/todo.md), each a list of tasks, every task a whole requirement of one
+//! docs/history.md), each a list of tasks, every task a whole requirement of one
 //! of its catalogs, chosen in a browser of the standards; and the documents
 //! of OSCAL (the list, the import, the export, the deletion). The catalogs
 //! are made from the PDFs of a standard in the view Converter
@@ -966,7 +966,7 @@ pub async fn work_packages_export<R: Runtime>(
 }
 
 /// The scheme of task `task`: its requirement as the standard writes it,
-/// its blocks and connections (step 51.2 of docs/todo.md).
+/// its blocks and connections (step 51.2 of docs/history.md).
 ///
 /// Called by the page: `TaskScheme.svelte`, when a task opens and after a
 /// change (`evaluationPlan.taskSchemeGet(task)`).

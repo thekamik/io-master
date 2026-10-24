@@ -1,4 +1,4 @@
-//! The export of a work package (step 51.5 of docs/todo.md, format b of the
+//! The export of a work package (step 51.5 of docs/history.md, format b of the
 //! user, 2026-10-24): one JSON file with our format and, as attachments, the
 //! documents of OSCAL it points to, whole and unchanged. A picture of the
 //! state at the moment of the export; the import is the work of the

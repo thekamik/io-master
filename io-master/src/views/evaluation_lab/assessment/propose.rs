@@ -1,5 +1,5 @@
 //! The agent of a requirement proposes its four results and a verdict (step
-//! 52 of docs/todo.md): one question of the task `assessment` (role
+//! 52 of docs/history.md): one question of the task `assessment` (role
 //! *formal analysis*) through `ai/api/`, with the requirement, what the
 //! planner asks to check and **only the fragments the evaluator accepted**,
 //! listed by input (decisions of the user, 2026-10-17). The proposal is kept

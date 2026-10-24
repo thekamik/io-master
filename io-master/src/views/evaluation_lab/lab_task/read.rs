@@ -1,5 +1,5 @@
 //! The screen of a task of an evaluation read for the page (step 52 of
-//! docs/todo.md): the frozen scheme and related elements, the requirement
+//! docs/history.md): the frozen scheme and related elements, the requirement
 //! from its catalog, and what the evaluator added (`db/evaluation/`). Every
 //! command that changes a task answers with it, so the page always shows
 //! what the program keeps.

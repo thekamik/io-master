@@ -1,5 +1,5 @@
 //! The tables of the master projects of the evaluations
-//! (`model/evaluation_project.rs`, step 51 of docs/todo.md), in the database
+//! (`model/evaluation_project.rs`, step 51 of docs/history.md), in the database
 //! of an evaluator. **Protection: encrypted by SQLCipher** with the key of the
 //! database of the evaluator (`db/encryption/`). Linked to the catalogs of
 //! OSCAL only by their UUIDs and the ids of their controls; nothing here is

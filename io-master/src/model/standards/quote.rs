@@ -2,7 +2,7 @@
 //!
 //! Every requirement keeps the passages of the standard it comes from
 //! (the evaluation support of step 41). A passage is a quote: text copied from a page,
-//! by hand or by the AI (step 20 of `docs/todo.md`). The program checks
+//! by hand or by the AI (step 20 of `docs/history.md`). The program checks
 //! that the quote really is on that page, so that a passage the AI
 //! made up is never taken for a part of the standard.
 //!

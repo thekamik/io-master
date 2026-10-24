@@ -1,4 +1,4 @@
-//! The scheme of a task of a master project (step 51.2 of docs/todo.md):
+//! The scheme of a task of a master project (step 51.2 of docs/history.md):
 //! the blocks the evaluator meets in the Evaluation lab, as the planner
 //! designs them. A task starts with only the block of its requirement
 //! (inherited from OSCAL); the planner adds inputs (what the evaluator

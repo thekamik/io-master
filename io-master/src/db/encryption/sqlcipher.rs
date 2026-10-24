@@ -27,7 +27,7 @@
 //! | cache of pages | 2 MiB (`cache_size = -2048`): only the pages a query reads are decrypted, and few are kept |
 //!
 //! The memory: decrypted data is only in RAM, and only what the queries of
-//! the moment read (step 47 of docs/todo.md, user 2026-10-23); the file
+//! the moment read (step 47 of docs/history.md, user 2026-10-23); the file
 //! on the disk is always encrypted, so a cut of the power leaves nothing
 //! readable.
 //!

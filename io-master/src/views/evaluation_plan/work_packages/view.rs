@@ -1,5 +1,5 @@
 //! The data of the work packages of a master project (step 51.5 of
-//! docs/todo.md), as the page gets it and sends it.
+//! docs/history.md), as the page gets it and sends it.
 
 use serde::{Deserialize, Serialize};
 

@@ -28,7 +28,7 @@
 //! migrations.rs the changes of the layout, by version
 //! ```
 //!
-//! Each step of `docs/todo.md` that keeps data of an evaluator adds
+//! Each step that keeps data of an evaluator adds
 //! its own tables. Tables are created with `IF NOT EXISTS` when the
 //! database is opened, so a database made by an earlier version
 //! gets the tables it lacks; other changes of the layout are the steps

@@ -1,5 +1,5 @@
 //! The data of the template of the outputs of a master project ("Standard
-//! outputs", step 51.3 of docs/todo.md), as the page gets it and sends it.
+//! outputs", step 51.3 of docs/history.md), as the page gets it and sends it.
 
 use serde::{Deserialize, Serialize};
 

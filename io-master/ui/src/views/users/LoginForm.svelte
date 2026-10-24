@@ -2,7 +2,7 @@
   The element "login form" of the view Users (its commands login_form_log_in
   and login_form_recover in src/views/users/users.rs). "I do not remember my
   password" switches it to the recovery: the recovery code and a new password;
-  then the new code is shown once (step 49 of docs/todo.md). When the
+  then the new code is shown once (step 49 of docs/history.md). When the
   evaluator is logged in it tells the application (ondone), which reads the
   state of the program again. Which of the two forms is shown is presentation.
 -->
