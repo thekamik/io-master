@@ -77,6 +77,7 @@ Legend: `[ ]` to do, `[x]` done.
 - **The AI only proposes; the planner approves** (P1). The AI has to understand the text and find elements such as the work units; the structure of OSCAL helps the machine.
 - **The evaluator sees a scheme exactly as the planner made it**: several inputs of the planner are several inputs for the evaluator; the same blocks, connections and layout.
 - **A requirement may have many inputs** (a fragment of the Security Target, the output of a program, a fragment of the documentation, ...).
+- **What the evaluator delivers to an input is kept exactly as delivered, the raw data** (the file as it was, the output of the program, the conversation), **and beside it, as an addition, the interpretation of the AI** (user, 2026-10-24). The interpretation never replaces the raw data: the assessment can always go back to what was delivered (P3, P5).
 - **The format of the export (user, 2026-10-24: variant b):** the standard (its catalogs of OSCAL) travels as an **attachment**; **our format holds the list of the requirements (the evaluation tasks) with the information of their schemes**, linked to the catalogs by their ids and UUIDs.
 - **Names:** `evaluation_task` (zadanie ewaluacji) in the code and the documents; it does not clash with the tasks of the AI (`ai/api/tasks`).
 - **The file is not locked by a signature of its author**; a project is changed only in the view Evaluation plan and carried out only in the view Evaluation lab.
