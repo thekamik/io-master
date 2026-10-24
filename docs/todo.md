@@ -60,6 +60,8 @@ Legend: `[ ]` to do, `[x]` done.
 
 The key of the database is wrapped a second time, with a random recovery code (160 bits, groups of characters without 0, O, 1, I, with a check sum), the mechanism of BitLocker, FileVault and LUKS: no server.
 
+**Decision of the user (2026-10-24):** the first recovery code is made **automatically when the user is created** and shown right after the setup, before the program opens, as programs of this kind do; it is not something the evaluator has to find in the settings.
+
 **Tasks**
 - [ ] `db/encryption/keys.rs`: the wrapping with the recovery code (HKDF, AES-256-GCM, its own purpose of HKDF); the code made, written and read as text with its check sum (`model/`).
 - [ ] `system.db`: the second copy of the key (columns of its own; a migration of the system database, its first).
