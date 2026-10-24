@@ -6,14 +6,16 @@
   catalog.
 
   With `onquote`, text selected in the page can be taken as a quote
-  (document, page and the selected text).
+  (document, page and the selected text). With `embedded` it is drawn in
+  its place in the screen, not above it, and follows the page and the quote
+  it is given (the screen of a task, where the standard stays visible).
 
   It reads the documents it can show and the PDF itself (from the
   encrypted database of the program); pdf.js, built into the window,
   draws the page. The page, the zoom and the selection are presentation.
 -->
 <script lang="ts">
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import type { PDFDocumentProxy } from "pdfjs-dist";
 
   import { sentence } from "../../lib/api/errors";
@@ -26,12 +28,14 @@
     quote = "",
     onquote,
     onclose,
+    embedded = false,
   }: {
     documentId: number;
     page?: number;
     quote?: string;
     onquote?: (source: { document_id: number; page: number; quote: string }) => void;
-    onclose: () => void;
+    onclose?: () => void;
+    embedded?: boolean;
   } = $props();
 
   // The page shown; starts at the page asked for.
@@ -104,6 +108,21 @@
     };
   });
 
+  // Embedded, the viewer follows the page and the quote it is given; the
+  // first run is the opening, which onMount draws.
+  let opened = false;
+
+  $effect(() => {
+    const next = { document: documentId, page, quote };
+
+    if (!opened) {
+      opened = true;
+      return;
+    }
+
+    untrack(() => go(next));
+  });
+
   async function go(change: Partial<typeof shown>) {
     shown = { ...shown, ...change };
     await tick();
@@ -132,7 +151,7 @@
   }
 
   function keydown(event: KeyboardEvent) {
-    if (event.key === "Escape") {
+    if (event.key === "Escape" && !embedded && onclose) {
       onclose();
     }
   }
@@ -140,8 +159,7 @@
 
 <svelte:window onkeydown={keydown} onmouseup={select} />
 
-<div class="overlay" role="presentation" onclick={(event) => event.target === event.currentTarget && onclose()}>
-  <div class="viewer" role="dialog" aria-label="The viewer of a standard">
+{#snippet viewer()}
     <header class="viewer-bar">
       <select value={shown.document} onchange={(event) => go({ document: Number(event.currentTarget.value), page: 1, quote: "" })}>
         {#each documents as document (document.id)}
@@ -172,7 +190,7 @@
         <button type="button" onclick={() => zoom(0.2)}>+</button>
       </div>
 
-      <button type="button" class="ghost" onclick={onclose}>Close</button>
+      {#if onclose}<button type="button" class="ghost" onclick={onclose}>Close</button>{/if}
     </header>
 
     {#if shown.quote}
@@ -194,5 +212,12 @@
         <button type="button" class="primary" onclick={take} disabled={!selected}>Use as a quote</button>
       </footer>
     {/if}
+{/snippet}
+
+{#if embedded}
+  <div class="viewer embedded" aria-label="The viewer of a standard">{@render viewer()}</div>
+{:else}
+  <div class="overlay" role="presentation" onclick={(event) => event.target === event.currentTarget && onclose?.()}>
+    <div class="viewer" role="dialog" aria-label="The viewer of a standard">{@render viewer()}</div>
   </div>
-</div>
+{/if}

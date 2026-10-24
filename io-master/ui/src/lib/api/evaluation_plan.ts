@@ -79,6 +79,43 @@ export interface RequirementView {
   own: OwnRequirement | null;
 }
 
+// task_scheme/view.rs
+export type BlockKind = "requirement" | "input" | "output";
+export type OutputFormat = "text" | "latex";
+export type OutputCondition = "always" | "not_met" | "met";
+
+/** A block of the scheme of a task. */
+export interface BlockView {
+  uuid: string;
+  kind: BlockKind;
+  x: number;
+  y: number;
+  name: string;
+  evidence: string;
+  instructions: string;
+  target: string;
+  format: OutputFormat;
+  condition: OutputCondition;
+}
+
+/** The fields of a block, as the page sends them. */
+export interface BlockForm {
+  name: string;
+  evidence: string;
+  instructions: string;
+  target: string;
+  format: OutputFormat;
+  condition: OutputCondition;
+}
+
+/** The scheme of a task. */
+export interface SchemeView {
+  task: TaskView;
+  requirement: RequirementView;
+  blocks: BlockView[];
+  connections: { from: string; to: string }[];
+}
+
 // own_requirement/view.rs
 /** A requirement of the laboratory's own; its identifier is the planner's. */
 export interface OwnRequirement {
@@ -215,4 +252,39 @@ export function ownRequirementSave(id: string, requirement: OwnRequirement): Pro
 /** Called by StandardBrowser.svelte, "Delete" of a requirement of the laboratory. */
 export function ownRequirementDelete(id: string): Promise<void> {
   return invoke("own_requirement_delete", { id });
+}
+
+/** Called by TaskScheme.svelte, when a task opens. */
+export function taskSchemeGet(task: string): Promise<SchemeView> {
+  return invoke("task_scheme_get", { task });
+}
+
+/** Called by TaskScheme.svelte, "+ Input" and "+ Output". */
+export function taskSchemeAddBlock(task: string, kind: "input" | "output", x: number, y: number): Promise<SchemeView> {
+  return invoke("task_scheme_add_block", { task, kind, x, y });
+}
+
+/** Called by BlockForm.svelte, "Save". */
+export function taskSchemeSaveBlock(block: string, fields: BlockForm): Promise<SchemeView> {
+  return invoke("task_scheme_save_block", { block, fields });
+}
+
+/** Called by TaskScheme.svelte, the end of a drag. */
+export function taskSchemeMoveBlock(block: string, x: number, y: number): Promise<void> {
+  return invoke("task_scheme_move_block", { block, x, y });
+}
+
+/** Called by BlockForm.svelte, "Remove". */
+export function taskSchemeRemoveBlock(block: string): Promise<SchemeView> {
+  return invoke("task_scheme_remove_block", { block });
+}
+
+/** Called by TaskScheme.svelte, a connection drawn. */
+export function taskSchemeConnect(from: string, to: string): Promise<SchemeView> {
+  return invoke("task_scheme_connect", { from, to });
+}
+
+/** Called by TaskScheme.svelte, a connection removed. */
+export function taskSchemeDisconnect(from: string, to: string): Promise<SchemeView> {
+  return invoke("task_scheme_disconnect", { from, to });
 }

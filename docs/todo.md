@@ -94,8 +94,8 @@ Legend: `[ ]` to do, `[x]` done.
   - **Phases of 51.2:**
     - [x] 51.2a the model (`model/task_scheme.rs`: the kinds, the formats and conditions of an output, the rules of the connections and the limits) and the tables `task_blocks`, `task_connections` in `db/evaluation_project/` (a new task gets its block of the requirement; a task and a project go with their schemes);
     - [x] 51.2b the seven commands `task_scheme_*` (get, add a block, save its fields, move it, remove it, connect, disconnect);
-    - [ ] 51.2c the page: the screen of a task with the drawing (Svelte Flow), the form of the block chosen, the standard always beside;
-    - [ ] 51.2d tried in the window; the documents.
+    - [x] 51.2c the page: the screen of a task with the drawing (Svelte Flow; `TaskScheme`, `BlockNode`, `SchemeFit`), the form of the block chosen (`BlockForm`), the standard always beside (the parts and, for a quote, the PDF in the embedded `PdfViewer`);
+    - [x] 51.2d tried in the window on a private display (2026-10-24): a task opens with only its requirement; inputs and outputs added, connected, a forbidden connection refused, the fields saved, a block moved and found in its place after the task is opened again, a connection and a block removed; `architecture.md`, section 12.
 - **The evaluator sees a scheme exactly as the planner made it**: several inputs of the planner are several inputs for the evaluator; the same blocks, connections and layout.
 - **A requirement may have many inputs** (a fragment of the Security Target, the output of a program, a fragment of the documentation, ...).
 - **What the evaluator delivers to an input is kept exactly as delivered, the raw data** (the file as it was, the output of the program, the conversation), **and beside it, as an addition, the interpretation of the AI** (user, 2026-10-24). The interpretation never replaces the raw data: the assessment can always go back to what was delivered (P3, P5).

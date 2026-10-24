@@ -378,7 +378,7 @@ the catalog and the pages (db/) ──prompt (ai/tasks/catalog_*.rs)──► th
 the tab Master projects ──► ProjectList ──project_list_get()──► the projects, the newest change first (db/evaluation_project/)
 ProjectList ──"New master project…"──► NewProject ──new_project_catalogs()──► the finished catalogs (db/conversion/)
      ──new_project_create(title, scope, catalogs)──► db/evaluation_project/ ──► "made" ──► the screen of the project
-the screen of a project:
+the screen of a project (the screen of a task in place of it while a task is open):
   ├─► ProjectForm ──project_form_get(uuid)──► title, scope, catalogs; ──project_form_save──► (a catalog with tasks stays)
   ├─► TaskList ──task_list_get(project)──► the tasks in order, each read from its catalog (db/oscal/)
   │     ──task_list_move(task, up) / task_list_remove(task)──► db/evaluation_project/
@@ -391,6 +391,18 @@ the screen of a project:
           "Requirements of the laboratory" (made at the first one, db/own_requirements/) ──► the catalog joins the
           project ──► a task at the end; ──own_requirement_save(id, …)──► changed for every project;
         ──own_requirement_delete(id)──► only while no task of any project points to it
+  └─► TaskList ──"open"(task)──► TaskScheme, the screen of a task (step 51.2), in place of the screen of the project
+TaskScheme ──task_scheme_get(task)──► the task, its requirement read from its catalog (parts, quotes), its blocks
+     and connections (db/evaluation_project/); a task with no block of its requirement gets one at the origin
+  ├─► the drawing (Svelte Flow, BlockNode): "+ Input" / "+ Output" ──task_scheme_add_block(task, kind, x, y)──►
+  │     a drag from the handle on the right of a block to the handle on the left of another
+  │     ──task_scheme_connect(from, to)──► only input → requirement, requirement → output; the rest refused
+  │     the end of a drag of a block ──task_scheme_move_block(block, x, y)──► only the last place is sent
+  │     a connection chosen ──task_scheme_disconnect(from, to)──►
+  ├─► BlockForm (the block chosen) ──task_scheme_save_block(block, fields)──► name, evidence, instructions,
+  │     target, format, condition; ──task_scheme_remove_block(block)──► with its connections (not the requirement)
+  └─► the standard, always beside: PartRows (component) and, for a quote, PdfViewer (component) at its page
+     every command answers with the whole scheme as stored; the page draws it again from that answer
 the tab OSCAL documents ──► OscalDocuments ──oscal_documents_get()──► the finished documents of OSCAL
 OscalDocuments ──oscal_documents_import / _export / _delete──► the dialog ──► checked against the schema of NIST ──► db/oscal/
      (a catalog a master project uses is not deleted)

@@ -2,7 +2,8 @@
   The element "list of tasks" of the view Evaluation plan (its commands
   task_list_get, task_list_move and task_list_remove in
   src/views/evaluation_plan/evaluation_plan.rs): the tasks of a master
-  project, each a whole requirement, in the order the planner gives them.
+  project, each a whole requirement, in the order the planner gives them; a
+  task opens its scheme (onopen).
   It reads them again when the project says they changed (version); after
   its own change it tells the project (onchanged).
 -->
@@ -14,7 +15,8 @@
     project,
     version,
     onchanged,
-  }: { project: string; version: number; onchanged: () => void } = $props();
+    onopen,
+  }: { project: string; version: number; onchanged: () => void; onopen: (task: string) => void } = $props();
 
   let tasks: evaluationPlan.TaskView[] = $state([]);
   let problem = $state("");
@@ -53,11 +55,11 @@
   <ol>
     {#each tasks as task, index (task.uuid)}
       <li>
-        <div class="task-text">
+        <button type="button" class="link task-text" onclick={() => onopen(task.uuid)}>
           <span class="object-id">{task.label}</span>
           {task.title || "(removed from its catalog)"}
           <span class="note">{task.catalog_title}</span>
-        </div>
+        </button>
         <div class="task-actions">
           <button
             type="button"

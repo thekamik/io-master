@@ -229,3 +229,117 @@ ul.wizard-groups .range input[type="number"] {
 .standard-browser blockquote.missing {
     border-left-color: var(--danger, #e06c75);
 }
+
+/* The screen of a task (views/evaluation_plan/TaskScheme.svelte): the
+   drawing of its scheme beside the form of a block and the standard. The
+   colours of the kinds of blocks and the blocks themselves (BlockNode.svelte). */
+.scheme-body {
+    display: grid;
+    grid-template-columns: minmax(28rem, 3fr) minmax(20rem, 2fr);
+    gap: 1rem;
+    align-items: start;
+}
+
+.scheme-canvas {
+    position: relative;
+    height: calc(100vh - 12rem);
+    min-height: 26rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--surface);
+}
+
+.scheme-tools {
+    position: absolute;
+    left: 0.75rem;
+    top: 0.6rem;
+    z-index: 5;
+    align-items: center;
+}
+
+.scheme-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    max-height: calc(100vh - 12rem);
+    overflow: auto;
+}
+
+.scheme-side > .card {
+    margin: 0;
+}
+
+.scheme-pdf {
+    height: 28rem;
+    flex-shrink: 0;
+}
+
+.tile.input {
+    --kind: #2f9e6b;
+}
+
+.tile.requirement {
+    --kind: #6d8bff;
+}
+
+.tile.output {
+    --kind: #e8590c;
+}
+
+.tile {
+    width: 15rem;
+    padding: 0.55rem 0.75rem 0.65rem;
+    font-size: 0.8rem;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--border-strong, var(--border));
+    border-left: 4px solid var(--kind);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.tile.selected {
+    box-shadow: 0 0 0 2px var(--kind), var(--shadow-raised);
+}
+
+.tile-head {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 0.2rem;
+}
+
+.tile-kind {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--kind);
+}
+
+.tile-id {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+}
+
+.tile-title {
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.svelte-flow__edge .svelte-flow__edge-path {
+    stroke-width: 1.8;
+}
+
+.svelte-flow__edge.selected .svelte-flow__edge-path {
+    stroke-width: 3.2;
+}
+
+.svelte-flow__handle {
+    width: 10px;
+    height: 10px;
+    background: var(--kind, var(--accent));
+    border: 2px solid var(--surface);
+}
