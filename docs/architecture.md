@@ -63,8 +63,8 @@ The first start is the real moment of installation. **It is told by the system d
 - The pages, in this order in the navigation:
   1. **Chat**: the AI assistant, over the active AI connection.
   2. **Converter** (step 50, 2026-10-24): the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI, its only aim: the PDFs loaded and searched, a catalog made from them, its editor where the AI proposes groups and controls and the evaluator accepts them (section 7.1).
-  3. **Evaluation plan**: works only on the documents of OSCAL, in two tabs: **Master projects** (step 51: a master project holds the catalogs of a standard and all its tasks, each a whole requirement chosen in a browser of the standards; made once for a version of a standard and used again and again; later each task gets its scheme of input, requirement and output blocks, and packages of tasks are handed to the evaluators) and **OSCAL documents** (the list, the import, the export, the deletion).
-  4. **Evaluation lab**: an evaluation plan carried out for one product, with what the manufacturer and the laboratory deliver (section 7.1; a placeholder until step 41.5, the documentation of the manufacturer with step 30).
+  3. **Evaluation plan**: works only on the documents of OSCAL, in two tabs: **Master projects** (step 51: a master project holds the catalogs of a standard and all its tasks, each a whole requirement chosen in a browser of the standards or proposed by the AI; made once for a version of a standard and used again and again; each task has its scheme of input, requirement and output blocks; packages of tasks are exported to the evaluators) and **OSCAL documents** (the list, the import, the export, the deletion).
+  4. **Evaluation lab** (step 52): a work package of the Evaluation plan imported and carried out for one product: the evidence of the inputs, the fragments accepted, the results and the verdict of every requirement, the texts of the outputs, and the report exported out of the program.
   5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password; later the recovery code (section 5.4), an optional second factor of the login and the removal of the installation.
   6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the backups and the removal of the installation).
 - **Logging in** with the name and the password; the keys of section 5.
@@ -452,4 +452,28 @@ ApiKey ──api_key_store(id, key) / api_key_delete(id)──► the key in the
 ConnectionCheck ──connection_check_run(id)──► ai/api/checks: one short question, written into the journal ──► the report
 ```
 
-**`evaluation_lab` (planned, step 41.5; open).** Its flow is drawn when its concept is settled; the tiles of the evidence are still open (section 10.2). What stands: the plan is handed over from `evaluation_plan`, what the AI proposes becomes a result of the assessment (OSCAL) only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3).
+**`evaluation_lab`** (step 52; entry `views/evaluation_lab/evaluation_lab.rs`, page `ui/src/views/evaluation_lab/`). A work package of the Evaluation plan carried out for one product. What the AI proposes becomes a result only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3). Nothing returns to the planner: the result is the report.
+
+```text
+EvaluationList ──evaluation_list_get()──► the evaluations with their progress (db/evaluation/)
+  ──package_import_import(product)──► the file chosen in a dialog of the system (package_import/read.rs): its format and
+    version, the package checked by the rules of the plan, the catalogs attached checked against the schema of NIST and
+    stored when missing ──► an evaluation: a frozen copy of the tasks, their schemes and related elements
+  ──evaluation_list_delete(uuid)──►
+EvaluationScreen ──lab_tasks_get(evaluation)──► the package, the product, the tasks and their state
+  ──lab_tasks_state(evaluation, task, progress)──► to do / in progress / done
+  ──report_export(evaluation)──► a folder chosen in a dialog ──► one file per output (report/export.rs): the accepted
+    texts, task by task, of the tasks whose verdict makes its condition hold (.txt or .tex)
+LabTask ──lab_task_get(evaluation, task)──► the scheme read only (LabScheme, the component BlockNode), the requirement
+  from its catalog, the related elements, the inputs, the results, the outputs; every command answers with the screen
+  ├─► InputPanel ──evidence_add_file / _add_note / _delete──► the evidence kept as delivered (a PDF read by page)
+  │     ──input_chat_send(…, onEvent) / _clear──► the task input_chat through ai/api/ (the requirement, the input, the
+  │       start of the evidence, the last messages) ──► the question and the answer kept
+  │     ──fragments_propose(…, onEvent)──► the task evidence_fragments, part by part ──► quotes looked for in the
+  │       evidence (found or not), a note apart ──fragments_accept / _remove / _add──► only accepted ones are assessed
+  ├─► RequirementPanel ──assessment_propose(…, onEvent)──► the task assessment (formal analysis) on the accepted
+  │     fragments only ──► four results and a verdict proposed ──assessment_accept / _reject / _save──► the evaluator decides
+  └─► OutputPanel (only when its condition holds for the verdict) ──outputs_draft(…, onEvent)──► the task output_draft
+        from the four results ──outputs_accept / _reject / _save──► the text of the output
+the instructions of the four tasks ──evaluation_lab_instructions_get / _save──►; "Stop" ──evaluation_lab_stop()──►
+```

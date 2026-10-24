@@ -1,0 +1,42 @@
+/* The view Evaluation lab (step 52): the line under a block of a scheme,
+   the quotes of the fragments, the chat of an input. */
+
+.tile-note {
+    margin-top: 0.35rem;
+    font-size: 0.68rem;
+    color: var(--text-muted);
+}
+
+.link-row blockquote {
+    margin: 0 0 0.25rem;
+    padding-left: 0.6rem;
+    border-left: 3px solid var(--border-strong, var(--border));
+    font-style: italic;
+}
+
+.chat-evaluator,
+.chat-model {
+    margin: 0.35rem 0;
+    padding: 0.4rem 0.6rem;
+    border-radius: var(--radius);
+    white-space: pre-wrap;
+}
+
+.chat-evaluator {
+    background: var(--surface-raised, var(--surface));
+}
+
+.chat-model {
+    border: 1px solid var(--border);
+}
+
+.ai-proposal pre {
+    max-height: 18rem;
+    overflow: auto;
+    white-space: pre-wrap;
+}
+
+/* The actions above the list of evaluations. */
+.lab-actions {
+    margin-bottom: 1rem;
+}

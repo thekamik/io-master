@@ -58,7 +58,7 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 52: The Evaluation lab: a work package carried out (2026-10-24)
 
-**State: concept approved by the user 2026-10-24 ("we may implement the whole of point 52"); built by stages without a stop between them.**
+**State: concept approved by the user 2026-10-24 ("we may implement the whole of point 52"); built the same day, by stages without a stop between them.**
 
 ```text
 file of a package (.iomaster.json) ──import──► an evaluation (its tasks) ──► a task: its scheme, read only
@@ -75,12 +75,12 @@ file of a package (.iomaster.json) ──import──► an evaluation (its task
 5. The whole step at once.
 
 **Stages:**
-- [ ] **52.1 The import and the list of evaluations.** "Import a work package…": the file chosen in the dialog of the system, its format, version and size checked, the documents of OSCAL attached checked against the schema of NIST (a catalog stored already stays as it is); an **evaluation** is made: a frozen copy of the tasks, their schemes and related elements (the evaluator does not change a scheme); a package is imported once. The list shows every evaluation with its progress.
-- [ ] **52.2 The screen of an evaluation.** The tasks with their state (to do, in progress, done); a task opens its scheme read only, beside it the requirement as the standard writes it and its related elements. The drawing of a scheme becomes a component of the page, used by both views.
-- [ ] **52.3 The inputs.** The evaluator delivers evidence: a file (PDF, text) or a pasted text, kept exactly as delivered (the text of a PDF read page by page for the AI); **the chat of the input** (the instructions of the plan, the evidence) helps to judge whether the evidence is ready; the AI proposes **fragments**: exact quotes the program finds in the text of the evidence, with a separate *AI note*; the evaluator accepts them or adds his own (decisions of 2026-10-17).
-- [ ] **52.4 The requirement.** Its agent of the AI (role *formal analysis*) reads the requirement, its instructions and **only the accepted fragments**, and proposes the four results and a verdict, with its reason; the evaluator corrects and accepts them and sets the verdict.
-- [ ] **52.5 The outputs and the report.** An output whose condition holds for the verdict is drafted by its AI from the four results (its target, format and instructions), corrected and accepted by the evaluator. **The report**: the accepted texts of every output, task by task, written into one file per output (`.txt` or `.tex`) in a folder the evaluator chooses.
-- [ ] **52.6** Tried in the window with a fake AI; the documents.
+- [x] **52.1 The import and the list of evaluations.** "Import a work package…": the file chosen in the dialog of the system, its format, version and size checked, the documents of OSCAL attached checked against the schema of NIST (a catalog stored already stays as it is); an **evaluation** is made: a frozen copy of the tasks, their schemes and related elements (the evaluator does not change a scheme); a package is imported once. The list shows every evaluation with its progress.
+- [x] **52.2 The screen of an evaluation.** The tasks with their state (to do, in progress, done); a task opens its scheme read only, beside it the requirement as the standard writes it and its related elements. The drawing of a scheme becomes a component of the page, used by both views.
+- [x] **52.3 The inputs.** The evaluator delivers evidence: a file (PDF, text) or a pasted text, kept exactly as delivered (the text of a PDF read page by page for the AI); **the chat of the input** (the instructions of the plan, the evidence) helps to judge whether the evidence is ready; the AI proposes **fragments**: exact quotes the program finds in the text of the evidence, with a separate *AI note*; the evaluator accepts them or adds his own (decisions of 2026-10-17).
+- [x] **52.4 The requirement.** Its agent of the AI (role *formal analysis*) reads the requirement, its instructions and **only the accepted fragments**, and proposes the four results and a verdict, with its reason; the evaluator corrects and accepts them and sets the verdict.
+- [x] **52.5 The outputs and the report.** An output whose condition holds for the verdict is drafted by its AI from the four results (its target, format and instructions), corrected and accepted by the evaluator. **The report**: the accepted texts of every output, task by task, written into one file per output (`.txt` or `.tex`) in a folder the evaluator chooses.
+- [x] **52.6** Tried in the window on a private display with a fake AI service (2026-10-24): the package "Roles" exported in step 51 imported for the product "Card reader"; a text pasted as evidence, two fragments proposed (one found in the evidence and accepted, one not found and rejected), a question to the chat of the input, the agent proposed "met" with the four results (accepted), the pETR drafted and accepted, the report exported (`pETR.tex`, the header and the section of the task). The drawing of a block became the component `BlockNode` of the page; the way to the AI with its events became the component `components/ai_work/`.
 
 **Reminders:** other forms of evidence (images, office documents, archives) later; the import of a new version of a package into an evaluation begun.
 

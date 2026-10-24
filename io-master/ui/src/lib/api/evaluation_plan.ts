@@ -112,14 +112,9 @@ export interface CorrectionView {
   reason: string;
 }
 
-// ai_work/view.rs
-/** An event of a work of the AI of the view. */
-export type AiEvent =
-  | { event: "part"; index: number; count: number }
-  | { event: "writing"; characters: number }
-  | { event: "proposed"; added: number; corrections: number; dropped: string[] }
-  | { event: "failed"; message: string }
-  | { event: "end"; stopped: boolean };
+// components/ai_work/view.rs
+export type { AiEvent } from "./components/ai_work";
+import type { AiEvent } from "./components/ai_work";
 
 /** The instructions of a work of the AI of the view. */
 export type AiWork = "task_scheme" | "requirement_choice" | "related_elements";

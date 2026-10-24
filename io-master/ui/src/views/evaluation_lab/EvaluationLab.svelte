@@ -1,24 +1,21 @@
 <!--
-  The view Evaluation lab (docs/architecture.md, section 10.1): the
-  structure of a standard, handed over from the evaluation plan, joined
-  with what the manufacturer and the laboratory deliver (the Security
-  Target, the guidance, the design, the results of the tests), and the
-  evidence assessed with the help of the AI (steps 41.5, 30 and 31 to 36
-  of docs/todo.md). It replaces the placeholders Evaluation and
-  Manufacturer documentation (step 43.8). Its concept is still open; until
-  it is built, the page only says what will come here.
+  The view Evaluation lab (step 52 of docs/todo.md; its commands in
+  src/views/evaluation_lab/evaluation_lab.rs): a work package of the
+  Evaluation plan imported and carried out for one product. The list of
+  evaluations (EvaluationList) or one evaluation (EvaluationScreen), whose
+  task opens its screen (LabTask). The AI proposes, the evaluator decides;
+  the result is the report, exported out of the program. Presentation only.
 -->
 <script lang="ts">
-  // No state yet: the evaluation lab is built after the evaluation plan.
+  import EvaluationList from "./EvaluationList.svelte";
+  import EvaluationScreen from "./EvaluationScreen.svelte";
+
+  /** The evaluation open, if any. */
+  let evaluation: string | null = $state(null);
 </script>
 
-<div class="card">
-  <h3>Coming next</h3>
-  <p class="note">
-    The evaluation lab takes an evaluation plan (tab Evaluation plan) and carries it out for one product. What the
-    manufacturer and the laboratory deliver (the Security Target, the guidance, the design, the results of the tests)
-    is joined with the requirements, and the AI helps to check whether each requirement is met, with its sources; the
-    findings and the verdicts are yours. The results are kept as NIST OSCAL assessment results, and the report is made
-    from them.
-  </p>
-</div>
+{#if evaluation}
+  <EvaluationScreen {evaluation} onclose={() => (evaluation = null)} />
+{:else}
+  <EvaluationList onopen={(uuid) => (evaluation = uuid)} />
+{/if}

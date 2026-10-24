@@ -32,7 +32,7 @@
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
   import BlockForm from "./BlockForm.svelte";
-  import BlockNode from "./BlockNode.svelte";
+  import BlockNode from "../../components/block_node/BlockNode.svelte";
   import AiWorkInstructions from "./AiWorkInstructions.svelte";
   import TaskLinks from "./TaskLinks.svelte";
   import SchemeFit from "./SchemeFit.svelte";
