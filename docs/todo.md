@@ -75,6 +75,10 @@ Legend: `[ ]` to do, `[x]` done.
   - **Requirement:** the interaction of the evaluator with an agent of the AI: the evaluator consults it whether the inputs meet the requirement. **One task, one requirement: the context of the agent stays small and it works better.**
   - **Output:** the configuration of where the evaluator exports the result of the evaluation.
 - **The AI only proposes; the planner approves** (P1). The AI has to understand the text and find elements such as the work units; the structure of OSCAL helps the machine.
+- **51.1, the answers of the user (2026-10-24):**
+  - **A task is a whole requirement** (a control of a catalog), never a single work unit inside it: requirements are assigned to the evaluators, and the structure stays simple. One requirement, one task.
+  - **The master project** holds all the tasks of a standard (of its catalogs) with their schemes; it is made once, when a new version of the standard comes, and **used again and again**. From it the planner **delegates tasks into smaller packages, which are handed to the employees** (the evaluators); this organises the time of the planner.
+  - The tasks keep the order in which they were added and are moved by hand; the catalogs of a project are chosen when it is made and may be changed later (a catalog no task uses may be removed).
 - **The evaluator sees a scheme exactly as the planner made it**: several inputs of the planner are several inputs for the evaluator; the same blocks, connections and layout.
 - **A requirement may have many inputs** (a fragment of the Security Target, the output of a program, a fragment of the documentation, ...).
 - **What the evaluator delivers to an input is kept exactly as delivered, the raw data** (the file as it was, the output of the program, the conversation), **and beside it, as an addition, the interpretation of the AI** (user, 2026-10-24). The interpretation never replaces the raw data: the assessment can always go back to what was delivered (P3, P5).
