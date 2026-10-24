@@ -58,7 +58,7 @@ Legend: `[ ]` to do, `[x]` done.
 
 ## Step 51: The evaluation plan: the evaluation project (2026-10-24)
 
-**State: described by the user 2026-10-24; Claude's ordered concept is in the chat, waiting for the user's answers.** It gives the step 41.4 (profile and assessment plan as a graph) its form.
+**State: described by the user 2026-10-24 and settled by their answers the same day (below); the format of the export and the names are open.** It gives the step 41.4 (profile and assessment plan as a graph) its form.
 
 **The user's description (2026-10-24), in order:**
 1. The **author of the plan** browses the standard (in OSCAL, from the converter or imported) and searches it for requirements.
@@ -67,6 +67,15 @@ Legend: `[ ]` to do, `[x]` done.
 4. The evaluation project holds the list of requirements, **shown graphically** (the drawings of the schemes of steps 16 to 27, Svelte Flow, move here).
 5. A requirement chosen in the plan shows a **scheme of the inputs the evaluator has to deliver**.
 6. When the author adds a requirement, **the AI proposes its scheme**, the inputs that represent it; the author accepts or corrects it.
+
+**The user's answers (2026-10-24), which settle the model:**
+- **The project is a list of tasks for the evaluator**, as the laboratories work: the evaluator gets a list of work units to carry out. The planner chooses elements of the standards (of several catalogs) as tasks; **every task is one requirement and has a scheme of its own**, made by the planner with the help of the AI. **No graph of a whole standard**: it would cloud the view and hinder the work.
+- **The scheme of a task has three kinds of blocks: input → requirement → output.** The evaluator imports the file of the project, sees the list, opens a task and sees the scheme the planner designed.
+  - **Input:** what the evaluator has to deliver to meet the requirement. Evidence has many forms (the Security Target as a PDF, the output of a program, even a conversation), so **an input has a chatbot** that takes the evidence in any form and, connected to the requirement, helps the evaluator judge whether the evidence is processed far enough to be assessed.
+  - **Requirement:** the interaction of the evaluator with an agent of the AI: the evaluator consults it whether the inputs meet the requirement. **One task, one requirement: the context of the agent stays small and it works better.**
+  - **Output:** the configuration of where the evaluator exports the result of the evaluation.
+- **The AI only proposes; the planner approves** (P1). The AI has to understand the text and find elements such as the work units; the structure of OSCAL helps the machine.
+- Open: the format of the exported project (the user asked for an explanation).
 
 ---
 
