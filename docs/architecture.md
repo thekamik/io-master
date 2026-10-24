@@ -384,6 +384,12 @@ the screen of a project (the screen of a task in place of it while a task is ope
   │     ──standard_outputs_add(project, output) / _save(output, fields) / _delete(output)──► db/evaluation_project/
   │     (a new task gets a copy of the template as its outputs, connected from its requirement: scheme::first;
   │      the tasks made before keep theirs)
+  ├─► TaskProposals (step 51.4) ──task_proposals_get(project)──► the requirements the AI proposes as tasks
+  │     ──task_proposals_propose(project, catalog, onEvent)──► the undecided proposals of the catalog removed; the
+  │     requirements that are no task yet, word for word, part by part (ai/tasks/candidates.rs), one question of the
+  │     task requirement_choice per part through ai/api/ ──► the proposals with their reasons (db/evaluation_project/)
+  │     ──task_proposals_accept / _reject / _accept_all / _reject_all──► a task made with the outputs of the
+  │     template, or the proposal dropped ──► "changed" ──► every element reads again
   ├─► TaskList ──task_list_get(project)──► the tasks in order, each read from its catalog (db/oscal/)
   │     ──task_list_move(task, up) / task_list_remove(task)──► db/evaluation_project/
   └─► StandardBrowser: CatalogTree (component) ──catalog_tree_get(catalog)──► the tree of a catalog of the project

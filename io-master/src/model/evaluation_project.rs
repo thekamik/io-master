@@ -58,6 +58,15 @@ pub struct EvaluationTask {
     pub control_id: String,
 }
 
+/// A requirement the AI proposes as a task of a project (step 51.4), with
+/// its reason; the planner accepts (it becomes a task) or rejects it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskProposal {
+    pub catalog_uuid: String,
+    pub control_id: String,
+    pub reason: String,
+}
+
 /// The fields in their normal form: no spaces around them.
 ///
 /// Called by: the commands of the view Evaluation plan, before

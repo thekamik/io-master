@@ -355,11 +355,17 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
   presets.rs/                  Presets: ready settings of well-known AI services, to fill the
     field_help.rs                Instructions for a chatbot: help to fill one field of an AI
   tasks/                       The tasks of the AI: for each, the question sent to the model and
+    candidates.rs                The requirements given to the AI for a choice, word for word under
+                                 short references, in parts of a bounded size (step 51.4).
     catalog_contents.rs          The task `catalog_contents` of the AI (role *text analysis*, step 50.2
     catalog_outline.rs           The task `catalog_outline` of the AI (role *text analysis*): the
     catalog_section.rs           The task `catalog_section` of the AI (role *text analysis*): the
     chat.rs                      The task `chat` of the AI (role *consultation*): the memory of a
     json.rs                      The JSON object in an answer of a model, and its texts.
+    related_elements.rs          The task `related_elements` of the AI (step 51.4): the work units and
+                                 other elements related to the requirement of a task.
+    requirement_choice.rs        The task `requirement_choice` of the AI (step 51.4): the requirements
+                                 of a catalog a project has to cover.
     task_scheme.rs               The task `task_scheme` of the AI (role *text analysis*, step 51.3): the
                                  inputs of the scheme of a task and corrections of its blocks
 pdf/                       Reading PDFs with the tools of Poppler (`pdfinfo`, `pdftotext`): the
@@ -462,8 +468,15 @@ views/                     The views of the window, one folder per view and one 
     standard_outputs/            The element "standard outputs": the template of the outputs of the
                                  tasks of a master project (step 51.3).
       view.rs                      The data of the template, as the page gets it and sends it.
+    ai_work/                     What the works of the AI of the view share (step 51.4): one question
+                                 with its events, the tasks whose instructions the planner may change.
+      ask.rs                       One question of a work of the AI, with its events.
+      view.rs                      The events of a work of the AI, as the page gets them.
     task_list/                   The element "list of tasks" of the view Evaluation plan.
       view.rs                      The data of the list of tasks of a master project, as the page gets it:
+    task_proposals/              The element "tasks proposed by the AI" (step 51.4).
+      propose.rs                   The AI proposes the tasks of a project, part by part.
+      view.rs                      The proposals, as the page gets them.
     task_scheme/                 The element "scheme of a task": its blocks input, requirement, output.
       propose.rs                   The AI proposes inputs of a scheme and corrections of its blocks
                                  (step 51.3): one question, the proposals stored for the planner.

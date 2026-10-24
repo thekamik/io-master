@@ -25,6 +25,7 @@ pub fn project(db: &UserDb, uuid: &str) -> Result<bool, DbError> {
     transaction.execute("DELETE FROM evaluation_tasks WHERE project_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM project_catalogs WHERE project_uuid = ?1", [uuid])?;
     transaction.execute("DELETE FROM standard_outputs WHERE project_uuid = ?1", [uuid])?;
+    transaction.execute("DELETE FROM task_proposals WHERE project_uuid = ?1", [uuid])?;
     let deleted = transaction.execute("DELETE FROM evaluation_projects WHERE uuid = ?1", [uuid])? > 0;
     transaction.commit()?;
 
@@ -94,6 +95,35 @@ pub fn proposals(db: &UserDb, task: &str) -> Result<(), DbError> {
     transaction.execute("DELETE FROM task_blocks WHERE task_uuid = ?1 AND proposal IS NOT NULL", [task])?;
     transaction.execute("DELETE FROM block_corrections WHERE task_uuid = ?1", [task])?;
     transaction.commit()?;
+
+    Ok(())
+}
+
+/// Rejects the proposal of requirement `control` of catalog `catalog` as a
+/// task of project `project`; gives whether there was one.
+///
+/// Called by: `task_proposals_reject` (`evaluation_plan.rs`).
+pub fn task_proposal(db: &UserDb, project: &str, catalog: &str, control: &str) -> Result<bool, DbError> {
+    let deleted = db.connection().execute(
+        "DELETE FROM task_proposals WHERE project_uuid = ?1 AND catalog_uuid = ?2 AND control_id = ?3",
+        [project, catalog, control],
+    )?;
+
+    Ok(deleted > 0)
+}
+
+/// Rejects the proposals of tasks of project `project`: those of catalog
+/// `catalog`, or all when it is `None`.
+///
+/// Called by: `task_proposals_reject_all` (`evaluation_plan.rs`), `task_proposals/propose.rs`
+/// (before a new question for a catalog).
+pub fn task_proposals(db: &UserDb, project: &str, catalog: Option<&str>) -> Result<(), DbError> {
+    match catalog {
+        Some(catalog) => db
+            .connection()
+            .execute("DELETE FROM task_proposals WHERE project_uuid = ?1 AND catalog_uuid = ?2", [project, catalog])?,
+        None => db.connection().execute("DELETE FROM task_proposals WHERE project_uuid = ?1", [project])?,
+    };
 
     Ok(())
 }
@@ -235,5 +265,33 @@ mod tests {
         update::accept_correction(&test.db, "r", &correction.applied(&BlockFields::empty())).unwrap();
         assert_eq!(read::block(&test.db, "r").unwrap().unwrap().1.fields.instructions, "Check the roles.");
         assert!(!self::correction(&test.db, "r").unwrap());
+    }
+
+    #[test]
+    fn a_proposed_task_is_rejected_or_decided_by_the_task_made() {
+        use crate::model::evaluation_project::TaskProposal;
+
+        let test = database();
+        let fields = ProjectFields { title: "p".to_owned(), description: String::new() };
+        create::project(&test.db, "p", &fields, &["c".to_owned(), "d".to_owned()]).unwrap();
+        for (catalog, control) in [("c", "x"), ("c", "y"), ("d", "z")] {
+            let proposal = TaskProposal {
+                catalog_uuid: catalog.to_owned(),
+                control_id: control.to_owned(),
+                reason: "Why.".to_owned(),
+            };
+            create::task_proposal(&test.db, "p", &proposal).unwrap();
+        }
+
+        let made = EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c".to_owned(), control_id: "x".to_owned() };
+        create::task(&test.db, "p", &made, &new_scheme("r", &[]).unwrap()).unwrap();
+        assert_eq!(read::task_proposals(&test.db, "p").unwrap().len(), 2);
+
+        assert!(task_proposal(&test.db, "p", "c", "y").unwrap());
+        assert!(!task_proposal(&test.db, "p", "c", "y").unwrap());
+        task_proposals(&test.db, "p", Some("c")).unwrap();
+        assert_eq!(read::task_proposals(&test.db, "p").unwrap()[0].control_id, "z");
+        task_proposals(&test.db, "p", None).unwrap();
+        assert!(read::task_proposals(&test.db, "p").unwrap().is_empty());
     }
 }

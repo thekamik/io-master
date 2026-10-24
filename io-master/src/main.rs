@@ -407,6 +407,10 @@ mod views {
         pub mod task_list {
             pub mod view;
         }
+        pub mod task_proposals {
+            pub mod propose;
+            pub mod view;
+        }
         pub mod task_scheme {
             pub mod propose;
             pub mod scheme;

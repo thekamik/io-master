@@ -111,6 +111,14 @@ pub fn listing(part: &[Candidate]) -> String {
     text
 }
 
+/// The answer of the model, read: the indices of the candidates chosen in
+/// their part, each with its reason, and what was dropped and why.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Choices {
+    pub chosen: Vec<(usize, String)>,
+    pub dropped: Vec<String>,
+}
+
 /// The answer form the model is asked for.
 pub const ANSWER_FORM: &str = r#"Answer with one JSON object and nothing else, in this form:
 {"chosen": [{"ref": "r3", "reason": "..."}]}
@@ -122,7 +130,7 @@ If you choose none, answer {"chosen": []}."#;
 ///
 /// Called by: `task_proposals/propose.rs`, `task_links/propose.rs`.
 /// Calls: `json_object`, `text_of`.
-pub fn read_choices(answer: &str, part: &[Candidate]) -> Result<(Vec<(usize, String)>, Vec<String>), String> {
+pub fn read_choices(answer: &str, part: &[Candidate]) -> Result<Choices, String> {
     let value = json_object(answer).ok_or("the answer holds no JSON object")?;
     let mut chosen: Vec<(usize, String)> = Vec::new();
     let mut dropped = Vec::new();
@@ -143,7 +151,7 @@ pub fn read_choices(answer: &str, part: &[Candidate]) -> Result<(Vec<(usize, Str
         chosen.push((index - 1, text_of(item, "reason")));
     }
 
-    Ok((chosen, dropped))
+    Ok(Choices { chosen, dropped })
 }
 
 #[cfg(test)]
@@ -172,7 +180,8 @@ mod tests {
         ];
 
         assert_eq!(parts(&candidates), [0..1, 1..2, 2..3, 3..4]);
-        assert_eq!(parts(&[candidate_of("a", 5), candidate_of("b", 5)]), [0..2]);
+        let one = parts(&[candidate_of("a", 5), candidate_of("b", 5)]);
+        assert_eq!((one.len(), one.first()), (1, Some(&(0..2))));
         assert!(parts(&[]).is_empty());
     }
 
@@ -182,10 +191,10 @@ mod tests {
         let answer =
             r#"{"chosen": [{"ref": "r2", "reason": "Needed."}, {"ref": "r2"}, {"ref": "r9"}, {"ref": "s1.1"}]}"#;
 
-        let (chosen, dropped) = read_choices(answer, &part).unwrap();
+        let choices = read_choices(answer, &part).unwrap();
 
-        assert_eq!(chosen, [(1, "Needed.".to_owned())]);
-        assert_eq!(dropped.len(), 2);
+        assert_eq!(choices.chosen, [(1, "Needed.".to_owned())]);
+        assert_eq!(choices.dropped.len(), 2);
         assert!(read_choices("none", &part).is_err());
     }
 

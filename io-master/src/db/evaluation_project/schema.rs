@@ -15,6 +15,8 @@
 //! task_connections      the connections of the blocks of a task
 //! block_corrections     the corrections of blocks the AI proposed (step 51.3),
 //!                       waiting for the planner
+//! task_proposals        the requirements the AI proposes as tasks of a project
+//!                       (step 51.4), waiting for the planner
 //! ```
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
@@ -80,6 +82,15 @@ pub const SCHEMA: &str = "
         from_block      TEXT NOT NULL,
         to_block        TEXT NOT NULL,
         PRIMARY KEY (from_block, to_block)
+    );
+
+    -- A requirement proposed once per project.
+    CREATE TABLE IF NOT EXISTS task_proposals (
+        project_uuid    TEXT NOT NULL,
+        catalog_uuid    TEXT NOT NULL,
+        control_id      TEXT NOT NULL,
+        reason          TEXT NOT NULL,
+        PRIMARY KEY (project_uuid, catalog_uuid, control_id)
     );
 
     -- One correction per block at most.

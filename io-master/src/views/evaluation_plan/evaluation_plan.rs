@@ -43,6 +43,8 @@ use super::standard_browser::search;
 use super::standard_browser::view::{HitView, RequirementView};
 use super::standard_outputs::view::{self as output_view, StandardOutputForm, StandardOutputView};
 use super::task_list::view::{self as task_view, TaskView};
+use super::task_proposals::propose as task_proposals_ask;
+use super::task_proposals::view::{self as proposal_view, TaskProposalView};
 use super::task_scheme::propose;
 use super::task_scheme::scheme;
 use super::task_scheme::view::{BlockForm, SchemeView};
@@ -303,9 +305,7 @@ pub fn project_form_save(
 ///
 /// Called by the page: `StandardBrowser.svelte`, "Add as a task"
 /// (`evaluationPlan.taskListAdd(project, catalog, control)`).
-/// Calls: [`project_catalog`], `Catalog::locate`, `new_uuid`, `scheme::first`
-/// (the outputs of the template), `db_evaluation_project::create::task`,
-/// `task_view::all`.
+/// Calls: [`add_task`], `task_view::all`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
@@ -317,24 +317,8 @@ pub fn task_list_add(
 ) -> Result<Vec<TaskView>, AppError> {
     let session = state.session()?;
     let db = session.db();
-    let found = project_catalog(&db, &project, &catalog)?;
 
-    let is_control = match found.locate(&control)? {
-        Some(location) => found.control_at(&location).is_some(),
-        None => false,
-    };
-
-    ensure!(is_control, AppError::Invalid("the catalog has no such requirement".to_owned()));
-
-    for task in db_evaluation_project::read::tasks(&db, &project)? {
-        ensure!(
-            !(task.catalog_uuid == catalog && task.control_id == control),
-            AppError::Invalid("the requirement is a task of the project already".to_owned())
-        );
-    }
-
-    let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog, control_id: control };
-    db_evaluation_project::create::task(&db, &project, &task, &scheme::first(&db, &project)?)?;
+    add_task(&db, &project, &catalog, &control)?;
 
     task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
 }
@@ -633,6 +617,133 @@ pub fn standard_outputs_delete(
     );
 
     Ok(output_view::all(db_evaluation_project::read::standard_outputs(&db, &project)?))
+}
+
+/// The requirements the AI proposes as tasks of project `project` (step
+/// 51.4), each with its reason.
+///
+/// Called by the page: `TaskProposals.svelte`, when a project opens and after
+/// a change (`evaluationPlan.taskProposalsGet(project)`).
+/// Calls: `db_evaluation_project::read::task_proposals`, `proposal_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_proposals_get(state: State<'_, AppState>, project: String) -> Result<Vec<TaskProposalView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    proposal_view::all(&db, db_evaluation_project::read::task_proposals(&db, &project)?)
+}
+
+/// The AI reads the requirements of catalog `catalog` that are no task of
+/// project `project` yet and proposes those the project has to cover; the
+/// undecided proposals of the catalog are removed first. The events arrive
+/// through `on_event`; gives the proposals.
+///
+/// Called by the page: `TaskProposals.svelte`, "Propose tasks with AI"
+/// (`evaluationPlan.taskProposalsPropose(project, catalog, onEvent)`).
+/// Calls: `AppState::start_work`, `task_proposals_ask::propose` (one
+/// question per part through `ai/api/`), `proposal_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+pub async fn task_proposals_propose(
+    state: State<'_, AppState>,
+    project: String,
+    catalog: String,
+    on_event: Channel<AiEvent>,
+) -> Result<Vec<TaskProposalView>, AppError> {
+    let session = state.session()?;
+    let stop = state.start_work();
+
+    task_proposals_ask::propose(&session, &project, &catalog, &stop, &on_event).await?;
+
+    let db = session.db();
+    proposal_view::all(&db, db_evaluation_project::read::task_proposals(&db, &project)?)
+}
+
+/// Accepts the proposal of requirement `control` of catalog `catalog`: it
+/// becomes a task of project `project`, with the outputs of the template.
+///
+/// Called by the page: `TaskProposals.svelte`, "Accept"
+/// (`evaluationPlan.taskProposalsAccept(project, catalog, control)`).
+/// Calls: [`add_task`] (which removes the proposal), `proposal_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_proposals_accept(
+    state: State<'_, AppState>,
+    project: String,
+    catalog: String,
+    control: String,
+) -> Result<Vec<TaskProposalView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    add_task(&db, &project, &catalog, &control)?;
+
+    proposal_view::all(&db, db_evaluation_project::read::task_proposals(&db, &project)?)
+}
+
+/// Rejects the proposal of requirement `control` of catalog `catalog`.
+///
+/// Called by the page: `TaskProposals.svelte`, "Reject"
+/// (`evaluationPlan.taskProposalsReject(project, catalog, control)`).
+/// Calls: `db_evaluation_project::delete::task_proposal`, `proposal_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_proposals_reject(
+    state: State<'_, AppState>,
+    project: String,
+    catalog: String,
+    control: String,
+) -> Result<Vec<TaskProposalView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    ensure!(
+        db_evaluation_project::delete::task_proposal(&db, &project, &catalog, &control)?,
+        AppError::Invalid("the AI did not propose this requirement".to_owned())
+    );
+
+    proposal_view::all(&db, db_evaluation_project::read::task_proposals(&db, &project)?)
+}
+
+/// Accepts every proposal of tasks of project `project`, in the order of the
+/// list.
+///
+/// Called by the page: `TaskProposals.svelte`, "Accept all"
+/// (`evaluationPlan.taskProposalsAcceptAll(project)`).
+/// Calls: `db_evaluation_project::read::task_proposals`, [`add_task`].
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_proposals_accept_all(state: State<'_, AppState>, project: String) -> Result<(), AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    for proposal in db_evaluation_project::read::task_proposals(&db, &project)? {
+        add_task(&db, &project, &proposal.catalog_uuid, &proposal.control_id)?;
+    }
+
+    Ok(())
+}
+
+/// Rejects every proposal of tasks of project `project`.
+///
+/// Called by the page: `TaskProposals.svelte`, "Reject all"
+/// (`evaluationPlan.taskProposalsRejectAll(project)`).
+/// Calls: `db_evaluation_project::delete::task_proposals`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn task_proposals_reject_all(state: State<'_, AppState>, project: String) -> Result<(), AppError> {
+    let session = state.session()?;
+
+    db_evaluation_project::delete::task_proposals(&session.db(), &project, None)?;
+
+    Ok(())
 }
 
 /// The scheme of task `task`: its requirement as the standard writes it,
@@ -987,6 +1098,36 @@ pub fn ai_work_instructions_save(state: State<'_, AppState>, which: String, text
 }
 
 // ── Helpers of the commands above ─────────────────────────────────────
+
+/// Adds control `control` of catalog `catalog` of project `project` as a
+/// task at the end of its list, with the outputs of the template: refused
+/// when the catalog has no such requirement or it is a task already.
+///
+/// Called by: `task_list_add`, `task_proposals_accept`, `task_proposals_accept_all`.
+/// Calls: [`project_catalog`], `Catalog::locate`, `new_uuid`, `scheme::first`,
+/// `db_evaluation_project::create::task`.
+fn add_task(db: &UserDb, project: &str, catalog: &str, control: &str) -> Result<(), AppError> {
+    let found = project_catalog(db, project, catalog)?;
+
+    let is_control = match found.locate(control)? {
+        Some(location) => found.control_at(&location).is_some(),
+        None => false,
+    };
+
+    ensure!(is_control, AppError::Invalid("the catalog has no such requirement".to_owned()));
+
+    for task in db_evaluation_project::read::tasks(db, project)? {
+        ensure!(
+            !(task.catalog_uuid == catalog && task.control_id == control),
+            AppError::Invalid("the requirement is a task of the project already".to_owned())
+        );
+    }
+
+    let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog.to_owned(), control_id: control.to_owned() };
+    db_evaluation_project::create::task(db, project, &task, &scheme::first(db, project)?)?;
+
+    Ok(())
+}
 
 /// The project of standard output `uuid`; refused when it does not exist.
 ///
@@ -1474,6 +1615,51 @@ mod tests {
         let long = "x".repeat(INSTRUCTIONS_MAX + 1);
         assert_eq!(
             window.call("ai_work_instructions_save", json!({ "which": "task_scheme", "text": long })).unwrap_err()["kind"],
+            "invalid"
+        );
+    }
+
+    #[test]
+    fn a_proposed_task_is_accepted_into_the_list_or_rejected() {
+        use crate::db::evaluation_project as db_evaluation_project;
+        use crate::model::evaluation_project::TaskProposal;
+
+        let (window, catalog, project) = with_project();
+        window.call("standard_outputs_add", json!({ "project": project, "output": output("pETR", "always") })).unwrap();
+        {
+            let session = window.session();
+            for control in ["s1.1.1", "s1.1.2", "s2.1.1"] {
+                let proposal = TaskProposal {
+                    catalog_uuid: catalog.clone(),
+                    control_id: control.to_owned(),
+                    reason: "Why.".to_owned(),
+                };
+                db_evaluation_project::create::task_proposal(&session.db(), &project, &proposal).unwrap();
+            }
+        }
+
+        let listed = window.call("task_proposals_get", json!({ "project": project })).unwrap();
+        assert_eq!((listed[0]["label"].clone(), listed[0]["reason"].clone()), (json!("1.1.1"), json!("Why.")));
+
+        let left = window
+            .call("task_proposals_accept", json!({ "project": project, "catalog": catalog, "control": "s1.1.1" }))
+            .unwrap();
+        assert_eq!(left.as_array().unwrap().len(), 2);
+        let tasks = window.call("task_list_get", json!({ "project": project })).unwrap();
+        let scheme = window.call("task_scheme_get", json!({ "task": tasks[0]["uuid"] })).unwrap();
+        assert_eq!(scheme["blocks"][1]["name"], "pETR", "the task has the outputs of the template");
+
+        let left = window
+            .call("task_proposals_reject", json!({ "project": project, "catalog": catalog, "control": "s1.1.2" }))
+            .unwrap();
+        assert_eq!(left.as_array().unwrap().len(), 1);
+        window.call("task_proposals_accept_all", json!({ "project": project })).unwrap();
+        assert_eq!(window.call("task_list_get", json!({ "project": project })).unwrap().as_array().unwrap().len(), 2);
+        assert_eq!(window.call("task_proposals_get", json!({ "project": project })).unwrap(), json!([]));
+        assert_eq!(
+            window
+                .call("task_proposals_reject", json!({ "project": project, "catalog": catalog, "control": "s1.1.2" }))
+                .unwrap_err()["kind"],
             "invalid"
         );
     }

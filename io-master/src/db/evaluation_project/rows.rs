@@ -2,7 +2,7 @@
 //! `model/evaluation_project.rs` they become.
 
 use crate::db::error::{Corrupt, DbError};
-use crate::model::evaluation_project::{EvaluationTask, ProjectFields, ProjectSummary};
+use crate::model::evaluation_project::{EvaluationTask, ProjectFields, ProjectSummary, TaskProposal};
 use crate::model::task_scheme::{
     Block, BlockFields, BlockKind, Connection, Correction, OutputCondition, OutputFormat, StandardOutput,
 };
@@ -37,6 +37,17 @@ pub(super) fn task(row: &rusqlite::Row<'_>) -> Result<EvaluationTask, DbError> {
         uuid: row.get("uuid")?,
         catalog_uuid: row.get("catalog_uuid")?,
         control_id: row.get("control_id")?,
+    })
+}
+
+/// A row of `task_proposals`.
+///
+/// Called by: `read::task_proposals`.
+pub(super) fn task_proposal(row: &rusqlite::Row<'_>) -> Result<TaskProposal, DbError> {
+    Ok(TaskProposal {
+        catalog_uuid: row.get("catalog_uuid")?,
+        control_id: row.get("control_id")?,
+        reason: row.get("reason")?,
     })
 }
 

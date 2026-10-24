@@ -162,6 +162,17 @@ export interface StandardOutputForm {
   condition: OutputCondition;
 }
 
+// task_proposals/view.rs
+/** A requirement the AI proposes as a task, with its reason. */
+export interface TaskProposalView {
+  catalog_uuid: string;
+  catalog_title: string;
+  control_id: string;
+  label: string;
+  title: string;
+  reason: string;
+}
+
 // own_requirement/view.rs
 /** A requirement of the laboratory's own; its identifier is the planner's. */
 export interface OwnRequirement {
@@ -397,4 +408,42 @@ export function aiWorkInstructionsGet(which: AiWork): Promise<string> {
 /** Called by AiWorkInstructions.svelte, "Save" and "Default" (an empty text). */
 export function aiWorkInstructionsSave(which: AiWork, text: string): Promise<string> {
   return invoke("ai_work_instructions_save", { which, text });
+}
+
+/** Called by TaskProposals.svelte, when a project opens and after a change. */
+export function taskProposalsGet(project: string): Promise<TaskProposalView[]> {
+  return invoke("task_proposals_get", { project });
+}
+
+/** Called by TaskProposals.svelte, "Propose tasks with AI"; the events go to `onEvent`. */
+export function taskProposalsPropose(
+  project: string,
+  catalog: string,
+  onEvent: (event: AiEvent) => void,
+): Promise<TaskProposalView[]> {
+  const channel = new Channel<AiEvent>();
+
+  channel.onmessage = onEvent;
+
+  return invoke("task_proposals_propose", { project, catalog, onEvent: channel });
+}
+
+/** Called by TaskProposals.svelte, "Accept". */
+export function taskProposalsAccept(project: string, catalog: string, control: string): Promise<TaskProposalView[]> {
+  return invoke("task_proposals_accept", { project, catalog, control });
+}
+
+/** Called by TaskProposals.svelte, "Reject". */
+export function taskProposalsReject(project: string, catalog: string, control: string): Promise<TaskProposalView[]> {
+  return invoke("task_proposals_reject", { project, catalog, control });
+}
+
+/** Called by TaskProposals.svelte, "Accept all". */
+export function taskProposalsAcceptAll(project: string): Promise<void> {
+  return invoke("task_proposals_accept_all", { project });
+}
+
+/** Called by TaskProposals.svelte, "Reject all". */
+export function taskProposalsRejectAll(project: string): Promise<void> {
+  return invoke("task_proposals_reject_all", { project });
 }

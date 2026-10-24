@@ -4,7 +4,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::{EvaluationTask, MAX_TASKS, ProjectFields};
+use crate::model::evaluation_project::{EvaluationTask, MAX_TASKS, ProjectFields, TaskProposal};
 use crate::model::task_scheme::{Block, Correction, MAX_BLOCKS, MAX_OUTPUTS, NewScheme, StandardOutput};
 use crate::model::time::now;
 
@@ -39,9 +39,10 @@ pub fn project(db: &UserDb, uuid: &str, fields: &ProjectFields, catalogs: &[Stri
 /// `scheme` (the block of its requirement and the outputs of the template of
 /// the project, connected: `task_scheme::new_scheme`), in one transaction;
 /// refused when the project holds [`MAX_TASKS`] already or the control is a
-/// task of it already (the table keeps a control once).
+/// task of it already (the table keeps a control once). A proposal of the
+/// AI for the same requirement is removed: it is decided.
 ///
-/// Called by: `task_list_add`, `own_requirement_add`
+/// Called by: `task_list_add`, `own_requirement_add`, `task_proposals_accept`
 /// (`views/evaluation_plan/evaluation_plan.rs`).
 pub fn task(db: &UserDb, project: &str, task: &EvaluationTask, scheme: &NewScheme) -> Result<(), DbError> {
     ensure!(
@@ -74,6 +75,11 @@ pub fn task(db: &UserDb, project: &str, task: &EvaluationTask, scheme: &NewSchem
             ":position": last.unwrap_or(0) + 1,
         },
     )?;
+    transaction.execute(
+        "DELETE FROM task_proposals WHERE project_uuid = ?1 AND catalog_uuid = ?2 AND control_id = ?3",
+        [project, &task.catalog_uuid, &task.control_id],
+    )?;
+
     for block in &scheme.blocks {
         insert_block(&transaction, &task.uuid, block)?;
     }
@@ -199,6 +205,25 @@ pub fn standard_output(db: &UserDb, project: &str, output: &StandardOutput) -> R
     transaction
         .execute("UPDATE evaluation_projects SET modified = ?1 WHERE uuid = ?2", rusqlite::params![now(), project])?;
     transaction.commit()?;
+
+    Ok(())
+}
+
+/// Keeps `proposal` of the AI for project `project`, in place of an earlier
+/// one for the same requirement.
+///
+/// Called by: `task_proposals/propose.rs`.
+pub fn task_proposal(db: &UserDb, project: &str, proposal: &TaskProposal) -> Result<(), DbError> {
+    db.connection().execute(
+        "INSERT OR REPLACE INTO task_proposals (project_uuid, catalog_uuid, control_id, reason)
+         VALUES (:project, :catalog, :control, :reason)",
+        named_params! {
+            ":project": project,
+            ":catalog": proposal.catalog_uuid,
+            ":control": proposal.control_id,
+            ":reason": proposal.reason,
+        },
+    )?;
 
     Ok(())
 }

@@ -5,7 +5,7 @@ use rusqlite::OptionalExtension;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{
-    EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_PROJECTS, MAX_TASKS, ProjectSummary,
+    EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_PROJECTS, MAX_TASKS, ProjectSummary, TaskProposal,
 };
 use crate::model::task_scheme::{Block, Connection, Correction, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
 
@@ -74,6 +74,23 @@ pub fn tasks(db: &UserDb, project: &str) -> Result<Vec<EvaluationTask>, DbError>
     let mut found = Vec::new();
 
     for row in statement.query_map(rusqlite::params![project, limit(MAX_TASKS)?], |row| Ok(rows::task(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The requirements the AI proposes as tasks of project `project`, by
+/// catalog and in the order proposed; at most `MAX_TASKS`.
+///
+/// Called by: `task_proposals_get` and the commands of the proposals (`evaluation_plan.rs`).
+pub fn task_proposals(db: &UserDb, project: &str) -> Result<Vec<TaskProposal>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection
+        .prepare("SELECT * FROM task_proposals WHERE project_uuid = ?1 ORDER BY catalog_uuid, rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![project, limit(MAX_TASKS)?], |row| Ok(rows::task_proposal(row)))? {
         found.push(row??);
     }
 
