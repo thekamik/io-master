@@ -164,7 +164,7 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 
 ### 2.8a `components/`: the components (step 43)
 
-A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Converter and by its editor of a catalog, the parts of an object (`part_rows/`), shown twice by the editor of a catalog, and the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users; a component that only shows data the elements give it has no entry, only its `view.rs`.
+A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Converter and by its editor of a catalog, the parts of an object (`part_rows/`), shown by the editor of a catalog and the browser of the standards, the tree of a catalog (`catalog_tree/`, step 51.1), shown by the editor of a catalog and the browser of the standards, and the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users; a component that only shows data the elements give it has no entry, only its `view.rs`.
 
 ### 2.9 `views/`: the views of the window (steps 42 and 46)
 
@@ -221,6 +221,7 @@ model/                     The data of the program as plain Rust types, and the 
   api_key.rs                   The API key of an AI connection of one evaluator
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the
   conversion.rs                The conversion of the documents of a standard (PDF) into a catalog of
+  evaluation_project.rs        The master project of an evaluation (step 51 of docs/todo.md): the
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
   recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/todo.md): 160
@@ -275,6 +276,13 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     rows.rs                      The rows of the conversions and the types of `model/conversion.rs` they
     schema.rs                    The tables of the conversions of the documents of standards into
     update.rs                    Changing a conversion: its stage, the pages of its table of contents,
+  evaluation_project/          The master projects of the evaluations and their tasks (step 51).
+    create.rs                    Storing master projects and their tasks.
+    delete.rs                    Deleting master projects and their tasks.
+    read.rs                      Reading master projects and their tasks.
+    rows.rs                      The rows of the master projects and the types of
+    schema.rs                    The tables of the master projects of the evaluations
+    update.rs                    Changing master projects: their fields and catalogs, the order of their
   encryption/                  All code of encryption of the databases.
     database_key.rs              The key that encrypts a database of the program.
     generate_key.rs              Generating the key that encrypts the database.
@@ -359,6 +367,9 @@ app/                       What the whole window shares (Tauri 2): the state the
     error_view.rs                How an error of a command reaches the page:
   state.rs                     The state of the desktop interface, kept in Rust and never in
 components/                The components of the window: small elements used more than once,
+  catalog_tree/                The component "tree of a catalog": its groups and controls as rows (step
+    catalog_tree.rs              The entry of the component "tree of a catalog": the groups and controls
+    view.rs                      The data of the component "tree of a catalog", as the page gets it.
   part_rows/                   The component "parts of an object": the parts of a group or a control
     view.rs                      The data of the component "parts of an object": the parts of a group or
   recovery_code/               The component "recovery code": the code shown once, after the setup,
@@ -389,8 +400,6 @@ views/                     The views of the window, one folder per view and one 
         parts.rs                     The pages of a standard cut into parts that fit the context of a
         steps.rs                     The steps both works of the AI share: the model and the instructions
         view.rs                      The data of the AI of the editor, as the page gets and sends it, and
-      catalog_tree/                The element "tree" of the editor of a catalog: its groups and controls
-        view.rs                      The data of the tree, as the page gets it.
       conversion_wizard/           The element "wizard" of the editor of a catalog: the conversion step by
         contents.rs                  The AI finds the table of contents of a document of a standard (step
         locate.rs                    Where every group of a catalog starts in its document (step 50.2 of
@@ -420,10 +429,23 @@ views/                     The views of the window, one folder per view and one 
       view.rs                      The data of the list of documents of standards, as the page gets and
   evaluation_plan/             The view Evaluation plan: it works only on the documents of OSCAL
     evaluation_plan.rs           The entry of the view Evaluation plan: it works only on the documents of
+    new_project/                 The element "new project" of the view Evaluation plan: a master project
+      catalogs.rs                  The catalogs a master project can use: the finished ones, and the check
+      view.rs                      The data of a new master project, as the page gets it: the catalogs it
     oscal_documents/             The element "documents of OSCAL" of the view Evaluation plan: the
       dialog.rs                    The dialogs of the system for a file of OSCAL: import, export.
       file.rs                      A file of OSCAL (JSON) read into the database, and written from it:
       view.rs                      The data of the list of documents of OSCAL, as the page gets it.
+    project_form/                The element "project" of the view Evaluation plan: its title, scope, catalogs.
+      view.rs                      The data of the form of a master project, as the page gets it: what the
+    project_list/                The element "list of master projects" of the view Evaluation plan.
+      view.rs                      The data of the list of master projects, as the page gets it.
+    standard_browser/            The element "browser of the standards" of the view Evaluation plan.
+      requirement.rs               A requirement of a catalog of a master project, read for the browser of
+      search.rs                    The search of the requirements of the catalogs of a master project: a
+      view.rs                      The data of the browser of the standards of a master project, as the
+    task_list/                   The element "list of tasks" of the view Evaluation plan.
+      view.rs                      The data of the list of tasks of a master project, as the page gets it:
   settings/                    The view Settings: the settings of the program, the connections to
     settings.rs                  The entry of the view Settings: every command the page calls for it
     api_key/                     The element "API key" of the view Settings, tab AI: the key of one

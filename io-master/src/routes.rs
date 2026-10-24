@@ -19,6 +19,7 @@ use tauri::ipc::Invoke;
 pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'static {
     tauri::generate_handler![
         // The components (components/), used by several views.
+        crate::components::catalog_tree::catalog_tree::catalog_tree_get,
         crate::components::pdf_viewer::pdf_viewer::pdf_viewer_documents,
         crate::components::pdf_viewer::pdf_viewer::pdf_viewer_get,
         // The view Users (views/users/): the account, the session and the
@@ -52,6 +53,18 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::chat::chat::conversation_stop,
         crate::views::chat::chat::conversation_delete,
         // The view Evaluation plan (views/evaluation_plan/).
+        crate::views::evaluation_plan::evaluation_plan::project_list_get,
+        crate::views::evaluation_plan::evaluation_plan::project_form_get,
+        crate::views::evaluation_plan::evaluation_plan::task_list_get,
+        crate::views::evaluation_plan::evaluation_plan::new_project_catalogs,
+        crate::views::evaluation_plan::evaluation_plan::new_project_create,
+        crate::views::evaluation_plan::evaluation_plan::project_list_delete,
+        crate::views::evaluation_plan::evaluation_plan::project_form_save,
+        crate::views::evaluation_plan::evaluation_plan::task_list_add,
+        crate::views::evaluation_plan::evaluation_plan::task_list_remove,
+        crate::views::evaluation_plan::evaluation_plan::task_list_move,
+        crate::views::evaluation_plan::evaluation_plan::standard_browser_get,
+        crate::views::evaluation_plan::evaluation_plan::standard_browser_search,
         crate::views::evaluation_plan::evaluation_plan::oscal_documents_get,
         crate::views::evaluation_plan::evaluation_plan::oscal_documents_import,
         crate::views::evaluation_plan::evaluation_plan::oscal_documents_export,
@@ -74,7 +87,6 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_stage,
         crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_group_pages,
         crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_group_state,
-        crate::views::converter::catalog_editor::catalog_editor::catalog_tree_get,
         crate::views::converter::catalog_editor::catalog_editor::object_form_get,
         crate::views::converter::catalog_editor::catalog_editor::object_form_save_group,
         crate::views::converter::catalog_editor::catalog_editor::object_form_save_control,

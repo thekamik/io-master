@@ -20,14 +20,14 @@
   element reads its data again.
 -->
 <script lang="ts">
-  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
   import type { Which } from "../../../lib/api/converter/catalog_editor";
-  import type { CatalogTreeView } from "../../../lib/api/converter/catalog_editor";
+  import * as catalogTree from "../../../lib/api/components/catalog_tree";
+  import type { CatalogTreeView } from "../../../lib/api/components/catalog_tree";
   import type { Place } from "../../../lib/api/converter/catalog_editor";
   import PdfViewer from "../../../components/pdf_viewer/PdfViewer.svelte";
   import AiBuilder from "./AiBuilder.svelte";
   import AiInstructions from "./AiInstructions.svelte";
-  import CatalogTree from "./CatalogTree.svelte";
+  import CatalogTree from "../../../components/catalog_tree/CatalogTree.svelte";
   import ConversionWizard from "./ConversionWizard.svelte";
   import NewObject from "./NewObject.svelte";
   import ObjectForm from "./ObjectForm.svelte";
@@ -56,7 +56,7 @@
   // (which reads it otherwise) is not shown.
   $effect(() => {
     void version;
-    catalogEditor.catalogTreeGet(uuid).then(
+    catalogTree.catalogTreeGet(uuid).then(
       (tree) => (head = tree),
       () => {},
     );

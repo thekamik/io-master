@@ -1,7 +1,8 @@
 // The commands of the editor of a catalog, a screen of the view Converter,
 // one function per command of its entry in the program
 // (src/views/converter/catalog_editor/catalog_editor.rs), named as the
-// command: `catalogTreeGet` calls `catalog_tree_get`.
+// command: `proposalsGet` calls `proposals_get`. The tree of the catalog is a
+// component (components/catalog_tree.ts).
 //
 // The types mirror the view.rs of the elements
 // (src/views/converter/catalog_editor/); a change there needs the same
@@ -10,21 +11,6 @@
 import { Channel, invoke } from "@tauri-apps/api/core";
 
 import type { PartRowView } from "../components/part_rows";
-
-// catalog_tree/view.rs
-export interface RowView {
-  kind: "group" | "control";
-  id: string | null;
-  title: string;
-  level: number;
-}
-
-export interface CatalogTreeView {
-  title: string;
-  version: string;
-  last_modified: string;
-  rows: RowView[];
-}
 
 // proposals/view.rs
 export interface DraftView {
@@ -144,11 +130,6 @@ export interface ObjectQuotesView {
 }
 
 // ── When the editor opens ────────────────────────────────────────────
-
-/** Called by CatalogTree.svelte, when the editor opens and after every change. */
-export function catalogTreeGet(uuid: string): Promise<CatalogTreeView> {
-  return invoke("catalog_tree_get", { uuid });
-}
 
 /** Called by Proposals.svelte, when the editor opens and after every change. */
 export function proposalsGet(uuid: string): Promise<ProposalView[]> {

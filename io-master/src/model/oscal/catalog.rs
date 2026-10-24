@@ -86,6 +86,23 @@ pub struct Control {
     pub other: Other,
 }
 
+impl Control {
+    /// The label of the control: the identifier the standard writes
+    /// (`ADV_FSP.4`), kept by the program as the property `label`; `None`
+    /// when it has none.
+    ///
+    /// Called by: the views that show a requirement (`views/evaluation_plan/`).
+    pub fn label(&self) -> Option<&str> {
+        for prop in &self.props {
+            if prop.name == "label" {
+                return Some(&prop.value);
+            }
+        }
+
+        None
+    }
+}
+
 /// Why a change of a catalog was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CatalogError {

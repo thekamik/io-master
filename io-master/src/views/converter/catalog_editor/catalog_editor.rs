@@ -28,7 +28,6 @@ use crate::model::oscal::catalog::{Control, Group};
 
 use super::ai_builder::view::{self as builder_view, BuildEvent, PageRange, SourceView};
 use super::ai_builder::{controls, groups};
-use super::catalog_tree::view::CatalogTreeView;
 use super::conversion_wizard::view::{PagesForm, WizardView};
 use super::conversion_wizard::{contents, locate, progress};
 use super::new_object::view::PlaceForm;
@@ -55,22 +54,6 @@ pub fn conversion_wizard_get(state: State<'_, AppState>, uuid: String) -> Result
     let session = state.session()?;
 
     progress::read(&session.db(), &uuid)
-}
-
-/// Catalog `uuid` as a tree of rows.
-///
-/// Called by the page: `CatalogTree.svelte`, when the editor opens and after
-/// every change (`catalogEditor.catalogTreeGet(uuid)`).
-/// Calls: `db_oscal::read::catalog`, `CatalogTreeView::new` (the rows of the
-/// tree, without recursion in the page).
-// Tauri hands a command its state and its arguments by value.
-#[allow(clippy::needless_pass_by_value)]
-#[tauri::command(async)]
-pub fn catalog_tree_get(state: State<'_, AppState>, uuid: String) -> Result<CatalogTreeView, AppError> {
-    let session = state.session()?;
-    let catalog = db_oscal::read::catalog(&session.db(), &uuid)?;
-
-    CatalogTreeView::new(&catalog)
 }
 
 /// The proposals waiting for catalog `uuid`, the oldest first.

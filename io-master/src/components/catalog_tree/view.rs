@@ -1,4 +1,4 @@
-//! The data of the tree, as the page gets it.
+//! The data of the component "tree of a catalog", as the page gets it.
 
 use serde::Serialize;
 

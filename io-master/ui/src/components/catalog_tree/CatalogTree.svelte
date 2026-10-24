@@ -1,13 +1,15 @@
 <!--
-  The element "tree" of the editor of a catalog
-  (its commands in src/views/converter/catalog_editor/catalog_editor.rs): the groups and controls, as
-  the rows the program gives with their level, drawn without recursion.
-  Choosing an object, and "+ Group", "+ Control", only tell the view. It
-  reads the tree again when the view says the catalog changed (version).
+  The component "tree of a catalog" (src/components/catalog_tree/, its
+  command catalog_tree_get): the groups and controls, as the rows the program
+  gives with their level, drawn without recursion. Used by the editor of a
+  catalog (Converter), with "+ Group" and "+ Control" (onadd), and by the
+  browser of the standards (Evaluation plan), without them. Choosing an
+  object only tells the view. It reads the tree again when the view says the
+  catalog changed (version).
 -->
 <script lang="ts">
-  import { sentence } from "../../../lib/api/errors";
-  import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
+  import { sentence } from "../../lib/api/errors";
+  import * as catalogTree from "../../lib/api/components/catalog_tree";
 
   let {
     uuid,
@@ -21,11 +23,11 @@
     version: number;
     selected: string | null;
     onchoose: (id: string, kind: "group" | "control") => void;
-    onread: (tree: catalogEditor.CatalogTreeView) => void;
-    onadd: (kind: "group" | "control") => void;
+    onread: (tree: catalogTree.CatalogTreeView) => void;
+    onadd?: (kind: "group" | "control") => void;
   } = $props();
 
-  let tree: catalogEditor.CatalogTreeView | null = $state(null);
+  let tree: catalogTree.CatalogTreeView | null = $state(null);
   let problem = $state("");
 
   $effect(() => {
@@ -35,7 +37,7 @@
 
   async function load(catalog: string) {
     try {
-      tree = await catalogEditor.catalogTreeGet(catalog);
+      tree = await catalogTree.catalogTreeGet(catalog);
       problem = "";
       onread(tree);
     } catch (error) {
@@ -45,13 +47,15 @@
 </script>
 
 <div class="card catalog-side">
-  <div class="buttons">
-    <button type="button" class="small" onclick={() => onadd("group")}>+ Group</button>
-    <button type="button" class="small" onclick={() => onadd("control")}>+ Control</button>
-  </div>
+  {#if onadd}
+    <div class="buttons">
+      <button type="button" class="small" onclick={() => onadd("group")}>+ Group</button>
+      <button type="button" class="small" onclick={() => onadd("control")}>+ Control</button>
+    </div>
+  {/if}
   {#if problem}<p class="problem">{problem}</p>{/if}
   {#if tree && tree.rows.length === 0}
-    <p class="note">The catalog is empty. Add a group, or let the AI read the table of contents.</p>
+    <p class="note">The catalog is empty.</p>
   {/if}
   {#if tree}
     <ul class="catalog-tree">

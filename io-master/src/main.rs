@@ -37,6 +37,7 @@ mod model {
     pub mod api_key;
     pub mod chats;
     pub mod conversion;
+    pub mod evaluation_project;
     pub mod evaluation_support;
     pub mod installation;
     pub mod oscal;
@@ -158,6 +159,16 @@ mod db {
         pub mod schema;
         pub mod update;
     }
+    // db/evaluation_project/: the master projects of the evaluations and their
+    // tasks (the database of the evaluator).
+    pub mod evaluation_project {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
     // db/evaluation_support/: what the program adds to OSCAL, linked by
     // UUIDs and ids (the database of the evaluator).
     pub mod evaluation_support {
@@ -248,6 +259,15 @@ mod components {
     // components/part_rows/: the parts of a group or a control as rows with
     // their level; the object chosen and the proposals of the editor of a
     // catalog. No command: the elements give its rows with their data.
+    // components/catalog_tree/: the tree of a catalog, its groups and
+    // controls as rows with their level; the editor of a catalog (Converter)
+    // and the browser of the standards (Evaluation plan).
+    pub mod catalog_tree {
+        #[allow(clippy::module_inception)]
+        pub mod catalog_tree;
+
+        pub mod view;
+    }
     pub mod part_rows {
         pub mod view;
     }
@@ -340,9 +360,27 @@ mod views {
         #[allow(clippy::module_inception)]
         pub mod evaluation_plan;
 
+        pub mod new_project {
+            pub mod catalogs;
+            pub mod view;
+        }
         pub mod oscal_documents {
             pub mod dialog;
             pub mod file;
+            pub mod view;
+        }
+        pub mod project_form {
+            pub mod view;
+        }
+        pub mod project_list {
+            pub mod view;
+        }
+        pub mod standard_browser {
+            pub mod requirement;
+            pub mod search;
+            pub mod view;
+        }
+        pub mod task_list {
             pub mod view;
         }
     }
@@ -384,9 +422,6 @@ mod views {
                 pub mod groups;
                 pub mod parts;
                 pub mod steps;
-                pub mod view;
-            }
-            pub mod catalog_tree {
                 pub mod view;
             }
             pub mod conversion_wizard {
