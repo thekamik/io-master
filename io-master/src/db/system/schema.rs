@@ -8,12 +8,6 @@
 //! users          one row: the account, its name, time it was created,
 //!                and the encrypted key of its database
 //! ```
-//!
-//! A database made before step 48 of docs/todo.md has two columns more,
-//! `installation.role` and `users.key_device` (the role master and the
-//! TPM factor, both removed). The program never reads them, and writes
-//! these tables only when the database is made, so such a database
-//! keeps working unchanged.
 
 /// The tables, created with the database.
 pub const SCHEMA: &str = "

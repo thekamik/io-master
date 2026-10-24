@@ -92,7 +92,7 @@ Plain types of every area, their rules of validity (`check`) and their normal fo
 - **Columns are read by their names; statements with more than one parameter name them** (`:title`); every statement is in the function that runs it.
 - **A value the program never writes is an error**, `DbError::Corrupt { table, column, value }`, never replaced in silence. `DbError::Sql` is SQLite only; `NoRow` for a change of a row that does not exist; `Inconsistent` for input that does not hold together.
 - **One transaction per operation**; an entry of a journal is written in the transaction of the change it records.
-- **Migrations by version**: `db/user/migrations.rs`, led by `PRAGMA user_version`, run once when the database is opened.
+- **Migrations by version**: `db/user/migrations.rs`, led by `PRAGMA user_version`, run once when the database is opened. The history started again at version 1 with the fresh installation of step 48 (2026-10-24); a database of a version the program does not know is refused (`DbError::Corrupt`).
 - `db/encryption/` holds all code of encryption; it is moved as it was and audited by the user. The head of every area states in which database its data lives and how it is protected.
 
 ### 2.3 `ai/`: the communication with AI
