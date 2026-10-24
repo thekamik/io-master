@@ -5,7 +5,7 @@ use rusqlite::named_params;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{EvaluationTask, MAX_TASKS, ProjectFields};
-use crate::model::task_scheme::{Block, BlockFields, BlockKind, MAX_BLOCKS};
+use crate::model::task_scheme::{Block, MAX_BLOCKS, MAX_OUTPUTS, NewScheme, StandardOutput};
 use crate::model::time::now;
 
 /// Stores a new project `uuid` with its fields and its catalogs, in one
@@ -35,15 +35,20 @@ pub fn project(db: &UserDb, uuid: &str, fields: &ProjectFields, catalogs: &[Stri
     Ok(())
 }
 
-/// Adds `task` at the end of the list of project `project` with the block of
-/// its requirement (`requirement_block`, placed at the origin: the scheme of
-/// a new task, step 51.2), in one transaction; refused when the project
-/// holds [`MAX_TASKS`] already or the control is a task of it already (the
-/// table keeps a control once).
+/// Adds `task` at the end of the list of project `project` with its first
+/// `scheme` (the block of its requirement and the outputs of the template of
+/// the project, connected: `task_scheme::new_scheme`), in one transaction;
+/// refused when the project holds [`MAX_TASKS`] already or the control is a
+/// task of it already (the table keeps a control once).
 ///
 /// Called by: `task_list_add`, `own_requirement_add`
 /// (`views/evaluation_plan/evaluation_plan.rs`).
-pub fn task(db: &UserDb, project: &str, task: &EvaluationTask, requirement_block: &str) -> Result<(), DbError> {
+pub fn task(db: &UserDb, project: &str, task: &EvaluationTask, scheme: &NewScheme) -> Result<(), DbError> {
+    ensure!(
+        scheme.blocks.len() <= MAX_BLOCKS,
+        DbError::Inconsistent(format!("a task holds at most {MAX_BLOCKS} blocks"))
+    );
+
     let transaction = db.connection().unchecked_transaction()?;
 
     let (count, last): (i64, Option<i64>) = transaction.query_row(
@@ -69,17 +74,17 @@ pub fn task(db: &UserDb, project: &str, task: &EvaluationTask, requirement_block
             ":position": last.unwrap_or(0) + 1,
         },
     )?;
-    insert_block(
-        &transaction,
-        &task.uuid,
-        &Block {
-            uuid: requirement_block.to_owned(),
-            kind: BlockKind::Requirement,
-            x: 0,
-            y: 0,
-            fields: BlockFields::empty(),
-        },
-    )?;
+    for block in &scheme.blocks {
+        insert_block(&transaction, &task.uuid, block)?;
+    }
+
+    for connection in &scheme.connections {
+        transaction.execute(
+            "INSERT INTO task_connections (task_uuid, from_block, to_block) VALUES (?1, ?2, ?3)",
+            [&task.uuid, &connection.from, &connection.to],
+        )?;
+    }
+
     transaction
         .execute("UPDATE evaluation_projects SET modified = ?1 WHERE uuid = ?2", rusqlite::params![now(), project])?;
     transaction.commit()?;
@@ -90,9 +95,7 @@ pub fn task(db: &UserDb, project: &str, task: &EvaluationTask, requirement_block
 /// Adds `block` (an input or an output) to the scheme of task `task`;
 /// refused when the scheme holds `MAX_BLOCKS` already.
 ///
-/// Called by: `task_scheme_add_block` (`evaluation_plan.rs`), and
-/// `task_scheme_get` for a task made before its block of the requirement
-/// existed.
+/// Called by: `task_scheme_add_block` (`evaluation_plan.rs`).
 pub fn block(db: &UserDb, task: &str, block: &Block) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
     let count: i64 =
@@ -134,6 +137,46 @@ fn insert_block(transaction: &rusqlite::Transaction<'_>, task: &str, block: &Blo
     Ok(())
 }
 
+/// Adds `output` at the end of the template of the outputs of project
+/// `project`; refused when the template holds [`MAX_OUTPUTS`] already (a
+/// task could not take more).
+///
+/// Called by: `standard_outputs_add` (`evaluation_plan.rs`).
+pub fn standard_output(db: &UserDb, project: &str, output: &StandardOutput) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    let (count, last): (i64, Option<i64>) = transaction.query_row(
+        "SELECT COUNT(*), MAX(position) FROM standard_outputs WHERE project_uuid = ?1",
+        [project],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let limit = i64::try_from(MAX_OUTPUTS).map_err(|error| DbError::Inconsistent(error.to_string()))?;
+
+    if count >= limit {
+        return Err(DbError::Inconsistent(format!("a project has at most {MAX_OUTPUTS} standard outputs")));
+    }
+
+    transaction.execute(
+        "INSERT INTO standard_outputs (uuid, project_uuid, position, name, instructions, target, format, condition)
+         VALUES (:uuid, :project, :position, :name, :instructions, :target, :format, :condition)",
+        named_params! {
+            ":uuid": output.uuid,
+            ":project": project,
+            ":position": last.unwrap_or(0) + 1,
+            ":name": output.fields.name,
+            ":instructions": output.fields.instructions,
+            ":target": output.fields.target,
+            ":format": output.fields.format.name(),
+            ":condition": output.fields.condition.name(),
+        },
+    )?;
+    transaction
+        .execute("UPDATE evaluation_projects SET modified = ?1 WHERE uuid = ?2", rusqlite::params![now(), project])?;
+    transaction.commit()?;
+
+    Ok(())
+}
+
 /// Connects block `from` to block `to` of task `task`; a connection made
 /// twice is kept once.
 ///
@@ -154,6 +197,7 @@ mod tests {
     use super::*;
 
     use crate::db::evaluation_project::read;
+    use crate::model::task_scheme::{BlockFields, BlockKind, new_scheme};
     use crate::test_support::standards::database;
 
     fn fields() -> ProjectFields {
@@ -180,11 +224,41 @@ mod tests {
         let test = database();
         project(&test.db, "p", &fields(), &["c3".to_owned()]).unwrap();
 
-        task(&test.db, "p", &a_task("t1", "adv_fsp.4"), "b1").unwrap();
-        task(&test.db, "p", &a_task("t2", "ate_ind.2"), "b2").unwrap();
+        task(&test.db, "p", &a_task("t1", "adv_fsp.4"), &new_scheme("b1", &[]).unwrap()).unwrap();
+        task(&test.db, "p", &a_task("t2", "ate_ind.2"), &new_scheme("b2", &[]).unwrap()).unwrap();
 
         let tasks = read::tasks(&test.db, "p").unwrap();
         assert_eq!((tasks[0].uuid.as_str(), tasks[1].uuid.as_str()), ("t1", "t2"));
-        assert!(task(&test.db, "p", &a_task("t3", "adv_fsp.4"), "b3").is_err());
+        assert!(task(&test.db, "p", &a_task("t3", "adv_fsp.4"), &new_scheme("b3", &[]).unwrap()).is_err());
+    }
+
+    #[test]
+    fn a_task_is_stored_with_the_outputs_of_its_first_scheme() {
+        let test = database();
+        project(&test.db, "p", &fields(), &["c3".to_owned()]).unwrap();
+        let outputs = [("o1".to_owned(), BlockFields::empty()), ("o2".to_owned(), BlockFields::empty())];
+
+        task(&test.db, "p", &a_task("t", "adv_fsp.4"), &new_scheme("r", &outputs).unwrap()).unwrap();
+
+        let blocks = read::blocks(&test.db, "t").unwrap();
+        assert_eq!(blocks.len(), 3);
+        assert_eq!(blocks[2].kind, BlockKind::Output);
+        assert_eq!(read::connections(&test.db, "t").unwrap().len(), 2);
+    }
+
+    #[test]
+    fn the_standard_outputs_go_to_the_end_up_to_their_limit() {
+        let test = database();
+        project(&test.db, "p", &fields(), &["c3".to_owned()]).unwrap();
+
+        for index in 0..MAX_OUTPUTS {
+            let output = StandardOutput { uuid: format!("s{index}"), fields: BlockFields::empty() };
+            standard_output(&test.db, "p", &output).unwrap();
+        }
+
+        let found = read::standard_outputs(&test.db, "p").unwrap();
+        assert_eq!((found.len(), found[0].uuid.as_str()), (MAX_OUTPUTS, "s0"));
+        let one_more = StandardOutput { uuid: "x".to_owned(), fields: BlockFields::empty() };
+        assert!(standard_output(&test.db, "p", &one_more).is_err());
     }
 }

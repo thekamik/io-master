@@ -24,7 +24,7 @@ use super::oscal_documents::file::{self, read_file, safe_name};
 use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
 use crate::model::own_requirement;
-use crate::model::task_scheme::{self, Block, BlockFields, BlockKind};
+use crate::model::task_scheme::{self, Block, BlockFields, BlockKind, StandardOutput};
 
 use super::new_project::catalogs;
 use super::new_project::view::CatalogChoiceView;
@@ -36,6 +36,7 @@ use super::project_list::view::{self as project_view, ProjectSummaryView};
 use super::standard_browser::requirement;
 use super::standard_browser::search;
 use super::standard_browser::view::{HitView, RequirementView};
+use super::standard_outputs::view::{self as output_view, StandardOutputForm, StandardOutputView};
 use super::task_list::view::{self as task_view, TaskView};
 use super::task_scheme::scheme;
 use super::task_scheme::view::{BlockForm, SchemeView};
@@ -296,8 +297,9 @@ pub fn project_form_save(
 ///
 /// Called by the page: `StandardBrowser.svelte`, "Add as a task"
 /// (`evaluationPlan.taskListAdd(project, catalog, control)`).
-/// Calls: [`project_catalog`], `Catalog::locate`, `new_uuid`,
-/// `db_evaluation_project::create::task`, `task_view::all`.
+/// Calls: [`project_catalog`], `Catalog::locate`, `new_uuid`, `scheme::first`
+/// (the outputs of the template), `db_evaluation_project::create::task`,
+/// `task_view::all`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
@@ -326,7 +328,7 @@ pub fn task_list_add(
     }
 
     let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog, control_id: control };
-    db_evaluation_project::create::task(&db, &project, &task, &new_uuid()?)?;
+    db_evaluation_project::create::task(&db, &project, &task, &scheme::first(&db, &project)?)?;
 
     task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
 }
@@ -444,7 +446,7 @@ pub fn standard_browser_search(
 /// Called by the page: `OwnRequirement.svelte`, "Add"
 /// (`evaluationPlan.ownRequirementAdd(project, requirement)`).
 /// Calls: `own_requirement::normalized` and `check`, `own_catalog::ensure`
-/// and `add`, `db_evaluation_project::update::add_catalog`,
+/// and `add`, `db_evaluation_project::update::add_catalog`, `scheme::first`,
 /// `db_evaluation_project::create::task`, `task_view::all`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
@@ -470,7 +472,7 @@ pub fn own_requirement_add(
     db_evaluation_project::update::add_catalog(&db, &project, &catalog)?;
 
     let task = EvaluationTask { uuid: new_uuid()?, catalog_uuid: catalog, control_id: control };
-    db_evaluation_project::create::task(&db, &project, &task, &new_uuid()?)?;
+    db_evaluation_project::create::task(&db, &project, &task, &scheme::first(&db, &project)?)?;
 
     task_view::all(&db, db_evaluation_project::read::tasks(&db, &project)?)
 }
@@ -527,6 +529,104 @@ pub fn own_requirement_delete(state: State<'_, AppState>, id: String) -> Result<
     );
 
     own_catalog::remove(&db, &catalog, &id)
+}
+
+/// The template of the outputs of project `project` ("Standard outputs",
+/// step 51.3): the default outputs of every new task, in order.
+///
+/// Called by the page: `StandardOutputs.svelte`, when a project opens
+/// (`evaluationPlan.standardOutputsGet(project)`).
+/// Calls: `db_evaluation_project::read::standard_outputs`, `output_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn standard_outputs_get(state: State<'_, AppState>, project: String) -> Result<Vec<StandardOutputView>, AppError> {
+    let session = state.session()?;
+
+    Ok(output_view::all(db_evaluation_project::read::standard_outputs(&session.db(), &project)?))
+}
+
+/// Adds `output` at the end of the template of project `project`; the tasks
+/// added from now on get it.
+///
+/// Called by the page: `StandardOutputs.svelte`, "Add"
+/// (`evaluationPlan.standardOutputsAdd(project, output)`).
+/// Calls: `task_scheme::normalized` and `check_fields`, `new_uuid`,
+/// `db_evaluation_project::create::standard_output`, `output_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn standard_outputs_add(
+    state: State<'_, AppState>,
+    project: String,
+    output: StandardOutputForm,
+) -> Result<Vec<StandardOutputView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let fields = task_scheme::normalized(&output.fields()?);
+
+    task_scheme::check_fields(BlockKind::Output, &fields).map_err(|error| AppError::Invalid(error.to_string()))?;
+    ensure!(
+        db_evaluation_project::read::project(&db, &project)?.is_some(),
+        AppError::Invalid("the project does not exist".to_owned())
+    );
+
+    db_evaluation_project::create::standard_output(&db, &project, &StandardOutput { uuid: new_uuid()?, fields })?;
+
+    Ok(output_view::all(db_evaluation_project::read::standard_outputs(&db, &project)?))
+}
+
+/// Saves the fields of standard output `output`; the tasks made before keep
+/// their copies.
+///
+/// Called by the page: `StandardOutputs.svelte`, "Save"
+/// (`evaluationPlan.standardOutputsSave(output, fields)`).
+/// Calls: `task_scheme::normalized` and `check_fields`,
+/// [`standard_output_project`], `db_evaluation_project::update::standard_output`,
+/// `output_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn standard_outputs_save(
+    state: State<'_, AppState>,
+    output: String,
+    fields: StandardOutputForm,
+) -> Result<Vec<StandardOutputView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let fields = task_scheme::normalized(&fields.fields()?);
+
+    task_scheme::check_fields(BlockKind::Output, &fields).map_err(|error| AppError::Invalid(error.to_string()))?;
+    let project = standard_output_project(&db, &output)?;
+    db_evaluation_project::update::standard_output(&db, &output, &fields)?;
+
+    Ok(output_view::all(db_evaluation_project::read::standard_outputs(&db, &project)?))
+}
+
+/// Deletes standard output `output` from its template; the tasks keep their
+/// copies.
+///
+/// Called by the page: `StandardOutputs.svelte`, "Delete"
+/// (`evaluationPlan.standardOutputsDelete(output)`).
+/// Calls: [`standard_output_project`],
+/// `db_evaluation_project::delete::standard_output`, `output_view::all`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn standard_outputs_delete(
+    state: State<'_, AppState>,
+    output: String,
+) -> Result<Vec<StandardOutputView>, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let project = standard_output_project(&db, &output)?;
+
+    ensure!(
+        db_evaluation_project::delete::standard_output(&db, &output)?,
+        AppError::Invalid("the standard output does not exist".to_owned())
+    );
+
+    Ok(output_view::all(db_evaluation_project::read::standard_outputs(&db, &project)?))
 }
 
 /// The scheme of task `task`: its requirement as the standard writes it,
@@ -699,6 +799,17 @@ pub fn task_scheme_disconnect(state: State<'_, AppState>, from: String, to: Stri
 }
 
 // ── Helpers of the commands above ─────────────────────────────────────
+
+/// The project of standard output `uuid`; refused when it does not exist.
+///
+/// Called by: `standard_outputs_save`, `standard_outputs_delete`.
+/// Calls: `db_evaluation_project::read::standard_output`.
+fn standard_output_project(db: &UserDb, uuid: &str) -> Result<String, AppError> {
+    match db_evaluation_project::read::standard_output(db, uuid)? {
+        Some((project, _)) => Ok(project),
+        None => Err(AppError::Invalid("the standard output does not exist".to_owned())),
+    }
+}
 
 /// Project `uuid` in its form.
 ///
@@ -1017,6 +1128,69 @@ mod tests {
         assert_eq!(
             window.call("task_scheme_remove_block", json!({ "block": requirement })).unwrap_err()["kind"],
             "invalid"
+        );
+    }
+
+    fn output(name: &str, condition: &str) -> serde_json::Value {
+        json!({ "name": name, "instructions": "Fill the template.", "target": "section 4", "format": "latex",
+                "condition": condition })
+    }
+
+    #[test]
+    fn the_standard_outputs_are_kept_with_all_four_operations() {
+        let (window, _, project) = with_project();
+
+        window
+            .call("standard_outputs_add", json!({ "project": project, "output": output(" pETR ", "always") }))
+            .unwrap();
+        let outputs = window
+            .call("standard_outputs_add", json!({ "project": project, "output": output("OR", "not_met") }))
+            .unwrap();
+        assert_eq!((outputs[0]["name"].clone(), outputs[1]["condition"].clone()), (json!("pETR"), json!("not_met")));
+
+        let saved = window
+            .call(
+                "standard_outputs_save",
+                json!({ "output": outputs[1]["uuid"], "fields": output("Observation Report", "not_met") }),
+            )
+            .unwrap();
+        assert_eq!(saved[1]["name"], "Observation Report");
+        assert_eq!(window.call("standard_outputs_get", json!({ "project": project })).unwrap(), saved);
+
+        let left = window.call("standard_outputs_delete", json!({ "output": saved[0]["uuid"] })).unwrap();
+        assert_eq!(left.as_array().unwrap().len(), 1);
+
+        let unnamed =
+            window.call("standard_outputs_add", json!({ "project": project, "output": output(" ", "always") }));
+        assert_eq!(unnamed.unwrap_err()["kind"], "invalid");
+        let wrong = window.call("standard_outputs_add", json!({ "project": project, "output": output("X", "maybe") }));
+        assert_eq!(wrong.unwrap_err()["kind"], "invalid");
+        assert_eq!(window.call("standard_outputs_delete", json!({ "output": "none" })).unwrap_err()["kind"], "invalid");
+    }
+
+    #[test]
+    fn a_new_task_gets_a_copy_of_the_standard_outputs_which_it_may_change() {
+        let (window, catalog, project) = with_project();
+        window.call("standard_outputs_add", json!({ "project": project, "output": output("pETR", "always") })).unwrap();
+        window.call("standard_outputs_add", json!({ "project": project, "output": output("OR", "not_met") })).unwrap();
+
+        let tasks = window
+            .call("task_list_add", json!({ "project": project, "catalog": catalog, "control": "s1.1.1" }))
+            .unwrap();
+        let scheme = window.call("task_scheme_get", json!({ "task": tasks[0]["uuid"] })).unwrap();
+
+        assert_eq!(scheme["blocks"].as_array().unwrap().len(), 3);
+        assert_eq!(
+            (scheme["blocks"][1]["name"].clone(), scheme["blocks"][2]["condition"].clone()),
+            (json!("pETR"), json!("not_met"))
+        );
+        assert_eq!(scheme["connections"][0]["from"], scheme["blocks"][0]["uuid"]);
+
+        // The copy is the task's own: removed in the task, it stays in the template.
+        window.call("task_scheme_remove_block", json!({ "block": scheme["blocks"][2]["uuid"] })).unwrap();
+        assert_eq!(
+            window.call("standard_outputs_get", json!({ "project": project })).unwrap().as_array().unwrap().len(),
+            2
         );
     }
 }

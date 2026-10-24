@@ -98,6 +98,28 @@ pub fn block_fields(db: &UserDb, uuid: &str, fields: &BlockFields) -> Result<(),
     if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "task_blocks", id: 0 }) }
 }
 
+/// Replaces the fields of standard output `uuid` (its `evidence` is not
+/// kept: an output has none).
+///
+/// Called by: `standard_outputs_save` (`evaluation_plan.rs`).
+pub fn standard_output(db: &UserDb, uuid: &str, fields: &BlockFields) -> Result<(), DbError> {
+    let changed = db.connection().execute(
+        "UPDATE standard_outputs SET name = :name, instructions = :instructions, target = :target,
+                                     format = :format, condition = :condition
+         WHERE uuid = :uuid",
+        named_params! {
+            ":uuid": uuid,
+            ":name": fields.name,
+            ":instructions": fields.instructions,
+            ":target": fields.target,
+            ":format": fields.format.name(),
+            ":condition": fields.condition.name(),
+        },
+    )?;
+
+    if changed == 1 { Ok(()) } else { Err(DbError::NoRow { table: "standard_outputs", id: 0 }) }
+}
+
 /// Places block `uuid` at `x`, `y` in the drawing (where a drag ended).
 ///
 /// Called by: `task_scheme_move_block` (`evaluation_plan.rs`).
@@ -160,6 +182,7 @@ mod tests {
 
     use crate::db::evaluation_project::{create, read};
     use crate::model::evaluation_project::EvaluationTask;
+    use crate::model::task_scheme::new_scheme;
     use crate::test_support::standards::database;
 
     fn fields(title: &str) -> ProjectFields {
@@ -192,7 +215,7 @@ mod tests {
         for (uuid, control) in [("t1", "a"), ("t2", "b"), ("t3", "c")] {
             let task =
                 EvaluationTask { uuid: uuid.to_owned(), catalog_uuid: "c".to_owned(), control_id: control.to_owned() };
-            create::task(&test.db, "p", &task, &format!("b-{}", task.uuid)).unwrap();
+            create::task(&test.db, "p", &task, &new_scheme(&format!("b-{}", task.uuid), &[]).unwrap()).unwrap();
         }
 
         assert!(move_task(&test.db, "t3", true).unwrap());
@@ -211,7 +234,7 @@ mod tests {
         let test = database();
         create::project(&test.db, "p", &fields("p"), &["c".to_owned()]).unwrap();
         let task = EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c".to_owned(), control_id: "x".to_owned() };
-        create::task(&test.db, "p", &task, "req").unwrap();
+        create::task(&test.db, "p", &task, &new_scheme("req", &[]).unwrap()).unwrap();
 
         let mut written = BlockFields::empty();
         written.instructions = "Assess the interfaces.".to_owned();
@@ -223,5 +246,27 @@ mod tests {
         let found = read::block(&test.db, "req").unwrap().unwrap().1;
         assert_eq!((found.fields, found.x, found.y), (written, 40, -12));
         assert!(block_position(&test.db, "none", 0, 0).is_err());
+    }
+
+    #[test]
+    fn the_fields_of_a_standard_output_are_kept() {
+        use crate::model::task_scheme::{BlockFields, OutputCondition, OutputFormat, StandardOutput};
+
+        let test = database();
+        create::project(&test.db, "p", &fields("p"), &["c".to_owned()]).unwrap();
+        create::standard_output(&test.db, "p", &StandardOutput { uuid: "s".to_owned(), fields: BlockFields::empty() })
+            .unwrap();
+
+        let mut written = BlockFields::empty();
+        written.name = "pETR".to_owned();
+        written.format = OutputFormat::Latex;
+        written.condition = OutputCondition::Met;
+        standard_output(&test.db, "s", &written).unwrap();
+
+        assert_eq!(
+            read::standard_output(&test.db, "s").unwrap().unwrap(),
+            ("p".to_owned(), StandardOutput { uuid: "s".to_owned(), fields: written.clone() })
+        );
+        assert!(standard_output(&test.db, "none", &written).is_err());
     }
 }

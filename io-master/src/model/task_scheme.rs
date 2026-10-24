@@ -11,6 +11,10 @@
 //!  input ──┘                  └──► output (only when the requirement is not met)
 //! ```
 //!
+//! The outputs of a new task are copied from the template of its project
+//! ("Standard outputs", step 51.3): the default shape of the outputs, which
+//! the planner may change in each task.
+//!
 //! Plain data and its rules; stored by `db/evaluation_project/`.
 
 use super::text::{Field, Invalid, check_text};
@@ -34,6 +38,12 @@ pub const TEXT_MAX: usize = 10_000;
 /// The farthest a block may be placed from the origin of the drawing, in
 /// either direction.
 pub const POSITION_MAX: i64 = 100_000;
+
+/// Where the outputs of a new task are placed: right of the requirement.
+pub const OUTPUT_X: i64 = 320;
+
+/// The distance of two blocks one below another in a new task.
+pub const ROW: i64 = 130;
 
 /// The kind of a block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -166,9 +176,26 @@ pub struct Connection {
     pub to: String,
 }
 
+/// An output of the template of a project ("Standard outputs"): the default
+/// shape of an output of every new task of the project.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StandardOutput {
+    pub uuid: String,
+    /// The fields of an output; `evidence` is empty.
+    pub fields: BlockFields,
+}
+
+/// The scheme of a new task, before it is stored.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewScheme {
+    pub blocks: Vec<Block>,
+    pub connections: Vec<Connection>,
+}
+
 /// The fields in their normal form: no spaces around them.
 ///
-/// Called by: `task_scheme_save_block` (`views/evaluation_plan/evaluation_plan.rs`).
+/// Called by: `task_scheme_save_block`, `standard_outputs_add` and
+/// `standard_outputs_save` (`views/evaluation_plan/evaluation_plan.rs`).
 pub fn normalized(fields: &BlockFields) -> BlockFields {
     BlockFields {
         name: fields.name.trim().to_owned(),
@@ -214,6 +241,40 @@ pub fn check_position(x: i64, y: i64) -> Result<(), Invalid> {
 /// Called by: `task_scheme_connect`.
 pub fn may_connect(from: BlockKind, to: BlockKind) -> bool {
     matches!((from, to), (BlockKind::Input, BlockKind::Requirement) | (BlockKind::Requirement, BlockKind::Output))
+}
+
+/// The scheme of a new task: the block of its requirement `requirement` at
+/// the origin and, in a column on its right, the outputs copied from the
+/// template of the project, each connected from the requirement. `outputs`
+/// are the UUIDs of the new blocks with the fields of the template; at most
+/// [`MAX_OUTPUTS`].
+///
+/// Called by: `task_scheme/scheme.rs` (`first`), when a task is added.
+pub fn new_scheme(requirement: &str, outputs: &[(String, BlockFields)]) -> Result<NewScheme, Invalid> {
+    ensure!(
+        outputs.len() <= MAX_OUTPUTS,
+        Invalid::new(Field::Kind, format!("a task has at most {MAX_OUTPUTS} outputs"))
+    );
+
+    let mut blocks = Vec::with_capacity(1 + outputs.len());
+    let mut connections = Vec::with_capacity(outputs.len());
+    let first =
+        Block { uuid: requirement.to_owned(), kind: BlockKind::Requirement, x: 0, y: 0, fields: BlockFields::empty() };
+
+    blocks.push(first);
+
+    // The column of the outputs is centred on the requirement.
+    let mut y = -ROW * i64::try_from(outputs.len().saturating_sub(1)).unwrap_or(0) / 2;
+
+    for (uuid, fields) in outputs {
+        ensure!(uuid != requirement, Invalid::new(Field::Kind, "two blocks have one UUID"));
+
+        blocks.push(Block { uuid: uuid.clone(), kind: BlockKind::Output, x: OUTPUT_X, y, fields: fields.clone() });
+        connections.push(Connection { from: requirement.to_owned(), to: uuid.clone() });
+        y += ROW;
+    }
+
+    Ok(NewScheme { blocks, connections })
 }
 
 /// Checks that a scheme with `blocks` may get one more block of `kind`:
@@ -299,6 +360,32 @@ mod tests {
         let full: Vec<Block> = (0..MAX_INPUTS).map(|_| block(BlockKind::Input)).collect();
         assert!(check_new_block(&full, BlockKind::Input).is_err());
         assert!(check_new_block(&full, BlockKind::Output).is_ok());
+    }
+
+    #[test]
+    fn a_new_task_has_its_requirement_and_the_outputs_of_the_template_connected() {
+        let mut report = BlockFields::empty();
+        report.name = "Observation Report".to_owned();
+        report.condition = OutputCondition::NotMet;
+        let outputs = [("o1".to_owned(), BlockFields::empty()), ("o2".to_owned(), report.clone())];
+
+        let scheme = new_scheme("r", &outputs).unwrap();
+
+        assert_eq!(scheme.blocks.len(), 3);
+        assert_eq!(scheme.blocks[0].kind, BlockKind::Requirement);
+        assert_eq!((scheme.blocks[2].kind, &scheme.blocks[2].fields), (BlockKind::Output, &report));
+        assert_eq!((scheme.blocks[1].y, scheme.blocks[2].y), (-ROW / 2, ROW / 2));
+        assert_eq!(scheme.connections[1], Connection { from: "r".to_owned(), to: "o2".to_owned() });
+        assert_eq!(new_scheme("r", &[]).unwrap().blocks.len(), 1);
+    }
+
+    #[test]
+    fn a_new_task_takes_no_more_outputs_than_a_task_holds() {
+        let outputs: Vec<(String, BlockFields)> =
+            (0..=MAX_OUTPUTS).map(|index| (format!("o{index}"), BlockFields::empty())).collect();
+
+        assert!(new_scheme("r", &outputs).is_err());
+        assert!(new_scheme("r", &[("r".to_owned(), BlockFields::empty())]).is_err());
     }
 
     #[test]

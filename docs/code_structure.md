@@ -225,7 +225,8 @@ model/                     The data of the program as plain Rust types, and the 
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
   own_requirement.rs           A requirement of the laboratory's own, outside the standards (step 51.1e
-  task_scheme.rs               The scheme of a task of a master project (step 51.2): its blocks
+  task_scheme.rs               The scheme of a task of a master project (step 51.2), the template of the
+                                 outputs of a project and the first scheme of a new task (step 51.3): its blocks
   recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/todo.md): 160
   oscal.rs/                    The documents of NIST OSCAL (Open Security Controls Assessment
     assessment_plan.rs           An OSCAL assessment plan: the evaluation plan (function a of
@@ -278,7 +279,8 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     rows.rs                      The rows of the conversions and the types of `model/conversion.rs` they
     schema.rs                    The tables of the conversions of the documents of standards into
     update.rs                    Changing a conversion: its stage, the pages of its table of contents,
-  evaluation_project/          The master projects of the evaluations and their tasks (step 51).
+  evaluation_project/          The master projects of the evaluations and their tasks (step 51), the
+                                 template of their outputs (standard_outputs, step 51.3).
     create.rs                    Storing master projects and their tasks.
     delete.rs                    Deleting master projects and their tasks.
     read.rs                      Reading master projects and their tasks.
@@ -455,6 +457,9 @@ views/                     The views of the window, one folder per view and one 
       requirement.rs               A requirement of a catalog of a master project, read for the browser of
       search.rs                    The search of the requirements of the catalogs of a master project: a
       view.rs                      The data of the browser of the standards of a master project, as the
+    standard_outputs/            The element "standard outputs": the template of the outputs of the
+                                 tasks of a master project (step 51.3).
+      view.rs                      The data of the template, as the page gets it and sends it.
     task_list/                   The element "list of tasks" of the view Evaluation plan.
       view.rs                      The data of the list of tasks of a master project, as the page gets it:
     task_scheme/                 The element "scheme of a task": its blocks input, requirement, output.

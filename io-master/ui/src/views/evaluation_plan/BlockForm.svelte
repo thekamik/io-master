@@ -10,6 +10,7 @@
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
+  import OutputFields from "./OutputFields.svelte";
 
   let {
     block,
@@ -81,27 +82,7 @@
     </label>
   {:else}
     <h3>Output</h3>
-    <label>Name <input bind:value={form.name} required placeholder="pETR, Observation Report, …" /></label>
-    <label>
-      Format
-      <select bind:value={form.format}>
-        <option value="text">a text file</option>
-        <option value="latex">a LaTeX template</option>
-      </select>
-    </label>
-    <label>
-      Filled
-      <select bind:value={form.condition}>
-        <option value="always">always</option>
-        <option value="not_met">only when the requirement is not met</option>
-        <option value="met">only when the requirement is met</option>
-      </select>
-    </label>
-    <label>Target <textarea bind:value={form.target} rows="2" placeholder="The file or the template, and its section"></textarea></label>
-    <label>
-      Instructions for its AI
-      <textarea bind:value={form.instructions} rows="3" placeholder="How to adapt the result to this document"></textarea>
-    </label>
+    <OutputFields bind:fields={form} />
   {/if}
   <div class="buttons">
     <button type="submit">Save</button>

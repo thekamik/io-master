@@ -116,6 +116,26 @@ export interface SchemeView {
   connections: { from: string; to: string }[];
 }
 
+// standard_outputs/view.rs
+/** An output of the template of a project ("Standard outputs"). */
+export interface StandardOutputView {
+  uuid: string;
+  name: string;
+  instructions: string;
+  target: string;
+  format: OutputFormat;
+  condition: OutputCondition;
+}
+
+/** The fields of an output of the template, as the page sends them. */
+export interface StandardOutputForm {
+  name: string;
+  instructions: string;
+  target: string;
+  format: OutputFormat;
+  condition: OutputCondition;
+}
+
 // own_requirement/view.rs
 /** A requirement of the laboratory's own; its identifier is the planner's. */
 export interface OwnRequirement {
@@ -287,4 +307,24 @@ export function taskSchemeConnect(from: string, to: string): Promise<SchemeView>
 /** Called by TaskScheme.svelte, a connection removed. */
 export function taskSchemeDisconnect(from: string, to: string): Promise<SchemeView> {
   return invoke("task_scheme_disconnect", { from, to });
+}
+
+/** Called by StandardOutputs.svelte, when a project opens. */
+export function standardOutputsGet(project: string): Promise<StandardOutputView[]> {
+  return invoke("standard_outputs_get", { project });
+}
+
+/** Called by StandardOutputs.svelte, "Add". */
+export function standardOutputsAdd(project: string, output: StandardOutputForm): Promise<StandardOutputView[]> {
+  return invoke("standard_outputs_add", { project, output });
+}
+
+/** Called by StandardOutputs.svelte, "Save". */
+export function standardOutputsSave(output: string, fields: StandardOutputForm): Promise<StandardOutputView[]> {
+  return invoke("standard_outputs_save", { output, fields });
+}
+
+/** Called by StandardOutputs.svelte, "Delete". */
+export function standardOutputsDelete(output: string): Promise<StandardOutputView[]> {
+  return invoke("standard_outputs_delete", { output });
 }

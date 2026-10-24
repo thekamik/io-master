@@ -7,7 +7,7 @@ use crate::db::user::database::UserDb;
 use crate::model::evaluation_project::{
     EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_PROJECTS, MAX_TASKS, ProjectSummary,
 };
-use crate::model::task_scheme::{Block, Connection, MAX_BLOCKS};
+use crate::model::task_scheme::{Block, Connection, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
 
 use super::rows;
 
@@ -118,6 +118,42 @@ pub fn catalog_has_tasks(db: &UserDb, project: &str, catalog: &str) -> Result<bo
     )?)
 }
 
+/// The template of the outputs of project `project`, in its order; at most
+/// `MAX_OUTPUTS`.
+///
+/// Called by: `standard_outputs_get` and the commands that change the
+/// template (`evaluation_plan.rs`), `task_scheme/scheme.rs` (`first`).
+pub fn standard_outputs(db: &UserDb, project: &str) -> Result<Vec<StandardOutput>, DbError> {
+    let connection = db.connection();
+    let mut statement =
+        connection.prepare("SELECT * FROM standard_outputs WHERE project_uuid = ?1 ORDER BY position LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in
+        statement.query_map(rusqlite::params![project, limit(MAX_OUTPUTS)?], |row| Ok(rows::standard_output(row)))?
+    {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// Standard output `uuid` and its project; `None` when it does not exist.
+///
+/// Called by: `standard_outputs_save`, `standard_outputs_delete` (`evaluation_plan.rs`).
+pub fn standard_output(db: &UserDb, uuid: &str) -> Result<Option<(String, StandardOutput)>, DbError> {
+    let mut statement = db.connection().prepare("SELECT * FROM standard_outputs WHERE uuid = ?1")?;
+
+    let found = statement
+        .query_row([uuid], |row| Ok((row.get::<_, String>("project_uuid"), rows::standard_output(row))))
+        .optional()?;
+
+    match found {
+        Some((project, output)) => Ok(Some((project?, output?))),
+        None => Ok(None),
+    }
+}
+
 /// The blocks of the scheme of task `task`: its requirement first, then the
 /// inputs and the outputs in the order they were added; at most
 /// `MAX_BLOCKS`.
@@ -189,6 +225,7 @@ mod tests {
 
     use crate::db::evaluation_project::create;
     use crate::model::evaluation_project::ProjectFields;
+    use crate::model::task_scheme::new_scheme;
     use crate::test_support::standards::database;
 
     #[test]
@@ -197,7 +234,7 @@ mod tests {
         let fields = ProjectFields { title: "CC".to_owned(), description: String::new() };
         create::project(&test.db, "p", &fields, &["c3".to_owned(), "c2".to_owned()]).unwrap();
         let added = EvaluationTask { uuid: "t".to_owned(), catalog_uuid: "c3".to_owned(), control_id: "x".to_owned() };
-        create::task(&test.db, "p", &added, &format!("b-{}", added.uuid)).unwrap();
+        create::task(&test.db, "p", &added, &new_scheme(&format!("b-{}", added.uuid), &[]).unwrap()).unwrap();
 
         let list = projects(&test.db).unwrap();
 

@@ -8,6 +8,7 @@
 //! ```text
 //! evaluation_projects   a master project: its title and description
 //! project_catalogs      the catalogs a project uses, in the order chosen
+//! standard_outputs      the template of the outputs of its tasks (step 51.3), in order
 //! evaluation_tasks      its tasks, each a control of one of its catalogs, in order
 //! task_blocks           the blocks of the scheme of a task (step 51.2): its
 //!                       requirement, its inputs, its outputs, placed in the drawing
@@ -29,6 +30,19 @@ pub const SCHEMA: &str = "
         catalog_uuid    TEXT NOT NULL,
         position        INTEGER NOT NULL,
         PRIMARY KEY (project_uuid, catalog_uuid)
+    );
+
+    -- The template of the outputs of a project: format and condition as in
+    -- task_blocks; a new task gets a copy of them as its outputs.
+    CREATE TABLE IF NOT EXISTS standard_outputs (
+        uuid            TEXT PRIMARY KEY,
+        project_uuid    TEXT NOT NULL,
+        position        INTEGER NOT NULL,
+        name            TEXT NOT NULL,
+        instructions    TEXT NOT NULL,
+        target          TEXT NOT NULL,
+        format          TEXT NOT NULL,
+        condition       TEXT NOT NULL
     );
 
     -- One task per control in a project.

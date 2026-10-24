@@ -1,6 +1,7 @@
 <!--
   The screen of a master project of the view Evaluation plan: its title,
-  scope and catalogs (ProjectForm, folded), its tasks (TaskList) beside the
+  scope and catalogs (ProjectForm, folded), the template of the outputs of
+  its tasks (StandardOutputs, folded, step 51.3), its tasks (TaskList) beside the
   browser of the standards (StandardBrowser), and the viewer of a standard
   for a quote; a task opens its scheme (TaskScheme, step 51.2). When an element changes the project, the screen counts up
   `version`, and every element reads its data again. Presentation only.
@@ -10,6 +11,7 @@
   import type { ProjectView } from "../../lib/api/evaluation_plan";
   import ProjectForm from "./ProjectForm.svelte";
   import StandardBrowser from "./StandardBrowser.svelte";
+  import StandardOutputs from "./StandardOutputs.svelte";
   import TaskList from "./TaskList.svelte";
   import TaskScheme from "./TaskScheme.svelte";
 
@@ -35,6 +37,7 @@
 </div>
 
 <ProjectForm {uuid} {version} onread={(view) => (project = view)} onchanged={changed} />
+<StandardOutputs project={uuid} />
 
 <div class="project-body">
   <TaskList project={uuid} {version} onchanged={changed} onopen={(id) => (task = id)} />

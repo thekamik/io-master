@@ -1,14 +1,13 @@
 //! The scheme of a task read for the page: the task with its requirement
 //! (from its catalog), its blocks and connections (from
-//! `db/evaluation_project/`). A task made before the scheme existed gets its
-//! block of the requirement here.
+//! `db/evaluation_project/`); and the first scheme of a new task.
 
 use crate::app::error::AppError;
 use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
-use crate::model::task_scheme::{Block, BlockFields, BlockKind};
+use crate::model::task_scheme::{self, Block, NewScheme};
 
 use super::super::own_requirement::catalog as own_catalog;
 use super::super::standard_browser::requirement;
@@ -26,22 +25,7 @@ pub fn read(db: &UserDb, task: &str) -> Result<SchemeView, AppError> {
         return Err(AppError::Invalid("the task does not exist".to_owned()));
     };
 
-    let mut blocks = db_evaluation_project::read::blocks(db, task)?;
-    let mut has_requirement = false;
-
-    for block in &blocks {
-        if block.kind == BlockKind::Requirement {
-            has_requirement = true;
-        }
-    }
-
-    if !has_requirement {
-        let block = Block { uuid: new_uuid()?, kind: BlockKind::Requirement, x: 0, y: 0, fields: BlockFields::empty() };
-
-        db_evaluation_project::create::block(db, task, &block)?;
-        blocks = db_evaluation_project::read::blocks(db, task)?;
-    }
-
+    let blocks = db_evaluation_project::read::blocks(db, task)?;
     let catalog = db_oscal::read::catalog(db, &found.catalog_uuid)?;
     let own = own_catalog::existing(db)?.as_deref() == Some(found.catalog_uuid.as_str());
     let shown = requirement::read(db, &found.catalog_uuid, &catalog, &found.control_id, true, own)?;
@@ -64,6 +48,24 @@ pub fn read(db: &UserDb, task: &str) -> Result<SchemeView, AppError> {
     }
 
     Ok(SchemeView { task: task_shown, requirement: shown, blocks: block_views, connections })
+}
+
+/// The first scheme of a new task of project `project`: the block of its
+/// requirement and a copy of every output of the template of the project
+/// (new UUIDs), connected from the requirement.
+///
+/// Called by: `task_list_add`, `own_requirement_add` (`evaluation_plan.rs`).
+/// Calls: `db_evaluation_project::read::standard_outputs`, `new_uuid`,
+/// `task_scheme::new_scheme`.
+pub fn first(db: &UserDb, project: &str) -> Result<NewScheme, AppError> {
+    let template = db_evaluation_project::read::standard_outputs(db, project)?;
+    let mut outputs = Vec::with_capacity(template.len());
+
+    for output in template {
+        outputs.push((new_uuid()?, output.fields));
+    }
+
+    task_scheme::new_scheme(&new_uuid()?, &outputs).map_err(|error| AppError::Invalid(error.to_string()))
 }
 
 /// Block `uuid` and its task; refused when it does not exist.

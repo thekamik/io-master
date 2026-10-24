@@ -380,6 +380,10 @@ ProjectList ──"New master project…"──► NewProject ──new_project_
      ──new_project_create(title, scope, catalogs)──► db/evaluation_project/ ──► "made" ──► the screen of the project
 the screen of a project (the screen of a task in place of it while a task is open):
   ├─► ProjectForm ──project_form_get(uuid)──► title, scope, catalogs; ──project_form_save──► (a catalog with tasks stays)
+  ├─► StandardOutputs (step 51.3) ──standard_outputs_get(project)──► the template of the outputs of its tasks
+  │     ──standard_outputs_add(project, output) / _save(output, fields) / _delete(output)──► db/evaluation_project/
+  │     (a new task gets a copy of the template as its outputs, connected from its requirement: scheme::first;
+  │      the tasks made before keep theirs)
   ├─► TaskList ──task_list_get(project)──► the tasks in order, each read from its catalog (db/oscal/)
   │     ──task_list_move(task, up) / task_list_remove(task)──► db/evaluation_project/
   └─► StandardBrowser: CatalogTree (component) ──catalog_tree_get(catalog)──► the tree of a catalog of the project
