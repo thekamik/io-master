@@ -75,7 +75,12 @@ Legend: `[ ]` to do, `[x]` done.
   - **Requirement:** the interaction of the evaluator with an agent of the AI: the evaluator consults it whether the inputs meet the requirement. **One task, one requirement: the context of the agent stays small and it works better.**
   - **Output:** the configuration of where the evaluator exports the result of the evaluation.
 - **The AI only proposes; the planner approves** (P1). The AI has to understand the text and find elements such as the work units; the structure of OSCAL helps the machine.
-- Open: the format of the exported project (the user asked for an explanation).
+- **The evaluator sees a scheme exactly as the planner made it**: several inputs of the planner are several inputs for the evaluator; the same blocks, connections and layout.
+- **A requirement may have many inputs** (a fragment of the Security Target, the output of a program, a fragment of the documentation, ...).
+- **The format of the export (user, 2026-10-24: variant b):** the standard (its catalogs of OSCAL) travels as an **attachment**; **our format holds the list of the requirements (the evaluation tasks) with the information of their schemes**, linked to the catalogs by their ids and UUIDs.
+- **Names:** `evaluation_task` (zadanie ewaluacji) in the code and the documents; it does not clash with the tasks of the AI (`ai/api/tasks`).
+- **The file is not locked by a signature of its author**; a project is changed only in the view Evaluation plan and carried out only in the view Evaluation lab.
+- **The result of a task:** the four texts decided on 2026-10-17 (*Findings*, *Analysis*, *Assessment and verdict proposition*, *Vulnerabilities and notes*) are the default format; laboratories have templates of their own, so **the output block has an instance of the AI too**, which adapts the default format to what the laboratory requires.
 
 ---
 
