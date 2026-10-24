@@ -1,38 +1,27 @@
-//! The roles of the AI (user, 2026-10-17): the AI acts in several
-//! roles, and every question to it is asked in one of them.
+//! The model a question goes to (user, 2026-10-17: the AI acts in
+//! roles, and every question is asked in a task of one role,
+//! `tasks.rs`; the role is written into the journal of the AI). Every
+//! role uses the active connection of Settings: a connection of its
+//! own per role was designed in step 38 and never offered on the page,
+//! and was removed on 2026-10-24 (step 53).
 //!
 //! ```text
-//! role                 used by (tasks.rs)                 answer   quotes   memory
-//! text_analysis        chapters, table of contents,       JSON     checked  never shortened
-//!                      later phase 1 of the evaluation
-//! summary              later: AI notes, drafts of outputs text     -        by parameters
-//! consultation         the chat                           text     -        by parameters
-//! formal_analysis      later: phase 2 of the evaluation   fields   checked  never shortened
-//! ```
-//!
-//! A role is fixed by the program: the form of its answer, whether its
-//! quotes are checked, and what the memory may do with its text (the
-//! quotes of a standard are never shortened, user 2026-10-17). What the
-//! evaluator chooses is kept in the database: the connection a role
-//! uses (`db/ai/roles/`; none: the active connection) and the
-//! instructions of each task (`tasks.rs`).
-//!
-//! ```text
-//! list()             GET  /roles
-//! connection()       GET  /roles/{role}/connection
-//! set_connection()   PUT  /roles/{role}/connection
-//! model()            the connection a role uses now, checked, with its key
+//! role                 used by (tasks.rs)
+//! text_analysis        the catalogs, the schemes, the proposals of tasks and related elements, the fragments
+//! summary              the texts of the outputs
+//! consultation         the chat, the chat of an input
+//! formal_analysis      the assessment of a requirement
+//! model()              the active connection, checked, with its key
 //! ```
 
 use std::fmt;
 
 use crate::db::ai::connection as db_connection;
-use crate::db::ai::roles as db_roles;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
 use super::connection::Checked;
-use crate::model::ai::{ConnectionError, Role};
+use crate::model::ai::ConnectionError;
 use crate::model::api_key::ApiKey;
 
 /// The connection a question goes over: checked, with its key.
@@ -48,7 +37,7 @@ pub struct Model {
 /// Why there is no model to ask.
 #[derive(Debug)]
 pub enum ModelError {
-    /// No connection is given to the role, and none is active.
+    /// No connection is active.
     NoConnection,
     /// The connection breaks a rule (a database changed by hand, or a
     /// rule of a newer version); holds its name and why.
@@ -88,29 +77,12 @@ impl From<DbError> for ModelError {
     }
 }
 
-/// Every role.
-pub fn list() -> Vec<Role> {
-    Role::ALL.to_vec()
-}
-
-/// The connection given to `role`; `None`: it uses the active one.
-pub fn connection(db: &UserDb, role: Role) -> Result<Option<i64>, DbError> {
-    db_roles::read::connection(db, role)
-}
-
-/// Gives `role` the connection `id`, or none (the active one); returns
-/// `false` when the connection does not exist.
-pub fn set_connection(db: &UserDb, role: Role, id: Option<i64>) -> Result<bool, DbError> {
-    db_roles::update::connection(db, role, id)
-}
-
-/// The connection `role` uses now (its own, else the active one),
-/// checked, with its key.
-pub fn model(db: &UserDb, role: Role) -> Result<Model, ModelError> {
-    let id = match db_roles::read::connection(db, role)? {
-        Some(id) => id,
-        None => db_connection::read::active(db)?.ok_or(ModelError::NoConnection)?,
-    };
+/// The active connection, checked, with its key.
+///
+/// Called by: every work of the AI (the chat, the Converter, the Evaluation plan, the Evaluation lab).
+/// Calls: `db_connection::read::active`, [`model_of`].
+pub fn model(db: &UserDb) -> Result<Model, ModelError> {
+    let id = db_connection::read::active(db)?.ok_or(ModelError::NoConnection)?;
 
     model_of(db, id, true)
 }
@@ -137,9 +109,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::ai::MemoryRule;
-
-    use crate::db::ai::connection::{create, delete, update};
+    use crate::db::ai::connection::{create, update};
     use crate::model::ai::Connection;
     use crate::test_support::standards::database;
 
@@ -155,50 +125,17 @@ mod tests {
     }
 
     #[test]
-    fn the_roles_are_those_the_user_named() {
-        let titles: Vec<&str> = list().iter().map(|role| role.title()).collect();
-
-        assert_eq!(titles, ["Analysis of a text and its fragments", "Summary", "Consultation", "Formal analysis"]);
-
-        for role in Role::ALL {
-            assert_eq!(Role::from_name(role.name()), Some(role));
-        }
-
-        // The quotes of a standard are never shortened.
-        assert_eq!(Role::TextAnalysis.memory(), MemoryRule::Verbatim);
-        assert_eq!(Role::FormalAnalysis.memory(), MemoryRule::Verbatim);
-        assert!(Role::TextAnalysis.quotes_checked() && !Role::Consultation.quotes_checked());
-    }
-
-    #[test]
-    fn a_role_uses_its_own_connection_else_the_active_one() {
+    fn a_question_goes_to_the_active_connection_with_its_key() {
         let test = database();
-        assert!(matches!(model(&test.db, Role::Consultation), Err(ModelError::NoConnection)));
+        assert!(matches!(model(&test.db), Err(ModelError::NoConnection)));
 
         let first = create::connection(&test.db, &connection("First")).unwrap().id;
-        let second = create::connection(&test.db, &connection("Second")).unwrap().id;
-        let key = ApiKey::new("sk-key".to_owned()).unwrap();
-        update::api_key(&test.db, first, &key).unwrap();
+        create::connection(&test.db, &connection("Second")).unwrap();
 
-        // The first connection is the active one.
-        assert_eq!(model(&test.db, Role::TextAnalysis).unwrap().name, "First");
-
-        // A role of its own: needs the key of its connection.
-        assert!(set_connection(&test.db, Role::FormalAnalysis, Some(second)).unwrap());
-        assert_eq!(connection_of(&test, Role::FormalAnalysis), Some(second));
-        assert!(matches!(model(&test.db, Role::FormalAnalysis), Err(ModelError::NoKey(name)) if name == "Second"));
-
-        // Its connection deleted: the role uses the active one again.
-        delete::connection(&test.db, second).unwrap();
-        assert_eq!(connection_of(&test, Role::FormalAnalysis), None);
-        assert_eq!(model(&test.db, Role::FormalAnalysis).unwrap().name, "First");
-
-        // A connection that does not exist is refused.
-        assert!(!set_connection(&test.db, Role::Summary, Some(9_999)).unwrap());
-    }
-
-    fn connection_of(test: &crate::test_support::standards::TestDb, role: Role) -> Option<i64> {
-        super::connection(&test.db, role).unwrap()
+        // The first connection is the active one; it needs its key.
+        assert!(matches!(model(&test.db), Err(ModelError::NoKey(name)) if name == "First"));
+        update::api_key(&test.db, first, &ApiKey::new("sk-key".to_owned()).unwrap()).unwrap();
+        assert_eq!(model(&test.db).unwrap().name, "First");
     }
 
     #[test]

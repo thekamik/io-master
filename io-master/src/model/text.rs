@@ -10,21 +10,13 @@ use std::fmt;
 /// A field of a project, a scheme, a tile, an evaluation or a document.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Field {
-    Author,
     Description,
-    Document,
     Documents,
     Evaluator,
-    External,
     Identifier,
     Instructions,
     Kind,
-    Link,
-    Manufacturer,
-    Model,
     Name,
-    Number,
-    Pages,
     Part,
     Place,
     Position,
@@ -32,9 +24,6 @@ pub enum Field {
     ProductVersion,
     Project,
     Quote,
-    Scheme,
-    Sections,
-    Sources,
     Text,
     Title,
     Version,
@@ -44,21 +33,13 @@ impl Field {
     /// The name of the field, in the sentences of the errors.
     pub fn name(self) -> &'static str {
         match self {
-            Field::Author => "author",
             Field::Description => "description",
-            Field::Document => "document",
             Field::Documents => "documents",
             Field::Evaluator => "evaluator",
-            Field::External => "external",
             Field::Identifier => "identifier",
             Field::Instructions => "instructions",
             Field::Kind => "kind",
-            Field::Link => "link",
-            Field::Manufacturer => "manufacturer",
-            Field::Model => "model",
             Field::Name => "name",
-            Field::Number => "number",
-            Field::Pages => "pages",
             Field::Part => "part",
             Field::Place => "place",
             Field::Position => "position",
@@ -66,9 +47,6 @@ impl Field {
             Field::ProductVersion => "product version",
             Field::Project => "project",
             Field::Quote => "quote",
-            Field::Scheme => "scheme",
-            Field::Sections => "sections",
-            Field::Sources => "sources",
             Field::Text => "text",
             Field::Title => "title",
             Field::Version => "version",
@@ -77,41 +55,6 @@ impl Field {
 }
 
 impl fmt::Display for Field {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter.write_str(self.name())
-    }
-}
-
-/// An object an error speaks of.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Entity {
-    Document,
-    Evaluation,
-    Link,
-    Project,
-    Proposal,
-    Scheme,
-    TestProject,
-    Tile,
-}
-
-impl Entity {
-    /// The name of the object, in the sentences of the errors.
-    pub fn name(self) -> &'static str {
-        match self {
-            Entity::Document => "document",
-            Entity::Evaluation => "evaluation",
-            Entity::Link => "link",
-            Entity::Project => "project",
-            Entity::Proposal => "proposal",
-            Entity::Scheme => "scheme",
-            Entity::TestProject => "test project",
-            Entity::Tile => "tile",
-        }
-    }
-}
-
-impl fmt::Display for Entity {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str(self.name())
     }

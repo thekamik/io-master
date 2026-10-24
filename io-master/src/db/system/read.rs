@@ -23,7 +23,9 @@ pub fn installation(db: &SystemDb) -> Result<Installation, DbError> {
     Ok(Installation { id })
 }
 
-/// The names of all accounts, the oldest first.
+/// The names of all accounts, the oldest first. Used by the tests only:
+/// the program knows its one account by its name at the login.
+#[cfg(test)]
 pub fn user_names(db: &SystemDb) -> Result<Vec<String>, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare("SELECT name FROM users ORDER BY id")?;

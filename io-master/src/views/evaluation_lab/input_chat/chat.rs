@@ -17,7 +17,7 @@ use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
 use crate::installation::session::Session;
-use crate::model::ai::{Role, Speaker, Task, Turn};
+use crate::model::ai::{Speaker, Task, Turn};
 use crate::model::evaluation::check_message;
 use crate::model::task_scheme::BlockKind;
 
@@ -43,7 +43,7 @@ pub async fn send(
         let db = session.db();
         let (task, turns) = turns(&db, evaluation, block, question)?;
 
-        (task, Arc::new(roles::model(&db, Role::Consultation)?), turns)
+        (task, Arc::new(roles::model(&db)?), turns)
     };
 
     let answer = ask::ask_turns(session, &model, Task::InputChat, &turns, stop, events).await;

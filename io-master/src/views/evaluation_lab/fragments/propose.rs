@@ -22,7 +22,7 @@ use crate::db::evaluation as db_evaluation;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{Role, Task};
+use crate::model::ai::Task;
 use crate::model::evaluation::{Evidence, Fragment, MAX_FRAGMENTS, check_fragment, quote_found};
 use crate::model::task_scheme::{BlockFields, BlockKind};
 
@@ -103,7 +103,7 @@ fn question(db: &UserDb, evaluation: &str, block: &str) -> Result<Question, AppE
     db_evaluation::delete::proposed_fragments(db, evaluation, block)?;
 
     Ok(Question {
-        model: Arc::new(roles::model(db, Role::TextAnalysis)?),
+        model: Arc::new(roles::model(db)?),
         instructions: tasks::instructions(db, Task::EvidenceFragments)?.unwrap_or_default(),
         task,
         requirement,

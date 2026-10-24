@@ -20,7 +20,7 @@ use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{Role, Task};
+use crate::model::ai::Task;
 use crate::model::evaluation::check_results;
 use crate::model::task_scheme::{BlockKind, check_reason};
 
@@ -103,10 +103,7 @@ fn question(db: &UserDb, evaluation: &str, task: &str) -> Result<(Arc<Model>, St
 
     let instructions = tasks::instructions(db, Task::Assessment)?.unwrap_or_default();
 
-    Ok((
-        Arc::new(roles::model(db, Role::FormalAnalysis)?),
-        assessment::prompt(&instructions, &requirement, &checks, &listed),
-    ))
+    Ok((Arc::new(roles::model(db)?), assessment::prompt(&instructions, &requirement, &checks, &listed)))
 }
 
 /// Reads `answer` and keeps it as the proposal for the results of task

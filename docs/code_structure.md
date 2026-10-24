@@ -77,14 +77,14 @@ The page never holds a secret. The key of the database of an evaluator opens the
 
 ### 2.1 `model/`: the data
 
-Plain types of every area, their rules of validity (`check`) and their normal form (`normalized`). **No I/O**: no database, no network, no file. The errors of the rules carry enums of the fields and of the objects (`model/text.rs`: `Field`, `Entity`), never text that is matched.
+Plain types of every area, their rules of validity (`check`) and their normal form (`normalized`). **No I/O**: no database, no network, no file. The errors of the rules carry enums of the fields and of the objects (`model/text.rs`: `Field`), never text that is matched.
 
 - **The normal form is the only place where text is trimmed.** A command of a view normalizes what it gets before it checks and stores it; `db/` writes what it gets; so memory and the database hold the same text.
 
 ### 2.2 `db/`: the databases
 
 - **SQL lives only here** (the connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile).
-- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `ai/roles/`, `standards/`, `oscal/`, `evaluation_support/`, `conversion/`, `own_requirements/`, `evaluation_project/`, `evaluation/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
+- One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `standards/`, `oscal/`, `evaluation_support/`, `conversion/`, `own_requirements/`, `evaluation_project/`, `evaluation/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
 - **Free functions everywhere:** `db::<area>::<operation>::<object>(db, ...)`. A caller imports the area as `db_<area>` and calls `db_<area>::<operation>::<object>`, so that every call shows which operation on which data it is.
 - **Columns are read by their names; statements with more than one parameter name them** (`:title`); every statement is in the function that runs it.
 - **A value the program never writes is an error**, `DbError::Corrupt { table, column, value }`, never replaced in silence. `DbError::Sql` is SQLite only; `NoRow` for a change of a row that does not exist; `Inconsistent` for input that does not hold together.
@@ -259,10 +259,6 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
       read.rs                      Reading the journal of the AI.
       rows.rs                      An entry of the journal of the AI and its row.
       schema.rs                    The journal of the questions to the AI (P3 of `architecture.md`:
-    roles/                       The connection each role of the AI uses.
-      read.rs                      Reading which connection a role of the AI uses.
-      schema.rs                    The table of the roles of the AI, in the database of an evaluator:
-      update.rs                    Giving a role of the AI a connection of its own, or taking it away.
   conversion/                  The conversions of the documents of standards into catalogs (step 50.2).
     create.rs                    Starting the conversion of a catalog.
     delete.rs                    Deleting a conversion.
@@ -350,7 +346,7 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
       request.rs                   The request to the AI service, made from the template of a
       response.rs                  Reading the answer of the AI service with the paths of its
       sse.rs                       Reading a stream of server-sent events (SSE), the format in
-    roles.rs                     The roles of the AI (user, 2026-10-17): the AI acts in several
+    roles.rs                     The model a question goes to: the active connection, for every role
     tasks.rs                     The tasks of the AI: what a question is for. Every task is asked
   presets.rs/                  Presets: ready settings of well-known AI services, to fill the
     field_help.rs                Instructions for a chatbot: help to fill one field of an AI

@@ -19,7 +19,7 @@ use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{Role, Task};
+use crate::model::ai::Task;
 use crate::model::task_scheme::{self, Block, BlockKind};
 use crate::model::text::Invalid;
 
@@ -93,7 +93,7 @@ fn question(db: &UserDb, task: &str) -> Result<(Model, String, Vec<Block>), AppE
     let text = scheme_question::prompt(&instructions, label, control, &project.fields.description, &blocks)
         .map_err(AppError::Invalid)?;
 
-    Ok((roles::model(db, Role::TextAnalysis)?, text, blocks))
+    Ok((roles::model(db)?, text, blocks))
 }
 
 /// Reads `answer` for the scheme of `blocks` and stores its proposals in

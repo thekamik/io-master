@@ -12,9 +12,6 @@
 //! **The only thing that decides whether this is the first start is
 //! the system database**: without it the program offers the setup
 //! page, with it the login (`docs/architecture.md`, section 3.2).
-//!
-//! [`uninstall`] removes all parts, also of a damaged installation,
-//! so that a new first start is possible.
 
 use crate::db::system;
 use std::fmt;
@@ -25,7 +22,6 @@ use std::path::Path;
 use crate::db::encryption::keys;
 use crate::db::error::DbError;
 use crate::db::system::database::{self as system_db, SystemDb};
-use crate::db::user::database as user_db;
 use crate::installation::accounts::{self, Account, AccountError};
 use crate::security::random::fill_random;
 
@@ -150,15 +146,6 @@ pub fn install(
     Ok((Running { system_db }, account, code))
 }
 
-/// Removes the installation: the system database and the databases
-/// of the accounts. Works on a damaged installation too.
-pub fn uninstall(data_dir: &Path) -> Result<(), LifecycleError> {
-    SystemDb::remove(data_dir)?;
-    user_db::remove_all(data_dir)?;
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     //! Unit tests of `lifecycle.rs`: the first start, the next start
@@ -229,20 +216,5 @@ mod tests {
         }
 
         assert!(matches!(open(directory.path()).unwrap(), Opened::FirstRun));
-    }
-
-    #[test]
-    fn uninstall_leaves_nothing_and_allows_a_new_first_start() {
-        let directory = TempDir::new();
-        install_program(&directory);
-
-        uninstall(directory.path()).unwrap();
-
-        assert!(!system_db::path(directory.path()).exists());
-        assert!(!directory.path().join(user_db::DIRECTORY).exists());
-        assert!(matches!(open(directory.path()).unwrap(), Opened::FirstRun));
-
-        // Removing again is not an error.
-        uninstall(directory.path()).unwrap();
     }
 }

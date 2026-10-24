@@ -21,7 +21,7 @@ use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{Role, Task};
+use crate::model::ai::Task;
 use crate::model::evaluation_project::{MAX_LINKS, TaskLink};
 use crate::model::oscal::catalog::Control;
 use crate::model::task_scheme::check_reason;
@@ -131,7 +131,7 @@ fn question(db: &UserDb, task: &str) -> Result<Question, AppError> {
     ensure!(!others.is_empty(), AppError::Invalid("the project has no other catalog to look in".to_owned()));
 
     Ok(Question {
-        model: Arc::new(roles::model(db, Role::TextAnalysis)?),
+        model: Arc::new(roles::model(db)?),
         instructions: tasks::instructions(db, Task::RelatedElements)?.unwrap_or_default(),
         label: control.label().unwrap_or(&control.id).to_owned(),
         control: control.clone(),

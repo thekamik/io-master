@@ -192,7 +192,7 @@ For each task, the scheme is shown read only, the requirement beside it, and eac
 - **Layers with a tested direction** (`model → db → ai/installation → components → views`): a test fails on a dependency against the direction, and on a view that uses another view
 - **All SQL in one layer**, as CRUD per area; all encryption in one folder; all AI behind one gate
 - **"The Power of 10" (NASA/JPL) adapted to Rust**: no recursion, bounded loops and inputs, no `unwrap`/`panic` outside tests, checks that return errors, functions under 60 lines, no `unsafe`
-- **462 automated tests** (unit, database, commands called as the page calls them, the AI against a fake service); every command of the window drawn in a flow of data in the documentation; window tests on a private display
+- **455 automated tests** (unit, database, commands called as the page calls them, the AI against a fake service); every command of the window drawn in a flow of data in the documentation; window tests on a private display
 
 ---
 

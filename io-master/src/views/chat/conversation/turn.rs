@@ -28,7 +28,7 @@ use crate::db::ai::chats as db_chats;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{ConnectionError, Role, Task, Turn};
+use crate::model::ai::{ConnectionError, Task, Turn};
 
 use super::stored;
 use super::view::{ReplyEvent, ending_notice};
@@ -134,7 +134,7 @@ pub fn prepare(db: &UserDb, chat_id: Option<i64>, text: &str) -> Result<Prepared
     ensure!(text.chars().count() <= MAX_MESSAGE, SendError::TooLong);
 
     // The connection first: without a usable one nothing is stored.
-    let model = roles::model(db, Role::Consultation)?;
+    let model = roles::model(db)?;
 
     let chat_id = match chat_id {
         Some(id) => {

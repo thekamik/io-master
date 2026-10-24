@@ -1,5 +1,6 @@
 //! An entry of the journal of the AI and its row.
 
+#[cfg(test)]
 use rusqlite::Row;
 
 /// One question to the AI and its answer, as the journal keeps them.
@@ -31,10 +32,13 @@ pub struct Entry {
     pub output_tokens: u64,
 }
 
-/// The columns of an entry, in the order of [`entry_from_row`].
+/// The columns of an entry, in the order of [`entry_from_row`]; used by
+/// the tests only (`read::last`).
+#[cfg(test)]
 pub(super) const COLUMNS: &str =
     "id, time, task, role, connection, model, request, answer, ending, note, input_tokens, output_tokens";
 
+#[cfg(test)]
 pub(super) fn entry_from_row(row: &Row<'_>) -> rusqlite::Result<Entry> {
     Ok(Entry {
         id: row.get(0)?,

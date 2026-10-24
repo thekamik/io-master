@@ -80,8 +80,9 @@ impl SystemDb {
         Ok(SystemDb { connection: Mutex::new(connection) })
     }
 
-    /// Removes the system database; used when the program is
-    /// uninstalled. A missing file is not an error.
+    /// Removes the system database; a missing file is not an error.
+    /// Called by `installation/lifecycle.rs` when the first start
+    /// fails half-way, so that the next start is a first start again.
     pub fn remove(data_dir: &Path) -> Result<(), DbError> {
         let path = path(data_dir);
 

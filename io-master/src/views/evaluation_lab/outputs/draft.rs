@@ -19,7 +19,7 @@ use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{Role, Task};
+use crate::model::ai::Task;
 use crate::model::evaluation::{check_output, output_applies};
 use crate::model::task_scheme::BlockKind;
 
@@ -91,7 +91,7 @@ fn question(db: &UserDb, evaluation: &str, block: &str) -> Result<(String, Arc<M
     let instructions = tasks::instructions(db, Task::OutputDraft)?.unwrap_or_default();
     let text = output_draft::prompt(&instructions, &output.fields, &found.label, &found.title, &results);
 
-    Ok((task, Arc::new(roles::model(db, Role::Summary)?), text))
+    Ok((task, Arc::new(roles::model(db)?), text))
 }
 
 #[cfg(test)]

@@ -14,7 +14,7 @@ use crate::app::error::AppError;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{Role, Task, Turn};
+use crate::model::ai::{Task, Turn};
 use crate::model::evaluation_support::QuoteDraft;
 use crate::model::standards::{Document, Part};
 
@@ -35,14 +35,9 @@ pub enum Asked {
     Stopped,
 }
 
-/// The model of the role of `task`, and the instructions of the task.
+/// The model (the active connection) and the instructions of `task`.
 pub fn model_and_instructions(db: &UserDb, task: Task) -> Result<(Model, String), AppError> {
-    let role = match task.role() {
-        Some(role) => role,
-        None => Role::TextAnalysis,
-    };
-
-    let model = roles::model(db, role)?;
+    let model = roles::model(db)?;
     let instructions = tasks::instructions(db, task)?.unwrap_or_default();
 
     Ok((model, instructions))

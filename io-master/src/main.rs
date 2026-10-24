@@ -125,12 +125,6 @@ mod db {
             pub mod rows;
             pub mod schema;
         }
-        // db/ai/roles/: the connection each role of the AI uses.
-        pub mod roles {
-            pub mod read;
-            pub mod schema;
-            pub mod update;
-        }
     }
     // db/standards/: the documents of standards, their PDFs and the text of
     // their pages (the database of the evaluator).
