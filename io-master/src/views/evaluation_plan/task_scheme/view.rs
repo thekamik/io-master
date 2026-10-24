@@ -71,21 +71,6 @@ impl BlockView {
     }
 }
 
-/// An event of a question to the AI about a scheme.
-#[derive(Debug, Clone, Serialize)]
-#[serde(tag = "event", rename_all = "snake_case")]
-pub enum ProposalEvent {
-    /// The model is answering: the characters written so far.
-    Writing { characters: usize },
-    /// What the answer gave: the inputs proposed, the corrections, and what
-    /// was dropped and why.
-    Proposed { inputs: usize, corrections: usize, dropped: Vec<String> },
-    /// The question gave nothing; why.
-    Failed { message: String },
-    /// The work is over.
-    End { stopped: bool },
-}
-
 /// A connection of two blocks.
 #[derive(Debug, Serialize)]
 pub struct ConnectionView {

@@ -410,6 +410,11 @@ pub enum Task {
     /// The inputs of the scheme of a task and the corrections of its
     /// blocks (step 51.3).
     Scheme,
+    /// The requirements of a catalog a project has to cover (step 51.4).
+    RequirementChoice,
+    /// The elements of other catalogs related to the requirement of a task
+    /// (step 51.4).
+    RelatedElements,
     /// A message of the chat.
     Chat,
     /// The check of a connection.
@@ -417,8 +422,16 @@ pub enum Task {
 }
 
 impl Task {
-    pub const ALL: [Task; 6] =
-        [Task::CatalogContents, Task::CatalogOutline, Task::CatalogSection, Task::Scheme, Task::Chat, Task::Check];
+    pub const ALL: [Task; 8] = [
+        Task::CatalogContents,
+        Task::CatalogOutline,
+        Task::CatalogSection,
+        Task::Scheme,
+        Task::RequirementChoice,
+        Task::RelatedElements,
+        Task::Chat,
+        Task::Check,
+    ];
 
     /// The name kept in the database and in the journal.
     pub fn name(self) -> &'static str {
@@ -427,6 +440,8 @@ impl Task {
             Task::CatalogOutline => "catalog_outline",
             Task::CatalogSection => "catalog_section",
             Task::Scheme => "task_scheme",
+            Task::RequirementChoice => "requirement_choice",
+            Task::RelatedElements => "related_elements",
             Task::Chat => "chat",
             Task::Check => "check",
         }
@@ -439,9 +454,12 @@ impl Task {
     /// The role it is asked in; `None` for the check of a connection.
     pub fn role(self) -> Option<Role> {
         match self {
-            Task::CatalogContents | Task::CatalogOutline | Task::CatalogSection | Task::Scheme => {
-                Some(Role::TextAnalysis)
-            }
+            Task::CatalogContents
+            | Task::CatalogOutline
+            | Task::CatalogSection
+            | Task::Scheme
+            | Task::RequirementChoice
+            | Task::RelatedElements => Some(Role::TextAnalysis),
             Task::Chat => Some(Role::Consultation),
             Task::Check => None,
         }

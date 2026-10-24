@@ -10,7 +10,6 @@ use std::sync::Arc;
 use tauri::ipc::Channel;
 use tokio::sync::watch;
 
-use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
 use crate::ai::tasks::task_scheme as scheme_question;
@@ -24,37 +23,37 @@ use crate::model::ai::{Role, Task};
 use crate::model::task_scheme::{self, Block, BlockKind};
 use crate::model::text::Invalid;
 
-use super::view::ProposalEvent;
-
-/// How often the page learns how much the model has written, in characters.
-const WRITING_EVERY: usize = 400;
+use super::super::ai_work::ask::{self, Asked};
+use super::super::ai_work::view::AiEvent;
 
 /// Asks the AI about the scheme of task `task` and stores its proposals;
 /// the events go to `events`, `stop` ends the question.
 ///
 /// Called by: `task_scheme_propose` (`evaluation_plan.rs`).
-/// Calls: [`question`], [`ask`], [`store`].
+/// Calls: [`question`], `ask::ask`, [`store`].
 pub async fn propose(
     session: &Session,
     task: &str,
     stop: &watch::Receiver<bool>,
-    events: &Channel<ProposalEvent>,
+    events: &Channel<AiEvent>,
 ) -> Result<(), AppError> {
     let (model, text, blocks) = question(&session.db(), task)?;
-    let answer = ask(session, model, text, stop, events).await;
-    let mut stopped = answer.is_none() && *stop.borrow();
 
-    if let Some(answer) = answer {
-        let event = match store(&session.db(), task, &answer, &blocks)? {
-            Ok(event) => event,
-            Err(message) => ProposalEvent::Failed { message },
-        };
+    let stopped = match ask::ask(session, &Arc::new(model), Task::Scheme, text, stop, events).await {
+        Asked::Answer(answer) => {
+            let event = match store(&session.db(), task, &answer, &blocks)? {
+                Ok(event) => event,
+                Err(message) => AiEvent::Failed { message },
+            };
 
-        stopped = events.send(event).is_err();
-    }
+            events.send(event).is_err()
+        }
+        Asked::Failed => false,
+        Asked::Stopped => true,
+    };
 
     ensure!(
-        events.send(ProposalEvent::End { stopped }).is_ok(),
+        events.send(AiEvent::End { stopped }).is_ok(),
         AppError::Failed("the window can no longer be reached".to_owned())
     );
 
@@ -97,50 +96,6 @@ fn question(db: &UserDb, task: &str) -> Result<(Model, String, Vec<Block>), AppE
     Ok((roles::model(db, Role::TextAnalysis)?, text, blocks))
 }
 
-/// Asks `model` the question `text`, telling the page how much it has
-/// written; gives the answer, or `None` when the question failed (the page
-/// was told why) or was stopped.
-///
-/// Called by: [`propose`].
-/// Calls: `completions::ask` (which writes the journal), `completions::outcome`.
-async fn ask(
-    session: &Session,
-    model: Model,
-    text: String,
-    stop: &watch::Receiver<bool>,
-    events: &Channel<ProposalEvent>,
-) -> Option<String> {
-    // A page that is gone misses the progress; the answer is stored all the
-    // same, and the end of the work sees the page is gone.
-    let writing = |characters| {
-        let _page_reached = events.send(ProposalEvent::Writing { characters }).is_ok();
-    };
-    let turns = completions::single(text);
-    let asked = completions::ask(
-        &session.db_handle(),
-        &Arc::new(model),
-        Task::Scheme,
-        &turns,
-        stop,
-        completions::counting(WRITING_EVERY, writing),
-    )
-    .await;
-
-    if let Err(error) = &asked.journal {
-        let message = format!("the question was not written into the journal of the AI: {error}");
-        let _page_reached = events.send(ProposalEvent::Failed { message }).is_ok();
-    }
-
-    match completions::outcome(&asked.reply, stop) {
-        Outcome::Answer(answer) => Some(answer),
-        Outcome::Stopped => None,
-        Outcome::Failed(message) => {
-            let _page_reached = events.send(ProposalEvent::Failed { message }).is_ok();
-            None
-        }
-    }
-}
-
 /// Reads `answer` for the scheme of `blocks` and stores its proposals in
 /// task `task`: each input a dashed block on the left, connected to the
 /// requirement; each correction beside its block. What breaks the rules of
@@ -150,7 +105,7 @@ async fn ask(
 /// Called by: [`propose`].
 /// Calls: `scheme_question::read`, [`store_inputs`],
 /// `task_scheme::check_correction`, `db_evaluation_project::create::correction`.
-fn store(db: &UserDb, task: &str, answer: &str, blocks: &[Block]) -> Result<Result<ProposalEvent, String>, AppError> {
+fn store(db: &UserDb, task: &str, answer: &str, blocks: &[Block]) -> Result<Result<AiEvent, String>, AppError> {
     let read = match scheme_question::read(answer, blocks) {
         Ok(read) => read,
         Err(message) => return Ok(Err(message)),
@@ -174,7 +129,7 @@ fn store(db: &UserDb, task: &str, answer: &str, blocks: &[Block]) -> Result<Resu
         corrections += 1;
     }
 
-    Ok(Ok(ProposalEvent::Proposed { inputs, corrections, dropped }))
+    Ok(Ok(AiEvent::Proposed { added: inputs, corrections, dropped }))
 }
 
 /// Stores the proposed `inputs` (fields and reason) as dashed blocks of task
@@ -279,7 +234,7 @@ mod tests {
     }
 
     /// A channel that collects the events it gets, as JSON.
-    fn collector() -> (Arc<Mutex<Vec<Value>>>, Channel<ProposalEvent>) {
+    fn collector() -> (Arc<Mutex<Vec<Value>>>, Channel<AiEvent>) {
         let events = Arc::new(Mutex::new(Vec::new()));
         let sink = Arc::clone(&events);
 
@@ -324,7 +279,7 @@ mod tests {
 
         let events = events.lock().unwrap();
         let proposed_event = &events[events.len() - 2];
-        assert_eq!((proposed_event["inputs"].clone(), proposed_event["corrections"].clone()), (json!(1), json!(1)));
+        assert_eq!((proposed_event["added"].clone(), proposed_event["corrections"].clone()), (json!(1), json!(1)));
         assert_eq!(proposed_event["dropped"].as_array().unwrap().len(), 2);
         assert_eq!(events.last().unwrap(), &json!({ "event": "end", "stopped": false }));
 

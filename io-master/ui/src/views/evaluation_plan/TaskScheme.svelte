@@ -31,7 +31,7 @@
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
   import BlockForm from "./BlockForm.svelte";
   import BlockNode from "./BlockNode.svelte";
-  import SchemeInstructions from "./SchemeInstructions.svelte";
+  import AiWorkInstructions from "./AiWorkInstructions.svelte";
   import SchemeFit from "./SchemeFit.svelte";
 
   let { task, onclose }: { task: string; onclose: () => void } = $props();
@@ -148,15 +148,15 @@
   }
 
   /** One event of the question to the AI. */
-  function follow(event: evaluationPlan.ProposalEvent) {
+  function follow(event: evaluationPlan.AiEvent) {
     if (event.event === "writing") {
       asking = event.characters;
     } else if (event.event === "proposed") {
       const dropped = event.dropped.length > 0 ? ` Left out: ${event.dropped.join("; ")}.` : "";
-      report = `The AI proposed ${event.inputs} input(s) and ${event.corrections} correction(s).${dropped}`;
+      report = `The AI proposed ${event.added} input(s) and ${event.corrections} correction(s).${dropped}`;
     } else if (event.event === "failed") {
       problem = event.message;
-    } else if (event.stopped) {
+    } else if (event.event === "end" && event.stopped) {
       report = "Stopped.";
     }
   }
@@ -194,7 +194,7 @@
 
 {#if problem}<p class="problem">{problem}</p>{/if}
 
-{#if instructions}<SchemeInstructions onclose={() => (instructions = false)} />{/if}
+{#if instructions}<AiWorkInstructions which="task_scheme" onclose={() => (instructions = false)} />{/if}
 
 {#if scheme}
   <div class="scheme-body">
@@ -205,7 +205,7 @@
         {#if asking === null}
           <button type="button" class="small" onclick={propose}>Propose with AI</button>
         {:else}
-          <button type="button" class="small danger" onclick={() => evaluationPlan.taskSchemeStop()}>Stop</button>
+          <button type="button" class="small danger" onclick={() => evaluationPlan.aiWorkStop()}>Stop</button>
         {/if}
         <button type="button" class="small" onclick={() => (instructions = true)}>Instructions…</button>
         {#if undecided}

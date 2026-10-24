@@ -13,9 +13,9 @@
 use serde_json::{Value, json};
 
 use crate::model::oscal::catalog::Control;
-use crate::model::oscal::catalog::tree::flat_parts;
 use crate::model::task_scheme::{Block, BlockFields, BlockKind, Correction, MAX_BLOCKS, MAX_INPUTS};
 
+use super::candidates::requirement_text;
 use super::json::{json_object, text_of};
 
 /// The instructions when the evaluator has not changed them.
@@ -70,7 +70,7 @@ fn named(blocks: &[Block]) -> Vec<(String, &Block)> {
 /// control nest deeper than a catalog may.
 ///
 /// Called by: `views/evaluation_plan/task_scheme/propose.rs`.
-/// Calls: `flat_parts`, [`named`].
+/// Calls: `requirement_text`, [`named`].
 pub fn prompt(
     instructions: &str,
     label: &str,
@@ -78,16 +78,7 @@ pub fn prompt(
     scope: &str,
     blocks: &[Block],
 ) -> Result<String, String> {
-    let parts = flat_parts(&control.parts).map_err(|error| error.to_string())?;
-    let mut text = format!("{}\n\nThe requirement {label}: {}\n", instructions.trim(), control.title);
-
-    for (level, part) in parts {
-        let indent = "  ".repeat(level + 1);
-        let title = part.title.as_deref().unwrap_or_default();
-        let prose = part.prose.as_deref().unwrap_or_default();
-
-        text.push_str(&format!("{indent}[{}] {title} {prose}\n", part.name));
-    }
+    let mut text = format!("{}\n\nThe requirement {}", instructions.trim(), requirement_text(label, control)?);
 
     if !scope.trim().is_empty() {
         text.push_str(&format!("\nThe scope of the evaluation:\n{}\n", scope.trim()));

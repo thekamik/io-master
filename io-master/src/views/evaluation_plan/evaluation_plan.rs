@@ -23,12 +23,14 @@ use crate::db::user::database::UserDb;
 
 use super::oscal_documents::dialog::{choose_file, choose_place};
 use super::oscal_documents::file::{self, read_file, safe_name};
-use crate::model::ai::{INSTRUCTIONS_MAX, Task};
+use crate::model::ai::INSTRUCTIONS_MAX;
 use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
 use crate::model::own_requirement;
 use crate::model::task_scheme::{self, Block, BlockFields, BlockKind, StandardOutput};
 
+use super::ai_work::ask as ai_ask;
+use super::ai_work::view::AiEvent;
 use super::new_project::catalogs;
 use super::new_project::view::CatalogChoiceView;
 use super::oscal_documents::view::{self as oscal_view, OscalDocumentView};
@@ -43,7 +45,7 @@ use super::standard_outputs::view::{self as output_view, StandardOutputForm, Sta
 use super::task_list::view::{self as task_view, TaskView};
 use super::task_scheme::propose;
 use super::task_scheme::scheme;
-use super::task_scheme::view::{BlockForm, ProposalEvent, SchemeView};
+use super::task_scheme::view::{BlockForm, SchemeView};
 
 // ── When the view opens ───────────────────────────────────────────────
 
@@ -817,7 +819,7 @@ pub fn task_scheme_disconnect(state: State<'_, AppState>, from: String, to: Stri
 pub async fn task_scheme_propose(
     state: State<'_, AppState>,
     task: String,
-    on_event: Channel<ProposalEvent>,
+    on_event: Channel<AiEvent>,
 ) -> Result<SchemeView, AppError> {
     let session = state.session()?;
     let stop = state.start_work();
@@ -827,14 +829,16 @@ pub async fn task_scheme_propose(
     scheme::read(&session.db(), &task)
 }
 
-/// Stops the question to the AI, if there is one.
+/// Stops the work of the AI of the view, if there is one: the proposals of a
+/// scheme, of the tasks or of the related elements.
 ///
-/// Called by the page: `TaskScheme.svelte`, "Stop" (`evaluationPlan.taskSchemeStop()`).
+/// Called by the page: `TaskScheme.svelte`, `TaskProposals.svelte`,
+/// `TaskLinks.svelte`, "Stop" (`evaluationPlan.aiWorkStop()`).
 /// Calls: `AppState::stop_work`.
 // Tauri hands a command its state by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn task_scheme_stop(state: State<'_, AppState>) {
+pub fn ai_work_stop(state: State<'_, AppState>) {
     state.stop_work();
 }
 
@@ -948,36 +952,38 @@ pub fn task_scheme_reject_all(state: State<'_, AppState>, task: String) -> Resul
     scheme::read(&db, &task)
 }
 
-/// The instructions of the AI that proposes a scheme: those the evaluator
+/// The instructions `which` of a work of the AI of the view (`"task_scheme"`,
+/// `"requirement_choice"`, `"related_elements"`): those the evaluator
 /// changed, or the default ones.
 ///
-/// Called by the page: `SchemeInstructions.svelte`, when its dialog opens
-/// (`evaluationPlan.taskSchemeInstructionsGet()`).
-/// Calls: `tasks::instructions`.
-// Tauri hands a command its state by value.
-#[allow(clippy::needless_pass_by_value)]
-#[tauri::command(async)]
-pub fn task_scheme_instructions_get(state: State<'_, AppState>) -> Result<String, AppError> {
-    let session = state.session()?;
-
-    Ok(tasks::instructions(&session.db(), Task::Scheme)?.unwrap_or_default())
-}
-
-/// Stores the instructions of the AI that proposes a scheme; an empty text
-/// brings the default ones back. Gives the instructions now in force.
-///
-/// Called by the page: `SchemeInstructions.svelte`, "Save"
-/// (`evaluationPlan.taskSchemeInstructionsSave(text)`).
-/// Calls: `tasks::set_instructions`.
+/// Called by the page: `AiWorkInstructions.svelte`, when its dialog opens
+/// (`evaluationPlan.aiWorkInstructionsGet(which)`).
+/// Calls: `ai_ask::task_of`, `tasks::instructions`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
-pub fn task_scheme_instructions_save(state: State<'_, AppState>, text: String) -> Result<String, AppError> {
+pub fn ai_work_instructions_get(state: State<'_, AppState>, which: String) -> Result<String, AppError> {
     let session = state.session()?;
+
+    Ok(tasks::instructions(&session.db(), ai_ask::task_of(&which)?)?.unwrap_or_default())
+}
+
+/// Stores the instructions `which`; an empty text brings the default ones
+/// back. Gives the instructions now in force.
+///
+/// Called by the page: `AiWorkInstructions.svelte`, "Save" and "Default"
+/// (`evaluationPlan.aiWorkInstructionsSave(which, text)`).
+/// Calls: `ai_ask::task_of`, `tasks::set_instructions`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn ai_work_instructions_save(state: State<'_, AppState>, which: String, text: String) -> Result<String, AppError> {
+    let session = state.session()?;
+    let task = ai_ask::task_of(&which)?;
 
     ensure!(text.len() <= INSTRUCTIONS_MAX, AppError::Invalid("the instructions are too long".to_owned()));
 
-    Ok(tasks::set_instructions(&session.db(), Task::Scheme, &text)?.unwrap_or_default())
+    Ok(tasks::set_instructions(&session.db(), task, &text)?.unwrap_or_default())
 }
 
 // ── Helpers of the commands above ─────────────────────────────────────
@@ -1453,15 +1459,21 @@ mod tests {
         use crate::model::ai::INSTRUCTIONS_MAX;
 
         let window = logged_in_window();
-        let default = window.call("task_scheme_instructions_get", json!({})).unwrap();
+        let default = window.call("ai_work_instructions_get", json!({ "which": "task_scheme" })).unwrap();
         assert!(default.as_str().unwrap().contains("Propose"));
 
-        assert_eq!(window.call("task_scheme_instructions_save", json!({ "text": "Mine." })).unwrap(), "Mine.");
-        assert_eq!(window.call("task_scheme_instructions_get", json!({})).unwrap(), "Mine.");
-        assert_eq!(window.call("task_scheme_instructions_save", json!({ "text": " " })).unwrap(), default);
+        assert_eq!(
+            window.call("ai_work_instructions_save", json!({ "which": "task_scheme", "text": "Mine." })).unwrap(),
+            "Mine."
+        );
+        assert_eq!(window.call("ai_work_instructions_get", json!({ "which": "task_scheme" })).unwrap(), "Mine.");
+        assert_eq!(
+            window.call("ai_work_instructions_save", json!({ "which": "task_scheme", "text": " " })).unwrap(),
+            default
+        );
         let long = "x".repeat(INSTRUCTIONS_MAX + 1);
         assert_eq!(
-            window.call("task_scheme_instructions_save", json!({ "text": long })).unwrap_err()["kind"],
+            window.call("ai_work_instructions_save", json!({ "which": "task_scheme", "text": long })).unwrap_err()["kind"],
             "invalid"
         );
     }

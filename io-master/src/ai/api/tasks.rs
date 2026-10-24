@@ -8,6 +8,8 @@
 //! catalog_outline   text_analysis   ai/tasks/catalog_outline.rs (the groups of a catalog)
 //! catalog_section   text_analysis   ai/tasks/catalog_section.rs (the controls of a group)
 //! task_scheme       text_analysis   ai/tasks/task_scheme.rs (the inputs of a task, corrections of its blocks)
+//! requirement_choice text_analysis  ai/tasks/requirement_choice.rs (the requirements a project covers)
+//! related_elements  text_analysis   ai/tasks/related_elements.rs (the work units of a requirement, ...)
 //! chat              consultation    none here: the system prompt of the connection
 //! check             none            none: the check of a connection (checks.rs)
 //! ```
@@ -17,7 +19,9 @@
 //! set_instructions()   PUT    /tasks/{task}/instructions (empty text: DELETE)
 //! ```
 
-use crate::ai::tasks::{catalog_contents, catalog_outline, catalog_section, task_scheme};
+use crate::ai::tasks::{
+    catalog_contents, catalog_outline, catalog_section, related_elements, requirement_choice, task_scheme,
+};
 use crate::db::ai::instructions as db_instructions;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
@@ -32,6 +36,8 @@ pub fn default_instructions(task: Task) -> Option<&'static str> {
         Task::CatalogOutline => Some(catalog_outline::DEFAULT_INSTRUCTIONS),
         Task::CatalogSection => Some(catalog_section::DEFAULT_INSTRUCTIONS),
         Task::Scheme => Some(task_scheme::DEFAULT_INSTRUCTIONS),
+        Task::RequirementChoice => Some(requirement_choice::DEFAULT_INSTRUCTIONS),
+        Task::RelatedElements => Some(related_elements::DEFAULT_INSTRUCTIONS),
         Task::Chat | Task::Check => None,
     }
 }

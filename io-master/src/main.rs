@@ -217,11 +217,14 @@ mod ai {
     // ai/tasks/: for each task of the AI, the question sent to the model and
     // the reading of its answer, on plain data of model/.
     pub mod tasks {
+        pub mod candidates;
         pub mod catalog_contents;
         pub mod catalog_outline;
         pub mod catalog_section;
         pub mod chat;
         mod json;
+        pub mod related_elements;
+        pub mod requirement_choice;
         pub mod task_scheme;
     }
     // ai/presets/: the ready settings of well-known AI services (its file has
@@ -370,6 +373,10 @@ mod views {
         #[allow(clippy::module_inception)]
         pub mod evaluation_plan;
 
+        pub mod ai_work {
+            pub mod ask;
+            pub mod view;
+        }
         pub mod new_project {
             pub mod catalogs;
             pub mod view;

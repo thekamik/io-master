@@ -110,12 +110,17 @@ export interface CorrectionView {
   reason: string;
 }
 
-/** An event of a question to the AI about a scheme. */
-export type ProposalEvent =
+// ai_work/view.rs
+/** An event of a work of the AI of the view. */
+export type AiEvent =
+  | { event: "part"; index: number; count: number }
   | { event: "writing"; characters: number }
-  | { event: "proposed"; inputs: number; corrections: number; dropped: string[] }
+  | { event: "proposed"; added: number; corrections: number; dropped: string[] }
   | { event: "failed"; message: string }
   | { event: "end"; stopped: boolean };
+
+/** The instructions of a work of the AI of the view. */
+export type AiWork = "task_scheme" | "requirement_choice" | "related_elements";
 
 /** The fields of a block, as the page sends them. */
 export interface BlockForm {
@@ -351,17 +356,17 @@ export function standardOutputsDelete(output: string): Promise<StandardOutputVie
 }
 
 /** Called by TaskScheme.svelte, "Propose with AI"; the events go to `onEvent`. */
-export function taskSchemePropose(task: string, onEvent: (event: ProposalEvent) => void): Promise<SchemeView> {
-  const channel = new Channel<ProposalEvent>();
+export function taskSchemePropose(task: string, onEvent: (event: AiEvent) => void): Promise<SchemeView> {
+  const channel = new Channel<AiEvent>();
 
   channel.onmessage = onEvent;
 
   return invoke("task_scheme_propose", { task, onEvent: channel });
 }
 
-/** Called by TaskScheme.svelte, "Stop". */
-export function taskSchemeStop(): Promise<void> {
-  return invoke("task_scheme_stop");
+/** Called by TaskScheme.svelte, TaskProposals.svelte, TaskLinks.svelte, "Stop". */
+export function aiWorkStop(): Promise<void> {
+  return invoke("ai_work_stop");
 }
 
 /** Called by BlockForm.svelte, "Accept" of a proposal. */
@@ -384,12 +389,12 @@ export function taskSchemeRejectAll(task: string): Promise<SchemeView> {
   return invoke("task_scheme_reject_all", { task });
 }
 
-/** Called by SchemeInstructions.svelte, when it opens. */
-export function taskSchemeInstructionsGet(): Promise<string> {
-  return invoke("task_scheme_instructions_get");
+/** Called by AiWorkInstructions.svelte, when it opens. */
+export function aiWorkInstructionsGet(which: AiWork): Promise<string> {
+  return invoke("ai_work_instructions_get", { which });
 }
 
-/** Called by SchemeInstructions.svelte, "Save" and "Default" (an empty text). */
-export function taskSchemeInstructionsSave(text: string): Promise<string> {
-  return invoke("task_scheme_instructions_save", { text });
+/** Called by AiWorkInstructions.svelte, "Save" and "Default" (an empty text). */
+export function aiWorkInstructionsSave(which: AiWork, text: string): Promise<string> {
+  return invoke("ai_work_instructions_save", { which, text });
 }
