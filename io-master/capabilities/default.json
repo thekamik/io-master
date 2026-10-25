@@ -25,6 +25,8 @@
     "allow-api-key-store",
     "allow-api-key-delete",
     "allow-connection-check-run",
+    "allow-ai-journal-get",
+    "allow-ai-journal-entry",
     "allow-connection-line-get",
     "allow-chat-list-get",
     "allow-conversation-open",

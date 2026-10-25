@@ -4,21 +4,24 @@
   User, src/views/users/):
 
   - AI: the connections to AI services (AiTab.svelte);
+  - AI journal: every question to the AI and its answer, read only (AiJournal.svelte, step 58);
   - Program: what this installation is and how it is protected.
 
   Which tab is open is presentation, kept here.
 -->
 <script lang="ts">
   import type { ProgramView } from "../../lib/api/shell";
+  import AiJournal from "./AiJournal.svelte";
   import AiTab from "./AiTab.svelte";
   import ProgramTab from "./ProgramTab.svelte";
 
   let { app }: { app: ProgramView } = $props();
 
-  type Tab = "ai" | "program";
+  type Tab = "ai" | "journal" | "program";
 
   const tabs: { id: Tab; title: string }[] = [
     { id: "ai", title: "AI" },
+    { id: "journal", title: "AI journal" },
     { id: "program", title: "Program" },
   ];
 
@@ -33,6 +36,8 @@
 
 {#if tab === "ai"}
   <AiTab />
+{:else if tab === "journal"}
+  <AiJournal />
 {:else}
   <ProgramTab {app} />
 {/if}

@@ -259,7 +259,7 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
       update.rs                    Storing the instructions of a task (made or replaced).
     journal/                     The journal of the AI.
       create.rs                    Adding an entry to the journal of the AI (the only way an entry
-      read.rs                      Reading the journal of the AI.
+      read.rs                      Reading the journal of the AI: a page by task and words, an entry whole.
       rows.rs                      An entry of the journal of the AI and its row.
       schema.rs                    The journal of the questions to the AI (P3 of `architecture.md`:
   conversion/                  The conversions of the documents of standards into catalogs (step 50.2).
@@ -573,6 +573,8 @@ views/                     The views of the window, one folder per view and one 
       view.rs                      The packages, as the page gets them and sends them.
   settings/                    The view Settings: the settings of the program, the connections to
     settings.rs                  The entry of the view Settings: every command the page calls for it
+    ai_journal/                  The element "journal of the AI" of the view Settings (step 58), read only.
+      view.rs                      A page of the entries and one entry whole, as the page gets them.
     api_key/                     The element "API key" of the view Settings, tab AI: the key of one
       view.rs                      The data of the API key, as the page gets it: never the key itself.
     connection_check/            The element "check of a connection" of the view Settings, tab AI

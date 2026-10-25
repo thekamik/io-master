@@ -158,3 +158,42 @@ export function apiKeyDelete(id: number): Promise<ApiKeyView> {
 export function connectionCheckRun(id: number): Promise<CheckView> {
   return invoke("connection_check_run", { id });
 }
+
+// ai_journal/view.rs (step 58)
+/** An entry of the journal of the AI as a row of the list; time: seconds since 1970. */
+export interface JournalRowView {
+  id: number;
+  time: number;
+  task: string;
+  role: string;
+  connection: string;
+  model: string;
+  ending: string;
+  input_tokens: number;
+  output_tokens: number;
+}
+
+export interface JournalPageView {
+  rows: JournalRowView[];
+  total: number;
+  page: number;
+  page_size: number;
+  tasks: string[];
+}
+
+export interface JournalEntryView {
+  row: JournalRowView;
+  request: string;
+  answer: string;
+  note: string | null;
+}
+
+/** Called by AiJournal.svelte, when the tab opens and after a change of the filter or the page. */
+export function aiJournalGet(task: string | null, text: string, page: number): Promise<JournalPageView> {
+  return invoke("ai_journal_get", { task, text, page });
+}
+
+/** Called by AiJournal.svelte, "Open" of an entry. */
+export function aiJournalEntry(id: number): Promise<JournalEntryView> {
+  return invoke("ai_journal_entry", { id });
+}

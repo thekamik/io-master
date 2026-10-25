@@ -29,6 +29,8 @@ fn main() {
         "api_key_store",
         "api_key_delete",
         "connection_check_run",
+        "ai_journal_get",
+        "ai_journal_entry",
         "connection_line_get",
         "chat_list_get",
         "conversation_open",

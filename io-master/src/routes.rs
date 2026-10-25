@@ -46,6 +46,8 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::settings::settings::api_key_store,
         crate::views::settings::settings::api_key_delete,
         crate::views::settings::settings::connection_check_run,
+        crate::views::settings::settings::ai_journal_get,
+        crate::views::settings::settings::ai_journal_entry,
         // The view Chat (views/chat/).
         crate::views::chat::chat::connection_line_get,
         crate::views::chat::chat::chat_list_get,

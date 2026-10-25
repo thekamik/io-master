@@ -491,6 +491,8 @@ ConnectionForm ──connection_form_save / _delete / _activate──► db/ai/c
   └── "changed" ──► the view ──► ConnectionList ──connection_list_get()──►; ApiKey ──api_key_get(id)──►
 ApiKey ──api_key_store(id, key) / api_key_delete(id)──► the key in the encrypted database, bound to the address
 ConnectionCheck ──connection_check_run(id)──► ai/api/checks: one short question, written into the journal ──► the report
+AiJournal (tab AI journal, step 58) ──ai_journal_get(task, text, page)──► db/ai/journal/: a page of the entries, the
+  newest first, by task and words ──ai_journal_entry(id)──► one entry whole: the request as sent, the answer (read only)
 ```
 
 **`evaluation_lab`** (step 52; entry `views/evaluation_lab/evaluation_lab.rs`, page `ui/src/views/evaluation_lab/`). A work package of the Evaluation plan carried out for one product. What the AI proposes becomes a result only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3). Nothing returns to the planner: the result is the report.

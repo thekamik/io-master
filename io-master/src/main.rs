@@ -392,6 +392,9 @@ mod views {
         #[allow(clippy::module_inception)]
         pub mod settings;
 
+        pub mod ai_journal {
+            pub mod view;
+        }
         pub mod api_key {
             pub mod view;
         }
