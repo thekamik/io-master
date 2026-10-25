@@ -12,7 +12,7 @@
 | 10 | Before the release | open |
 | 54 | The removal of the installation in the window | open |
 | 56 | The rule of the comments for the whole code | open |
-| 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | concept proposed 2026-10-25, to be approved |
+| 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | concept approved 2026-10-25; 57.1 built |
 | 58 | The journal of the AI on a page | after 57 |
 | 59 | The progress of an evaluation | after 58 |
 | 60 | A short presentation (5 minutes) with screenshots | after 59, the end of this workflow |
@@ -80,7 +80,12 @@ The removal is done in the window only (`architecture.md`, section 3.2): after t
 
 ## Step 57: Knowledge for the AI (RAG)
 
-**State: a concept proposed by Claude on 2026-10-25, to be approved by the user.** The user's idea (2026-10-24 and 25): the agent of the requirement should understand the context of the standard; a view of its own lets the evaluator make an agent with knowledge (for example of Common Criteria) and attach it to the analysis of a requirement.
+**State: concept approved by the user on 2026-10-25 ("działamy"), with the answers below; built stage by stage, each approved before the next.** The user's idea (2026-10-24 and 25): the agent of the requirement should understand the context of the standard; a view of its own lets the evaluator make an agent with knowledge (for example of Common Criteria) and attach it to the analysis of a requirement.
+
+**The answers of the user (2026-10-25):**
+- The view is `knowledge`, "Knowledge (RAG)" in the navigation.
+- **Every place that uses the AI offers "use RAG"**: an agent with knowledge can be attached to the chat, to the requirement, to the input (its chat and its fragments) and the other works of the AI.
+- **Many agents**, for different standards and tasks; each is **exported and imported as a file of its own** (its instructions, glossary and knowledge bases). Not the whole database: single projects and single agents are exported, so a file taken by someone holds less data and a leak is smaller.
 
 **What RAG is here.** *Retrieval-augmented generation*: the model is not trained; at the moment of a question the program finds the passages of the knowledge base that fit it and puts them into the question, marked as context, with their source and page. "Tuning" an agent means choosing its sources, its instructions and its glossary and trying it on questions, never changing the weights of a model (that needs GPUs and data and could not be audited).
 
@@ -94,13 +99,14 @@ proving ground: a question ──► passages with scores ──► answer, quot
 ```
 
 **Stages (each approved before the next):**
-- [ ] **57.1 The whole requirement in the question** (no new view): the parameters (assignments and selections), the guidance and the application notes of the control, its parents in the catalog, and the text of its related elements (`lab_related`: the work units of the CEM) given to the agent of the requirement; today it gets the title and prose of the parts only.
+- [x] **57.1 The whole requirement in the question** (no new view; built 2026-10-25: `ai/tasks/requirement_context.rs`, `Catalog::titles_above`, `lab_task/read.rs`; every work of the AI of a task gets where the requirement stands, its parameters and links, the assessment also its related elements up to 24 000 characters): the parameters (assignments and selections), the guidance and the application notes of the control, its parents in the catalog, and the text of its related elements (`lab_related`: the work units of the CEM) given to the agent of the requirement; today it gets the title and prose of the parts only.
 - [ ] **57.2 The view `knowledge`, the knowledge bases:** a base has a name and sources: a PDF (read page by page by Poppler, as in the Converter), a catalog of OSCAL of the installation, a note of the laboratory (an interpretation, a supporting document of the scheme). Every source is cut into passages of a bounded size, by page and paragraph, each with its source and page, and indexed by FTS5 of SQLite (BM25; built into the SQLCipher of the program, no new dependency). A search field shows what the index finds.
 - [ ] **57.3 Agents and the proving ground:** an agent has a name, instructions (who it is, how it answers), its knowledge bases, a glossary (terms and their synonyms, e.g. "TSF" = "TOE Security Functionality", used to widen the search) and limits (number of passages, characters). The proving ground: a question, the passages found with their scores, the answer of the model with its quotes of the knowledge checked in the passages (P5). The evaluator tunes the agent there.
-- [ ] **57.4 The agent attached to the requirement:** in the Evaluation lab the evaluator chooses an agent for an evaluation (or none) and may change it for a task; before the question the panel of the requirement lists the passages found (query: the requirement and what the planner asks to check), the evaluator may untick some; the question holds them in a section of their own, "Context of the standard: to understand the requirement, not evidence"; the verdict still rests on the accepted fragments only; the journal keeps the passages with the question (P3). The knowledge stays in the installation that made it: a work package carries no base (licensed standards).
+- [ ] **57.4 The agent attached to the requirement** (the first place; the others in 57.6): in the Evaluation lab the evaluator chooses an agent for an evaluation (or none) and may change it for a task; before the question the panel of the requirement lists the passages found (query: the requirement and what the planner asks to check), the evaluator may untick some; the question holds them in a section of their own, "Context of the standard: to understand the requirement, not evidence"; the verdict still rests on the accepted fragments only; the journal keeps the passages with the question (P3). The knowledge stays in the installation that made it: a work package carries no base (licensed standards).
 - [ ] **57.5 (only if 57.3 shows that the search by words is not enough) Embeddings:** the vectors of the passages from the endpoint of embeddings of the connection (a local model), kept in SQLite, compared in Rust within a bounded number; joined with FTS5 (hybrid search).
 
-**Open, decided in the concept:** whether the input chat may use an agent too; whether a base can be exported to a colleague (the sources may be licensed); the name of the view in the vocabulary (`architecture.md`, section 10).
+- [ ] **57.6 Every work of the AI may use an agent:** the chat, the chat and the fragments of an input, the works of the AI of the Evaluation plan and of the Converter; the agent chosen where the work is started, the passages shown and written into the journal as in 57.4.
+- [ ] **57.7 Export and import of an agent:** one file per agent (its instructions, glossary, limits and the passages of its bases with their sources), imported into another installation; the window says that the file holds the text of the sources (licensed standards).
 
 ---
 

@@ -498,14 +498,15 @@ EvaluationScreen ──lab_tasks_get(evaluation)──► the package, the produ
   ──report_export(evaluation)──► a folder chosen in a dialog ──► one file per output (report/export.rs): the accepted
     texts, task by task, of the tasks whose verdict makes its condition hold (.txt or .tex)
 LabTask ──lab_task_get(evaluation, task)──► the scheme read only (LabScheme, the component BlockNode), the requirement
-  from its catalog, the related elements, the inputs, the results, the outputs; every command answers with the screen
+  from its catalog (for every work of the AI of a task: with where it stands, its parameters and links, step 57.1), the related elements, the inputs, the results, the outputs; every command answers with the screen
   ├─► InputPanel ──evidence_add_file / _add_note / _delete──► the evidence kept as delivered (a PDF read by page)
   │     ──input_chat_send(…, onEvent) / _clear──► the task input_chat through ai/api/ (the requirement, the input, the
   │       start of the evidence, the last messages) ──► the question and the answer kept
   │     ──fragments_propose(…, onEvent)──► the task evidence_fragments, part by part ──► quotes looked for in the
   │       evidence (found or not), a note apart ──fragments_accept / _remove / _add──► only accepted ones are assessed
-  ├─► RequirementPanel ──assessment_propose(…, onEvent)──► the task assessment (formal analysis) on the accepted
-  │     fragments only ──► four results and a verdict proposed ──assessment_accept / _reject / _save──► the evaluator decides
+  ├─► RequirementPanel ──assessment_propose(…, onEvent)──► the task assessment (formal analysis): the whole
+  │     requirement (where it stands, parameters, links), its related elements word for word, to understand it,
+  │     and the accepted fragments, the only evidence ──► four results and a verdict proposed ──assessment_accept / _reject / _save──► the evaluator decides
   └─► OutputPanel (only when its condition holds for the verdict) ──outputs_draft(…, onEvent)──► the task output_draft
         from the four results ──outputs_accept / _reject / _save──► the text of the output
 the instructions of the four tasks ──evaluation_lab_instructions_get / _save──►; "Stop" ──evaluation_lab_stop()──►

@@ -189,6 +189,46 @@ impl Catalog {
         Some(control)
     }
 
+    /// The titles of the groups and controls that hold the object at
+    /// `location`, from the top of the catalog down; a control with its
+    /// label (`FCS_CKM.1: Cryptographic key generation`). Refused when the
+    /// location is deeper than [`MAX_DEPTH`].
+    ///
+    /// Called by: `views/evaluation_lab/lab_task/read.rs` (the requirement for the AI).
+    pub fn titles_above(&self, location: &Location) -> Result<Vec<String>, CatalogError> {
+        ensure!(location.depth() <= MAX_DEPTH, CatalogError::TooDeep);
+        let mut titles = Vec::with_capacity(location.depth());
+
+        for end in 1..=location.groups.len() {
+            let Some(groups) = location.groups.get(..end) else {
+                continue;
+            };
+            let Some(group) = self.group_at(groups) else {
+                continue;
+            };
+
+            titles.push(group.title.clone());
+        }
+
+        // The controls above it: every one but itself (the last index).
+        for end in 1..location.controls.len() {
+            let Some(controls) = location.controls.get(..end) else {
+                continue;
+            };
+            let above = Location { groups: location.groups.clone(), controls: controls.to_vec() };
+            let Some(control) = self.control_at(&above) else {
+                continue;
+            };
+
+            titles.push(match control.label() {
+                Some(label) => format!("{label}: {}", control.title),
+                None => control.title.clone(),
+            });
+        }
+
+        Ok(titles)
+    }
+
     /// The control at `location`, to be changed.
     pub fn control_at_mut(&mut self, location: &Location) -> Option<&mut Control> {
         let (first, rest) = location.controls.split_first()?;
@@ -228,4 +268,37 @@ pub fn flat_parts(parts: &[Part]) -> Result<Vec<(usize, &Part)>, CatalogError> {
     }
 
     Err(CatalogError::TooLarge)
+}
+
+#[cfg(test)]
+mod tests {
+    //! Unit tests of `tree.rs`.
+
+    use super::*;
+    use crate::model::oscal::OscalDocument;
+
+    /// The basic catalog of the examples of NIST.
+    fn catalog() -> Catalog {
+        match OscalDocument::from_json(include_str!("../../../../oscal/examples/basic-catalog.json")).unwrap() {
+            OscalDocument::Catalog(catalog) => catalog,
+            _ => panic!("the basic catalog is a catalog"),
+        }
+    }
+
+    #[test]
+    fn the_titles_above_a_control_go_from_the_top_down() {
+        let catalog = catalog();
+        let location = catalog.locate("s1.1.1").unwrap().unwrap();
+
+        let titles = catalog.titles_above(&location).unwrap();
+
+        assert_eq!(titles, ["Organization of Information Security", "Internal Organization"]);
+    }
+
+    #[test]
+    fn a_location_too_deep_is_refused() {
+        let location = Location { groups: vec![0; MAX_DEPTH + 1], controls: Vec::new() };
+
+        assert!(matches!(catalog().titles_above(&location), Err(CatalogError::TooDeep)));
+    }
 }

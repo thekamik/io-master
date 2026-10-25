@@ -236,6 +236,7 @@ mod ai {
         pub mod output_draft;
         pub mod related_elements;
         pub mod requirement_choice;
+        pub mod requirement_context;
         pub mod task_scheme;
     }
     // ai/presets/: the ready settings of well-known AI services (its file has

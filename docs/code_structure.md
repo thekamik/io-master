@@ -369,6 +369,9 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
                                  other elements related to the requirement of a task.
     requirement_choice.rs        The task `requirement_choice` of the AI (step 51.4): the requirements
                                  of a catalog a project has to cover.
+    requirement_context.rs       The whole requirement for the works of the AI of the Evaluation lab
+                                 (step 57.1): where it stands, its parameters, its links, the text of
+                                 its related elements.
     task_scheme.rs               The task `task_scheme` of the AI (role *text analysis*, step 51.3): the
                                  inputs of the scheme of a task and corrections of its blocks
 pdf/                       Reading PDFs with the tools of Poppler (`pdfinfo`, `pdftotext`): the

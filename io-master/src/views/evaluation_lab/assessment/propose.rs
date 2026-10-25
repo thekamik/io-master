@@ -58,11 +58,12 @@ pub async fn propose(
     Ok(())
 }
 
-/// The model and the question: the requirement, the instructions of its
-/// block, and the accepted fragments by input with their evidence and page.
+/// The model and the question: the whole requirement, the instructions of
+/// its block, its related elements word for word (step 57.1), and the
+/// accepted fragments by input with their evidence and page.
 ///
 /// Called by: [`propose`].
-/// Calls: `lab_task::task` and `requirement`, `read::blocks`,
+/// Calls: `lab_task::task`, `requirement` and `related_text`, `read::blocks`,
 /// `read::accepted_fragments`, `read::evidence_of`, `assessment::prompt`.
 fn question(db: &UserDb, evaluation: &str, task: &str) -> Result<(Arc<Model>, String), AppError> {
     let (_, requirement, _) = lab_task::requirement(db, &lab_task::task(db, evaluation, task)?)?;
@@ -103,7 +104,9 @@ fn question(db: &UserDb, evaluation: &str, task: &str) -> Result<(Arc<Model>, St
 
     let instructions = tasks::instructions(db, Task::Assessment)?.unwrap_or_default();
 
-    Ok((Arc::new(roles::model(db)?), assessment::prompt(&instructions, &requirement, &checks, &listed)))
+    let related = lab_task::related_text(db, evaluation, task)?;
+
+    Ok((Arc::new(roles::model(db)?), assessment::prompt(&instructions, &requirement, &checks, &related, &listed)))
 }
 
 /// Reads `answer` and keeps it as the proposal for the results of task
@@ -138,7 +141,7 @@ mod tests {
     use serde_json::json;
 
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions_events};
-    use crate::model::evaluation::{Fragment, Verdict};
+    use crate::model::evaluation::{Fragment, Related, Verdict};
     use crate::views::evaluation_lab::test_support::{collector, ready};
 
     #[tokio::test]
@@ -183,5 +186,38 @@ mod tests {
         assert!(asked.contains("Anna owns the keys"));
         assert!(!asked.contains("Bob owns the audit log"), "a fragment not accepted stays out");
         assert_eq!(crate::db::ai::journal::read::last(&session.db(), 5).unwrap()[0].task, "assessment");
+    }
+
+    #[tokio::test]
+    async fn the_agent_gets_the_whole_requirement_and_its_related_elements() {
+        let answer =
+            json!({ "findings": "F", "analysis": "A", "assessment": "S", "verdict": "inconclusive" }).to_string();
+        let service = FakeService::start(FakeAnswer::Stream(completions_events(&[&answer]))).await;
+        let test = ready(&service).await;
+        let session = test.state.session().unwrap();
+        {
+            let db = session.db();
+            let catalog = crate::test_support::db::basic_catalog();
+            let mut package = crate::test_support::db::lab_package(catalog.uuid());
+            package.package_uuid = "w2".to_owned();
+            package.tasks[0].related = vec![Related {
+                catalog_uuid: catalog.uuid().to_owned(),
+                control_id: "s2.1.1".to_owned(),
+                label: "2.1.1".to_owned(),
+                title: "Access control policy".to_owned(),
+            }];
+            let mut evaluation = crate::test_support::db::lab_evaluation(&package);
+            evaluation.uuid = "e2".to_owned();
+            db_evaluation::create::evaluation(&db, &evaluation, &package).unwrap();
+        }
+        let (_, channel) = collector();
+
+        propose(&session, "e2", "t", &test.state.start_work(), &channel).await.unwrap();
+
+        let asked = service.received()[0].body.to_string();
+        assert!(asked.contains("Within: Organization of Information Security > Internal Organization"));
+        assert!(asked.contains("- s1.1.1-prm1: assignment of a choice from a selection; selection of one or more of"));
+        assert!(asked.contains("The related elements of the requirement"));
+        assert!(asked.contains("2.1.1: "), "the related element word for word from its catalog");
     }
 }
