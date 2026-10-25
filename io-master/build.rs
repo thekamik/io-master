@@ -116,6 +116,8 @@ fn main() {
         "agent_list_delete",
         "agent_form_get",
         "agent_form_save",
+        "agent_form_export",
+        "agent_list_import",
         "proving_ground_find",
         "proving_ground_get",
         "proving_ground_ask",

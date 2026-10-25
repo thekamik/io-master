@@ -43,6 +43,9 @@ pub const QUERY_MAX: usize = 2000;
 /// The most words of a search.
 pub const MAX_TERMS: usize = 64;
 
+/// The largest file of an agent that is imported, in bytes (step 57.7).
+pub const AGENT_FILE_MAX: u64 = 256 * 1024 * 1024;
+
 /// The most passages a search gives.
 pub const MAX_HITS: usize = 50;
 
@@ -161,6 +164,22 @@ pub struct Passage {
     pub page: Option<u32>,
     pub label: String,
     pub text: String,
+}
+
+/// A source to be stored with its passages (the import of an agent, step 57.7).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewSource {
+    pub kind: SourceKind,
+    pub name: String,
+    pub passages: Vec<Passage>,
+}
+
+/// A knowledge base to be stored with its sources (the import of an agent).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct NewBase {
+    pub name: String,
+    pub description: String,
+    pub sources: Vec<NewSource>,
 }
 
 /// A passage found by a search, with its source and its score (BM25 of

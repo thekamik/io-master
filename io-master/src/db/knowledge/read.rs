@@ -6,7 +6,7 @@ use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::knowledge::{
     Agent, AgentPlace, AgentSummary, BaseSummary, Hit, KnowledgeBase, MAX_AGENT_PASSAGES, MAX_AGENTS, MAX_BASES,
-    MAX_HITS, MAX_QUOTES, MAX_SOURCES, Source, Trial,
+    MAX_HITS, MAX_PASSAGES, MAX_QUOTES, MAX_SOURCES, Passage, Source, Trial,
 };
 
 use super::rows;
@@ -57,6 +57,23 @@ pub fn sources(db: &UserDb, base: i64) -> Result<Vec<Source>, DbError> {
     let mut found = Vec::new();
 
     for row in statement.query_map(rusqlite::params![base, limit(MAX_SOURCES)?], |row| Ok(rows::source(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The passages of source `source`, in the order they were stored; at most
+/// `MAX_PASSAGES`.
+///
+/// Called by: `views/knowledge/agent_form/export.rs`.
+pub fn passages_of(db: &UserDb, source: i64) -> Result<Vec<Passage>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection
+        .prepare("SELECT page, label, text FROM knowledge_passages WHERE source_id = ?1 ORDER BY rowid LIMIT ?2")?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![source, limit(MAX_PASSAGES)?], |row| Ok(rows::passage(row)))? {
         found.push(row??);
     }
 

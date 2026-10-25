@@ -45,23 +45,25 @@ pub(super) fn source(row: &rusqlite::Row<'_>) -> Result<Source, DbError> {
     })
 }
 
-/// A passage found by a search (or given to a trial), with the name of its
-/// source and its score; its id in the column `column`.
+/// A stored passage: its page, label and text.
 ///
-/// Called by: `read::search`, `read::search_agent`, `read::trial`.
-pub(super) fn hit(row: &rusqlite::Row<'_>, column: &str) -> Result<Hit, DbError> {
+/// Called by: `read::passages_of`, [`hit`].
+pub(super) fn passage(row: &rusqlite::Row<'_>) -> Result<Passage, DbError> {
     let page: Option<i64> = row.get("page")?;
     let page = match page {
         Some(number) => Some(u32::try_from(number).map_err(|error| DbError::Inconsistent(error.to_string()))?),
         None => None,
     };
 
-    Ok(Hit {
-        id: row.get(column)?,
-        source: row.get("source")?,
-        passage: Passage { page, label: row.get("label")?, text: row.get("text")? },
-        score: row.get("score")?,
-    })
+    Ok(Passage { page, label: row.get("label")?, text: row.get("text")? })
+}
+
+/// A passage found by a search (or given to a trial), with the name of its
+/// source and its score; its id in the column `column`.
+///
+/// Called by: `read::search`, `read::search_agent`, `read::trial`.
+pub(super) fn hit(row: &rusqlite::Row<'_>, column: &str) -> Result<Hit, DbError> {
+    Ok(Hit { id: row.get(column)?, source: row.get("source")?, passage: passage(row)?, score: row.get("score")? })
 }
 
 /// A row of `knowledge_agents` with the bases `bases` it draws on.

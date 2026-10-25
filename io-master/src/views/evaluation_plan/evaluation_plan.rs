@@ -23,9 +23,10 @@ use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
 use crate::model::knowledge::AgentPlace;
+use crate::model::text::safe_file_name;
 
 use super::oscal_documents::dialog::{choose_file, choose_place};
-use super::oscal_documents::file::{self, read_file, safe_name};
+use super::oscal_documents::file::{self, read_file};
 use crate::model::ai::{INSTRUCTIONS_MAX, Task};
 use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
@@ -164,7 +165,7 @@ pub async fn oscal_documents_import<R: Runtime>(
 ///
 /// Called by the page: `OscalDocuments.svelte`, "Export"
 /// (`evaluation_plan.oscalDocumentsExport(...)`).
-/// Calls: `file::export`, `safe_name`, `choose_place` (the dialog),
+/// Calls: `file::export`, `safe_file_name`, `choose_place` (the dialog),
 /// `tokio::fs::write`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
@@ -178,7 +179,7 @@ pub async fn oscal_documents_export<R: Runtime>(
     let session = state.session()?;
     let text = file::export(&session.db(), &uuid)?;
 
-    let Some(path) = choose_place(app, "Export the OSCAL document", safe_name(&file_name)).await? else {
+    let Some(path) = choose_place(app, "Export the OSCAL document", safe_file_name(&file_name, "oscal")).await? else {
         return Ok(false);
     };
 
@@ -969,7 +970,7 @@ pub fn work_packages_delete(state: State<'_, AppState>, package: String) -> Resu
 ///
 /// Called by the page: `WorkPackages.svelte`, "Export…"
 /// (`evaluationPlan.workPackagesExport(package)`).
-/// Calls: `package_export::file_text`, `choose_place`, `safe_name`.
+/// Calls: `package_export::file_text`, `choose_place`, `safe_file_name`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
@@ -981,7 +982,8 @@ pub async fn work_packages_export<R: Runtime>(
     let session = state.session()?;
     let (name, text) = package_export::file_text(&session.db(), &package)?;
 
-    let Some(path) = choose_place(app, "Export the work package", format!("{}.iomaster", safe_name(&name))).await?
+    let Some(path) =
+        choose_place(app, "Export the work package", format!("{}.iomaster", safe_file_name(&name, "package"))).await?
     else {
         return Ok(false);
     };

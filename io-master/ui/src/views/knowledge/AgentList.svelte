@@ -2,8 +2,9 @@
   The element "list of agents" of the view Knowledge (RAG) (its commands
   agent_list_get, agent_list_create and agent_list_delete in
   src/views/knowledge/knowledge.rs): every agent with the number of its
-  bases, opened (onopen) or deleted; and a new agent, opened at once so
-  that its bases are ticked in its form.
+  bases, opened (onopen) or deleted; a new agent, opened at once so that
+  its bases are ticked in its form; and an agent imported from a file with
+  its bases (agent_list_import, step 57.7), opened once it is stored.
 -->
 <script lang="ts">
   import { onMount } from "svelte";
@@ -37,6 +38,16 @@
     }
   }
 
+  async function importAgent() {
+    try {
+      const imported = await knowledge.agentListImport();
+
+      if (imported) onopen(imported.id);
+    } catch (error) {
+      problem = `The agent was not imported: ${sentence(error)}`;
+    }
+  }
+
   async function remove(id: number) {
     try {
       agents = await knowledge.agentListDelete(id);
@@ -59,7 +70,10 @@
     </div>
   </form>
 {:else}
-  <div class="buttons lab-actions"><button type="button" onclick={() => (making = true)}>New agent…</button></div>
+  <div class="buttons lab-actions">
+    <button type="button" onclick={() => (making = true)}>New agent…</button>
+    <button type="button" onclick={importAgent}>Import an agent…</button>
+  </div>
 {/if}
 
 {#if agents.length === 0}

@@ -3,7 +3,9 @@
   agent_form_get and agent_form_save in src/views/knowledge/knowledge.rs):
   the name and the instructions of an agent, the knowledge bases it draws
   on (ticked here: the agent is joined to its bases in this one form), its
-  glossary and its limits; under it the proving ground (ProvingGround).
+  glossary and its limits; its export as one file (step 57.7), after a word
+  that the file holds the text of the sources; under it the proving ground
+  (ProvingGround).
 -->
 <script lang="ts">
   import { onMount } from "svelte";
@@ -17,6 +19,8 @@
   let view: knowledge.AgentFormView | null = $state(null);
   let form: knowledge.AgentForm = $state({ name: "", instructions: "", glossary: "", passages: 1, characters: 1, bases: [] });
   let notice: { done: boolean; text: string } | null = $state(null);
+  /** Whether the word before an export is shown. */
+  let exporting = $state(false);
 
   onMount(async () => {
     try {
@@ -36,6 +40,18 @@
       characters: screen.characters,
       bases: screen.bases.filter((base) => base.chosen).map((base) => base.id),
     };
+  }
+
+  async function exportAgent() {
+    exporting = false;
+
+    try {
+      if (await knowledge.agentFormExport(id)) {
+        notice = { done: true, text: "The agent was exported." };
+      }
+    } catch (error) {
+      notice = { done: false, text: `The agent was not exported: ${sentence(error)}` };
+    }
   }
 
   async function save(event: SubmitEvent) {
@@ -84,7 +100,19 @@
       <label>Characters of the passages, at most <input type="number" min={view.min_characters} max={view.max_characters} step="500" bind:value={form.characters} /></label>
     </div>
 
-    <div class="buttons"><button type="submit">Save</button></div>
+    <div class="buttons">
+      <button type="submit">Save</button>
+      <button type="button" onclick={() => (exporting = true)}>Export…</button>
+    </div>
+    {#if exporting}
+      <div class="ai-proposal">
+        <p>The file holds the agent with its knowledge bases and the text of all their sources, which may be licensed standards or documents under a non-disclosure agreement. Give it only to whom may have them.</p>
+        <div class="buttons">
+          <button type="button" onclick={exportAgent}>Choose where to write it…</button>
+          <button type="button" onclick={() => (exporting = false)}>Cancel</button>
+        </div>
+      </div>
+    {/if}
     {#if notice}<p class={notice.done ? "done" : "problem"}>{notice.text}</p>{/if}
   </form>
 

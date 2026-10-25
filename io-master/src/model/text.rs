@@ -100,6 +100,25 @@ pub fn check_text(field: Field, text: &str, max: usize, lines: bool) -> Result<(
     Ok(())
 }
 
+/// A name for a file proposed from the title `title` of what is exported:
+/// letters, digits, `-`, `_`, `.` and spaces kept, everything else `_`; at
+/// most 100 characters; `fallback` when nothing is left.
+///
+/// Called by: the exports of the views (`oscal_documents_export`, `work_packages_export`, `agent_form_export`).
+pub fn safe_file_name(title: &str, fallback: &str) -> String {
+    let mut name = String::new();
+
+    for character in title.trim().chars().take(100) {
+        if character.is_alphanumeric() || "-_ .".contains(character) {
+            name.push(character);
+        } else {
+            name.push('_');
+        }
+    }
+
+    if name.is_empty() { fallback.to_owned() } else { name }
+}
+
 #[cfg(test)]
 mod tests {
     //! Unit tests of `text.rs`.
@@ -120,5 +139,12 @@ mod tests {
         );
         assert!(check_text(Field::Description, "a\nb\tc", 10, true).is_ok());
         assert!(check_text(Field::Description, "a\u{7}b", 10, true).is_err());
+    }
+
+    #[test]
+    fn a_file_name_keeps_only_safe_characters() {
+        assert_eq!(safe_file_name(" CC Part 2: SFR / v1.0 ", "oscal"), "CC Part 2_ SFR _ v1.0");
+        assert_eq!(safe_file_name("../../etc", "oscal"), ".._.._etc");
+        assert_eq!(safe_file_name("   ", "oscal"), "oscal");
     }
 }

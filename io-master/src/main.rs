@@ -461,9 +461,13 @@ mod views {
         pub mod knowledge;
 
         pub mod agent_form {
+            pub mod dialog;
+            pub mod export;
             pub mod view;
         }
         pub mod agent_list {
+            pub mod dialog;
+            pub mod import;
             pub mod view;
         }
         pub mod knowledge_base {

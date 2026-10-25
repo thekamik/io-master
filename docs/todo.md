@@ -12,7 +12,7 @@
 | 10 | Before the release | open |
 | 54 | The removal of the installation in the window | open |
 | 56 | The rule of the comments for the whole code | open |
-| 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | concept approved 2026-10-25; 57.1 to 57.4 and 57.6 built |
+| 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | built 2026-10-25 (57.1 to 57.4, 57.6, 57.7); 57.5 only if needed |
 | 58 | The journal of the AI on a page | after 57 |
 | 59 | The progress of an evaluation | after 58 |
 | 60 | A short presentation (5 minutes) with screenshots | after 59, the end of this workflow |
@@ -106,7 +106,7 @@ proving ground: a question ──► passages with scores ──► answer, quot
 - [ ] **57.5 (only if 57.3 shows that the search by words is not enough) Embeddings:** the vectors of the passages from the endpoint of embeddings of the connection (a local model), kept in SQLite, compared in Rust within a bounded number; joined with FTS5 (hybrid search).
 
 - [x] **57.6 Every work of the AI may use an agent** (built 2026-10-25: the works of a task of the Evaluation lab use the agent of the task; a master project, a catalog in conversion and a chat choose theirs with the component `AgentPicker`, kept in `knowledge_attachments`; the passages go after the question, `ai/tasks/knowledge_context.rs`): the chat, the chat and the fragments of an input, the works of the AI of the Evaluation plan and of the Converter; the agent chosen where the work is started, the passages shown and written into the journal as in 57.4.
-- [ ] **57.7 Export and import of an agent:** one file per agent (its instructions, glossary, limits and the passages of its bases with their sources), imported into another installation; the window says that the file holds the text of the sources (licensed standards).
+- [x] **57.7 Export and import of an agent** (built 2026-10-25: "Export…" in the form of an agent after a word on the licensed sources, "Import an agent…" on the list; the import all or nothing in one transaction, a taken name with " (imported)"; the passages carried ready, the index built again): one file per agent (its instructions, glossary, limits and the passages of its bases with their sources), imported into another installation; the window says that the file holds the text of the sources (licensed standards).
 
 ---
 

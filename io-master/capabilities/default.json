@@ -112,6 +112,8 @@
     "allow-agent-list-delete",
     "allow-agent-form-get",
     "allow-agent-form-save",
+    "allow-agent-form-export",
+    "allow-agent-list-import",
     "allow-proving-ground-find",
     "allow-proving-ground-get",
     "allow-proving-ground-ask",

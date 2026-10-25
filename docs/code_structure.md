@@ -292,7 +292,8 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
   knowledge/                   The knowledge bases of the AI (step 57.2): the bases, their sources, and
                                  their passages with the index of their words (FTS5 of SQLite, BM25); the
                                  agents, their bases, the last trial of each (step 57.3).
-    create.rs                    Storing a base, a source with its passages, an agent.
+    create.rs                    Storing a base, a source with its passages, an agent; an agent imported
+                                 with its bases in one transaction, under free names (step 57.7).
     delete.rs                    Deleting a base, a source, an agent with what belongs to them.
     read.rs                      Reading bases, sources, agents and trials; the search of the passages.
     rows.rs                      The rows of the knowledge bases and the types of `model/knowledge.rs`.
@@ -511,8 +512,12 @@ views/                     The views of the window, one folder per view and one 
                                  agents made of them and their proving ground.
     knowledge.rs                 The entry of the view Knowledge (RAG): every command the page calls for it.
     agent_form/                  The element "form of an agent": its fields and its bases, ticked.
+      dialog.rs                    The dialog of the system for the file of an agent exported.
+      export.rs                    The file of an agent: the agent, its bases, sources and passages (57.7).
       view.rs                      The form of an agent with every base, as the page gets and sends it.
     agent_list/                  The element "list of agents".
+      dialog.rs                    The dialog of the system for the file of an agent to import.
+      import.rs                    The file of an agent read and checked against every limit (57.7).
       view.rs                      The agents with the numbers of their bases, as the page gets them.
     knowledge_base/              The element "knowledge base": its name, its sources.
       add.rs                       A PDF, a text file, a catalog of OSCAL or a note, cut into passages.

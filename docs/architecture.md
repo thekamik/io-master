@@ -536,6 +536,10 @@ KnowledgeSearch ──knowledge_search_run(base, text)──► the words as phr
   ranked by BM25 ──► the passages with their source, page or requirement, and relevance
 AgentList ──agent_list_get / _create(name) / _delete──► db/knowledge/ (agents, with the numbers of their bases)
 AgentForm ──agent_form_get / _save(id, form)──► name, instructions, glossary, limits, and the bases ticked in the form
+  ──agent_form_export(id)──► (after a word that the file holds the text of the sources) a dialog of the system ──►
+     one JSON file: the agent, its bases, their sources and every passage (step 57.7)
+AgentList ──agent_list_import()──► a dialog of the system ──► the file checked against every limit ──► the agent and
+     its bases stored in one transaction, a taken name with " (imported)" ──► its form opens
 ProvingGround ──proving_ground_find(agent, question)──► components/knowledge_agent: the question widened by the
     glossary ──► FTS5 in the bases of the agent ──► the passages chosen within its limits (no AI)
   ──proving_ground_ask(agent, question, onEvent)──► the same passages ──► the task knowledge_answer through ai/api/

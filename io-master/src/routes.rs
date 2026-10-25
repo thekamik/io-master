@@ -101,6 +101,8 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::knowledge::knowledge::agent_list_delete,
         crate::views::knowledge::knowledge::agent_form_get,
         crate::views::knowledge::knowledge::agent_form_save,
+        crate::views::knowledge::knowledge::agent_form_export,
+        crate::views::knowledge::knowledge::agent_list_import,
         crate::views::knowledge::knowledge::proving_ground_find,
         crate::views::knowledge::knowledge::proving_ground_get,
         crate::views::knowledge::knowledge::proving_ground_ask,

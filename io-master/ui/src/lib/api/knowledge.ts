@@ -200,6 +200,16 @@ export function agentFormSave(id: number, form: AgentForm): Promise<AgentFormVie
   return invoke("agent_form_save", { id, form });
 }
 
+/** Called by AgentForm.svelte, "Export…"; false when no place was chosen. */
+export function agentFormExport(id: number): Promise<boolean> {
+  return invoke("agent_form_export", { id });
+}
+
+/** Called by AgentList.svelte, "Import an agent…"; null when no file was chosen. */
+export function agentListImport(): Promise<AgentFormView | null> {
+  return invoke("agent_list_import");
+}
+
 /** Called by ProvingGround.svelte, "Show the passages". */
 export function provingGroundFind(agent: number, question: string): Promise<HitView[]> {
   return invoke("proving_ground_find", { agent, question });

@@ -4,7 +4,8 @@
 //! or a task, gives it sources (a PDF, a text file, a catalog of OSCAL, a
 //! note), which are cut into passages and indexed, and searches it; makes
 //! agents of the bases (instructions, glossary, limits, the bases joined in
-//! its form) and tries them on the proving ground (57.3). The works of the
+//! its form), tries them on the proving ground (57.3), and exports and
+//! imports an agent with its bases as one file (57.7). The works of the
 //! AI of the other views only choose an agent (57.4, 57.6). The flow of
 //! data: `docs/architecture.md`, section 12.
 
@@ -18,8 +19,13 @@ use crate::components::knowledge_agent::find;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
 use crate::model::knowledge::{check_agent, check_base};
+use crate::model::text::safe_file_name;
 
+use super::agent_form::dialog::choose_place;
+use super::agent_form::export as agent_export;
 use super::agent_form::view::{self as agent_view, AgentForm, AgentFormView};
+use super::agent_list::dialog::choose_file;
+use super::agent_list::import as agent_import;
 use super::agent_list::view::{self as agents_view, AgentSummaryView};
 
 use super::knowledge_base::add as source_add;
@@ -329,6 +335,65 @@ pub fn agent_form_save(state: State<'_, AppState>, id: i64, form: AgentForm) -> 
     ensure!(db_knowledge::update::agent(&db, id, &fields)?, AppError::Invalid("the agent does not exist".to_owned()));
 
     agent_view::form(&db, find::agent(&db, id)?)
+}
+
+/// Writes agent `id` with its knowledge bases, their sources and passages
+/// into a file the evaluator chooses in a dialog of the system (step 57.7);
+/// `false` when no place was chosen. The page says first that the file
+/// holds the text of the sources.
+///
+/// Called by the page: `AgentForm.svelte`, "Export…" (`knowledge.agentFormExport(id)`).
+/// Calls: `agent_export::file_text`, `safe_file_name`, `choose_place` (the dialog).
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+pub async fn agent_form_export<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+    id: i64,
+) -> Result<bool, AppError> {
+    let session = state.session()?;
+    let (name, text) = agent_export::file_text(&session.db(), id)?;
+
+    let Some(path) = choose_place(app, safe_file_name(&name, "agent")).await? else {
+        return Ok(false);
+    };
+
+    match tokio::fs::write(&path, text).await {
+        Ok(()) => Ok(true),
+        Err(error) => Err(AppError::Failed(format!("the file was not written: {error}"))),
+    }
+}
+
+/// Imports an agent from a file the evaluator chooses in a dialog of the
+/// system, with its knowledge bases, under free names; gives its form, or
+/// `None` when no file was chosen (step 57.7).
+///
+/// Called by the page: `AgentList.svelte`, "Import an agent…" (`knowledge.agentListImport()`).
+/// Calls: `choose_file`, `agent_import::read_file` (on a thread for blocking
+/// work), `agent_import::read`, `db_knowledge::create::imported_agent`, `agent_view::form`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command]
+pub async fn agent_list_import<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, AppState>,
+) -> Result<Option<AgentFormView>, AppError> {
+    let session = state.session()?;
+
+    let Some(path) = choose_file(app).await? else {
+        return Ok(None);
+    };
+
+    // spawn_blocking takes a closure: a library place (rule 9 of CLAUDE.md).
+    let text = tokio::task::spawn_blocking(move || agent_import::read_file(&path))
+        .await
+        .map_err(|_| AppError::Failed("the file was not read".to_owned()))??;
+    let (fields, bases) = agent_import::read(&text)?;
+    let db = session.db();
+    let id = db_knowledge::create::imported_agent(&db, &fields, &bases)?;
+
+    Ok(Some(agent_view::form(&db, find::agent(&db, id)?)?))
 }
 
 // ── The proving ground ────────────────────────────────────────────────
