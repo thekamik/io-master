@@ -40,7 +40,7 @@ These are requirements of the design, not preferences (`docs/architecture.md`, s
 
 ## Planned
 
-`docs/todo.md`: the review of the code by the user and its hardening, zero warnings, the removal of the installation in the window, backups optionally encrypted with OpenPGP, a viewer of the evidence, an export of the plan and of the results as OSCAL documents, the package for Debian.
+`docs/todo.md`: the review of the code by the user and its hardening, knowledge for the AI (RAG: agents with a knowledge base of a standard, attached to the analysis of a requirement), the journal of the AI on a page, the progress of an evaluation, the removal of the installation in the window, an export of the plan and of the results as OSCAL documents, the package for Debian.
 
 ## Requirements
 

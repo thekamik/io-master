@@ -30,7 +30,7 @@ Carried over from the first design of the program; they are requirements, not pr
 
 ## 3. One program, one user (agreed; changed 2026-10-24)
 
-There is one program, installed on the computer of the evaluator. **One Linux account, one installation, one user** (agreed 2026-10-15): an installation belongs to the Linux account that installed it, and it has exactly one user of the program; users cannot be added. The data of a laboratory is critical, so the installation is bound as tightly as possible to one person and one account. Planners and evaluators share their work by the files the program exports (the work packages of the Evaluation plan, the report of the Evaluation lab; backups later, section 5.5), as the laboratory organises it (section 6).
+There is one program, installed on the computer of the evaluator. **One Linux account, one installation, one user** (agreed 2026-10-15): an installation belongs to the Linux account that installed it, and it has exactly one user of the program; users cannot be added. The data of a laboratory is critical, so the installation is bound as tightly as possible to one person and one account. Planners and evaluators share their work by the files the program exports (the work packages of the Evaluation plan, the report of the Evaluation lab; no backups, section 5.5), as the laboratory organises it (section 6).
 
 **No roles** (user, 2026-10-24, step 48): until then the first start chose between a *workstation* and a *master*, a separate machine that served the reset of forgotten passwords to the workstations. The user found it a strong overcomplication of the architecture: the master, its server mode and its rule "never on one computer" (section 3.1 until then) were removed before they were built. A forgotten password is recovered on the workstation itself (section 5.4).
 
@@ -66,7 +66,7 @@ The first start is the real moment of installation. **It is told by the system d
   3. **Evaluation plan**: works only on the documents of OSCAL, in two tabs: **Master projects** (step 51: a master project holds the catalogs of a standard and all its tasks, each a whole requirement chosen in a browser of the standards or proposed by the AI; made once for a version of a standard and used again and again; each task has its scheme of input, requirement and output blocks; packages of tasks are exported to the evaluators) and **OSCAL documents** (the list, the import, the export, the deletion).
   4. **Evaluation lab** (step 52): a work package of the Evaluation plan imported and carried out for one product: the evidence of the inputs, the fragments accepted, the results and the verdict of every requirement, the texts of the outputs, and the report exported out of the program.
   5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password and the recovery code (section 5.4); later an optional second factor of the login and the removal of the installation (step 54).
-  6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the backups and the removal of the installation).
+  6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the removal of the installation).
 - **Logging in** with the name and the password; the keys of section 5.
 
 ## 5. Secrets and encryption (agreed)
@@ -119,12 +119,12 @@ key of the database ┤                                                         
 - **At the setup, automatically when the user is created** (user, 2026-10-24), the program makes a random recovery code (160 bits from the kernel, written as groups of characters without 0, O, 1 and I, with a check sum against typing errors) and wraps the key of the database a second time with it. The code is shown **once**; the evaluator prints or copies it, confirms it by typing a group, and keeps it outside the computer (the safe of the laboratory). Argon2id is not needed for it: 160 random bits cannot be guessed.
 - **A forgotten password:** "I do not remember my password" on the login page; the code opens copy B, the evaluator sets a new password (a new copy A); the database is not re-encrypted.
 - **A new code after every change of the password** (user, 2026-10-24), the old one stops working: after the change on the page User and after the recovery with the code. **"Make a new recovery code"** on the page User needs the password of the user.
-- **Limits, said in the window:** the code is a second key to the data (whoever finds it has the data); a lost password *and* a lost code mean lost data (only a backup is left); a replaced code protects the files on the computer, not copies of them taken earlier.
+- **Limits, said in the window:** the code is a second key to the data (whoever finds it has the data); a lost password *and* a lost code mean lost data (only what was exported is left: the work packages, the reports); a replaced code protects the files on the computer, not copies of them taken earlier.
 - **Built in step 49** (2026-10-24): `model/recovery_code.rs` (the text of a code), `db/encryption/recovery.rs` (its copy of the key), `installation/accounts.rs` and `views/users/users.rs` (the operations), the component `recovery_code` of the page (the code shown once). The way of the key: section 12.
 
-### 5.5 Backup (agreed; step 55 of `todo.md`; changed 2026-10-24)
+### 5.5 (Dropped 2026-10-25) Backup
 
-The evaluator exports backups of the work (also the only way to move it to a new computer). **A backup can be encrypted with an OpenPGP key, optionally** (user, 2026-10-24): for the key of the evaluator and, if the laboratory wishes, for a key of the laboratory, a standard the laboratories use. **The key is never required**: without it the backup is not encrypted, and the window says so and recommends a key. (Open, decided when the function is built: whether a backup without encryption leaves out the API keys.)
+Was: backups of the work, optionally encrypted with OpenPGP (step 55). **Dropped by the user (2026-10-25):** the program keeps nothing that matters to the laboratory besides the projects and the API key; the key is typed again after a reinstallation, and the export of the work (the work package of a master project, the report of an evaluation) makes it independent of the program.
 
 ### 5.6 (Removed 2026-10-24) The keyring and the secret of the application
 
@@ -144,7 +144,7 @@ planner (Evaluation plan)                          evaluator (Evaluation lab)
                                                    for the template of the laboratory
 ```
 
-Besides: the documents of OSCAL (export from the Evaluation plan) and backups later (section 5.5). Nothing returns from the Evaluation lab to the planner: the result of the work of the evaluator is the report (user, 2026-10-24). Everything else (API keys, chats, the work in progress) stays in the encrypted database of the evaluator.
+Besides: the documents of OSCAL (export from the Evaluation plan); there are no backups (section 5.5). Nothing returns from the Evaluation lab to the planner: the result of the work of the evaluator is the report (user, 2026-10-24). Everything else (API keys, chats, the work in progress) stays in the encrypted database of the evaluator.
 
 ## 7. Work on standards
 

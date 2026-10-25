@@ -1016,6 +1016,18 @@ file of a package (.iomaster.json) ──import──► an evaluation (its task
 
 ---
 
+## Step 53: Zero warnings (2026-10-24 and 25)
+
+**Done 2026-10-24** ("nieużywane funkcje usuwamy", user): the unused code of earlier steps removed, rustc and `cargo clippy --all-targets` give no warning (commit `f5fbfc6`). Removed: the forms of the answer and the rules of memory of the roles (`model/ai.rs`), the fields and objects no rule names (`model/text.rs`), the connection of its own for a role (`db/ai/roles/`: every role uses the active connection), the unused removal of the installation (`lifecycle::uninstall`, `user_db::remove_all`, written anew in step 54). Kept for the tests only, under `#[cfg(test)]`: `db/system/read.rs::user_names` and `db/ai/journal/read.rs::last` (until the page of step 58).
+
+**eslint on the page dropped** (user, 2026-10-25): TypeScript strict and `svelte-check` are the checks of the page; the page is judged by its testers. No automatic tests of the page either, for the same reason.
+
+## Step 55: Backups (dropped 2026-10-25)
+
+Was: backups of the work, optionally encrypted with OpenPGP (`architecture.md`, section 5.5 until then). **Dropped by the user (2026-10-25):** the program keeps nothing that matters to the laboratory besides the projects and the API key; the key is typed again after a reinstallation, and the export of the work (the work package of a master project, the report of an evaluation) makes the work independent of the program, which is the backup.
+
+**Also decided on 2026-10-25:** no viewer of the evidence with the quote of a fragment highlighted (the evaluator has Ctrl+F; what matters is that the AI does not distort the quotes, which the program checks); no data for a demonstration (the standards are licensed; the real test is the colleagues of the laboratory); `cargo-audit` and `cargo-deny` moved to the release (step 10).
+
 ## The steps dropped in step 48 (2026-10-24)
 
 IO Master became a framework for the evaluation with AI only (step 48): no devices, no master, no TPM, no passkeys, no keyring. The steps below were planned for the earlier concept and dropped before they were built (steps 8 and 13 partly: their half-built code was removed in 48.3). They are kept as they were written, for the record.

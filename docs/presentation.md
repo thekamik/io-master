@@ -202,8 +202,8 @@ For each task, the scheme is shown read only, the requirement beside it, and eac
 
 **Next** (chosen by the project owner):
 - The owner's code review, file by file, and functional hardening (login limits, permissions of the data folder, behaviour on damaged or locked databases)
-- Zero compiler warnings; removal of the installation from the window; backups optionally encrypted with OpenPGP
-- A viewer of the evidence, more evidence formats, OSCAL export of plans and results
+- **Knowledge for the AI (RAG)**: agents with a knowledge base of a standard (e.g. Common Criteria), tried on a proving ground and attached to the analysis of a requirement
+- The journal of the AI on a page; the progress of an evaluation; more evidence formats, OSCAL export of plans and results
 - A Debian 13 package and version 1, from which the data is kept across versions
 
 **Limits today**: experimental, single-user, Debian 13 only; the data of test installations is not migrated between development versions
