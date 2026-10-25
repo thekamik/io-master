@@ -180,6 +180,19 @@ pub struct LabTask {
     pub state: TaskState,
 }
 
+/// The agent with knowledge of a task (step 57.4 of docs/todo.md): that of
+/// its evaluation, none, or one of its own. The agent of an evaluation is
+/// chosen on its screen; a task changes it only when the evaluator says so.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskAgent {
+    /// The agent of the evaluation (or none, when it has none).
+    AsEvaluation,
+    /// No agent for this task.
+    NoAgent,
+    /// The agent of this id for this task.
+    Agent(i64),
+}
+
 /// An element of another catalog related to a task.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Related {

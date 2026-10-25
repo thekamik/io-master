@@ -4,8 +4,10 @@
   52): its agent of the AI reads the requirement and only the accepted
   fragments and proposes the four results and a verdict, with its reason;
   the evaluator accepts or rejects the proposal, writes the results and
-  sets the verdict (P1). After a change it gives the screen back
-  (onchanged).
+  sets the verdict (P1). An agent with knowledge (step 57.4: that of the
+  evaluation, another, or none) adds the passages of the standard it finds,
+  which the evaluator may untick; they are context, never evidence. After a
+  change it gives the screen back (onchanged).
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
@@ -57,6 +59,24 @@
     progress.running = false;
   }
 
+  function setAgent(event: Event) {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+    const choice = value === "evaluation" || value === "none" ? value : "agent";
+    const agent = choice === "agent" ? Number(value) : null;
+
+    act(() => evaluationLab.assessmentAgent(evaluation, screen.uuid, choice, agent));
+  }
+
+  /** Where a passage stands: its source, requirement and page. */
+  function place(passage: evaluationLab.ContextPassageView): string {
+    const parts = [passage.source];
+
+    if (passage.label) parts.push(passage.label);
+    if (passage.page !== null) parts.push(`page ${passage.page}`);
+
+    return parts.join(" · ");
+  }
+
   function save(event: SubmitEvent) {
     event.preventDefault();
     act(() => evaluationLab.assessmentSave(evaluation, screen.uuid, { ...form }), "The results were saved.");
@@ -77,6 +97,35 @@
   {/if}
   <button type="button" class="small" onclick={() => (instructions = true)}>Instructions…</button>
 </div>
+
+{#if screen.knowledge.agents.length > 0}
+  <div class="knowledge-context">
+    <label class="inline-choice">
+      Agent with knowledge
+      <select value={screen.knowledge.choice === "agent" ? String(screen.knowledge.agent) : screen.knowledge.choice} onchange={setAgent}>
+        <option value="evaluation">as the evaluation</option>
+        <option value="none">none</option>
+        {#each screen.knowledge.agents as agent (agent.id)}<option value={String(agent.id)}>{agent.name}</option>{/each}
+      </select>
+    </label>
+    {#if screen.knowledge.used}
+      <details>
+        <summary>
+          {screen.knowledge.used}: {screen.knowledge.passages.filter((passage) => passage.chosen).length} of {screen.knowledge.passages.length} passages of the standard go into the question, as context, not evidence
+        </summary>
+        {#each screen.knowledge.passages as passage (passage.id)}
+          <label class="choice">
+            <input type="checkbox" checked={passage.chosen} onchange={(event) => act(() => evaluationLab.assessmentContext(evaluation, screen.uuid, passage.id, event.currentTarget.checked))} />
+            <span class="note">{place(passage)}</span>
+            <blockquote>{passage.text}</blockquote>
+          </label>
+        {:else}
+          <p class="note">The bases of the agent hold no passage for this requirement.</p>
+        {/each}
+      </details>
+    {/if}
+  </div>
+{/if}
 
 {#if screen.proposal}
   <div class="ai-proposal">

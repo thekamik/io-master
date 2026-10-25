@@ -7,9 +7,10 @@ use crate::db::user::database::UserDb;
 use crate::model::ai::Turn;
 use crate::model::evaluation::{
     Evaluation, EvaluationSummary, Evidence, Fragment, LabTask, MAX_EVALUATIONS, MAX_EVIDENCE, MAX_FRAGMENTS,
-    MAX_MESSAGES, OutputText, Related, Results,
+    MAX_MESSAGES, OutputText, Related, Results, TaskAgent,
 };
 use crate::model::evaluation_project::{MAX_LINKS, MAX_TASKS};
+use crate::model::knowledge::MAX_HITS;
 use crate::model::task_scheme::{Block, Connection, MAX_BLOCKS};
 
 use super::rows;
@@ -300,4 +301,52 @@ pub fn output(db: &UserDb, evaluation: &str, block: &str) -> Result<Option<Outpu
         )
         .optional()?
         .transpose()
+}
+
+/// The agent with knowledge of evaluation `evaluation`; `None` when it has none.
+///
+/// Called by: `views/evaluation_lab/assessment/context.rs`, `lab_tasks/view.rs`.
+pub fn agent(db: &UserDb, evaluation: &str) -> Result<Option<i64>, DbError> {
+    Ok(db
+        .connection()
+        .query_row("SELECT agent_id FROM lab_agents WHERE evaluation_uuid = ?1", [evaluation], |row| row.get(0))
+        .optional()?)
+}
+
+/// The agent of task `task`: that of its evaluation when no other was chosen.
+///
+/// Called by: `views/evaluation_lab/assessment/context.rs`.
+pub fn task_agent(db: &UserDb, evaluation: &str, task: &str) -> Result<TaskAgent, DbError> {
+    let stored: Option<Option<i64>> = db
+        .connection()
+        .query_row(
+            "SELECT agent_id FROM lab_task_agents WHERE evaluation_uuid = ?1 AND task_uuid = ?2",
+            [evaluation, task],
+            |row| row.get(0),
+        )
+        .optional()?;
+
+    Ok(match stored {
+        None => TaskAgent::AsEvaluation,
+        Some(None) => TaskAgent::NoAgent,
+        Some(Some(id)) => TaskAgent::Agent(id),
+    })
+}
+
+/// The passages the evaluator unticked for task `task`; at most `MAX_HITS`,
+/// the most an agent ever shows.
+///
+/// Called by: `views/evaluation_lab/assessment/context.rs`.
+pub fn context_excluded(db: &UserDb, evaluation: &str, task: &str) -> Result<Vec<i64>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection.prepare(
+        "SELECT passage_id FROM lab_context_excluded WHERE evaluation_uuid = ?1 AND task_uuid = ?2 LIMIT ?3",
+    )?;
+    let mut found = Vec::new();
+
+    for passage in statement.query_map(rusqlite::params![evaluation, task, limit(MAX_HITS)?], |row| row.get(0))? {
+        found.push(passage?);
+    }
+
+    Ok(found)
 }

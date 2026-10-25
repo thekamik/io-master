@@ -18,6 +18,9 @@
 //! lab_results              the four results and the verdict of a requirement
 //! lab_result_proposals     what the AI proposed for them, not decided yet
 //! lab_outputs              the text of an output: accepted, and proposed by the AI
+//! lab_agents               the agent with knowledge of an evaluation (step 57.4)
+//! lab_task_agents          the agent of a task, when it is not that of its evaluation
+//! lab_context_excluded     the passages of the agent the evaluator unticked for a task
 //! ```
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
@@ -156,5 +159,27 @@ pub const SCHEMA: &str = "
         text            TEXT NOT NULL,
         proposal        TEXT,
         PRIMARY KEY (evaluation_uuid, block_uuid)
+    );
+
+    -- The agents are those of db/knowledge/; one deleted there is no agent
+    -- here any more (the reading checks it).
+    CREATE TABLE IF NOT EXISTS lab_agents (
+        evaluation_uuid TEXT PRIMARY KEY,
+        agent_id        INTEGER NOT NULL
+    );
+
+    -- agent_id NULL: no agent for the task; no row: that of the evaluation.
+    CREATE TABLE IF NOT EXISTS lab_task_agents (
+        evaluation_uuid TEXT NOT NULL,
+        task_uuid       TEXT NOT NULL,
+        agent_id        INTEGER,
+        PRIMARY KEY (evaluation_uuid, task_uuid)
+    );
+
+    CREATE TABLE IF NOT EXISTS lab_context_excluded (
+        evaluation_uuid TEXT NOT NULL,
+        task_uuid       TEXT NOT NULL,
+        passage_id      INTEGER NOT NULL,
+        PRIMARY KEY (evaluation_uuid, task_uuid, passage_id)
     );
 ";

@@ -411,6 +411,7 @@ mod views {
         pub mod test_support;
 
         pub mod assessment {
+            pub mod context;
             pub mod propose;
         }
         pub mod evaluation_list {

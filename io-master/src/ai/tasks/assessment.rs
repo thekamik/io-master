@@ -10,7 +10,7 @@ use crate::model::evaluation::{Results, Verdict};
 use super::json::{json_object, text_of};
 
 /// The instructions when the evaluator has not changed them.
-pub const DEFAULT_INSTRUCTIONS: &str = r#"You are the agent of one requirement of a security evaluation. Below are the requirement word for word (where it stands in its catalog, its parameters and the requirements it links to), what the planner asks to check, its related elements (for example the work units of the methodology), and the fragments of the evidence the evaluator accepted, by input: exact quotes with their pages, and notes. The requirement and its related elements tell you what to assess; they are not evidence. Assess the requirement on the accepted fragments only; do not assume what they do not say.
+pub const DEFAULT_INSTRUCTIONS: &str = r#"You are the agent of one requirement of a security evaluation. Below are the requirement word for word (where it stands in its catalog, its parameters and the requirements it links to), what the planner asks to check, its related elements (for example the work units of the methodology), perhaps passages of the standard given by an agent with knowledge, and the fragments of the evidence the evaluator accepted, by input: exact quotes with their pages, and notes. The requirement, its related elements and the passages of the standard tell you what to assess; they are not evidence. Assess the requirement on the accepted fragments only; do not assume what they do not say.
 
 Write the four results of the evaluation:
 - "findings": what the fragments show, with the quotes and pages they come from;
@@ -23,12 +23,20 @@ Answer with one JSON object and nothing else, in this form:
 {"findings": "...", "analysis": "...", "assessment": "...", "vulnerabilities": "...", "verdict": "met", "reason": "..."}"#;
 
 /// The message to the model: the instructions, the requirement, what the
-/// planner asks to check, its related elements (`related`, step 57.1; no
+/// planner asks to check, its related elements (`related`, step 57.1), the
+/// context of the standard of its agent (`context`, step 57.4; each no
 /// section when empty) and the fragments (`fragments`: the text that lists
 /// them by input).
 ///
 /// Called by: `views/evaluation_lab/assessment/propose.rs`.
-pub fn prompt(instructions: &str, requirement: &str, checks: &str, related: &str, fragments: &str) -> String {
+pub fn prompt(
+    instructions: &str,
+    requirement: &str,
+    checks: &str,
+    related: &str,
+    context: &str,
+    fragments: &str,
+) -> String {
     let checks = if checks.trim().is_empty() { "(nothing more)" } else { checks.trim() };
     let fragments = if fragments.trim().is_empty() { "(no fragment accepted)\n" } else { fragments };
 
@@ -40,8 +48,16 @@ pub fn prompt(instructions: &str, requirement: &str, checks: &str, related: &str
         )
     };
 
+    let context = if context.trim().is_empty() {
+        String::new()
+    } else {
+        format!(
+            "\n\nThe context of the standard, from the knowledge of an agent (to understand the requirement; not evidence):\n{context}"
+        )
+    };
+
     format!(
-        "{}\n\nThe requirement:\n{requirement}\nWhat the planner asks to check: {checks}{related}\n\nThe accepted fragments:\n{fragments}",
+        "{}\n\nThe requirement:\n{requirement}\nWhat the planner asks to check: {checks}{related}{context}\n\nThe accepted fragments:\n{fragments}",
         instructions.trim()
     )
 }
@@ -75,19 +91,28 @@ mod tests {
 
     #[test]
     fn the_question_holds_only_what_it_is_given() {
-        let text = prompt("Assess.", "1.1.1: Roles\n", " ", "", "");
+        let text = prompt("Assess.", "1.1.1: Roles\n", " ", "", "", "");
 
         assert!(text.contains("(nothing more)"));
         assert!(text.contains("(no fragment accepted)"));
         assert!(!text.contains("related elements"));
+        assert!(!text.contains("context of the standard"));
     }
 
     #[test]
     fn the_related_elements_have_a_section_of_their_own() {
-        let text = prompt("Assess.", "ADV_FSP.4\n", "", "ADV_FSP.4-1 The evaluator shall examine\n", "- \"quote\"\n");
+        let text = prompt(
+            "Assess.",
+            "ADV_FSP.4\n",
+            "",
+            "ADV_FSP.4-1 The evaluator shall examine\n",
+            "[1] CC Part 3 · page 80\nThe functional specification...\n",
+            "- \"quote\"\n",
+        );
 
         let related = text.find("The related elements of the requirement").unwrap();
-        assert!(related < text.find("The accepted fragments").unwrap());
+        let context = text.find("The context of the standard").unwrap();
+        assert!(related < context && context < text.find("The accepted fragments").unwrap());
         assert!(text.contains("ADV_FSP.4-1 The evaluator shall examine"));
     }
 

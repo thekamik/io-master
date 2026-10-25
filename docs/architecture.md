@@ -498,6 +498,7 @@ EvaluationList ──evaluation_list_get()──► the evaluations with their p
   ──evaluation_list_delete(uuid)──►
 EvaluationScreen ──lab_tasks_get(evaluation)──► the package, the product, the tasks and their state
   ──lab_tasks_state(evaluation, task, progress)──► to do / in progress / done
+  ──lab_tasks_agent(evaluation, agent)──► the agent with knowledge of its requirements (made in the view Knowledge)
   ──report_export(evaluation)──► a folder chosen in a dialog ──► one file per output (report/export.rs): the accepted
     texts, task by task, of the tasks whose verdict makes its condition hold (.txt or .tex)
 LabTask ──lab_task_get(evaluation, task)──► the scheme read only (LabScheme, the component BlockNode), the requirement
@@ -507,9 +508,12 @@ LabTask ──lab_task_get(evaluation, task)──► the scheme read only (LabS
   │       start of the evidence, the last messages) ──► the question and the answer kept
   │     ──fragments_propose(…, onEvent)──► the task evidence_fragments, part by part ──► quotes looked for in the
   │       evidence (found or not), a note apart ──fragments_accept / _remove / _add──► only accepted ones are assessed
-  ├─► RequirementPanel ──assessment_propose(…, onEvent)──► the task assessment (formal analysis): the whole
-  │     requirement (where it stands, parameters, links), its related elements word for word, to understand it,
-  │     and the accepted fragments, the only evidence ──► four results and a verdict proposed ──assessment_accept / _reject / _save──► the evaluator decides
+  ├─► RequirementPanel ──assessment_agent(…, choice, agent)──► the agent with knowledge of the task: that of the
+  │     evaluation, none, or another (step 57.4) ──► its passages (components/knowledge_agent, the words of the
+  │     requirement and of what the planner asks to check) ──assessment_context(…, passage, chosen)──► ticked or not
+  │   ──assessment_propose(…, onEvent)──► the task assessment (formal analysis): the whole requirement (where it
+  │     stands, parameters, links), its related elements word for word and the ticked passages of its agent, to
+  │     understand it, and the accepted fragments, the only evidence ──► four results and a verdict proposed ──assessment_accept / _reject / _save──► the evaluator decides
   └─► OutputPanel (only when its condition holds for the verdict) ──outputs_draft(…, onEvent)──► the task output_draft
         from the four results ──outputs_accept / _reject / _save──► the text of the output
 the instructions of the four tasks ──evaluation_lab_instructions_get / _save──►; "Stop" ──evaluation_lab_stop()──►

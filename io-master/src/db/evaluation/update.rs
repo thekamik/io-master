@@ -5,7 +5,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation::{Results, TaskState};
+use crate::model::evaluation::{Results, TaskAgent, TaskState};
 
 /// The name of a verdict in the database, or none.
 fn verdict_name(results: &Results) -> Option<&'static str> {
@@ -141,6 +141,90 @@ pub fn output_rejected(db: &UserDb, evaluation: &str, block: &str) -> Result<boo
     )?;
 
     Ok(changed == 1)
+}
+
+/// Gives evaluation `evaluation` the agent with knowledge `agent` (none:
+/// `None`); the passages unticked in its tasks are forgotten, since another
+/// agent finds others. One transaction.
+///
+/// Called by: `lab_tasks_agent` (`views/evaluation_lab/evaluation_lab.rs`).
+pub fn agent(db: &UserDb, evaluation: &str, agent: Option<i64>) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+
+    transaction.execute("DELETE FROM lab_agents WHERE evaluation_uuid = ?1", [evaluation])?;
+
+    if let Some(id) = agent {
+        transaction.execute(
+            "INSERT INTO lab_agents (evaluation_uuid, agent_id) VALUES (:evaluation, :agent)",
+            named_params! { ":evaluation": evaluation, ":agent": id },
+        )?;
+    }
+
+    transaction.execute("DELETE FROM lab_context_excluded WHERE evaluation_uuid = ?1", [evaluation])?;
+    transaction.commit()?;
+
+    Ok(())
+}
+
+/// Gives task `task` the agent `agent`; its unticked passages are forgotten.
+/// One transaction.
+///
+/// Called by: `assessment_agent` (`views/evaluation_lab/evaluation_lab.rs`).
+pub fn task_agent(db: &UserDb, evaluation: &str, task: &str, agent: TaskAgent) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let keys = named_params! { ":evaluation": evaluation, ":task": task };
+
+    transaction
+        .execute("DELETE FROM lab_task_agents WHERE evaluation_uuid = :evaluation AND task_uuid = :task", keys)?;
+    transaction
+        .execute("DELETE FROM lab_context_excluded WHERE evaluation_uuid = :evaluation AND task_uuid = :task", keys)?;
+
+    let stored = match agent {
+        TaskAgent::AsEvaluation => None,
+        TaskAgent::NoAgent => Some(None),
+        TaskAgent::Agent(id) => Some(Some(id)),
+    };
+
+    if let Some(id) = stored {
+        transaction.execute(
+            "INSERT INTO lab_task_agents (evaluation_uuid, task_uuid, agent_id) VALUES (:evaluation, :task, :agent)",
+            named_params! { ":evaluation": evaluation, ":task": task, ":agent": id },
+        )?;
+    }
+
+    transaction.commit()?;
+
+    Ok(())
+}
+
+/// Unticks (`excluded`) or ticks again passage `passage` of the agent of
+/// task `task`: an unticked passage is not given to its question.
+///
+/// Called by: `assessment_context` (`views/evaluation_lab/evaluation_lab.rs`).
+pub fn context_excluded(
+    db: &UserDb,
+    evaluation: &str,
+    task: &str,
+    passage: i64,
+    excluded: bool,
+) -> Result<(), DbError> {
+    let keys = named_params! { ":evaluation": evaluation, ":task": task, ":passage": passage };
+
+    if excluded {
+        db.connection().execute(
+            "INSERT OR IGNORE INTO lab_context_excluded (evaluation_uuid, task_uuid, passage_id)
+             VALUES (:evaluation, :task, :passage)",
+            keys,
+        )?;
+    } else {
+        db.connection().execute(
+            "DELETE FROM lab_context_excluded
+             WHERE evaluation_uuid = :evaluation AND task_uuid = :task AND passage_id = :passage",
+            keys,
+        )?;
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

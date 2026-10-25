@@ -1,10 +1,11 @@
 <!--
   The element "screen of an evaluation" of the view Evaluation lab (its
-  commands lab_tasks_get, lab_tasks_state and report_export in
-  src/views/evaluation_lab/evaluation_lab.rs): what the package says of
-  itself, the product, the tasks with their state (to do, in progress, done),
-  and "Export the report…" (one file per output, in a folder chosen in a
-  dialog of the system). A task opens its screen (LabTask).
+  commands lab_tasks_get, lab_tasks_state, lab_tasks_agent and report_export
+  in src/views/evaluation_lab/evaluation_lab.rs): what the package says of
+  itself, the product, the agent with knowledge of its requirements (made in
+  the view Knowledge (RAG)), the tasks with their state (to do, in progress,
+  done), and "Export the report…" (one file per output, in a folder chosen
+  in a dialog of the system). A task opens its screen (LabTask).
 -->
 <script lang="ts">
   import { onMount } from "svelte";
@@ -40,6 +41,16 @@
     }
   }
 
+  async function setAgent(event: Event) {
+    const value = (event.currentTarget as HTMLSelectElement).value;
+
+    try {
+      view = await evaluationLab.labTasksAgent(evaluation, value === "" ? null : Number(value));
+    } catch (error) {
+      notice = { done: false, text: sentence(error) };
+    }
+  }
+
   async function exportReport() {
     try {
       const written = await evaluationLab.reportExport(evaluation);
@@ -70,6 +81,15 @@
     {#if view.scope}<p class="note">{view.scope}</p>{/if}
     {#if view.note}<p class="note">{view.note}</p>{/if}
     <p class="note">Delegated to: {view.evaluator || "(nobody named)"}</p>
+    {#if view.agents.length > 0}
+      <label class="inline-choice">
+        Agent with knowledge for the requirements
+        <select value={view.agent === null ? "" : String(view.agent)} onchange={setAgent}>
+          <option value="">none</option>
+          {#each view.agents as agent (agent.id)}<option value={String(agent.id)}>{agent.name}</option>{/each}
+        </select>
+      </label>
+    {/if}
     <div class="buttons"><button type="button" onclick={exportReport}>Export the report…</button></div>
   </div>
   {#if notice}<p class={notice.done ? "done" : "problem"}>{notice.text}</p>{/if}

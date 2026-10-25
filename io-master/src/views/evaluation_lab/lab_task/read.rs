@@ -11,13 +11,15 @@ use crate::components::part_rows::view as part_rows;
 use crate::db::evaluation as db_evaluation;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation::{LabTask, output_applies};
+use crate::model::evaluation::{LabTask, TaskAgent, output_applies};
 use crate::model::oscal::catalog::{Catalog, Control};
 use crate::model::task_scheme::{BlockKind, ResultText};
 
+use super::super::assessment::context;
+use super::super::lab_tasks::view as tasks_view;
 use super::view::{
-    EvidenceView, FragmentView, InputView, LabBlockView, LabConnectionView, LabRelatedView, LabRequirementView,
-    LabTaskScreenView, MessageView, OutputView, ProposalView, ResultsForm,
+    ContextPassageView, EvidenceView, FragmentView, InputView, KnowledgeView, LabBlockView, LabConnectionView,
+    LabRelatedView, LabRequirementView, LabTaskScreenView, MessageView, OutputView, ProposalView, ResultsForm,
 };
 
 /// Task `task` of evaluation `evaluation`; refused when it does not exist.
@@ -161,6 +163,7 @@ pub fn screen(db: &UserDb, evaluation: &str, uuid: &str) -> Result<LabTaskScreen
         .map(|(proposed, reason)| ProposalView { results: ResultsForm::new(proposed), reason });
     let inputs = inputs(db, evaluation, &blocks)?;
     let outputs = outputs(db, evaluation, &blocks, &results)?;
+    let knowledge = knowledge(db, evaluation, &found)?;
     let mut block_views = Vec::with_capacity(blocks.len());
 
     for block in blocks {
@@ -189,7 +192,41 @@ pub fn screen(db: &UserDb, evaluation: &str, uuid: &str) -> Result<LabTaskScreen
             ResultText::Assessment.title(),
             ResultText::Vulnerabilities.title(),
         ],
+        knowledge,
     })
+}
+
+/// The agent with knowledge of `task` and its passages, for the panel of
+/// the requirement (step 57.4).
+///
+/// Called by: [`screen`].
+/// Calls: `context::context`, `tasks_view::agents`.
+fn knowledge(db: &UserDb, evaluation: &str, task: &LabTask) -> Result<KnowledgeView, AppError> {
+    let found = context::context(db, evaluation, task)?;
+    let (choice, agent) = match found.choice {
+        TaskAgent::AsEvaluation => ("evaluation", None),
+        TaskAgent::NoAgent => ("none", None),
+        TaskAgent::Agent(id) => ("agent", Some(id)),
+    };
+    let mut passages = Vec::with_capacity(found.passages.len());
+
+    for (hit, chosen) in found.passages {
+        passages.push(ContextPassageView {
+            id: hit.id,
+            source: hit.source,
+            page: hit.passage.page,
+            label: hit.passage.label,
+            text: hit.passage.text,
+            chosen,
+        });
+    }
+
+    let used = match found.agent {
+        Some(used) => Some(used.fields.name),
+        None => None,
+    };
+
+    Ok(KnowledgeView { choice, agent, used, agents: tasks_view::agents(db)?, passages })
 }
 
 /// Every input of `blocks` with its evidence, chat and fragments.

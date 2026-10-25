@@ -25,6 +25,7 @@ use crate::model::evaluation::check_results;
 use crate::model::task_scheme::{BlockKind, check_reason};
 
 use super::super::lab_task::read as lab_task;
+use super::context;
 
 /// Asks the agent of the requirement of task `task` for its results and
 /// keeps the proposal. The events go to `events`.
@@ -59,14 +60,16 @@ pub async fn propose(
 }
 
 /// The model and the question: the whole requirement, the instructions of
-/// its block, its related elements word for word (step 57.1), and the
-/// accepted fragments by input with their evidence and page.
+/// its block, its related elements word for word (step 57.1), the ticked
+/// passages of its agent with knowledge (step 57.4), and the accepted
+/// fragments by input with their evidence and page.
 ///
 /// Called by: [`propose`].
-/// Calls: `lab_task::task`, `requirement` and `related_text`, `read::blocks`,
+/// Calls: `lab_task::task`, `requirement` and `related_text`, `context::question_text`, `read::blocks`,
 /// `read::accepted_fragments`, `read::evidence_of`, `assessment::prompt`.
 fn question(db: &UserDb, evaluation: &str, task: &str) -> Result<(Arc<Model>, String), AppError> {
-    let (_, requirement, _) = lab_task::requirement(db, &lab_task::task(db, evaluation, task)?)?;
+    let found = lab_task::task(db, evaluation, task)?;
+    let (_, requirement, _) = lab_task::requirement(db, &found)?;
     let blocks = db_evaluation::read::blocks(db, evaluation, task)?;
     let fragments = db_evaluation::read::accepted_fragments(db, evaluation, task)?;
     let mut checks = String::new();
@@ -105,8 +108,10 @@ fn question(db: &UserDb, evaluation: &str, task: &str) -> Result<(Arc<Model>, St
     let instructions = tasks::instructions(db, Task::Assessment)?.unwrap_or_default();
 
     let related = lab_task::related_text(db, evaluation, task)?;
+    let context = context::question_text(db, evaluation, &found)?;
+    let text = assessment::prompt(&instructions, &requirement, &checks, &related, &context, &listed);
 
-    Ok((Arc::new(roles::model(db)?), assessment::prompt(&instructions, &requirement, &checks, &related, &listed)))
+    Ok((Arc::new(roles::model(db)?), text))
 }
 
 /// Reads `answer` and keeps it as the proposal for the results of task
@@ -219,5 +224,72 @@ mod tests {
         assert!(asked.contains("- s1.1.1-prm1: assignment of a choice from a selection; selection of one or more of"));
         assert!(asked.contains("The related elements of the requirement"));
         assert!(asked.contains("2.1.1: "), "the related element word for word from its catalog");
+    }
+
+    #[tokio::test]
+    async fn the_agent_of_the_evaluation_gives_its_ticked_passages_as_context() {
+        let answer = json!({ "findings": "F", "analysis": "A", "assessment": "S", "verdict": "met" }).to_string();
+        let service = FakeService::start(FakeAnswer::Stream(completions_events(&[&answer, &answer]))).await;
+        let test = ready(&service).await;
+        let session = test.state.session().unwrap();
+        let (kept, dropped) = {
+            let db = session.db();
+            let base = crate::db::knowledge::create::base(&db, "ISO", "").unwrap();
+            let passages = [
+                crate::model::knowledge::Passage {
+                    page: Some(7),
+                    label: String::new(),
+                    text: "Information security roles shall be defined and allocated.".to_owned(),
+                },
+                crate::model::knowledge::Passage {
+                    page: Some(9),
+                    label: String::new(),
+                    text: "Responsibilities for information security roles are documented.".to_owned(),
+                },
+            ];
+            crate::db::knowledge::create::source(
+                &db,
+                base,
+                crate::model::knowledge::SourceKind::Pdf,
+                "ISO 27002",
+                &passages,
+            )
+            .unwrap();
+            let itself = crate::model::knowledge::Passage {
+                page: None,
+                label: "1.1.1".to_owned(),
+                text: "1.1.1: Information security roles and responsibilities".to_owned(),
+            };
+            let catalog = "Sample Security Catalog *for Demonstration* and Testing";
+            let kind = crate::model::knowledge::SourceKind::Catalog;
+            crate::db::knowledge::create::source(&db, base, kind, catalog, &[itself]).unwrap();
+            let mut fields = crate::views::knowledge::agent_form::view::new_agent("ISO agent");
+            fields.bases = vec![base];
+            let agent = crate::db::knowledge::create::agent(&db, &fields).unwrap();
+            db_evaluation::update::agent(&db, "e", Some(agent)).unwrap();
+
+            let task = lab_task::task(&db, "e", "t").unwrap();
+            let found = context::context(&db, "e", &task).unwrap();
+            assert_eq!(found.passages.len(), 2, "the requirement itself, from its catalog, is left out");
+            let dropped = found.passages[1].0.id;
+            db_evaluation::update::context_excluded(&db, "e", "t", dropped, true).unwrap();
+            (found.passages[0].0.passage.text.clone(), found.passages[1].0.passage.text.clone())
+        };
+        let (_, channel) = collector();
+
+        propose(&session, "e", "t", &test.state.start_work(), &channel).await.unwrap();
+
+        let asked = service.received()[0].body.to_string();
+        assert!(asked.contains("The context of the standard, from the knowledge of an agent"));
+        assert!(asked.contains("ISO agent") && asked.contains(&kept));
+        assert!(!asked.contains(&dropped), "an unticked passage stays out");
+
+        db_evaluation::update::task_agent(&session.db(), "e", "t", crate::model::evaluation::TaskAgent::NoAgent)
+            .unwrap();
+        propose(&session, "e", "t", &test.state.start_work(), &channel).await.unwrap();
+        assert!(
+            !service.received()[1].body.to_string().contains("The context of the standard"),
+            "no agent for this task"
+        );
     }
 }

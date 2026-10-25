@@ -277,7 +277,8 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     read.rs                      Reading evaluations and what the evaluator added to them.
     rows.rs                      The rows of the evaluations and the types of `model/evaluation.rs`.
     schema.rs                    The tables of the evaluations.
-    update.rs                    The state of a task, the fragments accepted, the results, the outputs.
+    update.rs                    The state of a task, the fragments accepted, the results, the outputs,
+                                 the agents with knowledge and the passages unticked (step 57.4).
   evaluation_project/          The master projects of the evaluations and their tasks (step 51), the
                                  template of their outputs (standard_outputs, step 51.3).
     create.rs                    Storing master projects and their tasks.
@@ -476,6 +477,7 @@ views/                     The views of the window, one folder per view and one 
     evaluation_lab.rs            The entry of the view Evaluation lab: every command the page calls for it.
     test_support.rs              Help for the tests of the view: an evaluation and a fake AI.
     assessment/                  The element "assessment": the agent of a requirement.
+      context.rs                   The agent with knowledge of a task and its passages (step 57.4).
       propose.rs                   The four results and a verdict proposed, on the accepted fragments.
     evaluation_list/             The element "list of evaluations".
       view.rs                      The evaluations with their progress, as the page gets them.
