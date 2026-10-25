@@ -2,7 +2,9 @@
 //! they become.
 
 use crate::db::error::{Corrupt, DbError};
-use crate::model::knowledge::{BaseSummary, Hit, KnowledgeBase, Passage, Source, SourceKind};
+use crate::model::knowledge::{
+    AgentFields, AgentSummary, BaseSummary, Hit, KnowledgeBase, Passage, Source, SourceKind, TrialQuote,
+};
 
 /// A count of a column `column` as a number of the program.
 fn count(row: &rusqlite::Row<'_>, column: &str) -> Result<usize, DbError> {
@@ -43,10 +45,11 @@ pub(super) fn source(row: &rusqlite::Row<'_>) -> Result<Source, DbError> {
     })
 }
 
-/// A passage found by a search, with the name of its source and its score.
+/// A passage found by a search (or given to a trial), with the name of its
+/// source and its score; its id in the column `column`.
 ///
-/// Called by: `read::search`.
-pub(super) fn hit(row: &rusqlite::Row<'_>) -> Result<Hit, DbError> {
+/// Called by: `read::search`, `read::search_agent`, `read::trial`.
+pub(super) fn hit(row: &rusqlite::Row<'_>, column: &str) -> Result<Hit, DbError> {
     let page: Option<i64> = row.get("page")?;
     let page = match page {
         Some(number) => Some(u32::try_from(number).map_err(|error| DbError::Inconsistent(error.to_string()))?),
@@ -54,9 +57,37 @@ pub(super) fn hit(row: &rusqlite::Row<'_>) -> Result<Hit, DbError> {
     };
 
     Ok(Hit {
-        id: row.get("id")?,
+        id: row.get(column)?,
         source: row.get("source")?,
         passage: Passage { page, label: row.get("label")?, text: row.get("text")? },
         score: row.get("score")?,
     })
+}
+
+/// A row of `knowledge_agents` with the bases `bases` it draws on.
+///
+/// Called by: `read::agent`.
+pub(super) fn agent_fields(row: &rusqlite::Row<'_>, bases: Vec<i64>) -> Result<AgentFields, DbError> {
+    Ok(AgentFields {
+        name: row.get("name")?,
+        instructions: row.get("instructions")?,
+        glossary: row.get("glossary")?,
+        passages: count(row, "passages")?,
+        characters: count(row, "characters")?,
+        bases,
+    })
+}
+
+/// A row of `knowledge_agents` with the number of its bases.
+///
+/// Called by: `read::agents`.
+pub(super) fn agent_summary(row: &rusqlite::Row<'_>) -> Result<AgentSummary, DbError> {
+    Ok(AgentSummary { id: row.get("id")?, name: row.get("name")?, bases: count(row, "bases")? })
+}
+
+/// A row of `knowledge_trial_quotes`.
+///
+/// Called by: `read::trial`.
+pub(super) fn trial_quote(row: &rusqlite::Row<'_>) -> Result<TrialQuote, DbError> {
+    Ok(TrialQuote { passage: count(row, "passage")?, quote: row.get("quote")?, found: row.get("found")? })
 }

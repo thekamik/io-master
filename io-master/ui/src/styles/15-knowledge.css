@@ -1,5 +1,5 @@
-/* 15. The view Knowledge (RAG): the ways to add a source, each a block of
-   its own under a small heading, apart from the list of the sources. */
+/* 15. The view Knowledge (RAG): the blocks of the form of a base or of an
+   agent, each under a small heading. */
 
 .knowledge-add {
     margin-top: 1.25rem;
@@ -18,4 +18,21 @@
 
 .knowledge-search .buttons input {
     flex: 1;
+}
+
+/* The knowledge bases ticked in the form of an agent: one framed line each,
+   the ticked ones marked, as the choices of the setup. */
+.knowledge-add label.choice {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0.5rem;
+}
+
+.knowledge-add label.choice:has(input:checked) {
+    border-color: var(--accent);
+}
+
+.knowledge-add label.choice .note {
+    display: inline;
 }

@@ -12,7 +12,7 @@
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import * as evaluationLab from "../../lib/api/evaluation_lab";
-  import { follow, idle, start } from "./ai_progress";
+  import { follow, idle, start } from "../../components/ai_work/ai_progress";
   import LabInstructions from "./LabInstructions.svelte";
 
   let {

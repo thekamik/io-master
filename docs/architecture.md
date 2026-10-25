@@ -220,7 +220,8 @@ A **component** is a small element used more than once: several times in one vie
 | `catalog_tree` | drzewo katalogu | the groups and controls of a catalog as rows; the editor of a catalog and the browser of the standards |
 | `recovery_code` | kod odzyskiwania | the recovery code, shown once; four elements of the view Users |
 | `block_node` | blok schematu | a block of the scheme of a task on the drawing (the page only); the Evaluation plan, where it is edited, and the Evaluation lab, where it is read only |
-| `ai_work` | praca AI | one question of a work of the AI with its events (progress, failure, end; Rust only); the works of the AI of the Evaluation plan and of the Evaluation lab |
+| `ai_work` | praca AI | one question of a work of the AI with its events (progress, failure, end), and on the page what a panel shows of it; the works of the AI of the Evaluation plan, of the Evaluation lab and the proving ground of an agent |
+| `knowledge_agent` | agent z wiedzą | the passages an agent with knowledge gives the model with a question (Rust only, step 57.3): the proving ground, later every work of the AI an agent is attached to |
 
 The idea of the user of 2026-10-23 (the tiles of the evidence: a requirement linked to its inputs, a proof linked to an input, the AI of the input judging the proof) became the scheme of a task (step 51.2) and the inputs of the Evaluation lab (step 52).
 
@@ -524,4 +525,13 @@ KnowledgeBase ──knowledge_base_get / _save──► the name and the descrip
   ──knowledge_base_add_note(id, name, text)──► passages;  ──knowledge_base_remove(id, source)──► gone with its passages
 KnowledgeSearch ──knowledge_search_run(base, text)──► the words as phrases joined by OR (search_query) ──► FTS5 MATCH,
   ranked by BM25 ──► the passages with their source, page or requirement, and relevance
+AgentList ──agent_list_get / _create(name) / _delete──► db/knowledge/ (agents, with the numbers of their bases)
+AgentForm ──agent_form_get / _save(id, form)──► name, instructions, glossary, limits, and the bases ticked in the form
+ProvingGround ──proving_ground_find(agent, question)──► components/knowledge_agent: the question widened by the
+    glossary ──► FTS5 in the bases of the agent ──► the passages chosen within its limits (no AI)
+  ──proving_ground_ask(agent, question, onEvent)──► the same passages ──► the task knowledge_answer through ai/api/
+    (journal) ──► the answer and its quotes, each looked for in the passage it names ──► the trial kept
+  ──proving_ground_get(agent)──► the last trial;  "Stop" ──knowledge_stop()──►
 ```
+
+**The configurator is apart** (user, 2026-10-25): the knowledge bases and the agents are made and joined only in this view, so that the views of the evaluation are not crowded; there a work of the AI only chooses an agent (step 57.4).

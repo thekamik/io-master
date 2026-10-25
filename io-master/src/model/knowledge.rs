@@ -46,6 +46,33 @@ pub const MAX_TERMS: usize = 64;
 /// The most passages a search gives.
 pub const MAX_HITS: usize = 50;
 
+/// The most agents of an evaluator.
+pub const MAX_AGENTS: usize = 50;
+
+/// The longest instructions of an agent.
+pub const AGENT_INSTRUCTIONS_MAX: usize = 20_000;
+
+/// The longest glossary of an agent, and the most entries in it.
+pub const GLOSSARY_MAX: usize = 50_000;
+pub const MAX_GLOSSARY_ENTRIES: usize = 500;
+
+/// The most passages an agent gives the model with one question, and the
+/// number of a new agent.
+pub const MAX_AGENT_PASSAGES: usize = 20;
+pub const DEFAULT_AGENT_PASSAGES: usize = 8;
+
+/// The characters of the passages an agent gives with one question: the
+/// least, the most, and those of a new agent.
+pub const MIN_CONTEXT_CHARS: usize = PASSAGE_CHARS;
+pub const MAX_CONTEXT_CHARS: usize = 40_000;
+pub const DEFAULT_CONTEXT_CHARS: usize = 12_000;
+
+/// The longest question of the proving ground.
+pub const QUESTION_MAX: usize = 4000;
+
+/// The most quotes of an answer that are checked.
+pub const MAX_QUOTES: usize = 20;
+
 /// What a source of a base is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SourceKind {
@@ -121,6 +148,55 @@ pub struct Hit {
     pub score: f64,
 }
 
+/// What the evaluator sets of an agent (step 57.3): its name, its
+/// instructions (who it is, how it answers), its glossary (lines `term =
+/// other term`), how many passages and characters it gives the model, and
+/// the bases it draws on.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentFields {
+    pub name: String,
+    pub instructions: String,
+    pub glossary: String,
+    pub passages: usize,
+    pub characters: usize,
+    pub bases: Vec<i64>,
+}
+
+/// An agent of the AI with knowledge.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Agent {
+    pub id: i64,
+    pub fields: AgentFields,
+}
+
+/// An agent in the list, with the number of its bases.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentSummary {
+    pub id: i64,
+    pub name: String,
+    pub bases: usize,
+}
+
+/// A quote of an answer of the proving ground: the number of the passage
+/// it names (from 1) and whether the program found it there.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TrialQuote {
+    pub passage: usize,
+    pub quote: String,
+    pub found: bool,
+}
+
+/// The last question of the proving ground of an agent: the question, the
+/// passages it was given (in their order, numbered from 1), the answer and
+/// its quotes, checked.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Trial {
+    pub question: String,
+    pub passages: Vec<Hit>,
+    pub answer: String,
+    pub quotes: Vec<TrialQuote>,
+}
+
 /// Checks the name and the description of a base: a name not empty, both
 /// within their limits.
 ///
@@ -132,6 +208,162 @@ pub fn check_base(name: &str, description: &str) -> Result<(), Invalid> {
 
     check_text(Field::Name, name, NAME_MAX, false)?;
     check_text(Field::Description, description, DESCRIPTION_MAX, true)
+}
+
+/// Checks what the evaluator set of an agent: a name, the limits of every
+/// text, the numbers of passages and characters within their bounds, at
+/// most `MAX_BASES` bases, a glossary that reads (`glossary`).
+///
+/// Called by: `views/knowledge/` (an agent made or saved).
+/// Calls: `check_text`, [`glossary`].
+pub fn check_agent(fields: &AgentFields) -> Result<(), Invalid> {
+    if fields.name.trim().is_empty() {
+        return Err(Invalid::new(Field::Name, "the name is empty"));
+    }
+
+    check_text(Field::Name, &fields.name, NAME_MAX, false)?;
+    check_text(Field::Instructions, &fields.instructions, AGENT_INSTRUCTIONS_MAX, true)?;
+    check_text(Field::Glossary, &fields.glossary, GLOSSARY_MAX, true)?;
+
+    if !(1..=MAX_AGENT_PASSAGES).contains(&fields.passages) {
+        return Err(Invalid::new(Field::Kind, format!("an agent gives 1 to {MAX_AGENT_PASSAGES} passages")));
+    }
+
+    if !(MIN_CONTEXT_CHARS..=MAX_CONTEXT_CHARS).contains(&fields.characters) {
+        return Err(Invalid::new(
+            Field::Kind,
+            format!("an agent gives {MIN_CONTEXT_CHARS} to {MAX_CONTEXT_CHARS} characters of passages"),
+        ));
+    }
+
+    if fields.bases.len() > MAX_BASES {
+        return Err(Invalid::new(Field::Kind, format!("an agent draws on at most {MAX_BASES} bases")));
+    }
+
+    glossary(&fields.glossary)?;
+
+    Ok(())
+}
+
+/// The entries of the glossary `text`: one per line, `term = other term`
+/// (an abbreviation and what it stands for, two names of one thing); an
+/// empty line or one that starts with `#` is skipped. Refused when a line
+/// has no `=` or an empty side, or there are more than
+/// [`MAX_GLOSSARY_ENTRIES`].
+///
+/// Called by: [`check_agent`], `views/knowledge/proving_ground/` (the words of a search widened).
+pub fn glossary(text: &str) -> Result<Vec<(String, String)>, Invalid> {
+    let mut entries = Vec::new();
+
+    for (number, line) in (1..).zip(text.lines()) {
+        let line = line.trim();
+
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+
+        let Some((term, other)) = line.split_once('=') else {
+            return Err(Invalid::new(Field::Glossary, format!("line {number} of the glossary has no \"=\"")));
+        };
+
+        if term.trim().is_empty() || other.trim().is_empty() {
+            return Err(Invalid::new(Field::Glossary, format!("line {number} of the glossary has an empty side")));
+        }
+
+        if entries.len() == MAX_GLOSSARY_ENTRIES {
+            return Err(Invalid::new(
+                Field::Glossary,
+                format!("a glossary has at most {MAX_GLOSSARY_ENTRIES} entries"),
+            ));
+        }
+
+        entries.push((term.trim().to_owned(), other.trim().to_owned()));
+    }
+
+    Ok(entries)
+}
+
+/// The text `text` widened by the glossary `entries`: for every entry one
+/// of whose sides the text holds as a whole word (any case), the other
+/// side is added, so that a search finds both.
+///
+/// Called by: `views/knowledge/proving_ground/` (before `search_query`).
+/// Calls: [`holds_term`].
+pub fn widened(text: &str, entries: &[(String, String)]) -> String {
+    let lower = text.to_lowercase();
+    let mut widened = text.to_owned();
+
+    for (term, other) in entries {
+        if holds_term(&lower, &term.to_lowercase()) {
+            widened.push(' ');
+            widened.push_str(other);
+        }
+
+        if holds_term(&lower, &other.to_lowercase()) {
+            widened.push(' ');
+            widened.push_str(term);
+        }
+    }
+
+    widened
+}
+
+/// Whether `text` holds `term` as a whole word or words: not inside a
+/// longer word (`TSF` is not in `TSFI`).
+///
+/// Called by: [`widened`].
+fn holds_term(text: &str, term: &str) -> bool {
+    if term.is_empty() {
+        return false;
+    }
+
+    for (start, _) in text.match_indices(term) {
+        let before = text.get(..start).and_then(|head| head.chars().next_back());
+        let after = text.get(start + term.len()..).and_then(|tail| tail.chars().next());
+        if !inside_word(before) && !inside_word(after) {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Whether the character next to a term (none at the start or the end of
+/// the text) makes it part of a longer word.
+///
+/// Called by: [`holds_term`].
+fn inside_word(neighbour: Option<char>) -> bool {
+    match neighbour {
+        Some(character) => character.is_alphanumeric(),
+        None => false,
+    }
+}
+
+/// The passages an agent gives the model, from `hits` (the best first): at
+/// most `passages` of them, of at most `characters` together; a passage
+/// that does not fit is passed over for a shorter one after it.
+///
+/// Called by: `views/knowledge/proving_ground/`.
+pub fn chosen(hits: Vec<Hit>, passages: usize, characters: usize) -> Vec<Hit> {
+    let mut chosen = Vec::with_capacity(passages.min(hits.len()));
+    let mut total = 0;
+
+    for hit in hits {
+        let length = hit.passage.text.chars().count();
+
+        if chosen.len() == passages {
+            break;
+        }
+
+        if total + length > characters {
+            continue;
+        }
+
+        total += length;
+        chosen.push(hit);
+    }
+
+    chosen
 }
 
 /// The passages of the text `text` of one page (or of one requirement,
@@ -305,6 +537,77 @@ mod tests {
 
         assert_eq!(found.len(), 3);
         assert!(passages(None, "", " \n\n ").is_empty());
+    }
+
+    fn agent() -> AgentFields {
+        AgentFields {
+            name: "CC agent".to_owned(),
+            instructions: "You know Common Criteria.".to_owned(),
+            glossary: "# abbreviations\nTSF = TOE Security Functionality\n\nST = Security Target".to_owned(),
+            passages: DEFAULT_AGENT_PASSAGES,
+            characters: DEFAULT_CONTEXT_CHARS,
+            bases: vec![1, 2],
+        }
+    }
+
+    fn hit(id: i64, length: usize) -> Hit {
+        Hit {
+            id,
+            source: "CC".to_owned(),
+            passage: Passage { page: None, label: String::new(), text: "x".repeat(length) },
+            score: -1.0,
+        }
+    }
+
+    #[test]
+    fn an_agent_is_checked() {
+        assert!(check_agent(&agent()).is_ok());
+
+        let mut wrong = agent();
+        wrong.passages = 0;
+        assert!(check_agent(&wrong).is_err());
+
+        let mut wrong = agent();
+        wrong.characters = MAX_CONTEXT_CHARS + 1;
+        assert!(check_agent(&wrong).is_err());
+
+        let mut wrong = agent();
+        wrong.glossary = "TSF TOE Security Functionality".to_owned();
+        assert_eq!(check_agent(&wrong).unwrap_err().field, Field::Glossary);
+    }
+
+    #[test]
+    fn the_glossary_is_read_line_by_line() {
+        let entries = glossary(&agent().glossary).unwrap();
+
+        assert_eq!(
+            entries,
+            [
+                ("TSF".to_owned(), "TOE Security Functionality".to_owned()),
+                ("ST".to_owned(), "Security Target".to_owned())
+            ]
+        );
+        assert!(glossary("TSF = ").is_err());
+        assert!(glossary(&"a = b\n".repeat(MAX_GLOSSARY_ENTRIES + 1)).is_err());
+    }
+
+    #[test]
+    fn a_question_is_widened_by_the_glossary_both_ways() {
+        let entries = glossary(&agent().glossary).unwrap();
+
+        assert_eq!(widened("What does the TSF do?", &entries), "What does the TSF do? TOE Security Functionality");
+        assert_eq!(widened("the security target of a TOE", &entries), "the security target of a TOE ST");
+        assert_eq!(widened("The TSFI and the STs", &entries), "The TSFI and the STs", "only whole words");
+    }
+
+    #[test]
+    fn the_passages_chosen_keep_both_limits() {
+        let hits = vec![hit(1, 1000), hit(2, 1400), hit(3, 500), hit(4, 100)];
+
+        let chosen_ids: Vec<i64> = chosen(hits.clone(), 3, 2000).into_iter().map(|hit| hit.id).collect();
+        assert_eq!(chosen_ids, [1, 3, 4], "the second does not fit, shorter ones after it do");
+
+        assert_eq!(chosen(hits, 1, 5000).len(), 1);
     }
 
     #[test]

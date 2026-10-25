@@ -8,6 +8,11 @@
 //! knowledge_bases      a base: its name (unique) and what it is for
 //! knowledge_sources    a source of a base: its kind, its name, the number of its passages
 //! knowledge_passages   the passages of the sources and their index of words (FTS5, BM25)
+//! knowledge_agents     an agent: its name (unique), instructions, glossary, limits (step 57.3)
+//! knowledge_agent_bases the bases an agent draws on
+//! knowledge_trials     the last question of the proving ground of an agent, and its answer
+//! knowledge_trial_passages  the passages it was given, copied (a source may go later)
+//! knowledge_trial_quotes    the quotes of its answer, and whether they were found
 //! ```
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
@@ -43,5 +48,47 @@ pub const SCHEMA: &str = "
         page UNINDEXED,
         label UNINDEXED,
         tokenize = 'porter unicode61 remove_diacritics 2'
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_agents (
+        id           INTEGER PRIMARY KEY,
+        name         TEXT NOT NULL UNIQUE,
+        instructions TEXT NOT NULL,
+        glossary     TEXT NOT NULL,
+        passages     INTEGER NOT NULL,
+        characters   INTEGER NOT NULL,
+        created      INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_agent_bases (
+        agent_id INTEGER NOT NULL REFERENCES knowledge_agents(id),
+        base_id  INTEGER NOT NULL REFERENCES knowledge_bases(id),
+        PRIMARY KEY (agent_id, base_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_trials (
+        agent_id INTEGER PRIMARY KEY REFERENCES knowledge_agents(id),
+        question TEXT NOT NULL,
+        answer   TEXT NOT NULL,
+        asked    INTEGER NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_trial_passages (
+        agent_id   INTEGER NOT NULL REFERENCES knowledge_agents(id),
+        position   INTEGER NOT NULL,
+        passage_id INTEGER NOT NULL,
+        source     TEXT NOT NULL,
+        page       INTEGER,
+        label      TEXT NOT NULL,
+        text       TEXT NOT NULL,
+        score      REAL NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS knowledge_trial_quotes (
+        agent_id INTEGER NOT NULL REFERENCES knowledge_agents(id),
+        position INTEGER NOT NULL,
+        passage  INTEGER NOT NULL,
+        quote    TEXT NOT NULL,
+        found    INTEGER NOT NULL
     );
 ";

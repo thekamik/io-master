@@ -4,7 +4,10 @@ use rusqlite::{OptionalExtension, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{BaseSummary, Hit, KnowledgeBase, MAX_BASES, MAX_HITS, MAX_SOURCES, Source};
+use crate::model::knowledge::{
+    Agent, AgentSummary, BaseSummary, Hit, KnowledgeBase, MAX_AGENT_PASSAGES, MAX_AGENTS, MAX_BASES, MAX_HITS,
+    MAX_QUOTES, MAX_SOURCES, Source, Trial,
+};
 
 use super::rows;
 
@@ -78,11 +81,115 @@ pub fn search(db: &UserDb, base: i64, query: &str, max: usize) -> Result<Vec<Hit
     let parameters = named_params! { ":query": query, ":base": base, ":limit": limit(max.min(MAX_HITS))? };
     let mut found = Vec::new();
 
-    for row in statement.query_map(parameters, |row| Ok(rows::hit(row)))? {
+    for row in statement.query_map(parameters, |row| Ok(rows::hit(row, "id")))? {
         found.push(row??);
     }
 
     Ok(found)
+}
+
+/// The agents by name, with the numbers of their bases; at most `MAX_AGENTS`.
+///
+/// Called by: `agent_list_get` and the commands that change the list (`views/knowledge/knowledge.rs`).
+pub fn agents(db: &UserDb) -> Result<Vec<AgentSummary>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection.prepare(
+        "SELECT a.id AS id, a.name AS name,
+                (SELECT COUNT(*) FROM knowledge_agent_bases b WHERE b.agent_id = a.id) AS bases
+         FROM knowledge_agents a ORDER BY a.name COLLATE NOCASE LIMIT ?1",
+    )?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map([limit(MAX_AGENTS)?], |row| Ok(rows::agent_summary(row)))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// Agent `id` with the bases it draws on; `None` when it does not exist.
+///
+/// Called by: the commands of an agent (`views/knowledge/knowledge.rs`), the proving ground.
+pub fn agent(db: &UserDb, id: i64) -> Result<Option<Agent>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection
+        .prepare("SELECT base_id FROM knowledge_agent_bases WHERE agent_id = ?1 ORDER BY base_id LIMIT ?2")?;
+    let mut bases = Vec::new();
+
+    for base in statement.query_map(rusqlite::params![id, limit(MAX_BASES)?], |row| row.get::<_, i64>(0))? {
+        bases.push(base?);
+    }
+
+    let fields = connection
+        .query_row("SELECT * FROM knowledge_agents WHERE id = ?1", [id], |row| Ok(rows::agent_fields(row, bases)))
+        .optional()?
+        .transpose()?;
+
+    match fields {
+        Some(fields) => Ok(Some(Agent { id, fields })),
+        None => Ok(None),
+    }
+}
+
+/// The passages of the bases of agent `agent` that the FTS5 query `query`
+/// finds, the best first (BM25); at most `max`, never more than `MAX_HITS`.
+///
+/// Called by: `views/knowledge/proving_ground/` (the passages of a question).
+pub fn search_agent(db: &UserDb, agent: i64, query: &str, max: usize) -> Result<Vec<Hit>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection.prepare(
+        "SELECT knowledge_passages.rowid AS id, s.name AS source, knowledge_passages.page AS page,
+                knowledge_passages.label AS label, knowledge_passages.text AS text,
+                bm25(knowledge_passages) AS score
+         FROM knowledge_passages JOIN knowledge_sources s ON s.id = knowledge_passages.source_id
+         WHERE knowledge_passages MATCH :query
+           AND s.base_id IN (SELECT base_id FROM knowledge_agent_bases WHERE agent_id = :agent)
+         ORDER BY score LIMIT :limit",
+    )?;
+    let parameters = named_params! { ":query": query, ":agent": agent, ":limit": limit(max.min(MAX_HITS))? };
+    let mut found = Vec::new();
+
+    for row in statement.query_map(parameters, |row| Ok(rows::hit(row, "id")))? {
+        found.push(row??);
+    }
+
+    Ok(found)
+}
+
+/// The last trial of the proving ground of agent `agent`; `None` when it
+/// has none.
+///
+/// Called by: `proving_ground_get` (`views/knowledge/knowledge.rs`).
+pub fn trial(db: &UserDb, agent: i64) -> Result<Option<Trial>, DbError> {
+    let connection = db.connection();
+    let asked = connection
+        .query_row("SELECT question, answer FROM knowledge_trials WHERE agent_id = ?1", [agent], |row| {
+            Ok((row.get::<_, String>("question")?, row.get::<_, String>("answer")?))
+        })
+        .optional()?;
+    let Some((question, answer)) = asked else {
+        return Ok(None);
+    };
+
+    let mut statement =
+        connection.prepare("SELECT * FROM knowledge_trial_passages WHERE agent_id = ?1 ORDER BY position LIMIT ?2")?;
+    let mut passages = Vec::new();
+
+    for row in statement
+        .query_map(rusqlite::params![agent, limit(MAX_AGENT_PASSAGES)?], |row| Ok(rows::hit(row, "passage_id")))?
+    {
+        passages.push(row??);
+    }
+
+    let mut statement =
+        connection.prepare("SELECT * FROM knowledge_trial_quotes WHERE agent_id = ?1 ORDER BY position LIMIT ?2")?;
+    let mut quotes = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![agent, limit(MAX_QUOTES)?], |row| Ok(rows::trial_quote(row)))? {
+        quotes.push(row??);
+    }
+
+    Ok(Some(Trial { question, passages, answer, quotes }))
 }
 
 #[cfg(test)]

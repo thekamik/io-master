@@ -1,9 +1,14 @@
 // The commands of the view Knowledge (RAG) (src/views/knowledge/knowledge.rs,
 // step 57): the knowledge bases of the AI, their sources and the search of
-// their passages. One function per command; the types are the views of the
-// elements (their view.rs).
+// their passages; the agents made of them and their proving ground. One
+// function per command; the types are the views of the elements (their
+// view.rs).
 
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
+
+import type { AiEvent } from "./components/ai_work";
+
+export type { AiEvent };
 
 // knowledge_list/view.rs
 /** A knowledge base as a row of the list. */
@@ -51,6 +56,68 @@ export interface HitView {
   label: string;
   text: string;
   score: number;
+}
+
+// agent_list/view.rs
+export interface AgentSummaryView {
+  id: number;
+  name: string;
+  bases: number;
+}
+
+// agent_form/view.rs
+/** A knowledge base in the form of an agent: ticked when the agent draws on it. */
+export interface BaseChoiceView {
+  id: number;
+  name: string;
+  passages: number;
+  chosen: boolean;
+}
+
+export interface AgentFormView {
+  id: number;
+  name: string;
+  instructions: string;
+  glossary: string;
+  passages: number;
+  characters: number;
+  bases: BaseChoiceView[];
+  max_passages: number;
+  min_characters: number;
+  max_characters: number;
+}
+
+/** The form of an agent as it is saved. */
+export interface AgentForm {
+  name: string;
+  instructions: string;
+  glossary: string;
+  passages: number;
+  characters: number;
+  bases: number[];
+}
+
+// proving_ground/view.rs
+export interface QuoteView {
+  passage: number;
+  quote: string;
+  found: boolean;
+}
+
+export interface TrialView {
+  question: string;
+  passages: HitView[];
+  answer: string;
+  quotes: QuoteView[];
+}
+
+/** A channel of Tauri that hands every event of a work of the AI to `onEvent`. */
+function channel(onEvent: (event: AiEvent) => void): Channel<AiEvent> {
+  const made = new Channel<AiEvent>();
+
+  made.onmessage = onEvent;
+
+  return made;
 }
 
 /** Called by KnowledgeList.svelte, when the view opens. */
@@ -106,4 +173,49 @@ export function knowledgeBaseCatalogs(): Promise<CatalogChoiceView[]> {
 /** Called by KnowledgeSearch.svelte, "Search". */
 export function knowledgeSearchRun(base: number, text: string): Promise<HitView[]> {
   return invoke("knowledge_search_run", { base, text });
+}
+
+/** Called by AgentList.svelte, when the tab Agents opens. */
+export function agentListGet(): Promise<AgentSummaryView[]> {
+  return invoke("agent_list_get");
+}
+
+/** Called by AgentList.svelte, "Make". */
+export function agentListCreate(name: string): Promise<AgentFormView> {
+  return invoke("agent_list_create", { name });
+}
+
+/** Called by AgentList.svelte, "Delete". */
+export function agentListDelete(id: number): Promise<AgentSummaryView[]> {
+  return invoke("agent_list_delete", { id });
+}
+
+/** Called by AgentForm.svelte, when an agent opens. */
+export function agentFormGet(id: number): Promise<AgentFormView> {
+  return invoke("agent_form_get", { id });
+}
+
+/** Called by AgentForm.svelte, "Save". */
+export function agentFormSave(id: number, form: AgentForm): Promise<AgentFormView> {
+  return invoke("agent_form_save", { id, form });
+}
+
+/** Called by ProvingGround.svelte, "Show the passages". */
+export function provingGroundFind(agent: number, question: string): Promise<HitView[]> {
+  return invoke("proving_ground_find", { agent, question });
+}
+
+/** Called by ProvingGround.svelte, when an agent opens and after a question. */
+export function provingGroundGet(agent: number): Promise<TrialView | null> {
+  return invoke("proving_ground_get", { agent });
+}
+
+/** Called by ProvingGround.svelte, "Ask the agent". */
+export function provingGroundAsk(agent: number, question: string, onEvent: (event: AiEvent) => void): Promise<void> {
+  return invoke("proving_ground_ask", { agent, question, onEvent: channel(onEvent) });
+}
+
+/** Called by ProvingGround.svelte, "Stop". */
+export function knowledgeStop(): Promise<void> {
+  return invoke("knowledge_stop");
 }

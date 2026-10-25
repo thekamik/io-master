@@ -244,6 +244,7 @@ mod ai {
         pub mod evidence_text;
         pub mod input_chat;
         mod json;
+        pub mod knowledge_answer;
         pub mod output_draft;
         pub mod related_elements;
         pub mod requirement_choice;
@@ -296,6 +297,13 @@ mod components {
     pub mod ai_work {
         pub mod ask;
         pub mod view;
+    }
+    // components/knowledge_agent/: the passages an agent with knowledge gives
+    // the model with a question (step 57.3); the proving ground of the view
+    // Knowledge (RAG), later the works of the AI of the other views. No
+    // command of its own.
+    pub mod knowledge_agent {
+        pub mod find;
     }
     // components/part_rows/: the parts of a group or a control as rows with
     // their level; the object chosen and the proposals of the editor of a
@@ -446,6 +454,12 @@ mod views {
         #[allow(clippy::module_inception)]
         pub mod knowledge;
 
+        pub mod agent_form {
+            pub mod view;
+        }
+        pub mod agent_list {
+            pub mod view;
+        }
         pub mod knowledge_base {
             pub mod add;
             pub mod dialog;
@@ -456,6 +470,10 @@ mod views {
         }
         pub mod knowledge_search {
             pub mod search;
+            pub mod view;
+        }
+        pub mod proving_ground {
+            pub mod ask;
             pub mod view;
         }
     }

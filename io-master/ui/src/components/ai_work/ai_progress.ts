@@ -1,6 +1,7 @@
-// The progress of a work of the AI on a panel of the Evaluation lab: what
+// The progress of a work of the AI (the component ai_work of the page): what
 // the page shows while the AI writes, and what it gave. Presentation only;
-// the panels (InputPanel, RequirementPanel, OutputPanel) keep one each.
+// the panels of the Evaluation lab (InputPanel, RequirementPanel,
+// OutputPanel) and the proving ground of the view Knowledge (RAG) keep one each.
 
 import type { AiEvent } from "../../lib/api/components/ai_work";
 

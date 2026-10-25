@@ -151,7 +151,7 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 
 ### 2.8a `components/`: the components (step 43)
 
-A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Converter, by its editor of a catalog and, embedded, beside the scheme of a task (step 51.2), the parts of an object (`part_rows/`), shown by the editor of a catalog and the browser of the standards, the tree of a catalog (`catalog_tree/`, step 51.1), shown by the editor of a catalog and the browser of the standards, the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users, the block of a scheme (`block_node/`, a component of the page only, step 52), drawn by the Evaluation plan and the Evaluation lab, and the work of the AI (`ai_work/`, Rust only: one question with its events, steps 51 and 52), used by both views; a component that only shows data the elements give it has no entry, only its `view.rs`.
+A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Converter, by its editor of a catalog and, embedded, beside the scheme of a task (step 51.2), the parts of an object (`part_rows/`), shown by the editor of a catalog and the browser of the standards, the tree of a catalog (`catalog_tree/`, step 51.1), shown by the editor of a catalog and the browser of the standards, the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users, the block of a scheme (`block_node/`, a component of the page only, step 52), drawn by the Evaluation plan and the Evaluation lab, the work of the AI (`ai_work/`: in Rust one question with its events, steps 51 and 52; on the page `components/ai_work/ai_progress.ts`, what a panel shows of it), used by the Evaluation plan, the Evaluation lab and the proving ground, and the passages of an agent with knowledge (`knowledge_agent/`, Rust only, step 57.3); a component that only shows data the elements give it has no entry, only its `view.rs`.
 
 ### 2.9 `views/`: the views of the window (steps 42 and 46)
 
@@ -214,7 +214,8 @@ model/                     The data of the program as plain Rust types, and the 
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
   knowledge.rs                 The knowledge bases of the AI (step 57.2): sources, passages of at most
-                                 1500 characters, the query of a search (FTS5).
+                                 1500 characters, the query of a search (FTS5); the agents, their glossary,
+                                 the passages chosen, the trial of the proving ground (step 57.3).
   own_requirement.rs           A requirement of the laboratory's own, outside the standards (step 51.1e
   recovery_code.rs             The recovery code of a forgotten password (step 49): 160 random bits
   task_scheme.rs               The scheme of a task of a master project (step 51.2), the template of the
@@ -288,13 +289,14 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
                                  tasks, the fields and places of the blocks of a scheme (the tables
                                  task_blocks and task_connections of schema.rs, step 51.2)
   knowledge/                   The knowledge bases of the AI (step 57.2): the bases, their sources, and
-                                 their passages with the index of their words (FTS5 of SQLite, BM25).
-    create.rs                    Storing a base, a source with its passages.
-    delete.rs                    Deleting a base or a source with their passages.
-    read.rs                      Reading the bases and their sources; the search of the passages.
+                                 their passages with the index of their words (FTS5 of SQLite, BM25); the
+                                 agents, their bases, the last trial of each (step 57.3).
+    create.rs                    Storing a base, a source with its passages, an agent.
+    delete.rs                    Deleting a base, a source, an agent with what belongs to them.
+    read.rs                      Reading bases, sources, agents and trials; the search of the passages.
     rows.rs                      The rows of the knowledge bases and the types of `model/knowledge.rs`.
     schema.rs                    The tables of the knowledge bases (a virtual table of FTS5).
-    update.rs                    The name and the description of a base.
+    update.rs                    A base, an agent with its bases, the last trial of an agent.
   encryption/                  All code of encryption of the databases.
     database_key.rs              The key that encrypts a database of the program.
     generate_key.rs              Generating the key that encrypts the database.
@@ -373,6 +375,8 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
                                  a piece of evidence that matter for a requirement.
     evidence_text.rs             The text of the evidence in a question: by page, in bounded parts.
     input_chat.rs                The task `input_chat` of the AI (step 52): the chat of an input.
+    knowledge_answer.rs          The task `knowledge_answer` of the AI (step 57.3): an agent answers from
+                                 the passages of its bases; its quotes name their passages.
     json.rs                      The JSON object in an answer of a model, and its texts.
     output_draft.rs              The task `output_draft` of the AI (step 52): the text of an output.
     related_elements.rs          The task `related_elements` of the AI (step 51.4): the work units and
@@ -404,6 +408,9 @@ components/                The components of the window: small elements used mor
                                  the views Evaluation plan and Evaluation lab.
     ask.rs                       One question of a work of the AI, with its events.
     view.rs                      The events of a work of the AI, as the page gets them.
+  knowledge_agent/             The passages an agent with knowledge gives the model (step 57.3, Rust
+                                 only): the proving ground now, the works of the AI of the views later.
+    find.rs                      The question widened by the glossary, searched in the bases of the agent.
   catalog_tree/                The component "tree of a catalog": its groups and controls as rows (step
     catalog_tree.rs              The entry of the component "tree of a catalog": the groups and controls
     view.rs                      The data of the component "tree of a catalog", as the page gets it.
@@ -494,8 +501,13 @@ views/                     The views of the window, one folder per view and one 
     report/                      The element "report".
       dialog.rs                    The dialog of the system for the folder of the report.
       export.rs                    One file per output: the accepted texts, task by task.
-  knowledge/                   The view Knowledge (RAG) (step 57): the knowledge bases of the AI.
+  knowledge/                   The view Knowledge (RAG) (step 57): the knowledge bases of the AI, the
+                                 agents made of them and their proving ground.
     knowledge.rs                 The entry of the view Knowledge (RAG): every command the page calls for it.
+    agent_form/                  The element "form of an agent": its fields and its bases, ticked.
+      view.rs                      The form of an agent with every base, as the page gets and sends it.
+    agent_list/                  The element "list of agents".
+      view.rs                      The agents with the numbers of their bases, as the page gets them.
     knowledge_base/              The element "knowledge base": its name, its sources.
       add.rs                       A PDF, a text file, a catalog of OSCAL or a note, cut into passages.
       dialog.rs                    The dialog of the system for a file of a source.
@@ -505,6 +517,9 @@ views/                     The views of the window, one folder per view and one 
     knowledge_search/            The element "search" of a base.
       search.rs                    The words made a query of FTS5, the passages ranked by BM25.
       view.rs                      The passages found, as the page gets them.
+    proving_ground/              The element "proving ground" of an agent.
+      ask.rs                       A question answered by the agent, its quotes checked, the trial kept.
+      view.rs                      The last trial, as the page gets it.
   evaluation_plan/             The view Evaluation plan: it works only on the documents of OSCAL
     evaluation_plan.rs           The entry of the view Evaluation plan: it works only on the documents of
     new_project/                 The element "new project" of the view Evaluation plan: a master project

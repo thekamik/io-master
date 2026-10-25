@@ -4,7 +4,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{MAX_BASES, MAX_PASSAGES, MAX_SOURCES, Passage, SourceKind};
+use crate::model::knowledge::{AgentFields, MAX_AGENTS, MAX_BASES, MAX_PASSAGES, MAX_SOURCES, Passage, SourceKind};
 use crate::model::time::now;
 
 /// A limit as a number of SQL.
@@ -80,6 +80,46 @@ pub fn source(db: &UserDb, base: i64, kind: SourceKind, name: &str, passages: &[
         )?;
     }
 
+    transaction.commit()?;
+
+    Ok(id)
+}
+
+/// Stores a new agent of `fields` with the bases it draws on; gives its id.
+/// Refused when an agent has that name already, there are [`MAX_AGENTS`]
+/// already, or a base does not exist. One transaction.
+///
+/// Called by: `agent_list_create` (`views/knowledge/knowledge.rs`).
+/// Calls: `update::bases_of`.
+pub fn agent(db: &UserDb, fields: &AgentFields) -> Result<i64, DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let count: i64 = transaction.query_row("SELECT COUNT(*) FROM knowledge_agents", [], |row| row.get(0))?;
+    let taken: bool =
+        transaction
+            .query_row("SELECT COUNT(*) > 0 FROM knowledge_agents WHERE name = ?1", [&fields.name], |row| row.get(0))?;
+
+    if count >= limit(MAX_AGENTS)? {
+        return Err(DbError::Inconsistent(format!("an evaluator keeps at most {MAX_AGENTS} agents")));
+    }
+
+    if taken {
+        return Err(DbError::Inconsistent("an agent of this name exists already".to_owned()));
+    }
+
+    transaction.execute(
+        "INSERT INTO knowledge_agents (name, instructions, glossary, passages, characters, created)
+         VALUES (:name, :instructions, :glossary, :passages, :characters, :created)",
+        named_params! {
+            ":name": fields.name,
+            ":instructions": fields.instructions,
+            ":glossary": fields.glossary,
+            ":passages": limit(fields.passages)?,
+            ":characters": limit(fields.characters)?,
+            ":created": now(),
+        },
+    )?;
+    let id = transaction.last_insert_rowid();
+    super::update::bases_of(&transaction, id, &fields.bases)?;
     transaction.commit()?;
 
     Ok(id)

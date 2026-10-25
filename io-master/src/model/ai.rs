@@ -365,6 +365,9 @@ pub enum Task {
     Assessment,
     /// The text of an output from the results (step 52).
     OutputDraft,
+    /// The answer of an agent with knowledge from the passages of its bases
+    /// (step 57.3).
+    KnowledgeAnswer,
     /// A message of the chat.
     Chat,
     /// The check of a connection.
@@ -372,7 +375,7 @@ pub enum Task {
 }
 
 impl Task {
-    pub const ALL: [Task; 12] = [
+    pub const ALL: [Task; 13] = [
         Task::CatalogContents,
         Task::CatalogOutline,
         Task::CatalogSection,
@@ -383,6 +386,7 @@ impl Task {
         Task::EvidenceFragments,
         Task::Assessment,
         Task::OutputDraft,
+        Task::KnowledgeAnswer,
         Task::Chat,
         Task::Check,
     ];
@@ -400,6 +404,7 @@ impl Task {
             Task::EvidenceFragments => "evidence_fragments",
             Task::Assessment => "assessment",
             Task::OutputDraft => "output_draft",
+            Task::KnowledgeAnswer => "knowledge_answer",
             Task::Chat => "chat",
             Task::Check => "check",
         }
@@ -419,7 +424,7 @@ impl Task {
             | Task::RequirementChoice
             | Task::RelatedElements
             | Task::EvidenceFragments => Some(Role::TextAnalysis),
-            Task::InputChat | Task::Chat => Some(Role::Consultation),
+            Task::InputChat | Task::KnowledgeAnswer | Task::Chat => Some(Role::Consultation),
             Task::Assessment => Some(Role::FormalAnalysis),
             Task::OutputDraft => Some(Role::Summary),
             Task::Check => None,
