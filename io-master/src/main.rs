@@ -245,6 +245,7 @@ mod ai {
         pub mod input_chat;
         mod json;
         pub mod knowledge_answer;
+        pub mod knowledge_context;
         pub mod output_draft;
         pub mod related_elements;
         pub mod requirement_choice;
@@ -303,7 +304,11 @@ mod components {
     // Knowledge (RAG), later the works of the AI of the other views. No
     // command of its own.
     pub mod knowledge_agent {
+        #[allow(clippy::module_inception)]
+        pub mod knowledge_agent;
+
         pub mod find;
+        pub mod view;
     }
     // components/part_rows/: the parts of a group or a control as rows with
     // their level; the object chosen and the proposals of the editor of a

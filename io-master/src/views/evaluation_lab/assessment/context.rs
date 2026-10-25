@@ -6,7 +6,7 @@
 //! question of the assessment as context, never as evidence.
 
 use crate::ai::tasks::candidates::requirement_text;
-use crate::ai::tasks::knowledge_answer::passages_text;
+use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::components::knowledge_agent::find;
 use crate::db::evaluation as db_evaluation;
@@ -85,12 +85,14 @@ fn query(db: &UserDb, evaluation: &str, task: &LabTask) -> Result<(String, Strin
     Ok((text.chars().take(QUESTION_MAX).collect(), catalog_title))
 }
 
-/// The context for the question of the assessment: the instructions of the
-/// agent and its ticked passages, numbered (`passages_text`); empty when
-/// the task has no agent or no passage is ticked.
+/// The context for the questions of a task: the instructions of the agent
+/// and its ticked passages, numbered (`knowledge_context::text`); empty
+/// when the task has no agent or no passage is ticked. The assessment, the
+/// chat of an input, the fragments and the drafts of the outputs of the
+/// task all use it (steps 57.4 and 57.6).
 ///
-/// Called by: `assessment/propose.rs`.
-/// Calls: [`context`], `passages_text`.
+/// Called by: `assessment/propose.rs`, `input_chat/chat.rs`, `fragments/propose.rs`, `outputs/draft.rs`.
+/// Calls: [`context`], `knowledge_context::text`.
 pub fn question_text(db: &UserDb, evaluation: &str, task: &LabTask) -> Result<String, AppError> {
     let found = context(db, evaluation, task)?;
     let Some(agent) = found.agent else {
@@ -104,14 +106,5 @@ pub fn question_text(db: &UserDb, evaluation: &str, task: &LabTask) -> Result<St
         }
     }
 
-    if ticked.is_empty() {
-        return Ok(String::new());
-    }
-
-    Ok(format!(
-        "The agent \"{}\": {}\n\n{}",
-        agent.fields.name,
-        agent.fields.instructions.trim(),
-        passages_text(&ticked)
-    ))
+    Ok(knowledge_context::text(&agent.fields.name, &agent.fields.instructions, &ticked))
 }

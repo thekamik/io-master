@@ -13,6 +13,7 @@
 //! knowledge_trials     the last question of the proving ground of an agent, and its answer
 //! knowledge_trial_passages  the passages it was given, copied (a source may go later)
 //! knowledge_trial_quotes    the quotes of its answer, and whether they were found
+//! knowledge_attachments     the agent of a master project, a catalog or a chat (step 57.6)
 //! ```
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
@@ -82,6 +83,15 @@ pub const SCHEMA: &str = "
         label      TEXT NOT NULL,
         text       TEXT NOT NULL,
         score      REAL NOT NULL
+    );
+
+    -- place: model/knowledge.rs (AgentPlace); owner: the UUID or the id of
+    -- the object of that place.
+    CREATE TABLE IF NOT EXISTS knowledge_attachments (
+        place    TEXT NOT NULL,
+        owner    TEXT NOT NULL,
+        agent_id INTEGER NOT NULL REFERENCES knowledge_agents(id),
+        PRIMARY KEY (place, owner)
     );
 
     CREATE TABLE IF NOT EXISTS knowledge_trial_quotes (

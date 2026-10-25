@@ -9,6 +9,7 @@
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
+  import AgentPicker from "../../components/knowledge_agent/AgentPicker.svelte";
 
   let {
     uuid,
@@ -48,6 +49,16 @@
     onread(view);
   }
 
+  async function setAgent(agent: number | null) {
+    if (!project) return;
+
+    try {
+      show(await evaluationPlan.projectFormAgent(project.uuid, agent));
+    } catch (error) {
+      notice = { done: false, text: sentence(error) };
+    }
+  }
+
   async function save(event: SubmitEvent) {
     event.preventDefault();
 
@@ -79,5 +90,6 @@
       </fieldset>
       <button type="submit">Save</button>
     </form>
+    <AgentPicker value={project.agent} label="Agent with knowledge for the works of the AI" onchange={setAgent} />
   </details>
 {/if}

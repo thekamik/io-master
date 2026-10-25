@@ -16,11 +16,11 @@ use crate::model::oscal::catalog::{Catalog, Control};
 use crate::model::task_scheme::{BlockKind, ResultText};
 
 use super::super::assessment::context;
-use super::super::lab_tasks::view as tasks_view;
 use super::view::{
     ContextPassageView, EvidenceView, FragmentView, InputView, KnowledgeView, LabBlockView, LabConnectionView,
     LabRelatedView, LabRequirementView, LabTaskScreenView, MessageView, OutputView, ProposalView, ResultsForm,
 };
+use crate::components::knowledge_agent::view as agent_view;
 
 /// Task `task` of evaluation `evaluation`; refused when it does not exist.
 ///
@@ -200,7 +200,7 @@ pub fn screen(db: &UserDb, evaluation: &str, uuid: &str) -> Result<LabTaskScreen
 /// the requirement (step 57.4).
 ///
 /// Called by: [`screen`].
-/// Calls: `context::context`, `tasks_view::agents`.
+/// Calls: `context::context`, `agent_view::agents`.
 fn knowledge(db: &UserDb, evaluation: &str, task: &LabTask) -> Result<KnowledgeView, AppError> {
     let found = context::context(db, evaluation, task)?;
     let (choice, agent) = match found.choice {
@@ -226,7 +226,7 @@ fn knowledge(db: &UserDb, evaluation: &str, task: &LabTask) -> Result<KnowledgeV
         None => None,
     };
 
-    Ok(KnowledgeView { choice, agent, used, agents: tasks_view::agents(db)?, passages })
+    Ok(KnowledgeView { choice, agent, used, agents: agent_view::agents(db)?, passages })
 }
 
 /// Every input of `blocks` with its evidence, chat and fragments.

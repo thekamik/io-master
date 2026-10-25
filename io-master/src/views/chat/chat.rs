@@ -15,6 +15,8 @@ use crate::ai::api::connections;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::db::ai::chats as db_chats;
+use crate::db::knowledge as db_knowledge;
+use crate::model::knowledge::AgentPlace;
 
 use super::chat_list::view::ChatSummaryView;
 use super::connection_line::view::ConnectionLineView;
@@ -80,12 +82,16 @@ pub fn conversation_open(state: State<'_, AppState>, chat_id: i64) -> Result<Cha
         return Err(AppError::Invalid("the chat does not exist".to_owned()));
     };
 
-    Ok(ChatView::new(chat_id, title, db_chats::read::messages(&db, chat_id)?))
+    let agent = db_knowledge::read::attachment(&db, AgentPlace::Chat, &chat_id.to_string())?;
+
+    Ok(ChatView::new(chat_id, title, db_chats::read::messages(&db, chat_id)?, agent))
 }
 
 /// Sends `text` to chat `chat_id` (a new chat when `None`) and waits for
 /// the reply; its events go to `on_event` while it is written
-/// (`turn.rs`). One reply at a time: a reply still being written is
+/// (`turn.rs`). `agent` is the agent with knowledge the evaluator chose
+/// for the chat (none: `None`): it is kept with the chat, and its passages
+/// go after the question (step 57.6). One reply at a time: a reply still being written is
 /// stopped first.
 ///
 /// Called by the page: `Conversation.svelte`, "Send"
@@ -99,12 +105,13 @@ pub async fn conversation_send(
     state: State<'_, AppState>,
     chat_id: Option<i64>,
     text: String,
+    agent: Option<i64>,
     on_event: Channel<ReplyEvent>,
 ) -> Result<(), AppError> {
     let session = state.session()?;
     let stop = state.start_reply();
 
-    turn::send(&session, chat_id, &text, &stop, &on_event).await?;
+    turn::send(&session, chat_id, &text, agent, &stop, &on_event).await?;
 
     Ok(())
 }

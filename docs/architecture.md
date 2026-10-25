@@ -221,7 +221,7 @@ A **component** is a small element used more than once: several times in one vie
 | `recovery_code` | kod odzyskiwania | the recovery code, shown once; four elements of the view Users |
 | `block_node` | blok schematu | a block of the scheme of a task on the drawing (the page only); the Evaluation plan, where it is edited, and the Evaluation lab, where it is read only |
 | `ai_work` | praca AI | one question of a work of the AI with its events (progress, failure, end), and on the page what a panel shows of it; the works of the AI of the Evaluation plan, of the Evaluation lab and the proving ground of an agent |
-| `knowledge_agent` | agent z wiedzą | the passages an agent with knowledge gives the model with a question (Rust only, step 57.3): the proving ground, later every work of the AI an agent is attached to |
+| `knowledge_agent` | agent z wiedzą | the agent with knowledge of a work of the AI (steps 57.3 and 57.6): in Rust the passages it gives a question and the list of the agents; on the page `AgentPicker`, one line to choose it (the chat, the project, the catalog, the evaluation) |
 
 The idea of the user of 2026-10-23 (the tiles of the evidence: a requirement linked to its inputs, a proof linked to an input, the AI of the input judging the proof) became the scheme of a task (step 51.2) and the inputs of the Evaluation lab (step 52).
 
@@ -357,7 +357,8 @@ the view opens
   ├─► ConnectionLine ──connection_line_get()──► the connection of the role consultation (ai/api/)
   └─► ChatList ──chat_list_get()──► db/ai/chats/: the chats, the newest first
 ChatList ──"chosen"(id)──► the view ──► Conversation ──conversation_open(id)──► the chat from db/
-Conversation ──conversation_send(chat, text)──► db: the message ──► ai/api/: the reply, piece by piece ──► db: the reply
+Conversation ──conversation_send(chat, text, agent)──► db: the message (and the agent of the chat, step 57.6) ──►
+  the passages of the agent after the question, sent only ──► ai/api/: the reply, piece by piece ──► db: the reply
      ▲                                                                   │
      └──────────── events (ReplyEvent): the text as it comes, the end ◄──┘
 Conversation ──conversation_stop() / conversation_delete(id)
@@ -379,6 +380,8 @@ DocumentSearch ──document_search_run(text)──► the hits ──► the v
 
 the editor of a catalog (entry views/converter/catalog_editor/catalog_editor.rs), tab Conversion (step 50.2):
 the editor opens ──► ConversionWizard ──conversion_wizard_get(uuid)──► the stage, the pages, the groups (db/conversion/)
+  ──conversion_wizard_agent(uuid, agent)──► the agent with knowledge of the catalog: its passages after every question
+     of the groups and the controls (step 57.6)
   ① contents: ──conversion_wizard_find_contents(uuid, document)──► ai/api/: the first pages ──► the pages of the
      table of contents (checked within the pages read) ──► db/conversion/; ──conversion_wizard_contents(pages)──► confirmed
   ② groups:   ──ai_builder_groups(pages of the contents)──► proposals; Proposals ──accept / reject──► the catalog
@@ -416,6 +419,8 @@ ProjectList ──"New master project…"──► NewProject ──new_project_
      ──new_project_create(title, scope, catalogs)──► db/evaluation_project/ ──► "made" ──► the screen of the project
 the screen of a project (the screen of a task in place of it while a task is open):
   ├─► ProjectForm ──project_form_get(uuid)──► title, scope, catalogs; ──project_form_save──► (a catalog with tasks stays)
+  │     ──project_form_agent(uuid, agent)──► the agent with knowledge of the project: its passages after the questions
+  │       of the proposals of tasks, schemes and related elements (step 57.6)
   ├─► StandardOutputs (step 51.3) ──standard_outputs_get(project)──► the template of the outputs of its tasks
   │     ──standard_outputs_add(project, output) / _save(output, fields) / _delete(output)──► db/evaluation_project/
   │     (a new task gets a copy of the template as its outputs, connected from its requirement: scheme::first;
@@ -538,4 +543,4 @@ ProvingGround ──proving_ground_find(agent, question)──► components/kno
   ──proving_ground_get(agent)──► the last trial;  "Stop" ──knowledge_stop()──►
 ```
 
-**The configurator is apart** (user, 2026-10-25): the knowledge bases and the agents are made and joined only in this view, so that the views of the evaluation are not crowded; there a work of the AI only chooses an agent (step 57.4).
+**The configurator is apart** (user, 2026-10-25): the knowledge bases and the agents are made and joined only in this view, so that the views of the evaluation are not crowded; elsewhere a work of the AI only chooses an agent (steps 57.4 and 57.6): an evaluation and its tasks, a master project, a catalog in conversion, a chat. The choice of a project, a catalog or a chat is kept in `db/knowledge/` (`knowledge_attachments`); the passages always go after the question, in a section of their own (`ai/tasks/knowledge_context.rs`), never into what is stored of a chat.

@@ -9,7 +9,9 @@ use tokio::sync::watch;
 use crate::ai::api::completions;
 use crate::ai::api::roles::Model;
 use crate::ai::tasks::catalog_section::{self, Section};
+use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
+use crate::components::knowledge_agent::find;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::evaluation_support::create::NewProposal;
 use crate::db::oscal as db_oscal;
@@ -18,6 +20,7 @@ use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::Task;
 use crate::model::evaluation_support::ProposalKind;
+use crate::model::knowledge::AgentPlace;
 use crate::model::standards::{Document, Part};
 
 use super::steps::{self, Asked};
@@ -42,14 +45,15 @@ pub async fn propose(
     ensure!(!ranges.is_empty(), AppError::Invalid("choose the pages to read".to_owned()));
     ensure!(ranges.len() <= MAX_RANGES, AppError::Invalid(format!("at most {MAX_RANGES} ranges of pages")));
 
-    let Prepared { model, instructions, title, parts } = prepare(&session.db(), uuid, group, ranges, part_size)?;
+    let Prepared { model, instructions, title, parts, context } =
+        prepare(&session.db(), uuid, group, ranges, part_size)?;
     let model = Arc::new(model);
     let mut stopped = false;
 
     for (index, (part, document)) in parts.iter().enumerate() {
         let known = known_controls(&session.db(), uuid)?;
-        let turns =
-            completions::single(catalog_section::prompt(&instructions, document, part, title.as_deref(), &known));
+        let question = catalog_section::prompt(&instructions, document, part, title.as_deref(), &known);
+        let turns = completions::single(knowledge_context::appended(question, &context));
 
         if *stop.borrow() || events.send(steps::part_event(index, parts.len(), part, document)).is_err() {
             stopped = true;
@@ -95,6 +99,8 @@ struct Prepared {
     title: Option<String>,
     /// The parts of the pages, each with its document.
     parts: Vec<(Part, Document)>,
+    /// The context of the agent of the catalog (step 57.6); empty without one.
+    context: String,
 }
 
 fn prepare(
@@ -119,7 +125,10 @@ fn prepare(
         triples.push((range.document_id, range.first_page, range.last_page));
     }
 
-    Ok(Prepared { model, instructions, title, parts: steps::parts_with_documents(db, &triples, part_size)? })
+    let words = format!("{} {}", catalog.metadata.title, title.as_deref().unwrap_or_default());
+    let context = find::attached_context(db, AgentPlace::Catalog, uuid, &words)?;
+
+    Ok(Prepared { model, instructions, title, parts: steps::parts_with_documents(db, &triples, part_size)?, context })
 }
 
 /// The title of group `id`.

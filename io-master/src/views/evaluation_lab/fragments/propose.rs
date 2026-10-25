@@ -15,6 +15,7 @@ use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
 use crate::ai::tasks::evidence_fragments;
 use crate::ai::tasks::evidence_text::{self, Part};
+use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
@@ -26,13 +27,16 @@ use crate::model::ai::Task;
 use crate::model::evaluation::{Evidence, Fragment, MAX_FRAGMENTS, check_fragment, quote_found};
 use crate::model::task_scheme::{BlockFields, BlockKind};
 
+use super::super::assessment::context;
 use super::super::lab_task::read as lab_task;
 
 /// What the questions need: the model, the instructions, the requirement as
-/// a question shows it, the input and its evidence.
+/// a question shows it, the input and its evidence, and the context of the
+/// agent of the task (empty without one).
 struct Question {
     model: Arc<Model>,
     instructions: String,
+    context: String,
     task: String,
     requirement: String,
     input: BlockFields,
@@ -85,8 +89,9 @@ pub async fn propose(
 }
 
 /// Removes the fragments of input `block` the AI proposed and the evaluator
-/// did not accept, and gathers the question; refused for a block that is no
-/// input or has no evidence.
+/// did not accept, and gathers the question, with the context of the agent
+/// of its task (step 57.6); refused for a block that is no input or has no
+/// evidence.
 ///
 /// Called by: [`propose`].
 fn question(db: &UserDb, evaluation: &str, block: &str) -> Result<Question, AppError> {
@@ -99,10 +104,13 @@ fn question(db: &UserDb, evaluation: &str, block: &str) -> Result<Question, AppE
     let evidence = db_evaluation::read::evidence_of(db, evaluation, block)?;
     ensure!(!evidence.is_empty(), AppError::Invalid("the input has no evidence yet".to_owned()));
 
-    let (_, requirement, _) = lab_task::requirement(db, &lab_task::task(db, evaluation, &task)?)?;
+    let found = lab_task::task(db, evaluation, &task)?;
+    let (_, requirement, _) = lab_task::requirement(db, &found)?;
+    let context = context::question_text(db, evaluation, &found)?;
     db_evaluation::delete::proposed_fragments(db, evaluation, block)?;
 
     Ok(Question {
+        context,
         model: Arc::new(roles::model(db)?),
         instructions: tasks::instructions(db, Task::EvidenceFragments)?.unwrap_or_default(),
         task,
@@ -130,8 +138,10 @@ async fn ask_part(
     events: &Channel<AiEvent>,
 ) -> Result<bool, AppError> {
     let pages = evidence_text::pages_text(piece, part);
-    let text =
-        evidence_fragments::prompt(&question.instructions, &question.requirement, &question.input, &piece.name, &pages);
+    let text = knowledge_context::appended(
+        evidence_fragments::prompt(&question.instructions, &question.requirement, &question.input, &piece.name, &pages),
+        &question.context,
+    );
 
     match ask::ask(session, &question.model, Task::EvidenceFragments, text, stop, events).await {
         Asked::Answer(answer) => {

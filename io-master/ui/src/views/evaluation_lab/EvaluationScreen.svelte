@@ -12,6 +12,7 @@
 
   import { sentence } from "../../lib/api/errors";
   import * as evaluationLab from "../../lib/api/evaluation_lab";
+  import AgentPicker from "../../components/knowledge_agent/AgentPicker.svelte";
   import LabTask from "./LabTask.svelte";
 
   let { evaluation, onclose }: { evaluation: string; onclose: () => void } = $props();
@@ -41,11 +42,9 @@
     }
   }
 
-  async function setAgent(event: Event) {
-    const value = (event.currentTarget as HTMLSelectElement).value;
-
+  async function setAgent(agent: number | null) {
     try {
-      view = await evaluationLab.labTasksAgent(evaluation, value === "" ? null : Number(value));
+      view = await evaluationLab.labTasksAgent(evaluation, agent);
     } catch (error) {
       notice = { done: false, text: sentence(error) };
     }
@@ -81,15 +80,7 @@
     {#if view.scope}<p class="note">{view.scope}</p>{/if}
     {#if view.note}<p class="note">{view.note}</p>{/if}
     <p class="note">Delegated to: {view.evaluator || "(nobody named)"}</p>
-    {#if view.agents.length > 0}
-      <label class="inline-choice">
-        Agent with knowledge for the requirements
-        <select value={view.agent === null ? "" : String(view.agent)} onchange={setAgent}>
-          <option value="">none</option>
-          {#each view.agents as agent (agent.id)}<option value={String(agent.id)}>{agent.name}</option>{/each}
-        </select>
-      </label>
-    {/if}
+    <AgentPicker value={view.agent} label="Agent with knowledge for the requirements" onchange={setAgent} />
     <div class="buttons"><button type="button" onclick={exportReport}>Export the report…</button></div>
   </div>
   {#if notice}<p class={notice.done ? "done" : "problem"}>{notice.text}</p>{/if}

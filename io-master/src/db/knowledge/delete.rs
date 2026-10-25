@@ -45,8 +45,8 @@ pub fn source(db: &UserDb, base: i64, source: i64) -> Result<bool, DbError> {
     Ok(deleted > 0)
 }
 
-/// Deletes agent `id` with its bases and its trial, in one transaction;
-/// gives whether it existed. The bases themselves stay.
+/// Deletes agent `id` with its bases, its trial and its attachments, in
+/// one transaction; gives whether it existed. The bases themselves stay.
 ///
 /// Called by: `agent_list_delete` (`views/knowledge/knowledge.rs`).
 /// Calls: [`trial_of`].
@@ -55,6 +55,7 @@ pub fn agent(db: &UserDb, id: i64) -> Result<bool, DbError> {
 
     trial_of(&transaction, id)?;
     transaction.execute("DELETE FROM knowledge_agent_bases WHERE agent_id = ?1", [id])?;
+    transaction.execute("DELETE FROM knowledge_attachments WHERE agent_id = ?1", [id])?;
     let deleted = transaction.execute("DELETE FROM knowledge_agents WHERE id = ?1", [id])?;
     transaction.commit()?;
 

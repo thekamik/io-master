@@ -12,7 +12,7 @@
 | 10 | Before the release | open |
 | 54 | The removal of the installation in the window | open |
 | 56 | The rule of the comments for the whole code | open |
-| 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | concept approved 2026-10-25; 57.1 to 57.4 built |
+| 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | concept approved 2026-10-25; 57.1 to 57.4 and 57.6 built |
 | 58 | The journal of the AI on a page | after 57 |
 | 59 | The progress of an evaluation | after 58 |
 | 60 | A short presentation (5 minutes) with screenshots | after 59, the end of this workflow |
@@ -105,7 +105,7 @@ proving ground: a question ──► passages with scores ──► answer, quot
 - [x] **57.4 The agent attached to the requirement** (built 2026-10-25: the agent chosen on the screen of an evaluation and changed for a task in the panel of the requirement, `assessment/context.rs`, the tables `lab_agents`, `lab_task_agents`, `lab_context_excluded`; the requirement itself, from its own catalog, is left out of its context; the first place, the others in 57.6): in the Evaluation lab the evaluator chooses an agent for an evaluation (or none) and may change it for a task; before the question the panel of the requirement lists the passages found (query: the requirement and what the planner asks to check), the evaluator may untick some; the question holds them in a section of their own, "Context of the standard: to understand the requirement, not evidence"; the verdict still rests on the accepted fragments only; the journal keeps the passages with the question (P3). The knowledge stays in the installation that made it: a work package carries no base (licensed standards).
 - [ ] **57.5 (only if 57.3 shows that the search by words is not enough) Embeddings:** the vectors of the passages from the endpoint of embeddings of the connection (a local model), kept in SQLite, compared in Rust within a bounded number; joined with FTS5 (hybrid search).
 
-- [ ] **57.6 Every work of the AI may use an agent:** the chat, the chat and the fragments of an input, the works of the AI of the Evaluation plan and of the Converter; the agent chosen where the work is started, the passages shown and written into the journal as in 57.4.
+- [x] **57.6 Every work of the AI may use an agent** (built 2026-10-25: the works of a task of the Evaluation lab use the agent of the task; a master project, a catalog in conversion and a chat choose theirs with the component `AgentPicker`, kept in `knowledge_attachments`; the passages go after the question, `ai/tasks/knowledge_context.rs`): the chat, the chat and the fragments of an input, the works of the AI of the Evaluation plan and of the Converter; the agent chosen where the work is started, the passages shown and written into the journal as in 57.4.
 - [ ] **57.7 Export and import of an agent:** one file per agent (its instructions, glossary, limits and the passages of its bases with their sources), imported into another installation; the window says that the file holds the text of the sources (licensed standards).
 
 ---

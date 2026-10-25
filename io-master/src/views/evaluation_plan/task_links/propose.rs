@@ -14,15 +14,19 @@ use tokio::sync::watch;
 
 use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
+use crate::ai::tasks::candidates::requirement_text;
 use crate::ai::tasks::candidates::{self, Candidate, MAX_CANDIDATES};
+use crate::ai::tasks::knowledge_context;
 use crate::ai::tasks::related_elements;
 use crate::app::error::AppError;
+use crate::components::knowledge_agent::find;
 use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::Task;
 use crate::model::evaluation_project::{MAX_LINKS, TaskLink};
+use crate::model::knowledge::AgentPlace;
 use crate::model::oscal::catalog::Control;
 use crate::model::task_scheme::check_reason;
 
@@ -37,6 +41,8 @@ struct Question {
     label: String,
     control: Control,
     candidates: Vec<Candidate>,
+    /// The context of the agent of the project (step 57.6); empty without one.
+    context: String,
 }
 
 /// Asks the AI which elements of the other catalogs of its project are
@@ -66,8 +72,11 @@ pub async fn propose(
             break;
         }
 
-        let text = related_elements::prompt(&question.instructions, &question.label, &question.control, part)
-            .map_err(AppError::Invalid)?;
+        let text = knowledge_context::appended(
+            related_elements::prompt(&question.instructions, &question.label, &question.control, part)
+                .map_err(AppError::Invalid)?,
+            &question.context,
+        );
 
         match ask::ask(session, &question.model, Task::RelatedElements, text, stop, events).await {
             Asked::Answer(answer) => {
@@ -100,7 +109,8 @@ pub async fn propose(
 /// Called by: [`propose`].
 /// Calls: `read::task`, `read::project`, `delete::proposed_links`,
 /// `read::task_links`, `db_oscal::read::catalog`, [`offered`], `roles::model`,
-/// `tasks::instructions`.
+/// `tasks::instructions`, `find::attached_context` (the context of the agent of
+/// the project for the requirement, step 57.6).
 fn question(db: &UserDb, task: &str) -> Result<Question, AppError> {
     let Some((project, found)) = db_evaluation_project::read::task(db, task)? else {
         return Err(AppError::Invalid("the task does not exist".to_owned()));
@@ -130,10 +140,14 @@ fn question(db: &UserDb, task: &str) -> Result<Question, AppError> {
 
     ensure!(!others.is_empty(), AppError::Invalid("the project has no other catalog to look in".to_owned()));
 
+    let label = control.label().unwrap_or(&control.id).to_owned();
+    let words = requirement_text(&label, control).map_err(AppError::Invalid)?;
+
     Ok(Question {
         model: Arc::new(roles::model(db)?),
         instructions: tasks::instructions(db, Task::RelatedElements)?.unwrap_or_default(),
-        label: control.label().unwrap_or(&control.id).to_owned(),
+        context: find::attached_context(db, AgentPlace::Project, &project.uuid, &words)?,
+        label,
         control: control.clone(),
         candidates: offered(db, &others, &db_evaluation_project::read::task_links(db, task)?)?,
     })

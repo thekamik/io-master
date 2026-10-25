@@ -51,18 +51,20 @@ pub struct ChatView {
     pub id: i64,
     pub title: String,
     pub messages: Vec<MessageView>,
+    /// The agent with knowledge of the chat (step 57.6); `None`: none.
+    pub agent: Option<i64>,
 }
 
 impl ChatView {
-    /// Chat `id` with its `messages`, in order.
-    pub fn new(id: i64, title: String, messages: Vec<ChatMessage>) -> ChatView {
+    /// Chat `id` with its `messages`, in order, and its agent with knowledge.
+    pub fn new(id: i64, title: String, messages: Vec<ChatMessage>, agent: Option<i64>) -> ChatView {
         let mut views = Vec::with_capacity(messages.len());
 
         for message in messages {
             views.push(MessageView::new(message));
         }
 
-        ChatView { id, title, messages: views }
+        ChatView { id, title, messages: views, agent }
     }
 }
 

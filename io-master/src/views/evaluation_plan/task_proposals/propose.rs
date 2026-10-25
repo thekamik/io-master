@@ -14,14 +14,17 @@ use tokio::sync::watch;
 use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
 use crate::ai::tasks::candidates::{self, Candidate, MAX_CANDIDATES};
+use crate::ai::tasks::knowledge_context;
 use crate::ai::tasks::requirement_choice;
 use crate::app::error::AppError;
+use crate::components::knowledge_agent::find;
 use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::Task;
 use crate::model::evaluation_project::TaskProposal;
+use crate::model::knowledge::AgentPlace;
 use crate::model::task_scheme::check_reason;
 
 use crate::components::ai_work::ask::{self, Asked};
@@ -34,6 +37,8 @@ struct Question {
     instructions: String,
     scope: String,
     catalog_title: String,
+    /// The context of the agent of the project (step 57.6); empty without one.
+    context: String,
     candidates: Vec<Candidate>,
 }
 
@@ -64,7 +69,10 @@ pub async fn propose(
             break;
         }
 
-        let text = requirement_choice::prompt(&question.instructions, &question.scope, &question.catalog_title, part);
+        let text = knowledge_context::appended(
+            requirement_choice::prompt(&question.instructions, &question.scope, &question.catalog_title, part),
+            &question.context,
+        );
 
         match ask::ask(session, &question.model, Task::RequirementChoice, text, stop, events).await {
             Asked::Answer(answer) => {
@@ -98,7 +106,8 @@ pub async fn propose(
 /// Called by: [`propose`].
 /// Calls: `read::project`, `read::tasks`, `delete::task_proposals`,
 /// `db_oscal::read::catalog`, `Catalog::all_controls`, `candidates::candidate`,
-/// `roles::model`, `tasks::instructions`.
+/// `roles::model`, `tasks::instructions`, `find::attached_context` (the context
+/// of the agent of the project for the catalog and the scope, step 57.6).
 fn question(db: &UserDb, project: &str, catalog: &str) -> Result<Question, AppError> {
     let Some(found) = db_evaluation_project::read::project(db, project)? else {
         return Err(AppError::Invalid("the project does not exist".to_owned()));
@@ -123,9 +132,12 @@ fn question(db: &UserDb, project: &str, catalog: &str) -> Result<Question, AppEr
         offered.push(candidates::candidate(catalog, control).map_err(AppError::Invalid)?);
     }
 
+    let words = format!("{} {}", document.metadata.title, found.fields.description);
+
     Ok(Question {
         model: Arc::new(roles::model(db)?),
         instructions: tasks::instructions(db, Task::RequirementChoice)?.unwrap_or_default(),
+        context: find::attached_context(db, AgentPlace::Project, project, &words)?,
         scope: found.fields.description,
         catalog_title: document.metadata.title.clone(),
         candidates: offered,

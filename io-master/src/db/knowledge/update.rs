@@ -4,7 +4,7 @@ use rusqlite::{Transaction, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{AgentFields, MAX_BASES, Trial};
+use crate::model::knowledge::{AgentFields, AgentPlace, MAX_BASES, Trial};
 
 /// A limit as a number of SQL.
 fn limit(max: usize) -> Result<i64, DbError> {
@@ -139,6 +139,36 @@ pub fn trial(db: &UserDb, agent: i64, trial: &Trial) -> Result<(), DbError> {
                 ":agent": agent, ":position": limit(position)?, ":passage": limit(quote.passage)?,
                 ":quote": quote.quote, ":found": quote.found,
             },
+        )?;
+    }
+
+    transaction.commit()?;
+
+    Ok(())
+}
+
+/// Attaches agent `agent` to object `owner` of `place` (none: `None`, the
+/// attachment removed); refused when the agent does not exist. One
+/// transaction.
+///
+/// Called by: the commands that choose the agent of a project, a catalog or a chat.
+pub fn attachment(db: &UserDb, place: AgentPlace, owner: &str, agent: Option<i64>) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let keys = named_params! { ":place": place.name(), ":owner": owner };
+
+    transaction.execute("DELETE FROM knowledge_attachments WHERE place = :place AND owner = :owner", keys)?;
+
+    if let Some(id) = agent {
+        let exists: bool =
+            transaction.query_row("SELECT COUNT(*) > 0 FROM knowledge_agents WHERE id = ?1", [id], |row| row.get(0))?;
+
+        if !exists {
+            return Err(DbError::NoRow { table: "knowledge_agents", id });
+        }
+
+        transaction.execute(
+            "INSERT INTO knowledge_attachments (place, owner, agent_id) VALUES (:place, :owner, :agent)",
+            named_params! { ":place": place.name(), ":owner": owner, ":agent": id },
         )?;
     }
 

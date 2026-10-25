@@ -22,6 +22,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::components::catalog_tree::catalog_tree::catalog_tree_get,
         crate::components::pdf_viewer::pdf_viewer::pdf_viewer_documents,
         crate::components::pdf_viewer::pdf_viewer::pdf_viewer_get,
+        crate::components::knowledge_agent::knowledge_agent::knowledge_agent_list,
         // The view Users (views/users/): the account, the session and the
         // encryption of its database.
         crate::views::users::users::setup_form_install,
@@ -111,6 +112,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::evaluation_plan::evaluation_plan::new_project_create,
         crate::views::evaluation_plan::evaluation_plan::project_list_delete,
         crate::views::evaluation_plan::evaluation_plan::project_form_save,
+        crate::views::evaluation_plan::evaluation_plan::project_form_agent,
         crate::views::evaluation_plan::evaluation_plan::task_list_add,
         crate::views::evaluation_plan::evaluation_plan::task_list_remove,
         crate::views::evaluation_plan::evaluation_plan::task_list_move,
@@ -190,6 +192,7 @@ pub fn handler<R: Runtime>() -> impl Fn(Invoke<R>) -> bool + Send + Sync + 'stat
         crate::views::converter::catalog_editor::catalog_editor::ai_builder_sources,
         crate::views::converter::catalog_editor::catalog_editor::ai_builder_groups,
         crate::views::converter::catalog_editor::catalog_editor::ai_builder_controls,
+        crate::views::converter::catalog_editor::catalog_editor::conversion_wizard_agent,
         crate::views::converter::catalog_editor::catalog_editor::ai_builder_stop,
         crate::views::converter::catalog_editor::catalog_editor::ai_instructions_get,
         crate::views::converter::catalog_editor::catalog_editor::ai_instructions_save,

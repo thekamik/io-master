@@ -38,6 +38,7 @@
     "allow-new-project-create",
     "allow-project-list-delete",
     "allow-project-form-save",
+    "allow-project-form-agent",
     "allow-task-list-add",
     "allow-task-list-remove",
     "allow-task-list-move",
@@ -145,6 +146,7 @@
     "allow-document-search-run",
     "allow-pdf-viewer-documents",
     "allow-pdf-viewer-get",
+    "allow-knowledge-agent-list",
     "allow-conversion-wizard-get",
     "allow-conversion-wizard-find-contents",
     "allow-conversion-wizard-contents",
@@ -167,6 +169,7 @@
     "allow-ai-builder-sources",
     "allow-ai-builder-groups",
     "allow-ai-builder-controls",
+    "allow-conversion-wizard-agent",
     "allow-ai-builder-stop",
     "allow-ai-instructions-get",
     "allow-ai-instructions-save"

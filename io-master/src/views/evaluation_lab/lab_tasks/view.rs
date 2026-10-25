@@ -5,17 +5,10 @@
 use serde::Serialize;
 
 use crate::app::error::AppError;
+use crate::components::knowledge_agent::view::{AgentOptionView, agents};
 use crate::db::evaluation as db_evaluation;
-use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation::Evaluation;
-
-/// An agent with knowledge that may be chosen.
-#[derive(Debug, Serialize)]
-pub struct AgentOptionView {
-    pub id: i64,
-    pub name: String,
-}
 
 /// A task of the evaluation.
 #[derive(Debug, Serialize)]
@@ -44,25 +37,10 @@ pub struct EvaluationView {
     pub agents: Vec<AgentOptionView>,
 }
 
-/// The agents with knowledge of the evaluator, to be chosen.
-///
-/// Called by: [`screen`], `lab_task/read.rs` (the agent of a task).
-/// Calls: `db_knowledge::read::agents`.
-pub fn agents(db: &UserDb) -> Result<Vec<AgentOptionView>, AppError> {
-    let summaries = db_knowledge::read::agents(db)?;
-    let mut options = Vec::with_capacity(summaries.len());
-
-    for summary in summaries {
-        options.push(AgentOptionView { id: summary.id, name: summary.name });
-    }
-
-    Ok(options)
-}
-
 /// The screen of `evaluation`: its tasks, its agent and the agents to choose.
 ///
 /// Called by: `lab_tasks_get`, `lab_tasks_state`, `lab_tasks_agent` (`evaluation_lab.rs`).
-/// Calls: `db_evaluation::read::tasks`, `db_evaluation::read::agent`, [`agents`].
+/// Calls: `db_evaluation::read::tasks`, `db_evaluation::read::agent`, `agents` (`components/knowledge_agent/view.rs`).
 pub fn screen(db: &UserDb, evaluation: Evaluation) -> Result<EvaluationView, AppError> {
     let tasks = db_evaluation::read::tasks(db, &evaluation.uuid)?;
     let agent = db_evaluation::read::agent(db, &evaluation.uuid)?;

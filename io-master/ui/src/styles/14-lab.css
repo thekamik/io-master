@@ -41,19 +41,8 @@
     margin-bottom: 1rem;
 }
 
-/* The agent with knowledge of a requirement (step 57.4): its choice in one
-   line, its passages folded, each with its box. */
-.inline-choice {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-weight: 400;
-}
-
-.inline-choice select {
-    width: auto;
-}
-
+/* The agent with knowledge of a requirement (step 57.4): its passages
+   folded, each with its box. */
 .knowledge-context {
     margin: 0.75rem 0;
 }

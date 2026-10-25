@@ -151,7 +151,7 @@ ui/src/styles/        the style, one sheet per part of the window, in the order 
 
 ### 2.8a `components/`: the components (step 43)
 
-A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Converter, by its editor of a catalog and, embedded, beside the scheme of a task (step 51.2), the parts of an object (`part_rows/`), shown by the editor of a catalog and the browser of the standards, the tree of a catalog (`catalog_tree/`, step 51.1), shown by the editor of a catalog and the browser of the standards, the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users, the block of a scheme (`block_node/`, a component of the page only, step 52), drawn by the Evaluation plan and the Evaluation lab, the work of the AI (`ai_work/`: in Rust one question with its events, steps 51 and 52; on the page `components/ai_work/ai_progress.ts`, what a panel shows of it), used by the Evaluation plan, the Evaluation lab and the proving ground, and the passages of an agent with knowledge (`knowledge_agent/`, Rust only, step 57.3); a component that only shows data the elements give it has no entry, only its `view.rs`.
+A component is a small element used more than once: by several views, or many times in one view (`architecture.md`, section 10.2). It is built as a small view: its entry, the file of its name (`pdf_viewer/pdf_viewer.rs`), with its commands and their tests, and its data in `view.rs`; its commands are named `<component>_<action>`, their functions on the page are in `ui/src/lib/api/components/<component>.ts`, and its page is a folder of `ui/src/components/`. The views use it; it never uses a view. The first ones are the viewer of a standard (`pdf_viewer/`), shown by the view Converter, by its editor of a catalog and, embedded, beside the scheme of a task (step 51.2), the parts of an object (`part_rows/`), shown by the editor of a catalog and the browser of the standards, the tree of a catalog (`catalog_tree/`, step 51.1), shown by the editor of a catalog and the browser of the standards, the recovery code (`recovery_code/`, step 49), shown by four elements of the view Users, the block of a scheme (`block_node/`, a component of the page only, step 52), drawn by the Evaluation plan and the Evaluation lab, the work of the AI (`ai_work/`: in Rust one question with its events, steps 51 and 52; on the page `components/ai_work/ai_progress.ts`, what a panel shows of it), used by the Evaluation plan, the Evaluation lab and the proving ground, and the agent with knowledge of a work of the AI (`knowledge_agent/`, steps 57.3 and 57.6: in Rust its passages and the list of the agents, on the page `AgentPicker.svelte`), chosen in the chat, a master project, a catalog in conversion and an evaluation; a component that only shows data the elements give it has no entry, only its `view.rs`.
 
 ### 2.9 `views/`: the views of the window (steps 42 and 46)
 
@@ -378,6 +378,7 @@ ai/                        The communication with AI services (CLAUDE.md, "AI la
     input_chat.rs                The task `input_chat` of the AI (step 52): the chat of an input.
     knowledge_answer.rs          The task `knowledge_answer` of the AI (step 57.3): an agent answers from
                                  the passages of its bases; its quotes name their passages.
+    knowledge_context.rs         The context of an agent after a question, in a section of its own (57.6).
     json.rs                      The JSON object in an answer of a model, and its texts.
     output_draft.rs              The task `output_draft` of the AI (step 52): the text of an output.
     related_elements.rs          The task `related_elements` of the AI (step 51.4): the work units and
@@ -409,9 +410,12 @@ components/                The components of the window: small elements used mor
                                  the views Evaluation plan and Evaluation lab.
     ask.rs                       One question of a work of the AI, with its events.
     view.rs                      The events of a work of the AI, as the page gets them.
-  knowledge_agent/             The passages an agent with knowledge gives the model (step 57.3, Rust
-                                 only): the proving ground now, the works of the AI of the views later.
-    find.rs                      The question widened by the glossary, searched in the bases of the agent.
+  knowledge_agent/             The agent with knowledge of a work of the AI (steps 57.3 and 57.6): the
+                                 passages it gives, the agents to choose; on the page `AgentPicker.svelte`.
+    knowledge_agent.rs           The entry of the component: the list of the agents.
+    find.rs                      The question widened by the glossary, searched in the bases of the agent;
+                                 the context of the agent of a project, a catalog or a chat.
+    view.rs                      The agents to choose, as the page gets them.
   catalog_tree/                The component "tree of a catalog": its groups and controls as rows (step
     catalog_tree.rs              The entry of the component "tree of a catalog": the groups and controls
     view.rs                      The data of the component "tree of a catalog", as the page gets it.

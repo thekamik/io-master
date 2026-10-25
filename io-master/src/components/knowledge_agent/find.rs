@@ -5,10 +5,13 @@
 //! proving ground of the view Knowledge (RAG) uses it now, the works of the
 //! AI of the other views when an agent is attached to them (57.4, 57.6).
 
+use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{Agent, Hit, MAX_HITS, QUESTION_MAX, chosen, glossary, search_query, widened};
+use crate::model::knowledge::{
+    Agent, AgentPlace, Hit, MAX_HITS, QUESTION_MAX, chosen, glossary, search_query, widened,
+};
 
 /// Agent `id`; refused when it does not exist.
 ///
@@ -39,6 +42,40 @@ pub fn passages(db: &UserDb, agent: &Agent, question: &str) -> Result<Vec<Hit>, 
     let hits = db_knowledge::read::search_agent(db, agent.id, &query, MAX_HITS)?;
 
     Ok(chosen(hits, agent.fields.passages, agent.fields.characters))
+}
+
+/// The context agent `agent` (none: `None`, or an agent deleted since)
+/// gives a question about `words`: its instructions and its passages
+/// (`knowledge_context::text`); empty when there is no agent, no word or
+/// no passage. The words are cut to `QUESTION_MAX` characters.
+///
+/// Called by: the works of the AI of the Evaluation plan, the Converter and the Chat (step 57.6).
+/// Calls: `db_knowledge::read::agent`, [`passages`], `knowledge_context::text`.
+pub fn context(db: &UserDb, agent: Option<i64>, words: &str) -> Result<String, AppError> {
+    let Some(id) = agent else {
+        return Ok(String::new());
+    };
+    let Some(found) = db_knowledge::read::agent(db, id)? else {
+        return Ok(String::new());
+    };
+    let words: String = words.chars().take(QUESTION_MAX).collect();
+
+    if words.trim().is_empty() {
+        return Ok(String::new());
+    }
+
+    let hits = passages(db, &found, &words)?;
+
+    Ok(knowledge_context::text(&found.fields.name, &found.fields.instructions, &hits))
+}
+
+/// The context the agent attached to object `owner` of `place` gives a
+/// question about `words`; empty when it has none.
+///
+/// Called by: the works of the AI of a master project, of the conversion of a catalog and of a chat.
+/// Calls: `db_knowledge::read::attachment`, [`context`].
+pub fn attached_context(db: &UserDb, place: AgentPlace, owner: &str, words: &str) -> Result<String, AppError> {
+    context(db, db_knowledge::read::attachment(db, place, owner)?, words)
 }
 
 #[cfg(test)]
@@ -83,5 +120,10 @@ mod tests {
         assert_eq!(hits[0].source, "CC Part 1");
         assert!(passages(&test.db, &found, " ").is_err());
         assert!(agent(&test.db, 99).is_err());
+
+        let given = context(&test.db, Some(id), "What does the TSF enforce?").unwrap();
+        assert!(given.starts_with("The agent \"CC\""));
+        assert_eq!(context(&test.db, None, "TSF").unwrap(), "");
+        assert_eq!(context(&test.db, Some(99), "TSF").unwrap(), "", "an agent deleted since gives nothing");
     }
 }

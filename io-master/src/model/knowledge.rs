@@ -103,6 +103,31 @@ impl SourceKind {
     }
 }
 
+/// Where an agent with knowledge is attached (step 57.6): every work of
+/// the AI of a master project, of the conversion of a catalog, or of a chat
+/// uses the agent of its owner. (The Evaluation lab keeps its agents in
+/// tables of its own, step 57.4, since a task may change that of its
+/// evaluation.)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgentPlace {
+    /// A master project of the Evaluation plan (its UUID).
+    Project,
+    /// A catalog converted in the Converter (its UUID).
+    Catalog,
+    /// A chat of the view Chat (its id).
+    Chat,
+}
+
+impl AgentPlace {
+    pub fn name(self) -> &'static str {
+        match self {
+            AgentPlace::Project => "project",
+            AgentPlace::Catalog => "catalog",
+            AgentPlace::Chat => "chat",
+        }
+    }
+}
+
 /// A knowledge base: its name and what it is for.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KnowledgeBase {

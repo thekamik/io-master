@@ -20,6 +20,7 @@
   import { sentence } from "../../../lib/api/errors";
   import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
   import type { PagesView, Stage, WizardView } from "../../../lib/api/converter/catalog_editor";
+  import AgentPicker from "../../../components/knowledge_agent/AgentPicker.svelte";
   import { applyBuildEvent } from "./build_progress";
 
   let {
@@ -66,6 +67,14 @@
     void version;
     load();
   });
+
+  async function setAgent(agent: number | null) {
+    try {
+      show(await catalogEditor.conversionWizardAgent(uuid, agent));
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
 
   async function load() {
     try {
@@ -160,6 +169,7 @@
 {#if problem}<p class="problem">{problem}</p>{/if}
 
 {#if wizard}
+  <AgentPicker value={wizard.agent} label="Agent with knowledge for the AI of this catalog" onchange={setAgent} />
   <ol class="wizard-stages">
     {#each STAGES as stage, index (stage.id)}
       <li class:active={index === position} class:done={index < position}>{index + 1}. {stage.title}</li>

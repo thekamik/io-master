@@ -18,9 +18,11 @@ use crate::app::state::AppState;
 use crate::components::ai_work::view::AiEvent;
 use crate::db::conversion as db_conversion;
 use crate::db::evaluation_project as db_evaluation_project;
+use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
+use crate::model::knowledge::AgentPlace;
 
 use super::oscal_documents::dialog::{choose_file, choose_place};
 use super::oscal_documents::file::{self, read_file, safe_name};
@@ -300,6 +302,31 @@ pub fn project_form_save(
     }
 
     db_evaluation_project::update::project(&db, &uuid, &fields, &project.catalogs)?;
+
+    project_view_of(&db, &uuid)
+}
+
+/// Chooses the agent with knowledge of project `uuid` (none: `None`): every
+/// work of the AI of the project (the proposals of tasks, schemes and
+/// related elements) gets the passages it finds (step 57.6).
+///
+/// Called by the page: `ProjectForm.svelte`, the choice of the agent
+/// (`evaluationPlan.projectFormAgent(uuid, agent)`).
+/// Calls: [`project_view_of`], `db_knowledge::update::attachment`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn project_form_agent(
+    state: State<'_, AppState>,
+    uuid: String,
+    agent: Option<i64>,
+) -> Result<ProjectView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    project_view_of(&db, &uuid)?;
+    db_knowledge::update::attachment(&db, AgentPlace::Project, &uuid, agent)
+        .map_err(|_| AppError::Invalid("the agent does not exist".to_owned()))?;
 
     project_view_of(&db, &uuid)
 }
@@ -1444,6 +1471,7 @@ fn project_view_of(db: &UserDb, uuid: &str) -> Result<ProjectView, AppError> {
         description: project.fields.description,
         catalogs: chosen,
         available,
+        agent: db_knowledge::read::attachment(db, AgentPlace::Project, uuid)?,
     })
 }
 
@@ -2015,5 +2043,25 @@ mod tests {
 
         assert_eq!(window.call("work_packages_delete", json!({ "package": made[0]["uuid"] })).unwrap(), json!([]));
         assert_eq!(window.call("work_packages_delete", json!({ "package": "none" })).unwrap_err()["kind"], "invalid");
+    }
+
+    #[test]
+    fn a_project_keeps_the_agent_with_knowledge_of_its_works() {
+        let window = logged_in_window();
+        let project = {
+            let session = window.session();
+            let fields =
+                crate::model::evaluation_project::ProjectFields { title: "P".to_owned(), description: String::new() };
+            crate::db::evaluation_project::create::project(&session.db(), "p", &fields, &[]).unwrap();
+            crate::test_support::db::knowledge_agent(&session.db(), "Roles.")
+        };
+
+        let view = window.call("project_form_agent", json!({ "uuid": "p", "agent": project })).unwrap();
+        assert_eq!(view["agent"], project);
+        assert_eq!(window.call("project_form_get", json!({ "uuid": "p" })).unwrap()["agent"], project);
+        assert_eq!(
+            window.call("project_form_agent", json!({ "uuid": "p", "agent": 99 })).unwrap_err()["kind"],
+            "invalid"
+        );
     }
 }

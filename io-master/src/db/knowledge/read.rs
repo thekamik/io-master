@@ -5,8 +5,8 @@ use rusqlite::{OptionalExtension, named_params};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::knowledge::{
-    Agent, AgentSummary, BaseSummary, Hit, KnowledgeBase, MAX_AGENT_PASSAGES, MAX_AGENTS, MAX_BASES, MAX_HITS,
-    MAX_QUOTES, MAX_SOURCES, Source, Trial,
+    Agent, AgentPlace, AgentSummary, BaseSummary, Hit, KnowledgeBase, MAX_AGENT_PASSAGES, MAX_AGENTS, MAX_BASES,
+    MAX_HITS, MAX_QUOTES, MAX_SOURCES, Source, Trial,
 };
 
 use super::rows;
@@ -192,6 +192,20 @@ pub fn trial(db: &UserDb, agent: i64) -> Result<Option<Trial>, DbError> {
     Ok(Some(Trial { question, passages, answer, quotes }))
 }
 
+/// The agent attached to object `owner` of `place`; `None` when it has none.
+///
+/// Called by: the views that show or use the agent of a project, a catalog or a chat.
+pub fn attachment(db: &UserDb, place: AgentPlace, owner: &str) -> Result<Option<i64>, DbError> {
+    Ok(db
+        .connection()
+        .query_row(
+            "SELECT agent_id FROM knowledge_attachments WHERE place = :place AND owner = :owner",
+            named_params! { ":place": place.name(), ":owner": owner },
+            |row| row.get(0),
+        )
+        .optional()?)
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of the knowledge bases in the database: stored, read, searched,
@@ -262,6 +276,28 @@ mod tests {
         let left: i64 =
             test.db.connection().query_row("SELECT COUNT(*) FROM knowledge_passages", [], |row| row.get(0)).unwrap();
         assert_eq!(left, 0);
+    }
+
+    #[test]
+    fn an_agent_is_attached_and_goes_with_its_agent() {
+        let test = database();
+        let fields = crate::model::knowledge::AgentFields {
+            name: "CC".to_owned(),
+            instructions: String::new(),
+            glossary: String::new(),
+            passages: 4,
+            characters: 4000,
+            bases: Vec::new(),
+        };
+        let agent = create::agent(&test.db, &fields).unwrap();
+
+        update::attachment(&test.db, AgentPlace::Chat, "7", Some(agent)).unwrap();
+        assert_eq!(attachment(&test.db, AgentPlace::Chat, "7").unwrap(), Some(agent));
+        assert_eq!(attachment(&test.db, AgentPlace::Project, "7").unwrap(), None);
+        assert!(update::attachment(&test.db, AgentPlace::Chat, "8", Some(99)).is_err());
+
+        delete::agent(&test.db, agent).unwrap();
+        assert_eq!(attachment(&test.db, AgentPlace::Chat, "7").unwrap(), None);
     }
 
     #[test]

@@ -12,6 +12,7 @@ use tokio::sync::watch;
 use crate::ai::api::roles;
 use crate::ai::api::tasks;
 use crate::ai::tasks::input_chat;
+use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
@@ -21,6 +22,7 @@ use crate::model::ai::{Speaker, Task, Turn};
 use crate::model::evaluation::check_message;
 use crate::model::task_scheme::BlockKind;
 
+use super::super::assessment::context;
 use super::super::lab_task::read as lab_task;
 
 /// Sends `question` to the chat of input `block` and keeps the question
@@ -69,7 +71,9 @@ pub async fn send(
 ///
 /// Called by: [`send`].
 /// Calls: `db_evaluation::read::block`, `lab_task::task` and `requirement`,
-/// `read::evidence_of`, `read::messages`, `tasks::instructions`, `input_chat::turns`.
+/// `read::evidence_of`, `read::messages`, `tasks::instructions`, `input_chat::turns`,
+/// `context::question_text` and `knowledge_context::into_last` (the context of
+/// the agent of the task after the question, step 57.6; it is not kept in the chat).
 fn turns(
     db: &crate::db::user::database::UserDb,
     evaluation: &str,
@@ -82,12 +86,16 @@ fn turns(
 
     ensure!(input.kind == BlockKind::Input, AppError::Invalid("only an input has a chat".to_owned()));
 
-    let (_, requirement, _) = lab_task::requirement(db, &lab_task::task(db, evaluation, &task)?)?;
+    let found = lab_task::task(db, evaluation, &task)?;
+    let (_, requirement, _) = lab_task::requirement(db, &found)?;
     let evidence = db_evaluation::read::evidence_of(db, evaluation, block)?;
     let history = db_evaluation::read::messages(db, evaluation, block)?;
     let instructions = tasks::instructions(db, Task::InputChat)?.unwrap_or_default();
+    let mut turns = input_chat::turns(&instructions, &requirement, &input.fields, &evidence, &history, question.trim());
 
-    Ok((task, input_chat::turns(&instructions, &requirement, &input.fields, &evidence, &history, question.trim())))
+    knowledge_context::into_last(&mut turns, &context::question_text(db, evaluation, &found)?);
+
+    Ok((task, turns))
 }
 
 #[cfg(test)]
@@ -97,7 +105,7 @@ mod tests {
     use super::*;
 
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions_events};
-    use crate::views::evaluation_lab::test_support::{NOTE, collector, ready};
+    use crate::views::evaluation_lab::test_support::{NOTE, PASSAGE, collector, ready, with_agent};
 
     #[tokio::test]
     async fn the_question_and_the_answer_are_kept_and_the_evidence_is_shown_to_the_model() {
@@ -118,5 +126,21 @@ mod tests {
         assert!(service.received()[0].body.to_string().contains(&NOTE[..20]));
         assert!(send(&session, "e", "i", " ", &test.state.start_work(), &channel).await.is_err());
         assert!(send(&session, "e", "o", "Hi", &test.state.start_work(), &channel).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn the_agent_of_the_task_adds_its_passages_after_the_question_only() {
+        let service = FakeService::start(FakeAnswer::Stream(completions_events(&["Yes."]))).await;
+        let test = ready(&service).await;
+        let session = test.state.session().unwrap();
+        with_agent(&session.db());
+        let (_, channel) = collector();
+
+        send(&session, "e", "i", "Are the roles defined?", &test.state.start_work(), &channel).await.unwrap();
+
+        let asked = service.received()[0].body.to_string();
+        assert!(asked.contains("The context of the standard") && asked.contains(PASSAGE));
+        let messages = db_evaluation::read::messages(&session.db(), "e", "i").unwrap();
+        assert_eq!(messages[0].text, "Are the roles defined?", "the context is not kept in the chat");
     }
 }

@@ -13,7 +13,7 @@ use crate::model::ai::{Speaker, Turn};
 use crate::model::evaluation::{Evidence, Fragment, Results, Verdict};
 use crate::model::task_scheme::Block;
 
-use super::super::lab_tasks::view::AgentOptionView;
+use crate::components::knowledge_agent::view::AgentOptionView;
 
 /// A block of the scheme.
 #[derive(Debug, Serialize)]
