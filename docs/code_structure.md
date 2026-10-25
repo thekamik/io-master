@@ -213,6 +213,8 @@ model/                     The data of the program as plain Rust types, and the 
                                  out for one product; verdicts, evidence, fragments, results.
   evaluation_support.rs        The evaluation support (decided by the user, 2026-10-18): what the
   installation.rs              What an installation is: its identifier, made at the first start,
+  knowledge.rs                 The knowledge bases of the AI (step 57.2): sources, passages of at most
+                                 1500 characters, the query of a search (FTS5).
   own_requirement.rs           A requirement of the laboratory's own, outside the standards (step 51.1e
   recovery_code.rs             The recovery code of a forgotten password (step 49): 160 random bits
   task_scheme.rs               The scheme of a task of a master project (step 51.2), the template of the
@@ -285,6 +287,14 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     update.rs                    Changing master projects: their fields and catalogs, the order of their
                                  tasks, the fields and places of the blocks of a scheme (the tables
                                  task_blocks and task_connections of schema.rs, step 51.2)
+  knowledge/                   The knowledge bases of the AI (step 57.2): the bases, their sources, and
+                                 their passages with the index of their words (FTS5 of SQLite, BM25).
+    create.rs                    Storing a base, a source with its passages.
+    delete.rs                    Deleting a base or a source with their passages.
+    read.rs                      Reading the bases and their sources; the search of the passages.
+    rows.rs                      The rows of the knowledge bases and the types of `model/knowledge.rs`.
+    schema.rs                    The tables of the knowledge bases (a virtual table of FTS5).
+    update.rs                    The name and the description of a base.
   encryption/                  All code of encryption of the databases.
     database_key.rs              The key that encrypts a database of the program.
     generate_key.rs              Generating the key that encrypts the database.
@@ -484,6 +494,17 @@ views/                     The views of the window, one folder per view and one 
     report/                      The element "report".
       dialog.rs                    The dialog of the system for the folder of the report.
       export.rs                    One file per output: the accepted texts, task by task.
+  knowledge/                   The view Knowledge (RAG) (step 57): the knowledge bases of the AI.
+    knowledge.rs                 The entry of the view Knowledge (RAG): every command the page calls for it.
+    knowledge_base/              The element "knowledge base": its name, its sources.
+      add.rs                       A PDF, a text file, a catalog of OSCAL or a note, cut into passages.
+      dialog.rs                    The dialog of the system for a file of a source.
+      view.rs                      The screen of a base, the catalogs to choose, as the page gets them.
+    knowledge_list/              The element "list of knowledge bases".
+      view.rs                      The bases with their numbers, as the page gets them; the form of a base.
+    knowledge_search/            The element "search" of a base.
+      search.rs                    The words made a query of FTS5, the passages ranked by BM25.
+      view.rs                      The passages found, as the page gets them.
   evaluation_plan/             The view Evaluation plan: it works only on the documents of OSCAL
     evaluation_plan.rs           The entry of the view Evaluation plan: it works only on the documents of
     new_project/                 The element "new project" of the view Evaluation plan: a master project

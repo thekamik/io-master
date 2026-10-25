@@ -49,9 +49,8 @@ fn pages() -> Vec<PageView> {
         PageView { id: "chat", title: "Chat" },
         PageView { id: "converter", title: "Converter" },
         PageView { id: "evaluation_plan", title: "Evaluation plan" },
-        // A placeholder until step 41.5 of docs/history.md; it holds the
-        // documentation of the manufacturer as well (step 30).
         PageView { id: "evaluation_lab", title: "Evaluation lab" },
+        PageView { id: "knowledge", title: "Knowledge (RAG)" },
         PageView { id: "users", title: "User" },
         PageView { id: "settings", title: "Settings" },
     ]

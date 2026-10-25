@@ -1,0 +1,21 @@
+/* 15. The view Knowledge (RAG): the ways to add a source, each a block of
+   its own under a small heading, apart from the list of the sources. */
+
+.knowledge-add {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.knowledge-add h4 {
+    margin: 0 0 0.5rem;
+    font-size: 0.9rem;
+}
+
+.knowledge-add .buttons select {
+    flex: 1;
+}
+
+.knowledge-search .buttons input {
+    flex: 1;
+}

@@ -41,6 +41,7 @@ mod model {
     pub mod evaluation_project;
     pub mod evaluation_support;
     pub mod installation;
+    pub mod knowledge;
     pub mod oscal;
     pub mod own_requirement;
     pub mod recovery_code;
@@ -160,6 +161,16 @@ mod db {
     // db/evaluation/: the evaluations of the Evaluation lab, what the
     // evaluator adds to them (the database of the evaluator).
     pub mod evaluation {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
+    // db/knowledge/: the knowledge bases of the AI, their sources and the
+    // index of their passages (the database of the evaluator).
+    pub mod knowledge {
         pub mod create;
         pub mod delete;
         pub mod read;
@@ -426,6 +437,26 @@ mod views {
         pub mod report {
             pub mod dialog;
             pub mod export;
+        }
+    }
+
+    // views/knowledge/: the view Knowledge (RAG): the knowledge bases of the
+    // AI, their sources and the search of their passages (step 57).
+    pub mod knowledge {
+        #[allow(clippy::module_inception)]
+        pub mod knowledge;
+
+        pub mod knowledge_base {
+            pub mod add;
+            pub mod dialog;
+            pub mod view;
+        }
+        pub mod knowledge_list {
+            pub mod view;
+        }
+        pub mod knowledge_search {
+            pub mod search;
+            pub mod view;
         }
     }
 

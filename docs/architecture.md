@@ -65,8 +65,9 @@ The first start is the real moment of installation. **It is told by the system d
   2. **Converter** (step 50, 2026-10-24): the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI, its only aim: the PDFs loaded and searched, a catalog made from them, its editor where the AI proposes groups and controls and the evaluator accepts them (section 7.1).
   3. **Evaluation plan**: works only on the documents of OSCAL, in two tabs: **Master projects** (step 51: a master project holds the catalogs of a standard and all its tasks, each a whole requirement chosen in a browser of the standards or proposed by the AI; made once for a version of a standard and used again and again; each task has its scheme of input, requirement and output blocks; packages of tasks are exported to the evaluators) and **OSCAL documents** (the list, the import, the export, the deletion).
   4. **Evaluation lab** (step 52): a work package of the Evaluation plan imported and carried out for one product: the evidence of the inputs, the fragments accepted, the results and the verdict of every requirement, the texts of the outputs, and the report exported out of the program.
-  5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password and the recovery code (section 5.4); later an optional second factor of the login and the removal of the installation (step 54).
-  6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the removal of the installation).
+  5. **Knowledge (RAG)** (step 57): the knowledge bases of the AI: the sources of a standard, of its methodology or of the laboratory (a PDF, a text file, a catalog of OSCAL, a note) cut into passages and indexed, searched; later agents made of them and attached to every work of the AI (`todo.md`, step 57).
+  6. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password and the recovery code (section 5.4); later an optional second factor of the login and the removal of the installation (step 54).
+  7. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the removal of the installation).
 - **Logging in** with the name and the password; the keys of section 5.
 
 ## 5. Secrets and encryption (agreed)
@@ -203,6 +204,7 @@ A **view** is a whole page of the window, the high-level display.
 | `converter` | konwerter | the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI (step 50): the documents of standards, the catalogs made from them, the editor of a catalog |
 | `evaluation_plan` | plan ewaluacji | only the documents of OSCAL: the master projects with their tasks (step 51), and the list, import, export and deletion of the documents of OSCAL |
 | `evaluation_lab` | evaluation lab | a work package of the Evaluation plan carried out for one product (step 52): the evidence of the inputs, the fragments, the results and the verdicts, the outputs, the report |
+| `knowledge` | wiedza (RAG) | the knowledge bases of the AI (step 57): sources cut into passages, indexed and searched; the agents made of them (later stages) |
 | `settings` | ustawienia | the settings panel |
 
 The view `evaluation_plan` is wider than the OSCAL document *assessment plan* it makes; the two are never called by the same name.
@@ -510,4 +512,16 @@ LabTask ──lab_task_get(evaluation, task)──► the scheme read only (LabS
   └─► OutputPanel (only when its condition holds for the verdict) ──outputs_draft(…, onEvent)──► the task output_draft
         from the four results ──outputs_accept / _reject / _save──► the text of the output
 the instructions of the four tasks ──evaluation_lab_instructions_get / _save──►; "Stop" ──evaluation_lab_stop()──►
+```
+
+**`knowledge`** (step 57; entry `views/knowledge/knowledge.rs`, page `ui/src/views/knowledge/`). The knowledge bases of the AI. A source keeps only its text, cut into passages of at most 1500 characters, never across a page (`model/knowledge.rs`), in the encrypted database of the evaluator; the passages are indexed by FTS5 of SQLite (the stems of English words, BM25), no new dependency.
+
+```text
+KnowledgeList ──knowledge_list_get / _create / _delete──► db/knowledge/ (bases, with their numbers)
+KnowledgeBase ──knowledge_base_get / _save──► the name and the description of a base, its sources
+  ──knowledge_base_add_file(id)──► a dialog of the system ──► a PDF (Poppler, page by page) or a text ──► passages
+  ──knowledge_base_catalogs() / _add_catalog(id, catalog)──► a catalog of OSCAL: groups and requirements ──► passages
+  ──knowledge_base_add_note(id, name, text)──► passages;  ──knowledge_base_remove(id, source)──► gone with its passages
+KnowledgeSearch ──knowledge_search_run(base, text)──► the words as phrases joined by OR (search_query) ──► FTS5 MATCH,
+  ranked by BM25 ──► the passages with their source, page or requirement, and relevance
 ```
