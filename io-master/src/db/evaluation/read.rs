@@ -7,7 +7,7 @@ use crate::db::user::database::UserDb;
 use crate::model::ai::Turn;
 use crate::model::evaluation::{
     Evaluation, EvaluationSummary, Evidence, Fragment, LabTask, MAX_EVALUATIONS, MAX_EVIDENCE, MAX_FRAGMENTS,
-    MAX_MESSAGES, OutputText, Related, Results, TaskAgent,
+    MAX_MESSAGES, OutputText, Related, Results, TaskAgent, TaskProgress,
 };
 use crate::model::evaluation_project::{MAX_LINKS, MAX_TASKS};
 use crate::model::knowledge::MAX_HITS;
@@ -346,6 +346,47 @@ pub fn context_excluded(db: &UserDb, evaluation: &str, task: &str) -> Result<Vec
 
     for passage in statement.query_map(rusqlite::params![evaluation, task, limit(MAX_HITS)?], |row| row.get(0))? {
         found.push(passage?);
+    }
+
+    Ok(found)
+}
+
+/// How far every task of evaluation `evaluation` is, in the order of the
+/// package: its verdict, its accepted fragments, its outputs with their
+/// condition and whether their text is accepted (step 59).
+///
+/// Called by: `views/evaluation_lab/lab_tasks/view.rs` (the screen of an evaluation).
+pub fn progress(db: &UserDb, evaluation: &str) -> Result<Vec<TaskProgress>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection.prepare(
+        "SELECT t.uuid AS task,
+                (SELECT r.verdict FROM lab_results r
+                  WHERE r.evaluation_uuid = t.evaluation_uuid AND r.task_uuid = t.uuid) AS verdict,
+                (SELECT COUNT(*) FROM lab_fragments f
+                  WHERE f.evaluation_uuid = t.evaluation_uuid AND f.task_uuid = t.uuid AND f.accepted = 1) AS fragments
+         FROM lab_tasks t WHERE t.evaluation_uuid = ?1 ORDER BY t.position LIMIT ?2",
+    )?;
+    let mut found = Vec::new();
+
+    for row in statement.query_map(rusqlite::params![evaluation, limit(MAX_TASKS)?], |row| Ok(rows::progress(row)))? {
+        found.push(row??);
+    }
+
+    let mut statement = connection.prepare(
+        "SELECT b.task_uuid AS task, b.condition AS condition, COALESCE(length(o.text), 0) > 0 AS ready
+         FROM lab_blocks b LEFT JOIN lab_outputs o ON o.evaluation_uuid = b.evaluation_uuid AND o.block_uuid = b.uuid
+         WHERE b.evaluation_uuid = ?1 AND b.kind = 'output' LIMIT ?2",
+    )?;
+    let max_outputs = limit(MAX_TASKS.saturating_mul(MAX_BLOCKS))?;
+
+    for row in statement.query_map(rusqlite::params![evaluation, max_outputs], |row| Ok(rows::output_state(row)))? {
+        let (task, condition, ready) = row??;
+
+        for progress in &mut found {
+            if progress.task == task {
+                progress.outputs.push((condition, ready));
+            }
+        }
     }
 
     Ok(found)

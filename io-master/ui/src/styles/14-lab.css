@@ -62,3 +62,23 @@
     margin: 0.3rem 0 0.6rem 1.6rem;
     white-space: pre-wrap;
 }
+
+/* The progress of an evaluation (step 59): its figures in one line, the
+   verdicts in their colours. */
+.progress-figures {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem 1.4rem;
+}
+
+.verdict-met {
+    color: var(--success);
+}
+
+.verdict-not_met {
+    color: var(--danger);
+}
+
+.verdict-inconclusive {
+    color: var(--warning);
+}

@@ -13,8 +13,8 @@
 //!
 //! **Only added to.** No file of this folder changes or removes an
 //! entry, and the database refuses it as well (two triggers): the
-//! journal goes only with the whole database. How long entries are
-//! kept is to be decided later (a reminder of `docs/todo.md`).
+//! journal goes only with the whole database (user, 2026-10-25: no
+//! removal of old entries, step 58).
 
 /// The tables, created with `IF NOT EXISTS` whenever the database is
 /// opened (`db/user/database.rs`). Times are seconds since 1970 (UTC).

@@ -503,7 +503,8 @@ EvaluationList ──evaluation_list_get()──► the evaluations with their p
     version, the package checked by the rules of the plan, the catalogs attached checked against the schema of NIST and
     stored when missing ──► an evaluation: a frozen copy of the tasks, their schemes and related elements
   ──evaluation_list_delete(uuid)──►
-EvaluationScreen ──lab_tasks_get(evaluation)──► the package, the product, the tasks and their state
+EvaluationScreen ──lab_tasks_get(evaluation)──► the package, the product, the tasks and their state, and how far
+  each is and the whole (step 59): verdicts, accepted fragments, the outputs due and ready for the report
   ──lab_tasks_state(evaluation, task, progress)──► to do / in progress / done
   ──lab_tasks_agent(evaluation, agent)──► the agent with knowledge of its requirements (made in the view Knowledge)
   ──report_export(evaluation)──► a folder chosen in a dialog ──► one file per output (report/export.rs): the accepted

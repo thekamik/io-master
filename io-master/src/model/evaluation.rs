@@ -193,6 +193,40 @@ pub enum TaskAgent {
     Agent(i64),
 }
 
+/// How far a task of an evaluation is (step 59 of docs/todo.md): its
+/// verdict, its accepted fragments, and each of its outputs with its
+/// condition and whether its text is accepted.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TaskProgress {
+    pub task: String,
+    pub verdict: Option<Verdict>,
+    pub accepted_fragments: usize,
+    pub outputs: Vec<(OutputCondition, bool)>,
+}
+
+impl TaskProgress {
+    /// The outputs the verdict makes due (`output_applies`) and those of
+    /// them whose text is accepted, ready for the report.
+    ///
+    /// Called by: `views/evaluation_lab/lab_tasks/view.rs`.
+    pub fn outputs_due_and_ready(&self) -> (usize, usize) {
+        let mut due = 0;
+        let mut ready = 0;
+
+        for (condition, has_text) in &self.outputs {
+            if output_applies(*condition, self.verdict) {
+                due += 1;
+
+                if *has_text {
+                    ready += 1;
+                }
+            }
+        }
+
+        (due, ready)
+    }
+}
+
 /// An element of another catalog related to a task.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Related {

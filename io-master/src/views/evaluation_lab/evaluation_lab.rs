@@ -1157,4 +1157,37 @@ mod tests {
         let ticked = json!({ "evaluation": "e", "task": "t", "passage": 5, "chosen": false });
         assert!(window.call("assessment_context", ticked).is_ok());
     }
+
+    #[test]
+    fn the_screen_of_an_evaluation_shows_how_far_every_task_is() {
+        let window = with_evaluation();
+
+        let view = window.call("lab_tasks_get", json!({ "evaluation": "e" })).unwrap();
+        assert_eq!(view["tasks"][0]["verdict"], Value::Null);
+        assert_eq!(
+            (view["tasks"][0]["outputs_due"].clone(), view["tasks"][0]["outputs_ready"].clone()),
+            (json!(1), json!(0))
+        );
+        assert_eq!((view["progress"]["no_verdict"].clone(), view["progress"]["tasks"].clone()), (json!(1), json!(1)));
+
+        {
+            let session = window.session();
+            let mut results = crate::model::evaluation::Results::empty();
+            results.verdict = Some(crate::model::evaluation::Verdict::NotMet);
+            db_evaluation::update::results(&session.db(), "e", "t", &results).unwrap();
+            db_evaluation::update::output_text(&session.db(), "e", "o", "The pETR text.").unwrap();
+        }
+
+        let view = window.call("lab_tasks_get", json!({ "evaluation": "e" })).unwrap();
+        assert_eq!(view["tasks"][0]["verdict"], "not_met");
+        // pETR (always) is ready; the Observation Report (only when not met) is due now, not written.
+        assert_eq!(
+            (view["tasks"][0]["outputs_due"].clone(), view["tasks"][0]["outputs_ready"].clone()),
+            (json!(2), json!(1))
+        );
+        assert_eq!(
+            (view["progress"]["not_met"].clone(), view["progress"]["outputs_ready"].clone()),
+            (json!(1), json!(1))
+        );
+    }
 }

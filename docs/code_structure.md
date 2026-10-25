@@ -498,7 +498,7 @@ views/                     The views of the window, one folder per view and one 
       read.rs                      The screen of a task: scheme, requirement, inputs, results, outputs.
       view.rs                      The data of the screen, as the page gets it and sends it.
     lab_tasks/                   The element "screen of an evaluation".
-      view.rs                      The evaluation with its tasks and their state.
+      view.rs                      The evaluation with its tasks, how far each is and the whole (step 59).
     outputs/                     The element "outputs" of a task.
       draft.rs                     The AI drafts the text of an output whose condition holds.
     package_import/              The element "import of a work package".

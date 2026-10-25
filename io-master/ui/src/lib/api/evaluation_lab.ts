@@ -36,6 +36,23 @@ export interface LabTaskView {
   label: string;
   title: string;
   state: TaskState;
+  /** How far it is (step 59): its verdict, accepted fragments, outputs due and ready. */
+  verdict: Verdict | null;
+  fragments: number;
+  outputs_due: number;
+  outputs_ready: number;
+}
+
+/** The progress of the whole evaluation (step 59). */
+export interface ProgressView {
+  tasks: number;
+  done: number;
+  met: number;
+  not_met: number;
+  inconclusive: number;
+  no_verdict: number;
+  outputs_due: number;
+  outputs_ready: number;
 }
 
 export interface EvaluationView {
@@ -48,6 +65,7 @@ export interface EvaluationView {
   product: string;
   product_version: string;
   tasks: LabTaskView[];
+  progress: ProgressView;
   /** The agent with knowledge of the evaluation (step 57.4); null: none. */
   agent: number | null;
   agents: AgentOptionView[];

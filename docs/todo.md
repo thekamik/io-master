@@ -13,8 +13,8 @@
 | 54 | The removal of the installation in the window | open |
 | 56 | The rule of the comments for the whole code | open |
 | 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | built 2026-10-25 (57.1 to 57.4, 57.6, 57.7); 57.5 only if needed |
-| 58 | The journal of the AI on a page | built 2026-10-25; the removal of old entries waits for a decision |
-| 59 | The progress of an evaluation | after 58 |
+| 58 | The journal of the AI on a page | built 2026-10-25 |
+| 59 | The progress of an evaluation | built 2026-10-25 |
 | 60 | A short presentation (5 minutes) with screenshots | after 59, the end of this workflow |
 | — | Reminders without a step yet | below |
 
@@ -113,13 +113,13 @@ proving ground: a question ──► passages with scores ──► answer, quot
 ## Step 58: The journal of the AI on a page
 
 - [x] **The tab "AI journal" of Settings** (built 2026-10-25, approved by the user the same day): the entries the newest first, by task and words, 50 to a page; an entry opened shows the request as it was sent (with the passages of an agent) and the answer. `db/ai/journal/read.rs`, `views/settings/ai_journal/`, `AiJournal.svelte`.
-- [ ] **The removal of old entries ("Delete entries older than…")**, proposed by Claude and accepted by the user on 2026-10-25, **waits for a decision**: the journal is only added to (two triggers of `db/ai/journal/schema.rs` refuse a change and a removal, so that what a result of the AI rests on cannot be altered, P3). A removal needs those triggers changed: for example a removal of the entries older than a date only, itself written down.
+- **No removal of old entries** (user, 2026-10-25): the journal stays only added to (two triggers of `db/ai/journal/schema.rs` refuse a change and a removal, so that what a result of the AI rests on cannot be altered, P3); its entries go only with the whole database.
 
 ---
 
 ## Step 59: The progress of an evaluation
 
-In the Evaluation lab, a summary over the tasks of an evaluation: how many have a verdict (met, not met, inconclusive), how many wait, how many outputs are accepted and ready for the report.
+- [x] **Built 2026-10-25** (approved by the user the same day): the screen of an evaluation shows the tasks done, the verdicts (met, not met, inconclusive, none), and the outputs the verdicts make due with those ready for the report; every task its verdict, its accepted fragments and its outputs ready. `model/evaluation.rs` (`TaskProgress`), `db/evaluation/read.rs` (`progress`), `views/evaluation_lab/lab_tasks/view.rs`.
 
 ---
 

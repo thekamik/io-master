@@ -3,8 +3,9 @@
   commands lab_tasks_get, lab_tasks_state, lab_tasks_agent and report_export
   in src/views/evaluation_lab/evaluation_lab.rs): what the package says of
   itself, the product, the agent with knowledge of its requirements (made in
-  the view Knowledge (RAG)), the tasks with their state (to do, in progress,
-  done), and "Export the report…" (one file per output, in a folder chosen
+  the view Knowledge (RAG)), the progress of the evaluation and of every
+  task (its verdict, accepted fragments, outputs ready for the report; step
+  59), the tasks with their state (to do, in progress, done), and "Export the report…" (one file per output, in a folder chosen
   in a dialog of the system). A task opens its screen (LabTask).
 -->
 <script lang="ts">
@@ -18,6 +19,7 @@
   let { evaluation, onclose }: { evaluation: string; onclose: () => void } = $props();
 
   const states = { todo: "to do", working: "in progress", done: "done" };
+  const verdicts = { met: "met", not_met: "not met", inconclusive: "inconclusive" };
 
   let view: evaluationLab.EvaluationView | null = $state(null);
   /** The task whose screen is open. */
@@ -84,12 +86,26 @@
     <div class="buttons"><button type="button" onclick={exportReport}>Export the report…</button></div>
   </div>
   {#if notice}<p class={notice.done ? "done" : "problem"}>{notice.text}</p>{/if}
+  <div class="card lab-progress">
+    <h3>Progress</h3>
+    <div class="progress-figures">
+      <span><strong>{view.progress.done}</strong> of {view.progress.tasks} tasks done</span>
+      <span class="verdict-met"><strong>{view.progress.met}</strong> met</span>
+      <span class="verdict-not_met"><strong>{view.progress.not_met}</strong> not met</span>
+      <span class="verdict-inconclusive"><strong>{view.progress.inconclusive}</strong> inconclusive</span>
+      <span><strong>{view.progress.no_verdict}</strong> without a verdict</span>
+      <span><strong>{view.progress.outputs_ready}</strong> of {view.progress.outputs_due} outputs ready for the report</span>
+    </div>
+  </div>
   <table class="data">
-    <thead><tr><th>Requirement</th><th>State</th><th></th></tr></thead>
+    <thead><tr><th>Requirement</th><th>Verdict</th><th>Fragments</th><th>Outputs</th><th>State</th><th></th></tr></thead>
     <tbody>
       {#each view.tasks as item (item.uuid)}
         <tr>
           <td><span class="object-id">{item.label}</span> {item.title}</td>
+          <td class={item.verdict ? `verdict-${item.verdict}` : "note"}>{item.verdict ? verdicts[item.verdict] : "—"}</td>
+          <td>{item.fragments}</td>
+          <td>{item.outputs_ready} of {item.outputs_due}</td>
           <td>
             <select value={item.state} onchange={(event) => setState(item.uuid, event.currentTarget.value as evaluationLab.TaskState)} aria-label="State">
               {#each Object.entries(states) as [value, title] (value)}<option {value}>{title}</option>{/each}
