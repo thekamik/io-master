@@ -5,6 +5,7 @@ pub mod db;
 pub mod standards;
 
 use std::fs;
+use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
@@ -37,7 +38,9 @@ pub fn new_directory(prefix: &str) -> PathBuf {
         COUNTER.fetch_add(1, Ordering::Relaxed)
     ));
 
-    fs::create_dir_all(&directory).unwrap();
+    // Private, as the program makes the folder of an installation, so
+    // that the check of its permissions finds nothing to warn of.
+    fs::DirBuilder::new().recursive(true).mode(0o700).create(&directory).unwrap();
 
     directory
 }

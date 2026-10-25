@@ -16,6 +16,7 @@
   import { sentence } from "../../lib/api/errors";
   import * as chat from "../../lib/api/chat";
   import AgentPicker from "../../components/knowledge_agent/AgentPicker.svelte";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
 
   let {
     chatId,
@@ -164,7 +165,7 @@
 <section class="conversation">
   <h2>
     {title}
-    {#if chatId !== null}<button class="small danger" onclick={remove} disabled={writing}>Delete this chat</button>{/if}
+    {#if chatId !== null}<ConfirmButton label="Delete this chat" disabled={writing} onconfirm={remove} />{/if}
   </h2>
 
   <AgentPicker value={agent} onchange={(chosen) => (agent = chosen)} />

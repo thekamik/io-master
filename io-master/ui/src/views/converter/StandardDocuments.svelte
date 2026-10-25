@@ -13,6 +13,7 @@
 
   import { sentence } from "../../lib/api/errors";
   import * as converter from "../../lib/api/converter";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
 
   let { onview }: { onview: (documentId: number) => void } = $props();
 
@@ -142,7 +143,7 @@
             <td class="actions">
               <button type="button" class="small" onclick={() => onview(document.id)}>View</button>
               <button type="button" class="small" onclick={() => (editing = { ...document })}>Edit</button>
-              <button type="button" class="small danger" onclick={() => remove(document.id)}>Delete</button>
+              <ConfirmButton onconfirm={() => remove(document.id)} />
             </td>
           </tr>
         {/each}

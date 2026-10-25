@@ -18,14 +18,12 @@ use crate::app::state::AppState;
 use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
 use crate::db::knowledge as db_knowledge;
-use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
 use crate::model::ai::{INSTRUCTIONS_MAX, Task};
 use crate::model::evaluation::{
-    self, Evaluation, Fragment, Package, TaskAgent, TaskState, check_fragment, check_output, quote_found,
+    self, Evaluation, Fragment, TaskAgent, TaskState, check_fragment, check_output, quote_found,
 };
-use crate::model::oscal::OscalDocument;
 use crate::model::task_scheme::BlockKind;
 
 use super::assessment::propose as assessment_ask;
@@ -41,7 +39,8 @@ use super::lab_tasks::view::{self as tasks_view, EvaluationView};
 use super::outputs::draft as outputs_ask;
 use super::package_import::dialog::choose_package;
 use super::package_import::read::{self as package_read, MAX_FILE};
-use super::package_import::view::ImportForm;
+use super::package_import::store as package_store;
+use super::package_import::view::{ImportForm, ImportedView};
 use super::report::dialog::choose_folder;
 use super::report::export as report_export_files;
 
@@ -92,7 +91,7 @@ pub fn evaluation_list_delete(
 /// Called by the page: `ImportPackage.svelte`, "Import…"
 /// (`evaluationLab.packageImportImport(form)`).
 /// Calls: `evaluation::normalized` and `check_fields`, `choose_package`,
-/// `package_read::read`, [`store_package`], `list_view::all`.
+/// `package_read::read`, `package_store::store` (all or nothing), `list_view::all`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
@@ -100,7 +99,7 @@ pub async fn package_import_import<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, AppState>,
     form: ImportForm,
-) -> Result<Option<Vec<EvaluationSummaryView>>, AppError> {
+) -> Result<Option<ImportedView>, AppError> {
     let session = state.session()?;
     let fields = evaluation::normalized(&form.fields());
 
@@ -132,9 +131,9 @@ pub async fn package_import_import<R: Runtime>(
         fields,
     };
 
-    store_package(&db, &made, &package, &catalogs)?;
+    let notices = package_store::store(&db, &made, &package, &catalogs)?;
 
-    Ok(Some(list_view::all(db_evaluation::read::evaluations(&db)?)))
+    Ok(Some(ImportedView { evaluations: list_view::all(db_evaluation::read::evaluations(&db)?), notices }))
 }
 
 /// The evaluation `evaluation` with its tasks and their state.
@@ -786,9 +785,11 @@ pub async fn report_export<R: Runtime>(
     };
 
     for file in &files {
-        tokio::fs::write(folder.join(&file.name), &file.text)
+        let path = report_export_files::free_path(&folder, &file.name)?;
+
+        tokio::fs::write(&path, &file.text)
             .await
-            .map_err(|error| AppError::Failed(format!("the file {} was not written: {error}", file.name)))?;
+            .map_err(|error| AppError::Failed(format!("the file {} was not written: {error}", path.display())))?;
     }
 
     Ok(Some(files.len()))
@@ -847,49 +848,6 @@ pub fn evaluation_lab_instructions_save(
 
 // ── Helpers of the commands above ─────────────────────────────────────
 
-/// Stores the catalogs of `catalogs` that are not stored yet, checks that
-/// every catalog the package points to is there, and stores `made` with the
-/// frozen copy of `package`; refused when the package is imported already.
-///
-/// Called by: `package_import_import`.
-/// Calls: `read::package_imported`, `db_oscal::read::summary`,
-/// `db_oscal::create::document`, `db_evaluation::create::evaluation`.
-fn store_package(
-    db: &UserDb,
-    made: &Evaluation,
-    package: &Package,
-    catalogs: &[OscalDocument],
-) -> Result<(), AppError> {
-    ensure!(
-        !db_evaluation::read::package_imported(db, &package.package_uuid)?,
-        AppError::Invalid("this work package is imported already".to_owned())
-    );
-
-    for catalog in catalogs {
-        if db_oscal::read::summary(db, catalog.uuid())?.is_none() {
-            db_oscal::create::document(db, catalog)?;
-        }
-    }
-
-    for task in &package.tasks {
-        ensure!(
-            db_oscal::read::summary(db, &task.task.catalog_uuid)?.is_some(),
-            AppError::Invalid(format!("the catalog of the task {} is neither attached nor stored", task.task.label))
-        );
-
-        for element in &task.related {
-            ensure!(
-                db_oscal::read::summary(db, &element.catalog_uuid)?.is_some(),
-                AppError::Invalid(format!("the catalog of {} is neither attached nor stored", element.label))
-            );
-        }
-    }
-
-    db_evaluation::create::evaluation(db, made, package)?;
-
-    Ok(())
-}
-
 /// Evaluation `uuid`; refused when it does not exist.
 ///
 /// Called by: `lab_tasks_get`, `lab_tasks_state`.
@@ -934,7 +892,7 @@ mod tests {
     //! Tests of the commands of the view Evaluation lab, called as the page
     //! calls them: by name, through the IPC of Tauri. The import (a dialog
     //! of the system) is tested in `package_import/read.rs` and through
-    //! [`store_package`]; the works of the AI in their own files.
+    //! `package_import/store.rs`; the works of the AI in their own files.
 
     use super::*;
 
@@ -951,7 +909,7 @@ mod tests {
             let session = window.session();
             let catalog = basic_catalog();
             let package = lab_package(catalog.uuid());
-            store_package(&session.db(), &lab_evaluation(&package), &package, &[catalog]).unwrap();
+            package_store::store(&session.db(), &lab_evaluation(&package), &package, &[catalog]).unwrap();
         }
 
         window
@@ -965,13 +923,16 @@ mod tests {
         let package = lab_package(catalog.uuid());
 
         let again = Evaluation { uuid: "e2".to_owned(), ..lab_evaluation(&package) };
-        assert!(store_package(&session.db(), &again, &package, &[]).is_err(), "imported already");
+        assert!(package_store::store(&session.db(), &again, &package, &[]).is_err(), "imported already");
 
         let foreign = lab_package("no-such-catalog");
         let other = Evaluation { uuid: "e3".to_owned(), package_uuid: "w3".to_owned(), ..lab_evaluation(&foreign) };
         let mut moved = foreign.clone();
         moved.package_uuid = "w3".to_owned();
-        assert!(store_package(&session.db(), &other, &moved, &[]).is_err(), "a catalog neither attached nor stored");
+        assert!(
+            package_store::store(&session.db(), &other, &moved, &[]).is_err(),
+            "a catalog neither attached nor stored"
+        );
         drop(session);
 
         let list = window.call("evaluation_list_get", json!({})).unwrap();

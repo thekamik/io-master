@@ -173,3 +173,11 @@ label.choice {
 .inline-choice select {
     width: auto;
 }
+
+/* The question of a button that asks before it deletes (the component
+   confirm_button). */
+.confirm-question {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-right: 0.3rem;
+}

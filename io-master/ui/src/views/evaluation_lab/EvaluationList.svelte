@@ -10,6 +10,7 @@
 
   import { sentence } from "../../lib/api/errors";
   import * as evaluationLab from "../../lib/api/evaluation_lab";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
 
   let { onopen }: { onopen: (uuid: string) => void } = $props();
 
@@ -30,13 +31,13 @@
     event.preventDefault();
 
     try {
-      const listed = await evaluationLab.packageImportImport({ ...form });
+      const imported = await evaluationLab.packageImportImport({ ...form });
 
-      if (listed) {
-        evaluations = listed;
+      if (imported) {
+        evaluations = imported.evaluations;
         importing = false;
         form = { product: "", product_version: "" };
-        notice = { done: true, text: "The work package was imported." };
+        notice = { done: true, text: ["The work package was imported.", ...imported.notices].join(" ") };
       }
     } catch (error) {
       notice = { done: false, text: `The work package was not imported: ${sentence(error)}` };
@@ -86,7 +87,7 @@
           <td>{item.done} of {item.tasks}</td>
           <td class="actions">
             <button type="button" class="small" onclick={() => onopen(item.uuid)}>Open</button>
-            <button type="button" class="small danger" onclick={() => remove(item.uuid)}>Delete</button>
+            <ConfirmButton onconfirm={() => remove(item.uuid)} />
           </td>
         </tr>
       {/each}

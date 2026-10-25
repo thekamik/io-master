@@ -1,9 +1,20 @@
-//! The data of the import of a work package, as the page sends it: the
-//! product the evaluation is for.
+//! The data of the import of a work package, as the page sends it (the
+//! product the evaluation is for) and gets it back (the evaluations and the
+//! notices of the import).
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::model::evaluation::EvaluationFields;
+
+use super::super::evaluation_list::view::EvaluationSummaryView;
+
+/// The evaluations after an import, and what the evaluator should know of it
+/// (a catalog kept in the version stored already).
+#[derive(Debug, Serialize)]
+pub struct ImportedView {
+    pub evaluations: Vec<EvaluationSummaryView>,
+    pub notices: Vec<String>,
+}
 
 /// The product and its version, both optional.
 #[derive(Debug, Deserialize)]

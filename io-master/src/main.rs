@@ -269,6 +269,7 @@ mod pdf {
 mod installation {
     pub mod accounts;
     pub mod lifecycle;
+    pub mod permissions;
     pub mod session;
     pub mod verify;
 }
@@ -449,6 +450,7 @@ mod views {
         pub mod package_import {
             pub mod dialog;
             pub mod read;
+            pub mod store;
             pub mod view;
         }
         pub mod report {

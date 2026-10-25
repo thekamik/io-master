@@ -12,6 +12,7 @@
 
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
   import OutputFields from "./OutputFields.svelte";
 
   let { project }: { project: string } = $props();
@@ -83,7 +84,7 @@
             <td>{conditions[output.condition]}</td>
             <td class="actions">
               <button type="button" class="small" onclick={() => edit(output)}>Change</button>
-              <button type="button" class="small danger" onclick={() => act(() => evaluationPlan.standardOutputsDelete(output.uuid))}>Delete</button>
+              <ConfirmButton onconfirm={() => act(() => evaluationPlan.standardOutputsDelete(output.uuid))} />
             </td>
           </tr>
         {/each}

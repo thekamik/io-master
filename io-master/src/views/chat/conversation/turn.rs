@@ -164,11 +164,18 @@ pub fn prepare(db: &UserDb, chat_id: Option<i64>, text: &str) -> Result<Prepared
 }
 
 /// Keeps `agent` as the agent with knowledge of chat `chat_id` (none:
-/// `None`) and gives the context it adds to the question `text`.
+/// `None`; an agent deleted since the page read it counts as none, the
+/// message being stored already) and gives the context it adds to the
+/// question `text`.
 ///
 /// Called by: [`send`].
-/// Calls: `db_knowledge::update::attachment`, `find::context`.
+/// Calls: `db_knowledge::read::agent`, `db_knowledge::update::attachment`, `find::context`.
 fn knowledge(db: &UserDb, chat_id: i64, agent: Option<i64>, text: &str) -> Result<String, SendError> {
+    let agent = match agent {
+        Some(id) if db_knowledge::read::agent(db, id)?.is_some() => Some(id),
+        _ => None,
+    };
+
     db_knowledge::update::attachment(db, AgentPlace::Chat, &chat_id.to_string(), agent)?;
 
     find::context(db, agent, text).map_err(|error| SendError::Knowledge(error.to_string()))
@@ -473,5 +480,17 @@ mod tests {
         let db = session.db();
         assert_eq!(db_knowledge::read::attachment(&db, AgentPlace::Chat, "1").unwrap(), Some(agent));
         assert_eq!(db_chats::read::messages(&db, 1).unwrap()[0].text, "Who allocates the security roles?");
+    }
+
+    #[tokio::test]
+    async fn an_agent_deleted_since_the_page_read_it_counts_as_none() {
+        let (test, service) = ready(FakeAnswer::Stream(completions_events(&["Yes."]))).await;
+        let session = test.state.session().unwrap();
+        let (_, channel) = collector();
+
+        send(&session, None, "Hello", Some(99), &test.state.start_reply(), &channel).await.unwrap();
+
+        assert!(!service.received()[0].body.to_string().contains("The context of the standard"));
+        assert_eq!(db_knowledge::read::attachment(&session.db(), AgentPlace::Chat, "1").unwrap(), None);
     }
 }

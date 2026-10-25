@@ -13,6 +13,7 @@
   import PartRows from "../../components/part_rows/PartRows.svelte";
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
 
   let {
     project,
@@ -163,7 +164,7 @@
             <button type="button" onclick={() => requirement && (own = { editing: { id: requirement.id, fields } })}>
               Change
             </button>
-            <button type="button" class="danger" onclick={removeOwn}>Delete</button>
+            <ConfirmButton small={false} onconfirm={removeOwn} />
           {/if}
         </div>
         {#if requirement.own}<p class="note">A requirement of the laboratory, outside the standards.</p>{/if}

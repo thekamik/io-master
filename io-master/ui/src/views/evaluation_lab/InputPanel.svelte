@@ -13,6 +13,7 @@
   import { sentence } from "../../lib/api/errors";
   import * as evaluationLab from "../../lib/api/evaluation_lab";
   import { follow, idle, start } from "../../components/ai_work/ai_progress";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
   import LabInstructions from "./LabInstructions.svelte";
 
   let {
@@ -110,7 +111,7 @@
 {#each input?.evidence ?? [] as piece (piece.uuid)}
   <div class="link-row">
     <div>{piece.name} <span class="note">· {kinds[piece.kind]}{piece.kind === "pdf" ? `, ${piece.pages} pages` : ""}</span></div>
-    <button type="button" class="small danger" onclick={() => act(() => evaluationLab.evidenceDelete(evaluation, screen.uuid, piece.uuid))}>Delete</button>
+    <ConfirmButton onconfirm={() => act(() => evaluationLab.evidenceDelete(evaluation, screen.uuid, piece.uuid))} />
   </div>
 {/each}
 <div class="buttons">

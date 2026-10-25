@@ -8,6 +8,7 @@ use std::path::Path;
 use serde::Serialize;
 
 use crate::installation::accounts::Account;
+use crate::installation::permissions::{self, PermissionProblem};
 
 /// The state of the program, as the page sees it.
 #[derive(Debug, Serialize)]
@@ -40,7 +41,7 @@ pub struct PageView {
 pub struct WarningView {
     /// `"danger"` (red) or `"warning"` (orange).
     pub level: &'static str,
-    pub text: &'static str,
+    pub text: String,
 }
 
 /// The pages of the navigation.
@@ -56,11 +57,39 @@ fn pages() -> Vec<PageView> {
     ]
 }
 
-/// The warnings: none at present. Every account has its recovery code
-/// from the setup on (step 49 of docs/history.md), so the bar "your password
-/// cannot be recovered" is gone; the bars stay for what comes later.
-fn warnings() -> Vec<WarningView> {
-    Vec::new()
+/// The warnings: the folder of the installation open to other accounts or
+/// belonging to another one (`installation/permissions.rs`), with the
+/// command that corrects it. (Every account has its recovery code from the
+/// setup on, step 49 of docs/history.md, so no bar is needed for that.)
+///
+/// Called by: [`ProgramView::new`].
+/// Calls: `permissions::problems`.
+fn warnings(data_dir: &Path) -> Vec<WarningView> {
+    let problems = permissions::problems(data_dir);
+    let mut warnings = Vec::new();
+    let mut open = 0;
+
+    for problem in &problems {
+        match problem {
+            PermissionProblem::Owner(path) => warnings.push(WarningView {
+                level: "danger",
+                text: format!("The folder {} belongs to another account of this computer.", path.display()),
+            }),
+            PermissionProblem::Open(_) => open += 1,
+        }
+    }
+
+    if open > 0 {
+        warnings.push(WarningView {
+            level: "danger",
+            text: format!(
+                "Other accounts of this computer may open {open} item(s) of the folder of IO Master. Close it: chmod -R go-rwx {}",
+                data_dir.display()
+            ),
+        });
+    }
+
+    warnings
 }
 
 impl ProgramView {
@@ -82,7 +111,7 @@ impl ProgramView {
             installed: true,
             user: name_of(user),
             pages: pages(),
-            warnings: warnings(),
+            warnings: warnings(data_dir),
             version: env!("CARGO_PKG_VERSION"),
             data_dir: data_dir.display().to_string(),
         }
