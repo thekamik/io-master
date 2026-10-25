@@ -6,7 +6,7 @@ use rusqlite::{Transaction, named_params};
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 use crate::model::knowledge::{
-    AgentFields, MAX_AGENTS, MAX_BASES, MAX_PASSAGES, MAX_SOURCES, NewBase, Passage, SourceKind,
+    AgentFields, MAX_AGENTS, MAX_BASES, MAX_PASSAGES, MAX_SOURCES, NAME_MAX, NewBase, Passage, SourceKind,
 };
 use crate::model::time::now;
 
@@ -90,7 +90,8 @@ pub fn imported_agent(db: &UserDb, fields: &AgentFields, bases: &[NewBase]) -> R
 }
 
 /// `wanted`, or the first of `wanted (imported)`, `wanted (imported 2)`, ...
-/// that no row of `table` (`knowledge_bases` or `knowledge_agents`) has.
+/// that no row of `table` (`knowledge_bases` or `knowledge_agents`) has;
+/// `wanted` is shortened so that the name keeps within `NAME_MAX`.
 ///
 /// Called by: [`imported_agent`].
 fn free_name(transaction: &Transaction<'_>, table: &'static str, wanted: &str) -> Result<String, DbError> {
@@ -98,11 +99,13 @@ fn free_name(transaction: &Transaction<'_>, table: &'static str, wanted: &str) -
     let sql = format!("SELECT COUNT(*) > 0 FROM {table} WHERE name = ?1");
 
     for attempt in 0..MAX_NAME_TRIES {
-        let name = match attempt {
-            0 => wanted.to_owned(),
-            1 => format!("{wanted} (imported)"),
-            _ => format!("{wanted} (imported {attempt})"),
+        let suffix = match attempt {
+            0 => String::new(),
+            1 => " (imported)".to_owned(),
+            _ => format!(" (imported {attempt})"),
         };
+        let kept: String = wanted.chars().take(NAME_MAX.saturating_sub(suffix.chars().count())).collect();
+        let name = format!("{kept}{suffix}");
         let taken: bool = transaction.query_row(&sql, [&name], |row| row.get(0))?;
 
         if !taken {
@@ -264,6 +267,18 @@ mod tests {
 
         let again = imported_agent(&test.db, &fields("ISO agent"), &[new_base("ISO")]).unwrap();
         assert_eq!(read::agent(&test.db, again).unwrap().unwrap().fields.name, "ISO agent (imported 2)");
+    }
+
+    #[test]
+    fn an_imported_name_keeps_within_its_limit() {
+        let test = database();
+        let long = "n".repeat(NAME_MAX);
+        agent(&test.db, &fields(&long)).unwrap();
+
+        let id = imported_agent(&test.db, &fields(&long), &[]).unwrap();
+
+        let name = read::agent(&test.db, id).unwrap().unwrap().fields.name;
+        assert!(name.ends_with(" (imported)") && name.chars().count() == NAME_MAX);
     }
 
     #[test]

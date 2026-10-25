@@ -9,6 +9,7 @@ use serde::Serialize;
 use crate::app::error::AppError;
 use crate::components::knowledge_agent::view::{AgentOptionView, agents};
 use crate::db::evaluation as db_evaluation;
+use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
 use crate::model::evaluation::{Evaluation, TaskProgress, TaskState, Verdict};
 
@@ -69,7 +70,11 @@ pub struct EvaluationView {
 pub fn screen(db: &UserDb, evaluation: Evaluation) -> Result<EvaluationView, AppError> {
     let tasks = db_evaluation::read::tasks(db, &evaluation.uuid)?;
     let progress = db_evaluation::read::progress(db, &evaluation.uuid)?;
-    let agent = db_evaluation::read::agent(db, &evaluation.uuid)?;
+    // An agent deleted since it was chosen is shown as none (it gives no passages either).
+    let agent = match db_evaluation::read::agent(db, &evaluation.uuid)? {
+        Some(id) if db_knowledge::read::agent(db, id)?.is_some() => Some(id),
+        _ => None,
+    };
     let mut summary = ProgressView::default();
     let mut views = Vec::with_capacity(tasks.len());
 
