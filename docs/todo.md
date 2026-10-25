@@ -15,7 +15,7 @@
 | 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | built 2026-10-25 (57.1 to 57.4, 57.6, 57.7); 57.5 only if needed |
 | 58 | The journal of the AI on a page | built 2026-10-25 |
 | 59 | The progress of an evaluation | built 2026-10-25 |
-| 60 | A short presentation (5 minutes) with screenshots | after 59, the end of this workflow |
+| 60 | A short presentation (5 minutes) with screenshots | built 2026-10-25 |
 | — | Reminders without a step yet | below |
 
 ## How every step is done
@@ -125,7 +125,7 @@ proving ground: a question ──► passages with scores ──► answer, quot
 
 ## Step 60: A short presentation
 
-`presentation.md` made a presentation of about five minutes (user, 2026-10-25: the present one is too long), with screenshots of the window taken on a private display; the knowledge of the AI (RAG) shown. No screenshots in the README.
+- [x] **Built 2026-10-25**: `presentation.md` made a presentation of about five minutes (ten slides), with screenshots of the window in `docs/presentation/`, taken on a private display on the data of a test installation (the sample catalog of NIST, the manual of libtasn1; no licensed standard). The knowledge of the AI (RAG) shown on three slides. The owner may replace the screenshots with ones of a real standard.
 
 ---
 

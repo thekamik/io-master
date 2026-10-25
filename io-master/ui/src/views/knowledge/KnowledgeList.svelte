@@ -75,7 +75,7 @@
       {#each bases as item (item.id)}
         <tr>
           <td>{item.name}</td>
-          <td>{item.description}</td>
+          <td class="wrap">{item.description}</td>
           <td>{item.sources}</td>
           <td>{item.passages}</td>
           <td class="actions">

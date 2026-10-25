@@ -2,10 +2,10 @@
 
 Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md` and `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English. A high-level overview of what the program does: `docs/presentation.md`.
 
-## Where the project is (2026-10-24)
+## Where the project is (2026-10-25)
 
 - Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branches **`main`** (the tested state) and **`test_branch`** (the work); no other branches and no version numbers yet.
-- **Steps 0 to 53 are built or settled** (53: zero warnings; 55, backups, dropped) (`docs/history.md`): the layers and their tests (step 40), the views and the components (42 to 47), the framework for the evaluation with AI without devices, master, TPM or keyring (48), the recovery code (49), the Converter (50), the master projects of the Evaluation plan with the schemes of tasks, the proposals of the AI and the work packages (51), the Evaluation lab with the evidence, the fragments, the assessment, the outputs and the report (52).
+- **Steps 0 to 60 are built or settled** (53: zero warnings; 55, backups, dropped; 57 to 60 on 2026-10-25) (`docs/history.md`): the layers and their tests (step 40), the views and the components (42 to 47), the framework for the evaluation with AI without devices, master, TPM or keyring (48), the recovery code (49), the Converter (50), the master projects of the Evaluation plan with the schemes of tasks, the proposals of the AI and the work packages (51), the Evaluation lab with the evidence, the fragments, the assessment, the outputs and the report (52).
 - **The documents were read through on 2026-10-24** (step 48.2): the catalogue of the functions of version 0.2 and the console function of the removal of the installation were removed; `todo.md` keeps only the open steps (10, 12, 53 to 56 and reminders).
 - **The state of the branches (2026-10-24):** `main` and `test_branch` hold the same state after the merge of steps 48 to 52 and the documents; the user tests the functions of the AI by hand.
 - **The data of the tests is a temporary resource until version 1**: a change of a schema may need a fresh database (`~/.local/share/io-master` removed).
@@ -15,7 +15,7 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 
 The user chooses (`docs/todo.md`). The candidates:
 1. **Step 12, the user's review**, file by file: Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.
-2. **The workflow agreed on 2026-10-25:** step 57 (knowledge for the AI, RAG: the concept in `todo.md` waits for the approval of the user), then 58 (the journal of the AI on a page), 59 (the progress of an evaluation), 60 (a short presentation with screenshots). Changes go to `test_branch` only.
+2. **The workflow of 2026-10-25 is built** (steps 57 to 60: knowledge for the AI with agents, the journal of the AI on a page, the progress of an evaluation, a short presentation with screenshots in `docs/presentation/`). Open: 57.5 (embeddings, only if the search by words proves too weak on real standards), the user's tests of the AI on a real local model.
 
 ## Rules that are easy to forget
 
