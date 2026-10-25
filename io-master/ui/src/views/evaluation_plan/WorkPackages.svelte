@@ -11,6 +11,7 @@
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import * as evaluationPlan from "../../lib/api/evaluation_plan";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
 
   let { project, version, onchanged }: { project: string; version: number; onchanged: () => void } = $props();
 
@@ -103,7 +104,7 @@
             <td class="actions">
               <button type="button" class="small" onclick={() => exportPackage(item)}>Export…</button>
               <button type="button" class="small" onclick={() => edit(item)}>Change</button>
-              <button type="button" class="small danger" onclick={() => act(() => evaluationPlan.workPackagesDelete(item.uuid), "The package was deleted.")}>Delete</button>
+              <ConfirmButton onconfirm={() => act(() => evaluationPlan.workPackagesDelete(item.uuid), "The package was deleted.")} />
             </td>
           </tr>
         {/each}

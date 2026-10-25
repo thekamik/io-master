@@ -6,6 +6,8 @@
 //! `.txt`, a LaTeX output as `.tex` (the body only, for the template of the
 //! laboratory).
 
+use std::path::{Path, PathBuf};
+
 use crate::app::error::AppError;
 use crate::db::evaluation as db_evaluation;
 use crate::db::user::database::UserDb;
@@ -136,6 +138,32 @@ fn file_name(name: &str, format: OutputFormat) -> String {
     }
 }
 
+/// The most numbered names tried for a file of the report.
+const MAX_NAME_TRIES: usize = 1000;
+
+/// The path of the file `name` in `folder`, or of `name (2)`, `name (3)`,
+/// ... (before its ending) when a file of that name is there already: a
+/// report never overwrites a file (the audit of 2026-10-25).
+///
+/// Called by: `report_export` (`evaluation_lab.rs`).
+pub fn free_path(folder: &Path, name: &str) -> Result<PathBuf, AppError> {
+    let (stem, ending) = match name.rsplit_once('.') {
+        Some((stem, ending)) => (stem, format!(".{ending}")),
+        None => (name, String::new()),
+    };
+
+    for attempt in 1..=MAX_NAME_TRIES {
+        let candidate = if attempt == 1 { name.to_owned() } else { format!("{stem} ({attempt}){ending}") };
+        let path = folder.join(candidate);
+
+        if !path.exists() {
+            return Ok(path);
+        }
+    }
+
+    Err(AppError::Invalid(format!("the folder holds too many files named {name}")))
+}
+
 #[cfg(test)]
 mod tests {
     //! Unit tests of `export.rs`.
@@ -143,6 +171,7 @@ mod tests {
     use super::*;
 
     use crate::model::evaluation::{Results, Verdict};
+    use crate::test_support::TempDir;
     use crate::test_support::db::{lab_evaluation, lab_package};
     use crate::test_support::standards::database;
 
@@ -173,5 +202,16 @@ mod tests {
         db_evaluation::update::results(&test.db, "e", "t", &results).unwrap();
         assert_eq!(files(&test.db, "e").unwrap().len(), 2);
         assert_eq!(file_name("O/R: x", OutputFormat::Text), "O_R_ x.txt");
+    }
+
+    #[test]
+    fn a_file_of_the_report_never_overwrites_one() {
+        let directory = TempDir::new();
+
+        assert_eq!(free_path(directory.path(), "pETR.tex").unwrap(), directory.path().join("pETR.tex"));
+        std::fs::write(directory.path().join("pETR.tex"), "old").unwrap();
+        assert_eq!(free_path(directory.path(), "pETR.tex").unwrap(), directory.path().join("pETR (2).tex"));
+        std::fs::write(directory.path().join("pETR (2).tex"), "old").unwrap();
+        assert_eq!(free_path(directory.path(), "pETR.tex").unwrap(), directory.path().join("pETR (3).tex"));
     }
 }

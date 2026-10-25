@@ -54,6 +54,10 @@ pub enum LifecycleError {
     AlreadyInstalled,
     /// The first account could not be made.
     Account(AccountError),
+    /// The first account could not be made, and the system database made
+    /// for it could not be removed again: the next start would find an
+    /// installation without a user. Holds both errors.
+    AccountUnfinished(AccountError, DbError),
     /// A database or a file failed.
     Db(DbError),
 }
@@ -64,6 +68,10 @@ impl fmt::Display for LifecycleError {
             LifecycleError::Damaged(reason) => write!(formatter, "the installation is damaged: {reason}"),
             LifecycleError::AlreadyInstalled => formatter.write_str("the program is already installed"),
             LifecycleError::Account(error) => write!(formatter, "{error}"),
+            LifecycleError::AccountUnfinished(error, removal) => write!(
+                formatter,
+                "{error}; the started installation could not be removed ({removal}): remove the folder of IO Master by hand"
+            ),
             LifecycleError::Db(error) => write!(formatter, "{error}"),
         }
     }
@@ -137,9 +145,11 @@ pub fn install(
         Ok(created) => created,
         Err(error) => {
             drop(system_db);
-            let _ = SystemDb::remove(data_dir);
 
-            return Err(LifecycleError::Account(error));
+            return match SystemDb::remove(data_dir) {
+                Ok(()) => Err(LifecycleError::Account(error)),
+                Err(removal) => Err(LifecycleError::AccountUnfinished(error, removal)),
+            };
         }
     };
 

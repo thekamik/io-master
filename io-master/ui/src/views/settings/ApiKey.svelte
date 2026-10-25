@@ -9,6 +9,7 @@
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import * as settings from "../../lib/api/settings";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
 
   let { id }: { id: number | null } = $props();
 
@@ -82,7 +83,7 @@
     {#if key?.has_key}
       <p>
         <span class="badge success">An API key is stored</span>
-        <button type="button" class="small danger" onclick={remove}>Delete the key</button>
+        <ConfirmButton label="Delete the key" onconfirm={remove} />
       </p>
       {#if key.key_unused}
         <p class="problem">No header uses {"{{api_key}}"}, so the key is never sent.</p>

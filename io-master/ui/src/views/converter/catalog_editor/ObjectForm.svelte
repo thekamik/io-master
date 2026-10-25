@@ -14,6 +14,7 @@
   import * as catalogEditor from "../../../lib/api/converter/catalog_editor";
   import type { Place } from "../../../lib/api/converter/catalog_editor";
   import PartRows from "../../../components/part_rows/PartRows.svelte";
+  import ConfirmButton from "../../../components/confirm_button/ConfirmButton.svelte";
 
   let {
     uuid,
@@ -99,7 +100,7 @@
         {:else}
           <button type="button" class="small" onclick={() => onadd("control", { kind: "control", id })}>+ Enhancement</button>
         {/if}
-        <button type="button" class="small danger" onclick={remove}>Delete with its content</button>
+        <ConfirmButton label="Delete with its content" onconfirm={remove} />
       </div>
     </div>
     <h4>{object.title}</h4>

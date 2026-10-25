@@ -11,6 +11,7 @@
 
   import { sentence } from "../../lib/api/errors";
   import * as knowledge from "../../lib/api/knowledge";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
   import KnowledgeSearch from "./KnowledgeSearch.svelte";
 
   let { id, onclose }: { id: number; onclose: () => void } = $props();
@@ -105,7 +106,7 @@
               <td>{kinds[source.kind]}</td>
               <td>{source.passages}</td>
               <td class="actions">
-                <button type="button" class="small danger" disabled={busy !== ""} onclick={() => run("Removing…", () => knowledge.knowledgeBaseRemove(id, source.id), "The source was removed.")}>Remove</button>
+                <ConfirmButton label="Remove" disabled={busy !== ""} onconfirm={() => run("Removing…", () => knowledge.knowledgeBaseRemove(id, source.id), "The source was removed.")} />
               </td>
             </tr>
           {/each}

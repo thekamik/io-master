@@ -10,6 +10,7 @@
 
   import { sentence } from "../../lib/api/errors";
   import * as knowledge from "../../lib/api/knowledge";
+  import ConfirmButton from "../../components/confirm_button/ConfirmButton.svelte";
 
   let { onopen }: { onopen: (id: number) => void } = $props();
 
@@ -80,7 +81,7 @@
           <td>{item.passages}</td>
           <td class="actions">
             <button type="button" class="small" onclick={() => onopen(item.id)}>Open</button>
-            <button type="button" class="small danger" onclick={() => remove(item.id)}>Delete</button>
+            <ConfirmButton onconfirm={() => remove(item.id)} />
           </td>
         </tr>
       {/each}

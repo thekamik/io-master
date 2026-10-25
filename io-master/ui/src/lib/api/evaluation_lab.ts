@@ -207,8 +207,14 @@ export function evaluationListDelete(uuid: string): Promise<EvaluationSummaryVie
   return invoke("evaluation_list_delete", { uuid });
 }
 
+/** The evaluations after an import, and what the evaluator should know of it. */
+export interface ImportedView {
+  evaluations: EvaluationSummaryView[];
+  notices: string[];
+}
+
 /** Called by EvaluationList.svelte, "Import a work package…"; null when no file was chosen. */
-export function packageImportImport(form: ImportForm): Promise<EvaluationSummaryView[] | null> {
+export function packageImportImport(form: ImportForm): Promise<ImportedView | null> {
   return invoke("package_import_import", { form });
 }
 

@@ -48,7 +48,7 @@ The whole code is gone through once, module by module, so that it matches `archi
 
 **Functional hardening (candidates, settled in the concept of each module)**
 - [ ] Login: a limit on failed attempts, without telling which names exist; a delay after a failure.
-- [ ] The data directory: permissions (`0700`, files `0600`) checked at the start; a clear message when they are wider or the owner differs.
+- [x] The data directory: permissions (`0700`, files `0600`) checked whenever the window reads the state of the program; a red bar with the command that corrects them when they are wider or the owner differs (`installation/permissions.rs`, the audit of 2026-10-25).
 - [ ] Databases: behaviour on a full disk, a damaged file, a database locked by a second running program (one program per data directory).
 - [ ] The limits of the inputs from files (a work package, a document of OSCAL, a PDF, evidence) measured on real documents of the laboratories.
 
@@ -130,6 +130,8 @@ proving ground: a question ──► passages with scores ──► answer, quot
 ---
 
 ## Reminders without a step yet
+
+- **The security audit of 2026-10-25** (user's decisions): corrected the import of a work package (all or nothing, a catalog kept in its stored version is told), the report (a file of the same name is never overwritten: "pETR (2).tex"), the recovery code sent to the page without a lasting copy (passwords, codes and API keys were already wiped in Rust; the page clears its fields), the permissions of the data directory, a question before every deletion that cannot be undone, the failed removal after a failed first account reported. Ignored by the user: bounds of the parameters of Argon2 stored in the system database, the timing of a login with an unknown name, a limit of failed logins. The instructions in a work package or a file of an agent from outside go to the AI: the operator checks the files received.
 
 - **The Evaluation lab:** other forms of evidence (images, office documents, archives); the import of a new version of a work package into an evaluation begun.
 - **The Evaluation plan:** a manual addition of a related element (from the browser of the standards), besides the AI.
