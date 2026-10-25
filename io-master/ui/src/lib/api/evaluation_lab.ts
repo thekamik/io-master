@@ -36,6 +36,23 @@ export interface LabTaskView {
   label: string;
   title: string;
   state: TaskState;
+  /** How far it is (step 59): its verdict, accepted fragments, outputs due and ready. */
+  verdict: Verdict | null;
+  fragments: number;
+  outputs_due: number;
+  outputs_ready: number;
+}
+
+/** The progress of the whole evaluation (step 59). */
+export interface ProgressView {
+  tasks: number;
+  done: number;
+  met: number;
+  not_met: number;
+  inconclusive: number;
+  no_verdict: number;
+  outputs_due: number;
+  outputs_ready: number;
 }
 
 export interface EvaluationView {
@@ -48,6 +65,16 @@ export interface EvaluationView {
   product: string;
   product_version: string;
   tasks: LabTaskView[];
+  progress: ProgressView;
+  /** The agent with knowledge of the evaluation (step 57.4); null: none. */
+  agent: number | null;
+  agents: AgentOptionView[];
+}
+
+/** An agent with knowledge that may be chosen. */
+export interface AgentOptionView {
+  id: number;
+  name: string;
 }
 
 // lab_task/view.rs
@@ -127,6 +154,26 @@ export interface LabTaskScreenView {
   proposal: { results: ResultsForm; reason: string } | null;
   outputs: OutputView[];
   result_titles: string[];
+  knowledge: KnowledgeView;
+}
+
+/** A passage of the knowledge of the agent of a task; chosen: it goes into the question. */
+export interface ContextPassageView {
+  id: number;
+  source: string;
+  page: number | null;
+  label: string;
+  text: string;
+  chosen: boolean;
+}
+
+/** The agent with knowledge of a task: how it is chosen, the one in force, its passages. */
+export interface KnowledgeView {
+  choice: "evaluation" | "none" | "agent";
+  agent: number | null;
+  used: string | null;
+  agents: AgentOptionView[];
+  passages: ContextPassageView[];
 }
 
 // fragments/view.rs
@@ -173,6 +220,11 @@ export function labTasksGet(evaluation: string): Promise<EvaluationView> {
 /** Called by EvaluationScreen.svelte, the state of a task. */
 export function labTasksState(evaluation: string, task: string, progress: TaskState): Promise<EvaluationView> {
   return invoke("lab_tasks_state", { evaluation, task, progress });
+}
+
+/** Called by EvaluationScreen.svelte, the agent with knowledge of the evaluation. */
+export function labTasksAgent(evaluation: string, agent: number | null): Promise<EvaluationView> {
+  return invoke("lab_tasks_agent", { evaluation, agent });
 }
 
 /** Called by LabTask.svelte, when a task opens. */
@@ -248,6 +300,21 @@ export function assessmentReject(evaluation: string, task: string): Promise<LabT
 /** Called by RequirementPanel.svelte, "Save". */
 export function assessmentSave(evaluation: string, task: string, results: ResultsForm): Promise<LabTaskScreenView> {
   return invoke("assessment_save", { evaluation, task, results });
+}
+
+/** Called by RequirementPanel.svelte, the agent with knowledge of the task. */
+export function assessmentAgent(
+  evaluation: string,
+  task: string,
+  choice: KnowledgeView["choice"],
+  agent: number | null,
+): Promise<LabTaskScreenView> {
+  return invoke("assessment_agent", { evaluation, task, choice, agent });
+}
+
+/** Called by RequirementPanel.svelte, the box of a passage of the agent. */
+export function assessmentContext(evaluation: string, task: string, passage: number, chosen: boolean): Promise<LabTaskScreenView> {
+  return invoke("assessment_context", { evaluation, task, passage, chosen });
 }
 
 /** Called by OutputPanel.svelte, "Draft with AI"; the events go to `onEvent`. */

@@ -18,12 +18,15 @@ use crate::app::state::AppState;
 use crate::components::ai_work::view::AiEvent;
 use crate::db::conversion as db_conversion;
 use crate::db::evaluation_project as db_evaluation_project;
+use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
+use crate::model::knowledge::AgentPlace;
+use crate::model::text::safe_file_name;
 
 use super::oscal_documents::dialog::{choose_file, choose_place};
-use super::oscal_documents::file::{self, read_file, safe_name};
+use super::oscal_documents::file::{self, read_file};
 use crate::model::ai::{INSTRUCTIONS_MAX, Task};
 use crate::model::evaluation_project::{self, EvaluationTask};
 use crate::model::oscal::catalog::Catalog;
@@ -162,7 +165,7 @@ pub async fn oscal_documents_import<R: Runtime>(
 ///
 /// Called by the page: `OscalDocuments.svelte`, "Export"
 /// (`evaluation_plan.oscalDocumentsExport(...)`).
-/// Calls: `file::export`, `safe_name`, `choose_place` (the dialog),
+/// Calls: `file::export`, `safe_file_name`, `choose_place` (the dialog),
 /// `tokio::fs::write`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
@@ -176,7 +179,7 @@ pub async fn oscal_documents_export<R: Runtime>(
     let session = state.session()?;
     let text = file::export(&session.db(), &uuid)?;
 
-    let Some(path) = choose_place(app, "Export the OSCAL document", safe_name(&file_name)).await? else {
+    let Some(path) = choose_place(app, "Export the OSCAL document", safe_file_name(&file_name, "oscal")).await? else {
         return Ok(false);
     };
 
@@ -300,6 +303,31 @@ pub fn project_form_save(
     }
 
     db_evaluation_project::update::project(&db, &uuid, &fields, &project.catalogs)?;
+
+    project_view_of(&db, &uuid)
+}
+
+/// Chooses the agent with knowledge of project `uuid` (none: `None`): every
+/// work of the AI of the project (the proposals of tasks, schemes and
+/// related elements) gets the passages it finds (step 57.6).
+///
+/// Called by the page: `ProjectForm.svelte`, the choice of the agent
+/// (`evaluationPlan.projectFormAgent(uuid, agent)`).
+/// Calls: [`project_view_of`], `db_knowledge::update::attachment`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn project_form_agent(
+    state: State<'_, AppState>,
+    uuid: String,
+    agent: Option<i64>,
+) -> Result<ProjectView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    project_view_of(&db, &uuid)?;
+    db_knowledge::update::attachment(&db, AgentPlace::Project, &uuid, agent)
+        .map_err(|_| AppError::Invalid("the agent does not exist".to_owned()))?;
 
     project_view_of(&db, &uuid)
 }
@@ -942,7 +970,7 @@ pub fn work_packages_delete(state: State<'_, AppState>, package: String) -> Resu
 ///
 /// Called by the page: `WorkPackages.svelte`, "Export…"
 /// (`evaluationPlan.workPackagesExport(package)`).
-/// Calls: `package_export::file_text`, `choose_place`, `safe_name`.
+/// Calls: `package_export::file_text`, `choose_place`, `safe_file_name`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command]
@@ -954,7 +982,8 @@ pub async fn work_packages_export<R: Runtime>(
     let session = state.session()?;
     let (name, text) = package_export::file_text(&session.db(), &package)?;
 
-    let Some(path) = choose_place(app, "Export the work package", format!("{}.iomaster", safe_name(&name))).await?
+    let Some(path) =
+        choose_place(app, "Export the work package", format!("{}.iomaster", safe_file_name(&name, "package"))).await?
     else {
         return Ok(false);
     };
@@ -1444,6 +1473,7 @@ fn project_view_of(db: &UserDb, uuid: &str) -> Result<ProjectView, AppError> {
         description: project.fields.description,
         catalogs: chosen,
         available,
+        agent: db_knowledge::read::attachment(db, AgentPlace::Project, uuid)?,
     })
 }
 
@@ -2015,5 +2045,25 @@ mod tests {
 
         assert_eq!(window.call("work_packages_delete", json!({ "package": made[0]["uuid"] })).unwrap(), json!([]));
         assert_eq!(window.call("work_packages_delete", json!({ "package": "none" })).unwrap_err()["kind"], "invalid");
+    }
+
+    #[test]
+    fn a_project_keeps_the_agent_with_knowledge_of_its_works() {
+        let window = logged_in_window();
+        let project = {
+            let session = window.session();
+            let fields =
+                crate::model::evaluation_project::ProjectFields { title: "P".to_owned(), description: String::new() };
+            crate::db::evaluation_project::create::project(&session.db(), "p", &fields, &[]).unwrap();
+            crate::test_support::db::knowledge_agent(&session.db(), "Roles.")
+        };
+
+        let view = window.call("project_form_agent", json!({ "uuid": "p", "agent": project })).unwrap();
+        assert_eq!(view["agent"], project);
+        assert_eq!(window.call("project_form_get", json!({ "uuid": "p" })).unwrap()["agent"], project);
+        assert_eq!(
+            window.call("project_form_agent", json!({ "uuid": "p", "agent": 99 })).unwrap_err()["kind"],
+            "invalid"
+        );
     }
 }

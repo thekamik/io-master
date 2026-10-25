@@ -39,6 +39,19 @@ pub async fn ready(service: &FakeService) -> TestState {
     test
 }
 
+/// The text of the passage of the knowledge base of [`with_agent`].
+pub const PASSAGE: &str = "Information security roles shall be defined and allocated by the management.";
+
+/// An agent with knowledge (a base with one passage on roles,
+/// `test_support/db.rs`) made the agent of the evaluation "e"; gives its id
+/// (step 57.6).
+pub fn with_agent(db: &crate::db::user::database::UserDb) -> i64 {
+    let agent = crate::test_support::db::knowledge_agent(db, PASSAGE);
+    db_evaluation::update::agent(db, "e", Some(agent)).unwrap();
+
+    agent
+}
+
 /// A channel that collects the events it gets, as JSON.
 pub fn collector() -> (Arc<Mutex<Vec<Value>>>, Channel<AiEvent>) {
     let events = Arc::new(Mutex::new(Vec::new()));

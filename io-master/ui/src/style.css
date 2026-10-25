@@ -15,7 +15,8 @@
      6. the frame (bars, sidebar, page head)
                          12. create evaluation scheme
                          13. the editor of a catalog
-                         14. the Evaluation lab */
+                         14. the Evaluation lab
+                         15. the view Knowledge (RAG) */
 
 /* The sheets, in the order of the cascade (step 40 of docs/history.md):
    one file per part of the window. */
@@ -32,3 +33,4 @@
 @import "./styles/12-schemes.css";
 @import "./styles/13-catalogs.css";
 @import "./styles/14-lab.css";
+@import "./styles/15-knowledge.css";

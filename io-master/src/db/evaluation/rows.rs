@@ -5,7 +5,7 @@ use crate::db::error::{Corrupt, DbError};
 use crate::model::ai::{Speaker, Turn};
 use crate::model::evaluation::{
     Evaluation, EvaluationFields, EvaluationSummary, Evidence, EvidenceKind, Fragment, LabTask, OutputText, Related,
-    Results, TaskState, Verdict,
+    Results, TaskProgress, TaskState, Verdict,
 };
 use crate::model::task_scheme::{Block, BlockFields, BlockKind, Connection, OutputCondition, OutputFormat};
 
@@ -225,4 +225,38 @@ pub(super) fn results(row: &rusqlite::Row<'_>, table: &'static str) -> Result<Re
 /// Called by: `read::output`.
 pub(super) fn output(row: &rusqlite::Row<'_>) -> Result<OutputText, DbError> {
     Ok(OutputText { block: row.get("block_uuid")?, text: row.get("text")?, proposal: row.get("proposal")? })
+}
+
+/// A task with its verdict and the number of its accepted fragments; its
+/// outputs are added by `read::progress`.
+///
+/// Called by: `read::progress`.
+pub(super) fn progress(row: &rusqlite::Row<'_>) -> Result<TaskProgress, DbError> {
+    let verdict: Option<String> = row.get("verdict")?;
+    let verdict = match verdict {
+        Some(name) => match Verdict::from_name(&name) {
+            Some(verdict) => Some(verdict),
+            None => return Err(corrupt("lab_results", "verdict", name)),
+        },
+        None => None,
+    };
+
+    Ok(TaskProgress {
+        task: row.get("task")?,
+        verdict,
+        accepted_fragments: count(row, "fragments")?,
+        outputs: Vec::new(),
+    })
+}
+
+/// An output block of a task: the task, its condition, whether its text is accepted.
+///
+/// Called by: `read::progress`.
+pub(super) fn output_state(row: &rusqlite::Row<'_>) -> Result<(String, OutputCondition, bool), DbError> {
+    let condition: String = row.get("condition")?;
+    let Some(known) = OutputCondition::from_name(&condition) else {
+        return Err(corrupt("lab_blocks", "condition", condition));
+    };
+
+    Ok((row.get("task")?, known, row.get("ready")?))
 }

@@ -63,4 +63,6 @@ pub struct WizardView {
     pub contents: Option<PagesView>,
     pub groups: Vec<GroupView>,
     pub review: ReviewView,
+    /// The agent with knowledge of the works of the AI of the catalog (step 57.6); `None`: none.
+    pub agent: Option<i64>,
 }

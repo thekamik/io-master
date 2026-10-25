@@ -1,6 +1,7 @@
 //! The entry of the view Settings: the settings of the program: the
-//! connections to AI services and their API keys (tab AI), and what the
-//! installation is (tab Program, which shows the state of the program the
+//! connections to AI services and their API keys (tab AI), the journal of
+//! the AI, read only (tab AI journal, step 58), and what the installation
+//! is (tab Program, which shows the state of the program the
 //! frame has read: no command of its own); the settings of the user, the
 //! account and the encryption, are in `views/users/` (page:
 //! `ui/src/views/settings/`, its commands in `ui/src/lib/api/settings.ts`).
@@ -17,10 +18,12 @@ use crate::ai::api::{checks, connections};
 use crate::ai::presets::{self, field_help};
 use crate::app::error::AppError;
 use crate::app::state::AppState;
+use crate::db::ai::journal::read as journal;
 use crate::db::user::database::UserDb;
 use crate::model::ai::Field;
 use crate::model::api_key::ApiKey;
 
+use super::ai_journal::view::{self as journal_view, JournalEntryView, JournalPageView};
 use super::api_key::view::ApiKeyView;
 use super::connection_check::view::CheckView;
 use super::connection_form::view::{ConnectionForm, ConnectionView, NewConnectionView, SavedView};
@@ -273,6 +276,59 @@ fn no_such_connection() -> AppError {
     AppError::Invalid("the connection does not exist".to_owned())
 }
 
+// ── The journal of the AI ─────────────────────────────────────────────
+
+/// The longest words looked for in the journal, in characters.
+const JOURNAL_TEXT_MAX: usize = 200;
+
+/// The most pages of the journal that can be asked for.
+const MAX_JOURNAL_PAGE: usize = 100_000;
+
+/// Page `page` of the journal of the AI, the newest entry first: of task
+/// `task` (all: `None`), holding `text` in its request or answer (any case).
+///
+/// Called by the page: `AiJournal.svelte`, when the tab opens and after a
+/// change of the filter or of the page (`settings.aiJournalGet(task, text, page)`).
+/// Calls: `journal::summaries`, `journal::tasks`, `journal_view::page`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn ai_journal_get(
+    state: State<'_, AppState>,
+    task: Option<String>,
+    text: String,
+    page: usize,
+) -> Result<JournalPageView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    ensure!(
+        text.chars().count() <= JOURNAL_TEXT_MAX,
+        AppError::Invalid(format!("the words are at most {JOURNAL_TEXT_MAX} characters"))
+    );
+    ensure!(page <= MAX_JOURNAL_PAGE, AppError::Invalid("there is no such page".to_owned()));
+
+    let (summaries, total) = journal::summaries(&db, task.as_deref(), text.trim(), page)?;
+
+    Ok(journal_view::page(summaries, total, page, journal::tasks(&db)?))
+}
+
+/// Entry `id` of the journal whole: what was sent and what came back.
+///
+/// Called by the page: `AiJournal.svelte`, "Open" of an entry (`settings.aiJournalEntry(id)`).
+/// Calls: `journal::entry`, `journal_view::entry`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn ai_journal_entry(state: State<'_, AppState>, id: i64) -> Result<JournalEntryView, AppError> {
+    let session = state.session()?;
+
+    match journal::entry(&session.db(), id)? {
+        Some(entry) => Ok(journal_view::entry(entry)),
+        None => Err(AppError::Invalid("the entry does not exist".to_owned())),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of the commands of the view Settings, called as the page calls
@@ -503,5 +559,33 @@ mod tests {
         assert_eq!(report["works"], false);
         assert!(report["outcome"].as_str().unwrap().contains("API key"), "{}", report["outcome"]);
         assert!(service.received().is_empty());
+    }
+
+    #[test]
+    fn the_journal_is_listed_filtered_and_an_entry_opened_whole() {
+        let window = crate::views::test_support::logged_in_window();
+        {
+            let session = window.session();
+            let mut entry = crate::test_support::db::journal_entry("assessment");
+            entry.request = r#"{"messages":[{"role":"user","content":"Assess FCS_CKM.1."}]}"#.to_owned();
+            crate::db::ai::journal::create::entry(&session.db(), &entry).unwrap();
+            crate::db::ai::journal::create::entry(&session.db(), &crate::test_support::db::journal_entry("chat"))
+                .unwrap();
+        }
+
+        let page = window.call("ai_journal_get", json!({ "task": null, "text": "", "page": 0 })).unwrap();
+        assert_eq!((page["total"].clone(), page["rows"][0]["task"].clone()), (json!(2), json!("chat")));
+        assert_eq!(page["tasks"], json!(["assessment", "chat"]));
+
+        let found =
+            window.call("ai_journal_get", json!({ "task": "assessment", "text": "fcs_ckm", "page": 0 })).unwrap();
+        assert_eq!(found["total"], 1);
+
+        let id = found["rows"][0]["id"].clone();
+        let entry = window.call("ai_journal_entry", json!({ "id": id })).unwrap();
+        assert!(entry["request"].as_str().unwrap().contains("\n"), "the JSON of the request is indented");
+        assert_eq!(window.call("ai_journal_entry", json!({ "id": 999 })).unwrap_err()["kind"], "invalid");
+        let long = json!({ "task": null, "text": "x".repeat(201), "page": 0 });
+        assert_eq!(window.call("ai_journal_get", long).unwrap_err()["kind"], "invalid");
     }
 }

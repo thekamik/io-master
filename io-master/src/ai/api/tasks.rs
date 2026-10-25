@@ -14,6 +14,7 @@
 //! evidence_fragments text_analysis  ai/tasks/evidence_fragments.rs (the quotes of the evidence that matter)
 //! assessment        formal_analysis ai/tasks/assessment.rs (the four results and a verdict proposed)
 //! output_draft      summary         ai/tasks/output_draft.rs (the text of an output from the results)
+//! knowledge_answer  consultation    ai/tasks/knowledge_answer.rs (an agent answers from its passages)
 //! chat              consultation    none here: the system prompt of the connection
 //! check             none            none: the check of a connection (checks.rs)
 //! ```
@@ -24,8 +25,8 @@
 //! ```
 
 use crate::ai::tasks::{
-    assessment, catalog_contents, catalog_outline, catalog_section, evidence_fragments, input_chat, output_draft,
-    related_elements, requirement_choice, task_scheme,
+    assessment, catalog_contents, catalog_outline, catalog_section, evidence_fragments, input_chat, knowledge_answer,
+    output_draft, related_elements, requirement_choice, task_scheme,
 };
 use crate::db::ai::instructions as db_instructions;
 use crate::db::error::DbError;
@@ -47,6 +48,7 @@ pub fn default_instructions(task: Task) -> Option<&'static str> {
         Task::EvidenceFragments => Some(evidence_fragments::DEFAULT_INSTRUCTIONS),
         Task::Assessment => Some(assessment::DEFAULT_INSTRUCTIONS),
         Task::OutputDraft => Some(output_draft::DEFAULT_INSTRUCTIONS),
+        Task::KnowledgeAnswer => Some(knowledge_answer::DEFAULT_INSTRUCTIONS),
         Task::Chat | Task::Check => None,
     }
 }

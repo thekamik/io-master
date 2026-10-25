@@ -164,3 +164,13 @@ button.help:hover:not(:disabled) {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
 }
+
+/* The filter of the journal of the AI (step 58): the task, the words in
+   the rest of the line, the button. */
+.journal-filter select {
+    width: auto;
+}
+
+.journal-filter input {
+    flex: 1;
+}

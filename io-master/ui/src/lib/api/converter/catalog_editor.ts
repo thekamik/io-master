@@ -92,6 +92,8 @@ export interface WizardView {
   contents: PagesView | null;
   groups: WizardGroupView[];
   review: { proposals: number; quotes_not_found: number; groups_without_controls: number };
+  /** The agent with knowledge of the works of the AI of the catalog (step 57.6); null: none. */
+  agent: number | null;
 }
 
 // object_form/view.rs
@@ -196,6 +198,11 @@ export function aiBuilderControls(
 /** Called by ConversionWizard.svelte, when the editor opens and after a change. */
 export function conversionWizardGet(uuid: string): Promise<WizardView> {
   return invoke("conversion_wizard_get", { uuid });
+}
+
+/** Called by ConversionWizard.svelte, the agent with knowledge of the catalog. */
+export function conversionWizardAgent(uuid: string, agent: number | null): Promise<WizardView> {
+  return invoke("conversion_wizard_agent", { uuid, agent });
 }
 
 /** The AI finds the pages of the table of contents. Called by ConversionWizard.svelte, "Find it with the AI". */

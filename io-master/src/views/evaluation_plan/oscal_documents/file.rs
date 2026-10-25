@@ -83,25 +83,6 @@ pub async fn read_file(path: PathBuf) -> Result<String, AppError> {
     }
 }
 
-/// A name for a file proposed from the title of a document: letters,
-/// digits, `-`, `_`, `.` and spaces kept, everything else `_`; at most
-/// 100 characters.
-///
-/// Called by: `oscal_documents_export` (`evaluation_plan.rs`).
-pub fn safe_name(title: &str) -> String {
-    let mut name = String::new();
-
-    for character in title.trim().chars().take(100) {
-        if character.is_alphanumeric() || "-_ .".contains(character) {
-            name.push(character);
-        } else {
-            name.push('_');
-        }
-    }
-
-    if name.is_empty() { "oscal".to_owned() } else { name }
-}
-
 #[cfg(test)]
 mod tests {
     //! Unit tests of `file.rs`, on the examples of NIST.
@@ -148,8 +129,6 @@ mod tests {
 
     #[test]
     fn a_name_for_a_file_keeps_only_safe_characters() {
-        assert_eq!(safe_name(" CC Part 2: SFR / v1.0 "), "CC Part 2_ SFR _ v1.0");
-        assert_eq!(safe_name("../../etc"), ".._.._etc");
-        assert_eq!(safe_name("   "), "oscal");
+        assert_eq!(crate::model::text::safe_file_name(" CC Part 2: SFR / v1.0 ", "oscal"), "CC Part 2_ SFR _ v1.0");
     }
 }

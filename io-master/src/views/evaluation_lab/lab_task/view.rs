@@ -2,7 +2,8 @@
 //! and sends it: the scheme (read only), the requirement as its catalog
 //! writes it, the related elements, every input with its evidence, chat and
 //! fragments, the results with what the AI proposed, every output with its
-//! text and whether its condition holds.
+//! text and whether its condition holds; the agent with knowledge of the
+//! task and its passages (step 57.4).
 
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +12,8 @@ use crate::components::part_rows::view::PartRowView;
 use crate::model::ai::{Speaker, Turn};
 use crate::model::evaluation::{Evidence, Fragment, Results, Verdict};
 use crate::model::task_scheme::Block;
+
+use crate::components::knowledge_agent::view::AgentOptionView;
 
 /// A block of the scheme.
 #[derive(Debug, Serialize)]
@@ -208,6 +211,30 @@ pub struct OutputView {
     pub applies: bool,
 }
 
+/// A passage of the knowledge of the agent of a task, ticked when it goes
+/// into the question of the assessment (step 57.4).
+#[derive(Debug, Serialize)]
+pub struct ContextPassageView {
+    pub id: i64,
+    pub source: String,
+    pub page: Option<u32>,
+    pub label: String,
+    pub text: String,
+    pub chosen: bool,
+}
+
+/// The agent with knowledge of a task: how it is chosen (`"evaluation"`,
+/// `"none"`, `"agent"`), the agent of the task's own, the name of the agent
+/// in force, the agents to choose, and its passages.
+#[derive(Debug, Serialize)]
+pub struct KnowledgeView {
+    pub choice: &'static str,
+    pub agent: Option<i64>,
+    pub used: Option<String>,
+    pub agents: Vec<AgentOptionView>,
+    pub passages: Vec<ContextPassageView>,
+}
+
 /// The screen of a task.
 #[derive(Debug, Serialize)]
 pub struct LabTaskScreenView {
@@ -224,4 +251,5 @@ pub struct LabTaskScreenView {
     pub outputs: Vec<OutputView>,
     /// The titles of the four results.
     pub result_titles: [&'static str; 4],
+    pub knowledge: KnowledgeView,
 }

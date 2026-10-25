@@ -159,3 +159,17 @@ label.choice {
     align-items: center;
     gap: 0.5rem;
 }
+
+/* A label and its choice in one line (the agent with knowledge of a work of
+   the AI, step 57.6). */
+.inline-choice {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 400;
+    margin: 0.4rem 0;
+}
+
+.inline-choice select {
+    width: auto;
+}

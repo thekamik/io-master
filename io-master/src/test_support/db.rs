@@ -179,3 +179,22 @@ pub fn lab_evaluation(package: &Package) -> Evaluation {
         fields: EvaluationFields { product: "Reader".to_owned(), product_version: "2.0".to_owned() },
     }
 }
+
+/// An agent with knowledge named "ISO agent" whose one base holds one
+/// passage, `text` (page 7 of "ISO 27002"); gives its id (step 57.6).
+pub fn knowledge_agent(db: &UserDb, text: &str) -> i64 {
+    let base = crate::db::knowledge::create::base(db, "ISO", "").unwrap();
+    let passage = crate::model::knowledge::Passage { page: Some(7), label: String::new(), text: text.to_owned() };
+    let kind = crate::model::knowledge::SourceKind::Pdf;
+    crate::db::knowledge::create::source(db, base, kind, "ISO 27002", &[passage]).unwrap();
+    let fields = crate::model::knowledge::AgentFields {
+        name: "ISO agent".to_owned(),
+        instructions: "You know ISO 27002.".to_owned(),
+        glossary: String::new(),
+        passages: 4,
+        characters: 4000,
+        bases: vec![base],
+    };
+
+    crate::db::knowledge::create::agent(db, &fields).unwrap()
+}

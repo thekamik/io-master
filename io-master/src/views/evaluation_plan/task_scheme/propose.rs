@@ -12,14 +12,18 @@ use tokio::sync::watch;
 
 use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
+use crate::ai::tasks::candidates::requirement_text;
+use crate::ai::tasks::knowledge_context;
 use crate::ai::tasks::task_scheme as scheme_question;
 use crate::app::error::AppError;
+use crate::components::knowledge_agent::find;
 use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::Task;
+use crate::model::knowledge::AgentPlace;
 use crate::model::task_scheme::{self, Block, BlockKind};
 use crate::model::text::Invalid;
 
@@ -67,7 +71,8 @@ pub async fn propose(
 /// Called by: [`propose`].
 /// Calls: `db_evaluation_project::delete::proposals`, `read::task`,
 /// `read::project`, `read::blocks`, `db_oscal::read::catalog`, `roles::model`,
-/// `tasks::instructions`, `scheme_question::prompt`.
+/// `tasks::instructions`, `scheme_question::prompt`, `find::attached_context` (the
+/// context of the agent of the project, step 57.6), `knowledge_context::appended`.
 fn question(db: &UserDb, task: &str) -> Result<(Model, String, Vec<Block>), AppError> {
     let Some((project, found)) = db_evaluation_project::read::task(db, task)? else {
         return Err(AppError::Invalid("the task does not exist".to_owned()));
@@ -92,6 +97,9 @@ fn question(db: &UserDb, task: &str) -> Result<(Model, String, Vec<Block>), AppE
     let instructions = tasks::instructions(db, Task::Scheme)?.unwrap_or_default();
     let text = scheme_question::prompt(&instructions, label, control, &project.fields.description, &blocks)
         .map_err(AppError::Invalid)?;
+    let words = requirement_text(label, control).map_err(AppError::Invalid)?;
+    let context = find::attached_context(db, AgentPlace::Project, &project.uuid, &words)?;
+    let text = knowledge_context::appended(text, &context);
 
     Ok((roles::model(db)?, text, blocks))
 }
@@ -287,6 +295,22 @@ mod tests {
         assert_eq!(crate::db::ai::journal::read::last(&db, 5).unwrap()[0].task, "task_scheme");
         let asked = service.received()[0].body.to_string();
         assert!(asked.contains("A smart card."));
+    }
+
+    #[tokio::test]
+    async fn the_agent_of_the_project_adds_its_passages() {
+        let service = FakeService::start(FakeAnswer::Stream(completions_events(&[&answer()]))).await;
+        let (test, task) = ready(&service).await;
+        let session = test.state.session().unwrap();
+        let text = "Information security roles and responsibilities are allocated by the management.";
+        let agent = crate::test_support::db::knowledge_agent(&session.db(), text);
+        crate::db::knowledge::update::attachment(&session.db(), AgentPlace::Project, "p", Some(agent)).unwrap();
+        let (_, channel) = collector();
+
+        propose(&session, &task, &test.state.start_work(), &channel).await.unwrap();
+
+        let asked = service.received()[0].body.to_string();
+        assert!(asked.contains("The context of the standard") && asked.contains(text));
     }
 
     #[tokio::test]

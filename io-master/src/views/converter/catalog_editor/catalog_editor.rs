@@ -19,11 +19,13 @@ use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::db::conversion as db_conversion;
 use crate::db::evaluation_support as db_evaluation_support;
+use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
 use crate::db::standards as db_standards;
 use crate::model::ai::Task;
 use crate::model::conversion::{GroupState, Stage};
+use crate::model::knowledge::AgentPlace;
 use crate::model::oscal::catalog::{Control, Group};
 
 use super::ai_builder::view::{self as builder_view, BuildEvent, PageRange, SourceView};
@@ -560,6 +562,30 @@ pub fn conversion_wizard_group_state(
     progress::read(&db, &uuid)
 }
 
+/// Chooses the agent with knowledge of catalog `uuid` (none: `None`): the
+/// proposals of its groups and controls get the passages it finds (step 57.6).
+///
+/// Called by the page: `ConversionWizard.svelte`, the choice of the agent
+/// (`catalogEditor.conversionWizardAgent(uuid, agent)`).
+/// Calls: `db_knowledge::update::attachment`, `progress::read`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn conversion_wizard_agent(
+    state: State<'_, AppState>,
+    uuid: String,
+    agent: Option<i64>,
+) -> Result<WizardView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+
+    progress::read(&db, &uuid)?;
+    db_knowledge::update::attachment(&db, AgentPlace::Catalog, &uuid, agent)
+        .map_err(|_| AppError::Invalid("the agent does not exist".to_owned()))?;
+
+    progress::read(&db, &uuid)
+}
+
 /// Stops the work of the AI, if one runs.
 ///
 /// Called by the page: `AiBuilder.svelte`, "Stop" (`catalogEditor.aiBuilderStop()`).
@@ -939,5 +965,19 @@ mod tests {
         assert_eq!(window.call("conversion_wizard_get", json!({ "uuid": uuid })).unwrap()["stage"], "finished");
         let error = window.call("conversion_wizard_stage", json!({ "uuid": uuid, "stage": "groups" })).unwrap_err();
         assert_eq!(error["kind"], "invalid");
+    }
+
+    #[test]
+    fn a_catalog_keeps_the_agent_with_knowledge_of_its_conversion() {
+        let (window, uuid, _) = with_catalog();
+        let agent = crate::test_support::db::knowledge_agent(&window.session().db(), "Roles.");
+
+        let wizard = window.call("conversion_wizard_agent", json!({ "uuid": uuid, "agent": agent })).unwrap();
+        assert_eq!(wizard["agent"], agent);
+
+        let wrong = window.call("conversion_wizard_agent", json!({ "uuid": uuid, "agent": 99 })).unwrap_err();
+        assert_eq!(wrong["kind"], "invalid");
+        let none = window.call("conversion_wizard_agent", json!({ "uuid": uuid, "agent": null })).unwrap();
+        assert_eq!(none["agent"], json!(null));
     }
 }

@@ -4,7 +4,10 @@ use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
 /// The tables that hold the rows of an evaluation, the evaluation itself last.
-const TABLES: [&str; 11] = [
+const TABLES: [&str; 14] = [
+    "lab_context_excluded",
+    "lab_task_agents",
+    "lab_agents",
     "lab_outputs",
     "lab_result_proposals",
     "lab_results",

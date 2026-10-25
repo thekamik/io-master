@@ -36,6 +36,8 @@ export interface ChatView {
   id: number;
   title: string;
   messages: MessageView[];
+  /** The agent with knowledge of the chat (step 57.6); null: none. */
+  agent: number | null;
 }
 
 /** An event of a reply being written. */
@@ -74,11 +76,12 @@ export function conversationOpen(chatId: number): Promise<ChatView> {
 export function conversationSend(
   chatId: number | null,
   text: string,
+  agent: number | null,
   onEvent: (event: ReplyEvent) => void,
 ): Promise<void> {
   const channel = new Channel<ReplyEvent>();
   channel.onmessage = onEvent;
-  return invoke("conversation_send", { chatId, text, onEvent: channel });
+  return invoke("conversation_send", { chatId, text, agent, onEvent: channel });
 }
 
 /** Stops the reply being written. Called by Conversation.svelte, "Stop". */

@@ -1,7 +1,8 @@
 //! An entry of the journal of the AI and its row.
 
-#[cfg(test)]
 use rusqlite::Row;
+
+use crate::db::error::{Corrupt, DbError};
 
 /// One question to the AI and its answer, as the journal keeps them.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,26 +33,63 @@ pub struct Entry {
     pub output_tokens: u64,
 }
 
-/// The columns of an entry, in the order of [`entry_from_row`]; used by
-/// the tests only (`read::last`).
-#[cfg(test)]
-pub(super) const COLUMNS: &str =
-    "id, time, task, role, connection, model, request, answer, ending, note, input_tokens, output_tokens";
+/// An entry as a row of the list of the journal (step 58): all but the
+/// request and the answer, which are read when the entry is opened.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct EntrySummary {
+    pub id: i64,
+    pub time: i64,
+    pub task: String,
+    pub role: String,
+    pub connection: String,
+    pub model: String,
+    pub ending: String,
+    pub input_tokens: u64,
+    pub output_tokens: u64,
+}
 
-#[cfg(test)]
-pub(super) fn entry_from_row(row: &Row<'_>) -> rusqlite::Result<Entry> {
+/// The tokens of column `column`; a negative number, which the program
+/// never writes, is corrupt.
+fn tokens(row: &Row<'_>, column: &'static str) -> Result<u64, DbError> {
+    let value: i64 = row.get(column)?;
+
+    u64::try_from(value)
+        .map_err(|_| DbError::Corrupt(Corrupt { table: "ai_journal", column, value: value.to_string() }))
+}
+
+/// A whole row of `ai_journal`.
+///
+/// Called by: `read::entry`, `read::last` (the tests).
+pub(super) fn entry(row: &Row<'_>) -> Result<Entry, DbError> {
     Ok(Entry {
-        id: row.get(0)?,
-        time: row.get(1)?,
-        task: row.get(2)?,
-        role: row.get(3)?,
-        connection: row.get(4)?,
-        model: row.get(5)?,
-        request: row.get(6)?,
-        answer: row.get(7)?,
-        ending: row.get(8)?,
-        note: row.get(9)?,
-        input_tokens: row.get::<_, i64>(10)? as u64,
-        output_tokens: row.get::<_, i64>(11)? as u64,
+        id: row.get("id")?,
+        time: row.get("time")?,
+        task: row.get("task")?,
+        role: row.get("role")?,
+        connection: row.get("connection")?,
+        model: row.get("model")?,
+        request: row.get("request")?,
+        answer: row.get("answer")?,
+        ending: row.get("ending")?,
+        note: row.get("note")?,
+        input_tokens: tokens(row, "input_tokens")?,
+        output_tokens: tokens(row, "output_tokens")?,
+    })
+}
+
+/// A row of `ai_journal` without its request and answer.
+///
+/// Called by: `read::summaries`.
+pub(super) fn summary(row: &Row<'_>) -> Result<EntrySummary, DbError> {
+    Ok(EntrySummary {
+        id: row.get("id")?,
+        time: row.get("time")?,
+        task: row.get("task")?,
+        role: row.get("role")?,
+        connection: row.get("connection")?,
+        model: row.get("model")?,
+        ending: row.get("ending")?,
+        input_tokens: tokens(row, "input_tokens")?,
+        output_tokens: tokens(row, "output_tokens")?,
     })
 }

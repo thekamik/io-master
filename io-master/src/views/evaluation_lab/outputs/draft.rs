@@ -12,6 +12,7 @@ use tokio::sync::watch;
 
 use crate::ai::api::roles::{self, Model};
 use crate::ai::api::tasks;
+use crate::ai::tasks::knowledge_context;
 use crate::ai::tasks::output_draft;
 use crate::app::error::AppError;
 use crate::components::ai_work::ask::{self, Asked};
@@ -23,6 +24,7 @@ use crate::model::ai::Task;
 use crate::model::evaluation::{check_output, output_applies};
 use crate::model::task_scheme::BlockKind;
 
+use super::super::assessment::context;
 use super::super::lab_task::read as lab_task;
 
 /// Asks the AI for the text of output `block` and keeps the draft; gives the
@@ -72,7 +74,8 @@ pub async fn draft(
 ///
 /// Called by: [`draft`].
 /// Calls: `db_evaluation::read::block`, `lab_task::task`, `read::results`,
-/// `output_applies`, `output_draft::prompt`.
+/// `output_applies`, `output_draft::prompt`, `context::question_text` (the
+/// context of the agent of the task, step 57.6), `knowledge_context::appended`.
 fn question(db: &UserDb, evaluation: &str, block: &str) -> Result<(String, Arc<Model>, String), AppError> {
     let Some((task, output)) = db_evaluation::read::block(db, evaluation, block)? else {
         return Err(AppError::Invalid("the output does not exist".to_owned()));
@@ -89,7 +92,10 @@ fn question(db: &UserDb, evaluation: &str, block: &str) -> Result<(String, Arc<M
     );
 
     let instructions = tasks::instructions(db, Task::OutputDraft)?.unwrap_or_default();
-    let text = output_draft::prompt(&instructions, &output.fields, &found.label, &found.title, &results);
+    let text = knowledge_context::appended(
+        output_draft::prompt(&instructions, &output.fields, &found.label, &found.title, &results),
+        &context::question_text(db, evaluation, &found)?,
+    );
 
     Ok((task, Arc::new(roles::model(db)?), text))
 }

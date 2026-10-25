@@ -128,6 +128,11 @@ table.data td {
     white-space: pre;
 }
 
+/* A cell of prose (a description) wraps, so the row stays within the page. */
+table.data td.wrap {
+    white-space: normal;
+}
+
 table.data th {
     font-size: 0.72rem;
     font-weight: 650;

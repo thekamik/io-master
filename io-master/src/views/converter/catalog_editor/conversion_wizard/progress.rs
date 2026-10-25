@@ -6,10 +6,12 @@
 use crate::app::error::AppError;
 use crate::db::conversion as db_conversion;
 use crate::db::evaluation_support as db_evaluation_support;
+use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::model::conversion::{self, Pages, Stage};
+use crate::model::knowledge::AgentPlace;
 use crate::model::oscal::catalog::Catalog;
 
 use super::view::{GroupView, PagesForm, PagesView, ReviewView, WizardView};
@@ -52,6 +54,7 @@ pub fn read(db: &UserDb, uuid: &str) -> Result<WizardView, AppError> {
         contents: contents.map(PagesView::new),
         groups,
         review: ReviewView { proposals, quotes_not_found, groups_without_controls },
+        agent: db_knowledge::read::attachment(db, AgentPlace::Catalog, uuid)?,
     })
 }
 

@@ -17,6 +17,8 @@
 //! db/evaluation_support/  quotes and proposals linked to them
 //! db/conversion/      the conversions of documents of standards into catalogs
 //! db/evaluation_project/  the master projects of the evaluations and their tasks
+//! db/evaluation/      the evaluations of the Evaluation lab
+//! db/knowledge/       the knowledge bases of the AI and the index of their passages
 //! ```
 //!
 //! ```text
@@ -44,7 +46,7 @@ use rusqlite::Connection;
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
-use crate::db::{ai, conversion, evaluation, evaluation_project, evaluation_support, oscal, standards};
+use crate::db::{ai, conversion, evaluation, evaluation_project, evaluation_support, knowledge, oscal, standards};
 
 use super::{migrations, schema};
 
@@ -79,6 +81,7 @@ impl UserDb {
         connection.execute_batch(conversion::schema::SCHEMA)?;
         connection.execute_batch(evaluation_project::schema::SCHEMA)?;
         connection.execute_batch(evaluation::schema::SCHEMA)?;
+        connection.execute_batch(knowledge::schema::SCHEMA)?;
         migrations::run(&connection)?;
 
         Ok(UserDb { connection })

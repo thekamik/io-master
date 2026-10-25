@@ -2,16 +2,20 @@
 
 **A heap of reminders, not a plan in order** (user, 2026-10-21): the user chooses what is done next. The number of a step is its name and never changes, so that references in the code (`TODO (step 12 of docs/todo.md)`) stay valid. **The steps already built, dropped or replaced are in `history.md`**, with their decisions; this file keeps only what is open.
 
-**Where the program is (2026-10-24):** steps 0 to 52 are built or settled (`history.md`). IO Master is a framework for the evaluation with AI (step 48): the Converter makes catalogs of OSCAL from the PDFs of a standard (step 50), the Evaluation plan makes master projects with a scheme per task and exports work packages (step 51), the Evaluation lab carries a package out for one product and exports the report (step 52). The program is experimental: the data of the tests is a temporary resource until version 1 (`CLAUDE.md`).
+**Where the program is (2026-10-25):** steps 0 to 53 are built or settled (`history.md`). IO Master is a framework for the evaluation with AI (step 48): the Converter makes catalogs of OSCAL from the PDFs of a standard (step 50), the Evaluation plan makes master projects with a scheme per task and exports work packages (step 51), the Evaluation lab carries a package out for one product and exports the report (step 52). The program is experimental: the data of the tests is a temporary resource until version 1 (`CLAUDE.md`).
+
+**The workflow agreed on 2026-10-25** (user): steps 57, 58, 59 and 60 in this order, each stage approved before the next; the changes go to `test_branch` only. Settled the same day and moved to `history.md`: step 53 (zero warnings; eslint dropped), step 55 (backups dropped: the export of the work is the backup).
 
 | Step | What | State |
 |---|---|---|
 | 12 | Review, order and functional hardening of the whole code | the user's review, file by file (`review.md`); open |
 | 10 | Before the release | open |
-| 53 | Zero warnings: the unused code removed; eslint on the page | eslint open |
 | 54 | The removal of the installation in the window | open |
-| 55 | Backups, optionally encrypted with OpenPGP | open (`architecture.md`, section 5.5) |
 | 56 | The rule of the comments for the whole code | open |
+| 57 | Knowledge for the AI (RAG): the view `knowledge`, agents with a knowledge base, the agent of the requirement | built 2026-10-25 (57.1 to 57.4, 57.6, 57.7); 57.5 only if needed |
+| 58 | The journal of the AI on a page | built 2026-10-25 |
+| 59 | The progress of an evaluation | built 2026-10-25 |
+| 60 | A short presentation (5 minutes) with screenshots | built 2026-10-25 |
 | — | Reminders without a step yet | below |
 
 ## How every step is done
@@ -55,17 +59,10 @@ The whole code is gone through once, module by module, so that it matches `archi
 ## Step 10: Before the release
 
 - [ ] Security review of the whole program, with the findings of step 12.
+- [ ] `cargo-audit` and `cargo-deny` on the dependencies (user, 2026-10-25: not critical before the release; what matters is code that is readable and free of logical errors).
 - [ ] The installation package for Debian 13 (the program, its desktop entry, its dependencies: Poppler, WebKitGTK).
 - [ ] Version 1: from then on the data is kept, and every change of the layout of a database is a migration (`db/user/migrations.rs`).
 - [x] **Paste on Wayland (found 2026-10-18; gone the same day, a fault of the unstable system of the time, not of the program):** on KDE Plasma (Wayland, WebKitGTK 2.54.0) the program ended with SIGSEGV when the clipboard was emptied by a clipboard cleaner while it was being pasted; the fault was inside WebKitGTK. Should it come back: the page catches every paste, the program reads the clipboard itself through GTK and says "Nothing was pasted: copy the text again" instead of ending.
-
----
-
-## Step 53: Zero warnings
-
-Rule 10 of `CLAUDE.md`: the code compiles without warnings and clippy is clean. The unused code of earlier steps was removed on 2026-10-24 ("nieużywane funkcje usuwamy"): the forms of the answer and the rules of memory of the roles (`model/ai.rs`), the fields and objects no rule names (`model/text.rs`), the connection of its own for a role (`db/ai/roles/`, removed: every role uses the active connection), the removal of the installation (`lifecycle::uninstall`, `user_db::remove_all`, written anew in step 54). Kept only for the tests, under `#[cfg(test)]`: `db/system/read.rs::user_names` and the reading of the journal of the AI (`db/ai/journal/read.rs::last`), until a page of the journal exists.
-- [x] rustc and `cargo clippy --all-targets`: zero warnings.
-- [ ] eslint on the page (`CLAUDE.md`, rule 10 for the page): only svelte-check runs today.
 
 ---
 
@@ -75,23 +72,67 @@ The removal is done in the window only (`architecture.md`, section 3.2): after t
 
 ---
 
-## Step 55: Backups
-
-The evaluator exports backups of the work (also the only way to move it to a new computer); **a backup may be encrypted with an OpenPGP key, optionally** (user, 2026-10-24): without a key the backup is not encrypted, and the window says so and recommends a key. Open: whether a backup without encryption leaves out the API keys. `architecture.md`, section 5.5.
-
----
-
 ## Step 56: The rule of the comments for the whole code
 
 `CLAUDE.md`, "Where the comments are": at every function what it does, where it is called from and which functions it calls; the architecture in `docs/`. The entries of the views and components and the code of steps 49 to 52 follow it; the other layers get it when a file is rebuilt or reviewed (step 12), or in this step if the user asks for it.
 
 ---
 
+## Step 57: Knowledge for the AI (RAG)
+
+**State: concept approved by the user on 2026-10-25 ("działamy"), with the answers below; built stage by stage, each approved before the next.** The user's idea (2026-10-24 and 25): the agent of the requirement should understand the context of the standard; a view of its own lets the evaluator make an agent with knowledge (for example of Common Criteria) and attach it to the analysis of a requirement.
+
+**The answers of the user (2026-10-25):**
+- The view is `knowledge`, "Knowledge (RAG)" in the navigation.
+- **Every place that uses the AI offers "use RAG"**: an agent with knowledge can be attached to the chat, to the requirement, to the input (its chat and its fragments) and the other works of the AI.
+- **Many agents**, for different standards and tasks; each is **exported and imported as a file of its own** (its instructions, glossary and knowledge bases). Not the whole database: single projects and single agents are exported, so a file taken by someone holds less data and a leak is smaller.
+
+**What RAG is here.** *Retrieval-augmented generation*: the model is not trained; at the moment of a question the program finds the passages of the knowledge base that fit it and puts them into the question, marked as context, with their source and page. "Tuning" an agent means choosing its sources, its instructions and its glossary and trying it on questions, never changing the weights of a model (that needs GPUs and data and could not be audited).
+
+```text
+view knowledge                                       Evaluation lab
+──────────────                                       ──────────────
+sources (PDF, catalog, note) ──► passages ──► index   requirement block
+                                 (page, ≤ N chars)    agent chosen ──► retrieval ──► passages shown,
+agent: instructions + bases + glossary + limits                        the evaluator may untick them
+proving ground: a question ──► passages with scores ──► answer, quotes of the standard checked
+```
+
+**Stages (each approved before the next):**
+- [x] **57.1 The whole requirement in the question** (no new view; built 2026-10-25: `ai/tasks/requirement_context.rs`, `Catalog::titles_above`, `lab_task/read.rs`; every work of the AI of a task gets where the requirement stands, its parameters and links, the assessment also its related elements up to 24 000 characters): the parameters (assignments and selections), the guidance and the application notes of the control, its parents in the catalog, and the text of its related elements (`lab_related`: the work units of the CEM) given to the agent of the requirement; today it gets the title and prose of the parts only.
+- [x] **57.2 The view `knowledge`, the knowledge bases** (built 2026-10-25: `model/knowledge.rs`, `db/knowledge/`, `views/knowledge/`, the page `ui/src/views/knowledge/`; the stems of English words found by the tokenizer `porter`): a base has a name and sources: a PDF (read page by page by Poppler, as in the Converter), a catalog of OSCAL of the installation, a note of the laboratory (an interpretation, a supporting document of the scheme). Every source is cut into passages of a bounded size, by page and paragraph, each with its source and page, and indexed by FTS5 of SQLite (BM25; built into the SQLCipher of the program, no new dependency). A search field shows what the index finds.
+- [x] **57.3 Agents and the proving ground** (built 2026-10-25: the tab Agents of the view, the bases of an agent ticked in its form, `components/knowledge_agent/find.rs`, the task `knowledge_answer`; user, 2026-10-25: the configurator stays in its own view, the evaluation only chooses an agent): an agent has a name, instructions (who it is, how it answers), its knowledge bases, a glossary (terms and their synonyms, e.g. "TSF" = "TOE Security Functionality", used to widen the search) and limits (number of passages, characters). The proving ground: a question, the passages found with their scores, the answer of the model with its quotes of the knowledge checked in the passages (P5). The evaluator tunes the agent there.
+- [x] **57.4 The agent attached to the requirement** (built 2026-10-25: the agent chosen on the screen of an evaluation and changed for a task in the panel of the requirement, `assessment/context.rs`, the tables `lab_agents`, `lab_task_agents`, `lab_context_excluded`; the requirement itself, from its own catalog, is left out of its context; the first place, the others in 57.6): in the Evaluation lab the evaluator chooses an agent for an evaluation (or none) and may change it for a task; before the question the panel of the requirement lists the passages found (query: the requirement and what the planner asks to check), the evaluator may untick some; the question holds them in a section of their own, "Context of the standard: to understand the requirement, not evidence"; the verdict still rests on the accepted fragments only; the journal keeps the passages with the question (P3). The knowledge stays in the installation that made it: a work package carries no base (licensed standards).
+- [ ] **57.5 (only if 57.3 shows that the search by words is not enough) Embeddings:** the vectors of the passages from the endpoint of embeddings of the connection (a local model), kept in SQLite, compared in Rust within a bounded number; joined with FTS5 (hybrid search).
+
+- [x] **57.6 Every work of the AI may use an agent** (built 2026-10-25: the works of a task of the Evaluation lab use the agent of the task; a master project, a catalog in conversion and a chat choose theirs with the component `AgentPicker`, kept in `knowledge_attachments`; the passages go after the question, `ai/tasks/knowledge_context.rs`): the chat, the chat and the fragments of an input, the works of the AI of the Evaluation plan and of the Converter; the agent chosen where the work is started, the passages shown and written into the journal as in 57.4.
+- [x] **57.7 Export and import of an agent** (built 2026-10-25: "Export…" in the form of an agent after a word on the licensed sources, "Import an agent…" on the list; the import all or nothing in one transaction, a taken name with " (imported)"; the passages carried ready, the index built again): one file per agent (its instructions, glossary, limits and the passages of its bases with their sources), imported into another installation; the window says that the file holds the text of the sources (licensed standards).
+
+---
+
+## Step 58: The journal of the AI on a page
+
+- [x] **The tab "AI journal" of Settings** (built 2026-10-25, approved by the user the same day): the entries the newest first, by task and words, 50 to a page; an entry opened shows the request as it was sent (with the passages of an agent) and the answer. `db/ai/journal/read.rs`, `views/settings/ai_journal/`, `AiJournal.svelte`.
+- **No removal of old entries** (user, 2026-10-25): the journal stays only added to (two triggers of `db/ai/journal/schema.rs` refuse a change and a removal, so that what a result of the AI rests on cannot be altered, P3); its entries go only with the whole database.
+
+---
+
+## Step 59: The progress of an evaluation
+
+- [x] **Built 2026-10-25** (approved by the user the same day): the screen of an evaluation shows the tasks done, the verdicts (met, not met, inconclusive, none), and the outputs the verdicts make due with those ready for the report; every task its verdict, its accepted fragments and its outputs ready. `model/evaluation.rs` (`TaskProgress`), `db/evaluation/read.rs` (`progress`), `views/evaluation_lab/lab_tasks/view.rs`.
+
+---
+
+## Step 60: A short presentation
+
+- [x] **Built 2026-10-25**: `presentation.md` made a presentation of about five minutes (ten slides), with screenshots of the window in `docs/presentation/`, taken on a private display on the data of a test installation (the sample catalog of NIST, the manual of libtasn1; no licensed standard). The knowledge of the AI (RAG) shown on three slides. The owner may replace the screenshots with ones of a real standard.
+
+---
+
 ## Reminders without a step yet
 
-- **The Evaluation lab:** a viewer of the evidence (the PDF on its page, as the viewer of a standard, the quote of a fragment highlighted); other forms of evidence (images, office documents, archives); the import of a new version of a work package into an evaluation begun.
+- **The Evaluation lab:** other forms of evidence (images, office documents, archives); the import of a new version of a work package into an evaluation begun.
 - **The Evaluation plan:** a manual addition of a related element (from the browser of the standards), besides the AI.
 - **OSCAL beyond catalogs:** the plan and the results are kept in the program's own model (`oscal.md`); an export of an evaluation as OSCAL assessment results, and of a master project as a profile and an assessment plan, when a laboratory or a scheme asks for it.
 - **The login:** an optional second factor (`architecture.md`, section 5.1).
-- **The journal of the AI:** how long its entries are kept (they go only with the whole database today, `db/ai/journal/schema.rs`), and a page to read it (its reading is kept for the tests only, step 53).
 - **Few resources** (`architecture.md`, section 9): the program measured on a virtual machine of 8 GB RAM with a large catalog (the CEM, 813 work units) and a large PDF.

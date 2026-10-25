@@ -15,6 +15,7 @@
 
   import { sentence } from "../../lib/api/errors";
   import * as chat from "../../lib/api/chat";
+  import AgentPicker from "../../components/knowledge_agent/AgentPicker.svelte";
 
   let {
     chatId,
@@ -31,6 +32,8 @@
   /** The chat shown; undefined until the first is shown. Not reactive on purpose. */
   let shown: number | null | undefined = undefined;
   let title = $state("New chat");
+  /** The agent with knowledge of the chat (step 57.6); sent with every message, kept by Rust. */
+  let agent: number | null = $state(null);
   let messages: chat.MessageView[] = $state([]);
   let problem = $state("");
 
@@ -55,6 +58,7 @@
     if (id === null) {
       title = "New chat";
       messages = [];
+      agent = null;
       return;
     }
 
@@ -63,6 +67,7 @@
 
       title = opened.title;
       messages = opened.messages;
+      agent = opened.agent;
       await scrollDown();
     } catch (error) {
       problem = sentence(error);
@@ -134,7 +139,7 @@
     await scrollDown();
 
     try {
-      await chat.conversationSend(shown ?? null, message, (replyEvent) => apply(replyEvent, reply));
+      await chat.conversationSend(shown ?? null, message, agent, (replyEvent) => apply(replyEvent, reply));
       onchanged(shown ?? null);
     } catch (error) {
       // Refused before the reply started (no key, empty message): the
@@ -161,6 +166,8 @@
     {title}
     {#if chatId !== null}<button class="small danger" onclick={remove} disabled={writing}>Delete this chat</button>{/if}
   </h2>
+
+  <AgentPicker value={agent} onchange={(chosen) => (agent = chosen)} />
 
   {#if problem}<p class="problem">{problem}</p>{/if}
 

@@ -2,10 +2,10 @@
 
 Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md` and `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English. A high-level overview of what the program does: `docs/presentation.md`.
 
-## Where the project is (2026-10-24)
+## Where the project is (2026-10-25)
 
 - Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branches **`main`** (the tested state) and **`test_branch`** (the work); no other branches and no version numbers yet.
-- **Steps 0 to 52 are built or settled** (`docs/history.md`): the layers and their tests (step 40), the views and the components (42 to 47), the framework for the evaluation with AI without devices, master, TPM or keyring (48), the recovery code (49), the Converter (50), the master projects of the Evaluation plan with the schemes of tasks, the proposals of the AI and the work packages (51), the Evaluation lab with the evidence, the fragments, the assessment, the outputs and the report (52).
+- **Steps 0 to 60 are built or settled** (53: zero warnings; 55, backups, dropped; 57 to 60 on 2026-10-25) (`docs/history.md`): the layers and their tests (step 40), the views and the components (42 to 47), the framework for the evaluation with AI without devices, master, TPM or keyring (48), the recovery code (49), the Converter (50), the master projects of the Evaluation plan with the schemes of tasks, the proposals of the AI and the work packages (51), the Evaluation lab with the evidence, the fragments, the assessment, the outputs and the report (52).
 - **The documents were read through on 2026-10-24** (step 48.2): the catalogue of the functions of version 0.2 and the console function of the removal of the installation were removed; `todo.md` keeps only the open steps (10, 12, 53 to 56 and reminders).
 - **The state of the branches (2026-10-24):** `main` and `test_branch` hold the same state after the merge of steps 48 to 52 and the documents; the user tests the functions of the AI by hand.
 - **The data of the tests is a temporary resource until version 1**: a change of a schema may need a fresh database (`~/.local/share/io-master` removed).
@@ -15,8 +15,7 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 
 The user chooses (`docs/todo.md`). The candidates:
 1. **Step 12, the user's review**, file by file: Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.
-2. **Step 53, zero warnings**: the unused code was removed (2026-10-24), rustc and clippy are clean; eslint on the page is open.
-3. The reminders of the Evaluation lab (a viewer of the evidence, other forms of evidence), steps 54 (removal of the installation) and 55 (backups).
+2. **The workflow of 2026-10-25 is built** (steps 57 to 60: knowledge for the AI with agents, the journal of the AI on a page, the progress of an evaluation, a short presentation with screenshots in `docs/presentation/`). Open: 57.5 (embeddings, only if the search by words proves too weak on real standards), the user's tests of the AI on a real local model.
 
 ## Rules that are easy to forget
 
@@ -62,7 +61,7 @@ env -u WAYLAND_DISPLAY DISPLAY=:99 GDK_BACKEND=x11 XDG_DATA_HOME=<scratch>/data 
 
 - Drive it with XTEST from Python (`ctypes`, libXtst): click, type, key, drag, scroll; screenshots with `import -display :99 -window root`. Name the modifier keys by their keysyms (`Control_L`, `Shift_L`): a name like `ctrl` is no keysym, and its keys go into the field as letters.
 - **The scratchpad is emptied when a session starts again**: the helpers are written anew when they are missing. The ones used on 2026-10-24: `x.py` (XTEST through ctypes, no xdotool: `click X Y`, `type TEXT`, `key NAME`, `scroll X Y N`, `drag X1 Y1 X2 Y2`, `paste` into a GTK dialog), `tools/start.sh` (a private display, the fake AI and the program on a fresh data folder), `tools/restart.sh` (the program again on the same data), `tools/stop.sh`, `tools/fakeai.py` (the fake AI).
-- The window of a fresh installation (1280x860 at 0,0): the setup form (name at 640,406, passwords at 640,486 and 640,566, Install at 640,627), then the recovery code (the group to type at 640,564, "go on" at 640,624); the login (name 640,430, password 640,510, Log in 640,570; "I do not remember my password" at 610,608); the navigation at x 110 (Chat 108, Converter 151, Evaluation plan 194, Evaluation lab 237, User 280, Settings 323); the user menu at the foot (log out 162,826, log out and close 207,826).
+- The window of a fresh installation (1280x860 at 0,0): the setup form (name at 640,406, passwords at 640,486 and 640,566, Install at 640,627), then the recovery code (the group to type at 640,564, "go on" at 640,624); the login (name 640,430, password 640,510, Log in 640,570; "I do not remember my password" at 610,608); the navigation at x 110 (Chat 108, Converter 151, Evaluation plan 194, Evaluation lab 237, Knowledge (RAG) 280, User 323, Settings 366); the user menu at the foot (log out 162,826, log out and close 207,826).
 - The GTK dialogs: a file to open is pasted (Ctrl+L, Ctrl+V, Enter); a file to save is typed into the field Name as a whole path; a folder to choose is picked from the list (its typed path does not enable the button "Open").
 - The mock runtime of Tauri does not implement the exit of the program: `user_menu_close` is tested in the window only.
 - The GTK file dialog is not visible in a root screenshot (no compositor): capture its own window (`xwininfo -display :99 -root -tree`, then `import -window <id>`), and enter a path by pasting it (`xclip -display :99 -selection clipboard`, then Ctrl+L, Ctrl+V, Enter).

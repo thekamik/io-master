@@ -17,6 +17,8 @@ pub struct ProjectView {
     pub catalogs: Vec<CatalogChoiceView>,
     /// The finished catalogs it could use.
     pub available: Vec<CatalogChoiceView>,
+    /// The agent with knowledge of its works of the AI (step 57.6); `None`: none.
+    pub agent: Option<i64>,
 }
 
 /// What the page sends of a project.

@@ -17,12 +17,13 @@ use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
+use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
 use crate::model::ai::{INSTRUCTIONS_MAX, Task};
 use crate::model::evaluation::{
-    self, Evaluation, Fragment, Package, TaskState, check_fragment, check_output, quote_found,
+    self, Evaluation, Fragment, Package, TaskAgent, TaskState, check_fragment, check_output, quote_found,
 };
 use crate::model::oscal::OscalDocument;
 use crate::model::task_scheme::BlockKind;
@@ -140,7 +141,7 @@ pub async fn package_import_import<R: Runtime>(
 ///
 /// Called by the page: `EvaluationScreen.svelte`, when an evaluation opens and
 /// after a change (`evaluationLab.labTasksGet(evaluation)`).
-/// Calls: [`evaluation_of`], `db_evaluation::read::tasks`, `tasks_view::new`.
+/// Calls: [`evaluation_of`], `tasks_view::screen`.
 // Tauri hands a command its state and its arguments by value.
 #[allow(clippy::needless_pass_by_value)]
 #[tauri::command(async)]
@@ -148,7 +149,35 @@ pub fn lab_tasks_get(state: State<'_, AppState>, evaluation: String) -> Result<E
     let session = state.session()?;
     let db = session.db();
 
-    Ok(tasks_view::new(evaluation_of(&db, &evaluation)?, db_evaluation::read::tasks(&db, &evaluation)?))
+    tasks_view::screen(&db, evaluation_of(&db, &evaluation)?)
+}
+
+/// Chooses the agent with knowledge of evaluation `evaluation` (none:
+/// `None`), given to the agent of every requirement whose task has no
+/// other; the unticked passages of its tasks are forgotten.
+///
+/// Called by the page: `EvaluationScreen.svelte`, the choice of the agent
+/// (`evaluationLab.labTasksAgent(evaluation, agent)`).
+/// Calls: [`evaluation_of`], [`existing_agent`], `db_evaluation::update::agent`, `tasks_view::screen`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn lab_tasks_agent(
+    state: State<'_, AppState>,
+    evaluation: String,
+    agent: Option<i64>,
+) -> Result<EvaluationView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    let found = evaluation_of(&db, &evaluation)?;
+
+    let agent = match agent {
+        Some(id) => Some(existing_agent(&db, id)?),
+        None => None,
+    };
+    db_evaluation::update::agent(&db, &evaluation, agent)?;
+
+    tasks_view::screen(&db, found)
 }
 
 /// Sets the state of task `task` (`"todo"`, `"working"`, `"done"`).
@@ -177,7 +206,7 @@ pub fn lab_tasks_state(
         AppError::Invalid("the task does not exist".to_owned())
     );
 
-    Ok(tasks_view::new(evaluation_of(&db, &evaluation)?, db_evaluation::read::tasks(&db, &evaluation)?))
+    tasks_view::screen(&db, evaluation_of(&db, &evaluation)?)
 }
 
 // ── A task: its scheme and its evidence ───────────────────────────────
@@ -557,6 +586,73 @@ pub fn assessment_save(
     db_evaluation::update::task_started(&db, &evaluation, &task)?;
 
     lab_task::screen(&db, &evaluation, &task)
+}
+
+/// Chooses the agent with knowledge of task `task`: `"evaluation"` (that of
+/// its evaluation), `"none"`, or `"agent"` with `agent`. Its unticked
+/// passages are forgotten.
+///
+/// Called by the page: `RequirementPanel.svelte`, the choice of the agent
+/// (`evaluationLab.assessmentAgent(evaluation, task, choice, agent)`).
+/// Calls: [`existing_agent`], `db_evaluation::update::task_agent`, `lab_task::screen`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn assessment_agent(
+    state: State<'_, AppState>,
+    evaluation: String,
+    task: String,
+    choice: String,
+    agent: Option<i64>,
+) -> Result<LabTaskScreenView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    lab_task::task(&db, &evaluation, &task)?;
+
+    let chosen = match (choice.as_str(), agent) {
+        ("evaluation", _) => TaskAgent::AsEvaluation,
+        ("none", _) => TaskAgent::NoAgent,
+        ("agent", Some(id)) => TaskAgent::Agent(existing_agent(&db, id)?),
+        _ => return Err(AppError::Invalid("there is no such choice of an agent".to_owned())),
+    };
+
+    db_evaluation::update::task_agent(&db, &evaluation, &task, chosen)?;
+
+    lab_task::screen(&db, &evaluation, &task)
+}
+
+/// Ticks (`chosen`) or unticks passage `passage` of the agent of task
+/// `task`: an unticked passage is not given to the question of the assessment.
+///
+/// Called by the page: `RequirementPanel.svelte`, the box of a passage
+/// (`evaluationLab.assessmentContext(evaluation, task, passage, chosen)`).
+/// Calls: `db_evaluation::update::context_excluded`, `lab_task::screen`.
+// Tauri hands a command its state and its arguments by value.
+#[allow(clippy::needless_pass_by_value)]
+#[tauri::command(async)]
+pub fn assessment_context(
+    state: State<'_, AppState>,
+    evaluation: String,
+    task: String,
+    passage: i64,
+    chosen: bool,
+) -> Result<LabTaskScreenView, AppError> {
+    let session = state.session()?;
+    let db = session.db();
+    lab_task::task(&db, &evaluation, &task)?;
+
+    db_evaluation::update::context_excluded(&db, &evaluation, &task, passage, !chosen)?;
+
+    lab_task::screen(&db, &evaluation, &task)
+}
+
+/// Agent `id` when it exists; refused otherwise.
+///
+/// Called by: `assessment_agent`, `lab_tasks_agent`.
+fn existing_agent(db: &UserDb, id: i64) -> Result<i64, AppError> {
+    ensure!(db_knowledge::read::agent(db, id)?.is_some(), AppError::Invalid("the agent does not exist".to_owned()));
+
+    Ok(id)
 }
 
 // ── The outputs and the report ────────────────────────────────────────
@@ -1025,5 +1121,73 @@ mod tests {
         assert_eq!(saved, "Mine.");
         let other = window.call("evaluation_lab_instructions_get", json!({ "which": "task_scheme" }));
         assert_eq!(other.unwrap_err()["kind"], "invalid", "the instructions of the plan belong to the plan");
+    }
+
+    #[test]
+    fn an_agent_is_chosen_for_the_evaluation_and_changed_for_a_task() {
+        let window = with_evaluation();
+        let agent = {
+            let session = window.session();
+            let fields = crate::views::knowledge::agent_form::view::new_agent("CC agent");
+            crate::db::knowledge::create::agent(&session.db(), &fields).unwrap()
+        };
+
+        let view = window.call("lab_tasks_agent", json!({ "evaluation": "e", "agent": agent })).unwrap();
+        assert_eq!((view["agent"].clone(), view["agents"][0]["name"].clone()), (json!(agent), json!("CC agent")));
+        assert_eq!(
+            window.call("lab_tasks_agent", json!({ "evaluation": "e", "agent": 99 })).unwrap_err()["kind"],
+            "invalid"
+        );
+
+        let screen = window.call("lab_task_get", json!({ "evaluation": "e", "task": "t" })).unwrap();
+        assert_eq!(
+            (screen["knowledge"]["choice"].clone(), screen["knowledge"]["used"].clone()),
+            (json!("evaluation"), json!("CC agent"))
+        );
+
+        let none = json!({ "evaluation": "e", "task": "t", "choice": "none", "agent": null });
+        let screen = window.call("assessment_agent", none).unwrap();
+        assert_eq!(
+            (screen["knowledge"]["choice"].clone(), screen["knowledge"]["used"].clone()),
+            (json!("none"), Value::Null)
+        );
+
+        let wrong = json!({ "evaluation": "e", "task": "t", "choice": "agent", "agent": null });
+        assert_eq!(window.call("assessment_agent", wrong).unwrap_err()["kind"], "invalid");
+        let ticked = json!({ "evaluation": "e", "task": "t", "passage": 5, "chosen": false });
+        assert!(window.call("assessment_context", ticked).is_ok());
+    }
+
+    #[test]
+    fn the_screen_of_an_evaluation_shows_how_far_every_task_is() {
+        let window = with_evaluation();
+
+        let view = window.call("lab_tasks_get", json!({ "evaluation": "e" })).unwrap();
+        assert_eq!(view["tasks"][0]["verdict"], Value::Null);
+        assert_eq!(
+            (view["tasks"][0]["outputs_due"].clone(), view["tasks"][0]["outputs_ready"].clone()),
+            (json!(1), json!(0))
+        );
+        assert_eq!((view["progress"]["no_verdict"].clone(), view["progress"]["tasks"].clone()), (json!(1), json!(1)));
+
+        {
+            let session = window.session();
+            let mut results = crate::model::evaluation::Results::empty();
+            results.verdict = Some(crate::model::evaluation::Verdict::NotMet);
+            db_evaluation::update::results(&session.db(), "e", "t", &results).unwrap();
+            db_evaluation::update::output_text(&session.db(), "e", "o", "The pETR text.").unwrap();
+        }
+
+        let view = window.call("lab_tasks_get", json!({ "evaluation": "e" })).unwrap();
+        assert_eq!(view["tasks"][0]["verdict"], "not_met");
+        // pETR (always) is ready; the Observation Report (only when not met) is due now, not written.
+        assert_eq!(
+            (view["tasks"][0]["outputs_due"].clone(), view["tasks"][0]["outputs_ready"].clone()),
+            (json!(2), json!(1))
+        );
+        assert_eq!(
+            (view["progress"]["not_met"].clone(), view["progress"]["outputs_ready"].clone()),
+            (json!(1), json!(1))
+        );
     }
 }

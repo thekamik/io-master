@@ -41,6 +41,7 @@ mod model {
     pub mod evaluation_project;
     pub mod evaluation_support;
     pub mod installation;
+    pub mod knowledge;
     pub mod oscal;
     pub mod own_requirement;
     pub mod recovery_code;
@@ -167,6 +168,16 @@ mod db {
         pub mod schema;
         pub mod update;
     }
+    // db/knowledge/: the knowledge bases of the AI, their sources and the
+    // index of their passages (the database of the evaluator).
+    pub mod knowledge {
+        pub mod create;
+        pub mod delete;
+        pub mod read;
+        pub mod rows;
+        pub mod schema;
+        pub mod update;
+    }
     // db/evaluation_project/: the master projects of the evaluations and their
     // tasks (the database of the evaluator).
     pub mod evaluation_project {
@@ -233,9 +244,12 @@ mod ai {
         pub mod evidence_text;
         pub mod input_chat;
         mod json;
+        pub mod knowledge_answer;
+        pub mod knowledge_context;
         pub mod output_draft;
         pub mod related_elements;
         pub mod requirement_choice;
+        pub mod requirement_context;
         pub mod task_scheme;
     }
     // ai/presets/: the ready settings of well-known AI services (its file has
@@ -283,6 +297,17 @@ mod components {
     // Evaluation plan and Evaluation lab. No command of its own.
     pub mod ai_work {
         pub mod ask;
+        pub mod view;
+    }
+    // components/knowledge_agent/: the passages an agent with knowledge gives
+    // the model with a question (step 57.3); the proving ground of the view
+    // Knowledge (RAG), later the works of the AI of the other views. No
+    // command of its own.
+    pub mod knowledge_agent {
+        #[allow(clippy::module_inception)]
+        pub mod knowledge_agent;
+
+        pub mod find;
         pub mod view;
     }
     // components/part_rows/: the parts of a group or a control as rows with
@@ -367,6 +392,9 @@ mod views {
         #[allow(clippy::module_inception)]
         pub mod settings;
 
+        pub mod ai_journal {
+            pub mod view;
+        }
         pub mod api_key {
             pub mod view;
         }
@@ -391,6 +419,7 @@ mod views {
         pub mod test_support;
 
         pub mod assessment {
+            pub mod context;
             pub mod propose;
         }
         pub mod evaluation_list {
@@ -425,6 +454,40 @@ mod views {
         pub mod report {
             pub mod dialog;
             pub mod export;
+        }
+    }
+
+    // views/knowledge/: the view Knowledge (RAG): the knowledge bases of the
+    // AI, their sources and the search of their passages (step 57).
+    pub mod knowledge {
+        #[allow(clippy::module_inception)]
+        pub mod knowledge;
+
+        pub mod agent_form {
+            pub mod dialog;
+            pub mod export;
+            pub mod view;
+        }
+        pub mod agent_list {
+            pub mod dialog;
+            pub mod import;
+            pub mod view;
+        }
+        pub mod knowledge_base {
+            pub mod add;
+            pub mod dialog;
+            pub mod view;
+        }
+        pub mod knowledge_list {
+            pub mod view;
+        }
+        pub mod knowledge_search {
+            pub mod search;
+            pub mod view;
+        }
+        pub mod proving_ground {
+            pub mod ask;
+            pub mod view;
         }
     }
 

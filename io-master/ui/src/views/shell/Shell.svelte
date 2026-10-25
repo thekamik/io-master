@@ -13,6 +13,7 @@
   import EvaluationLab from "../evaluation_lab/EvaluationLab.svelte";
   import Converter from "../converter/Converter.svelte";
   import EvaluationPlan from "../evaluation_plan/EvaluationPlan.svelte";
+  import Knowledge from "../knowledge/Knowledge.svelte";
   import Settings from "../settings/Settings.svelte";
   import UserMenu from "../users/UserMenu.svelte";
   import Users from "../users/Users.svelte";
@@ -33,6 +34,7 @@
     converter: "The documents of a standard (PDF) converted into a catalog of NIST OSCAL, with the help of the AI.",
     evaluation_plan: "The documents of NIST OSCAL, and the plan of an evaluation made from them.",
     evaluation_lab: "Carry out an evaluation plan for a product, with what the manufacturer and the laboratory deliver.",
+    knowledge: "Knowledge bases for the AI: the sources of a standard, cut into passages the AI is given with its questions.",
     users: "Your account: the password that opens your encrypted database, and your recovery code.",
     settings: "The connections to AI services, and this installation.",
   };
@@ -55,6 +57,11 @@
       <rect x="14.5" y="4" width="6" height="5" rx="1.2" />
       <rect x="9" y="15" width="6" height="5" rx="1.2" />
       <path d="M6.5 9v2.5h11V9M12 11.5V15" />
+    {:else if name === "knowledge"}
+      <path d="M5 4.5h10.5a2 2 0 0 1 2 2V19.5H7a2 2 0 0 1-2-2z" />
+      <path d="M5 17.5a2 2 0 0 1 2-2h10.5M9 8h5M9 11h3" />
+      <circle cx="18" cy="17" r="2.5" />
+      <path d="M19.8 18.8l1.7 1.7" />
     {:else if name === "users"}
       <circle cx="12" cy="8" r="3.5" />
       <path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7" />
@@ -107,6 +114,8 @@
       <EvaluationPlan />
     {:else if active === "evaluation_lab"}
       <EvaluationLab />
+    {:else if active === "knowledge"}
+      <Knowledge />
     {:else if active === "users"}
       <Users user={app.user} />
     {:else if active === "settings"}

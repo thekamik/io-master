@@ -5,13 +5,16 @@
 //!
 //! ```text
 //! prepare(db, chat, text)       check, store the message, read the history
+//! knowledge(db, chat, agent)    the agent with knowledge of the chat kept; its
+//!                               passages after the question (step 57.6), sent
+//!                               only, never stored in the chat
 //! completions::ask(...)         the reply, piece by piece, and the question
 //!                               in the journal of the AI (ai/api/)
 //! stored::add_reply(db, ...)    store it, also when stopped or failed
 //! ```
 //!
-//! The chat is asked in the role *consultation* (`ai/api/roles.rs`): the
-//! connection given to that role, else the active one. The database is
+//! The chat is asked in the role *consultation* (`ai/api/roles.rs`), on the
+//! active connection. The database is
 //! held for each step only, never while the model writes.
 
 use std::fmt;
@@ -23,12 +26,16 @@ use tokio::sync::watch;
 use crate::ai::api::completions;
 use crate::ai::api::roles::{self, Model, ModelError};
 use crate::ai::tasks::chat as memory;
+use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
+use crate::components::knowledge_agent::find;
 use crate::db::ai::chats as db_chats;
 use crate::db::error::DbError;
+use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::{ConnectionError, Task, Turn};
+use crate::model::knowledge::AgentPlace;
 
 use super::stored;
 use super::view::{ReplyEvent, ending_notice};
@@ -72,6 +79,8 @@ pub enum SendError {
     PageGone,
     /// The database failed.
     Db(DbError),
+    /// The knowledge of the agent could not be read; holds why.
+    Knowledge(String),
 }
 
 impl fmt::Display for SendError {
@@ -92,6 +101,7 @@ impl fmt::Display for SendError {
             SendError::NoSuchChat => formatter.write_str("the chat does not exist"),
             SendError::PageGone => formatter.write_str("the window can no longer be reached"),
             SendError::Db(error) => write!(formatter, "the message was not stored: {error}"),
+            SendError::Knowledge(reason) => write!(formatter, "the knowledge of the agent could not be read: {reason}"),
         }
     }
 }
@@ -153,6 +163,17 @@ pub fn prepare(db: &UserDb, chat_id: Option<i64>, text: &str) -> Result<Prepared
     })
 }
 
+/// Keeps `agent` as the agent with knowledge of chat `chat_id` (none:
+/// `None`) and gives the context it adds to the question `text`.
+///
+/// Called by: [`send`].
+/// Calls: `db_knowledge::update::attachment`, `find::context`.
+fn knowledge(db: &UserDb, chat_id: i64, agent: Option<i64>, text: &str) -> Result<String, SendError> {
+    db_knowledge::update::attachment(db, AgentPlace::Chat, &chat_id.to_string(), agent)?;
+
+    find::context(db, agent, text).map_err(|error| SendError::Knowledge(error.to_string()))
+}
+
 /// Sends `text` to chat `chat_id` (a new chat when `None`) and waits for
 /// the reply, sending its events to `events` while it is written: the
 /// chat first, then the pieces, then how it ended. A page that can no
@@ -161,10 +182,14 @@ pub async fn send(
     session: &Session,
     chat_id: Option<i64>,
     text: &str,
+    agent: Option<i64>,
     stop: &watch::Receiver<bool>,
     events: &Channel<ReplyEvent>,
 ) -> Result<(), SendError> {
-    let Prepared { chat_id, title, model, turns } = prepare(&session.db(), chat_id, text)?;
+    let Prepared { chat_id, title, model, mut turns } = prepare(&session.db(), chat_id, text)?;
+    let context = knowledge(&session.db(), chat_id, agent, text)?;
+
+    knowledge_context::into_last(&mut turns, &context);
 
     ensure!(events.send(ReplyEvent::Chat { id: chat_id, title }).is_ok(), SendError::PageGone);
 
@@ -363,7 +388,7 @@ mod tests {
         let session = test.state.session().unwrap();
         let (events, channel) = collector();
 
-        send(&session, None, "What is ADV_FSP?", &test.state.start_reply(), &channel).await.unwrap();
+        send(&session, None, "What is ADV_FSP?", None, &test.state.start_reply(), &channel).await.unwrap();
 
         let events = events.lock().unwrap().clone();
         assert_eq!(events[0], serde_json::json!({ "event": "chat", "id": 1, "title": "What is ADV_FSP?" }));
@@ -381,7 +406,7 @@ mod tests {
         // The history goes with the next message: the instructions, the
         // first message, the reply, the new one.
         let (_, channel) = collector();
-        send(&session, Some(1), "And ADV_TDS?", &test.state.start_reply(), &channel).await.unwrap();
+        send(&session, Some(1), "And ADV_TDS?", None, &test.state.start_reply(), &channel).await.unwrap();
         assert_eq!(service.received()[1].body["messages"].as_array().unwrap().len(), 4);
     }
 
@@ -397,7 +422,7 @@ mod tests {
         let worker = Arc::clone(&test);
         let reply = tokio::spawn(async move {
             let session = worker.state.session().unwrap();
-            send(&session, None, "Hello", &worker.state.start_reply(), &channel).await
+            send(&session, None, "Hello", None, &worker.state.start_reply(), &channel).await
         });
 
         // Wait for the first piece, then press "Stop".
@@ -424,10 +449,29 @@ mod tests {
         let session = test.state.session().unwrap();
         let (events, channel) = collector();
 
-        let result = send(&session, Some(99), "Hello", &test.state.start_reply(), &channel).await;
+        let result = send(&session, Some(99), "Hello", None, &test.state.start_reply(), &channel).await;
 
         assert!(matches!(result, Err(SendError::NoSuchChat)));
         assert!(events.lock().unwrap().is_empty());
         assert!(service.received().is_empty());
+    }
+
+    #[tokio::test]
+    async fn the_agent_of_the_chat_is_kept_and_its_passages_follow_the_question() {
+        let (test, service) = ready(FakeAnswer::Stream(completions_events(&["Roles are allocated."]))).await;
+        let session = test.state.session().unwrap();
+        let text = "Information security roles and responsibilities are allocated by the management.";
+        let agent = crate::test_support::db::knowledge_agent(&session.db(), text);
+        let (_, channel) = collector();
+
+        send(&session, None, "Who allocates the security roles?", Some(agent), &test.state.start_reply(), &channel)
+            .await
+            .unwrap();
+
+        let asked = service.received()[0].body.to_string();
+        assert!(asked.contains("The context of the standard") && asked.contains(text));
+        let db = session.db();
+        assert_eq!(db_knowledge::read::attachment(&db, AgentPlace::Chat, "1").unwrap(), Some(agent));
+        assert_eq!(db_chats::read::messages(&db, 1).unwrap()[0].text, "Who allocates the security roles?");
     }
 }

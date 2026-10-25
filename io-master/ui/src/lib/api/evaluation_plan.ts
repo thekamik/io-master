@@ -38,6 +38,8 @@ export interface ProjectView {
   description: string;
   catalogs: CatalogChoiceView[];
   available: CatalogChoiceView[];
+  /** The agent with knowledge of its works of the AI (step 57.6); null: none. */
+  agent: number | null;
 }
 
 /** What the page sends of a project. */
@@ -297,6 +299,11 @@ export function projectListDelete(uuid: string): Promise<void> {
 /** Called by ProjectForm.svelte, "Save". */
 export function projectFormSave(uuid: string, project: ProjectForm): Promise<ProjectView> {
   return invoke("project_form_save", { uuid, project });
+}
+
+/** Called by ProjectForm.svelte, the agent with knowledge of the project. */
+export function projectFormAgent(uuid: string, agent: number | null): Promise<ProjectView> {
+  return invoke("project_form_agent", { uuid, agent });
 }
 
 /** Called by StandardBrowser.svelte, "Add as a task". */

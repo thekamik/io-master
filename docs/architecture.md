@@ -30,7 +30,7 @@ Carried over from the first design of the program; they are requirements, not pr
 
 ## 3. One program, one user (agreed; changed 2026-10-24)
 
-There is one program, installed on the computer of the evaluator. **One Linux account, one installation, one user** (agreed 2026-10-15): an installation belongs to the Linux account that installed it, and it has exactly one user of the program; users cannot be added. The data of a laboratory is critical, so the installation is bound as tightly as possible to one person and one account. Planners and evaluators share their work by the files the program exports (the work packages of the Evaluation plan, the report of the Evaluation lab; backups later, section 5.5), as the laboratory organises it (section 6).
+There is one program, installed on the computer of the evaluator. **One Linux account, one installation, one user** (agreed 2026-10-15): an installation belongs to the Linux account that installed it, and it has exactly one user of the program; users cannot be added. The data of a laboratory is critical, so the installation is bound as tightly as possible to one person and one account. Planners and evaluators share their work by the files the program exports (the work packages of the Evaluation plan, the report of the Evaluation lab; no backups, section 5.5), as the laboratory organises it (section 6).
 
 **No roles** (user, 2026-10-24, step 48): until then the first start chose between a *workstation* and a *master*, a separate machine that served the reset of forgotten passwords to the workstations. The user found it a strong overcomplication of the architecture: the master, its server mode and its rule "never on one computer" (section 3.1 until then) were removed before they were built. A forgotten password is recovered on the workstation itself (section 5.4).
 
@@ -65,8 +65,9 @@ The first start is the real moment of installation. **It is told by the system d
   2. **Converter** (step 50, 2026-10-24): the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI, its only aim: the PDFs loaded and searched, a catalog made from them, its editor where the AI proposes groups and controls and the evaluator accepts them (section 7.1).
   3. **Evaluation plan**: works only on the documents of OSCAL, in two tabs: **Master projects** (step 51: a master project holds the catalogs of a standard and all its tasks, each a whole requirement chosen in a browser of the standards or proposed by the AI; made once for a version of a standard and used again and again; each task has its scheme of input, requirement and output blocks; packages of tasks are exported to the evaluators) and **OSCAL documents** (the list, the import, the export, the deletion).
   4. **Evaluation lab** (step 52): a work package of the Evaluation plan imported and carried out for one product: the evidence of the inputs, the fragments accepted, the results and the verdict of every requirement, the texts of the outputs, and the report exported out of the program.
-  5. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password and the recovery code (section 5.4); later an optional second factor of the login and the removal of the installation (step 54).
-  6. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the backups and the removal of the installation).
+  5. **Knowledge (RAG)** (step 57): the knowledge bases of the AI: the sources of a standard, of its methodology or of the laboratory (a PDF, a text file, a catalog of OSCAL, a note) cut into passages and indexed, searched; later agents made of them and attached to every work of the AI (`todo.md`, step 57).
+  6. **User** (step 47): the settings of the evaluator, those of the account and of the encryption of its database: the password and the recovery code (section 5.4); later an optional second factor of the login and the removal of the installation (step 54).
+  7. **Settings**: the settings of the program, in tabs: **AI** (the connections to AI services and their API keys, the active connection, the check of a connection; changed 2026-10-16: settings, not a tool of its own), **Program** (the version and the folder of the installation, its protection; later the removal of the installation).
 - **Logging in** with the name and the password; the keys of section 5.
 
 ## 5. Secrets and encryption (agreed)
@@ -119,12 +120,12 @@ key of the database ┤                                                         
 - **At the setup, automatically when the user is created** (user, 2026-10-24), the program makes a random recovery code (160 bits from the kernel, written as groups of characters without 0, O, 1 and I, with a check sum against typing errors) and wraps the key of the database a second time with it. The code is shown **once**; the evaluator prints or copies it, confirms it by typing a group, and keeps it outside the computer (the safe of the laboratory). Argon2id is not needed for it: 160 random bits cannot be guessed.
 - **A forgotten password:** "I do not remember my password" on the login page; the code opens copy B, the evaluator sets a new password (a new copy A); the database is not re-encrypted.
 - **A new code after every change of the password** (user, 2026-10-24), the old one stops working: after the change on the page User and after the recovery with the code. **"Make a new recovery code"** on the page User needs the password of the user.
-- **Limits, said in the window:** the code is a second key to the data (whoever finds it has the data); a lost password *and* a lost code mean lost data (only a backup is left); a replaced code protects the files on the computer, not copies of them taken earlier.
+- **Limits, said in the window:** the code is a second key to the data (whoever finds it has the data); a lost password *and* a lost code mean lost data (only what was exported is left: the work packages, the reports); a replaced code protects the files on the computer, not copies of them taken earlier.
 - **Built in step 49** (2026-10-24): `model/recovery_code.rs` (the text of a code), `db/encryption/recovery.rs` (its copy of the key), `installation/accounts.rs` and `views/users/users.rs` (the operations), the component `recovery_code` of the page (the code shown once). The way of the key: section 12.
 
-### 5.5 Backup (agreed; step 55 of `todo.md`; changed 2026-10-24)
+### 5.5 (Dropped 2026-10-25) Backup
 
-The evaluator exports backups of the work (also the only way to move it to a new computer). **A backup can be encrypted with an OpenPGP key, optionally** (user, 2026-10-24): for the key of the evaluator and, if the laboratory wishes, for a key of the laboratory, a standard the laboratories use. **The key is never required**: without it the backup is not encrypted, and the window says so and recommends a key. (Open, decided when the function is built: whether a backup without encryption leaves out the API keys.)
+Was: backups of the work, optionally encrypted with OpenPGP (step 55). **Dropped by the user (2026-10-25):** the program keeps nothing that matters to the laboratory besides the projects and the API key; the key is typed again after a reinstallation, and the export of the work (the work package of a master project, the report of an evaluation) makes it independent of the program.
 
 ### 5.6 (Removed 2026-10-24) The keyring and the secret of the application
 
@@ -144,7 +145,7 @@ planner (Evaluation plan)                          evaluator (Evaluation lab)
                                                    for the template of the laboratory
 ```
 
-Besides: the documents of OSCAL (export from the Evaluation plan) and backups later (section 5.5). Nothing returns from the Evaluation lab to the planner: the result of the work of the evaluator is the report (user, 2026-10-24). Everything else (API keys, chats, the work in progress) stays in the encrypted database of the evaluator.
+Besides: the documents of OSCAL (export from the Evaluation plan); there are no backups (section 5.5). Nothing returns from the Evaluation lab to the planner: the result of the work of the evaluator is the report (user, 2026-10-24). Everything else (API keys, chats, the work in progress) stays in the encrypted database of the evaluator.
 
 ## 7. Work on standards
 
@@ -203,6 +204,7 @@ A **view** is a whole page of the window, the high-level display.
 | `converter` | konwerter | the documents of a standard (PDF) converted into a catalog of OSCAL with the help of the AI (step 50): the documents of standards, the catalogs made from them, the editor of a catalog |
 | `evaluation_plan` | plan ewaluacji | only the documents of OSCAL: the master projects with their tasks (step 51), and the list, import, export and deletion of the documents of OSCAL |
 | `evaluation_lab` | evaluation lab | a work package of the Evaluation plan carried out for one product (step 52): the evidence of the inputs, the fragments, the results and the verdicts, the outputs, the report |
+| `knowledge` | wiedza (RAG) | the knowledge bases of the AI (step 57): sources cut into passages, indexed and searched; the agents made of them (later stages) |
 | `settings` | ustawienia | the settings panel |
 
 The view `evaluation_plan` is wider than the OSCAL document *assessment plan* it makes; the two are never called by the same name.
@@ -218,7 +220,8 @@ A **component** is a small element used more than once: several times in one vie
 | `catalog_tree` | drzewo katalogu | the groups and controls of a catalog as rows; the editor of a catalog and the browser of the standards |
 | `recovery_code` | kod odzyskiwania | the recovery code, shown once; four elements of the view Users |
 | `block_node` | blok schematu | a block of the scheme of a task on the drawing (the page only); the Evaluation plan, where it is edited, and the Evaluation lab, where it is read only |
-| `ai_work` | praca AI | one question of a work of the AI with its events (progress, failure, end; Rust only); the works of the AI of the Evaluation plan and of the Evaluation lab |
+| `ai_work` | praca AI | one question of a work of the AI with its events (progress, failure, end), and on the page what a panel shows of it; the works of the AI of the Evaluation plan, of the Evaluation lab and the proving ground of an agent |
+| `knowledge_agent` | agent z wiedzą | the agent with knowledge of a work of the AI (steps 57.3 and 57.6): in Rust the passages it gives a question and the list of the agents; on the page `AgentPicker`, one line to choose it (the chat, the project, the catalog, the evaluation) |
 
 The idea of the user of 2026-10-23 (the tiles of the evidence: a requirement linked to its inputs, a proof linked to an input, the AI of the input judging the proof) became the scheme of a task (step 51.2) and the inputs of the Evaluation lab (step 52).
 
@@ -354,7 +357,8 @@ the view opens
   ├─► ConnectionLine ──connection_line_get()──► the connection of the role consultation (ai/api/)
   └─► ChatList ──chat_list_get()──► db/ai/chats/: the chats, the newest first
 ChatList ──"chosen"(id)──► the view ──► Conversation ──conversation_open(id)──► the chat from db/
-Conversation ──conversation_send(chat, text)──► db: the message ──► ai/api/: the reply, piece by piece ──► db: the reply
+Conversation ──conversation_send(chat, text, agent)──► db: the message (and the agent of the chat, step 57.6) ──►
+  the passages of the agent after the question, sent only ──► ai/api/: the reply, piece by piece ──► db: the reply
      ▲                                                                   │
      └──────────── events (ReplyEvent): the text as it comes, the end ◄──┘
 Conversation ──conversation_stop() / conversation_delete(id)
@@ -376,6 +380,8 @@ DocumentSearch ──document_search_run(text)──► the hits ──► the v
 
 the editor of a catalog (entry views/converter/catalog_editor/catalog_editor.rs), tab Conversion (step 50.2):
 the editor opens ──► ConversionWizard ──conversion_wizard_get(uuid)──► the stage, the pages, the groups (db/conversion/)
+  ──conversion_wizard_agent(uuid, agent)──► the agent with knowledge of the catalog: its passages after every question
+     of the groups and the controls (step 57.6)
   ① contents: ──conversion_wizard_find_contents(uuid, document)──► ai/api/: the first pages ──► the pages of the
      table of contents (checked within the pages read) ──► db/conversion/; ──conversion_wizard_contents(pages)──► confirmed
   ② groups:   ──ai_builder_groups(pages of the contents)──► proposals; Proposals ──accept / reject──► the catalog
@@ -413,6 +419,8 @@ ProjectList ──"New master project…"──► NewProject ──new_project_
      ──new_project_create(title, scope, catalogs)──► db/evaluation_project/ ──► "made" ──► the screen of the project
 the screen of a project (the screen of a task in place of it while a task is open):
   ├─► ProjectForm ──project_form_get(uuid)──► title, scope, catalogs; ──project_form_save──► (a catalog with tasks stays)
+  │     ──project_form_agent(uuid, agent)──► the agent with knowledge of the project: its passages after the questions
+  │       of the proposals of tasks, schemes and related elements (step 57.6)
   ├─► StandardOutputs (step 51.3) ──standard_outputs_get(project)──► the template of the outputs of its tasks
   │     ──standard_outputs_add(project, output) / _save(output, fields) / _delete(output)──► db/evaluation_project/
   │     (a new task gets a copy of the template as its outputs, connected from its requirement: scheme::first;
@@ -483,6 +491,8 @@ ConnectionForm ──connection_form_save / _delete / _activate──► db/ai/c
   └── "changed" ──► the view ──► ConnectionList ──connection_list_get()──►; ApiKey ──api_key_get(id)──►
 ApiKey ──api_key_store(id, key) / api_key_delete(id)──► the key in the encrypted database, bound to the address
 ConnectionCheck ──connection_check_run(id)──► ai/api/checks: one short question, written into the journal ──► the report
+AiJournal (tab AI journal, step 58) ──ai_journal_get(task, text, page)──► db/ai/journal/: a page of the entries, the
+  newest first, by task and words ──ai_journal_entry(id)──► one entry whole: the request as sent, the answer (read only)
 ```
 
 **`evaluation_lab`** (step 52; entry `views/evaluation_lab/evaluation_lab.rs`, page `ui/src/views/evaluation_lab/`). A work package of the Evaluation plan carried out for one product. What the AI proposes becomes a result only when the evaluator accepts it (P1), and every question to the AI is in the journal (P3). Nothing returns to the planner: the result is the report.
@@ -493,20 +503,51 @@ EvaluationList ──evaluation_list_get()──► the evaluations with their p
     version, the package checked by the rules of the plan, the catalogs attached checked against the schema of NIST and
     stored when missing ──► an evaluation: a frozen copy of the tasks, their schemes and related elements
   ──evaluation_list_delete(uuid)──►
-EvaluationScreen ──lab_tasks_get(evaluation)──► the package, the product, the tasks and their state
+EvaluationScreen ──lab_tasks_get(evaluation)──► the package, the product, the tasks and their state, and how far
+  each is and the whole (step 59): verdicts, accepted fragments, the outputs due and ready for the report
   ──lab_tasks_state(evaluation, task, progress)──► to do / in progress / done
+  ──lab_tasks_agent(evaluation, agent)──► the agent with knowledge of its requirements (made in the view Knowledge)
   ──report_export(evaluation)──► a folder chosen in a dialog ──► one file per output (report/export.rs): the accepted
     texts, task by task, of the tasks whose verdict makes its condition hold (.txt or .tex)
 LabTask ──lab_task_get(evaluation, task)──► the scheme read only (LabScheme, the component BlockNode), the requirement
-  from its catalog, the related elements, the inputs, the results, the outputs; every command answers with the screen
+  from its catalog (for every work of the AI of a task: with where it stands, its parameters and links, step 57.1), the related elements, the inputs, the results, the outputs; every command answers with the screen
   ├─► InputPanel ──evidence_add_file / _add_note / _delete──► the evidence kept as delivered (a PDF read by page)
   │     ──input_chat_send(…, onEvent) / _clear──► the task input_chat through ai/api/ (the requirement, the input, the
   │       start of the evidence, the last messages) ──► the question and the answer kept
   │     ──fragments_propose(…, onEvent)──► the task evidence_fragments, part by part ──► quotes looked for in the
   │       evidence (found or not), a note apart ──fragments_accept / _remove / _add──► only accepted ones are assessed
-  ├─► RequirementPanel ──assessment_propose(…, onEvent)──► the task assessment (formal analysis) on the accepted
-  │     fragments only ──► four results and a verdict proposed ──assessment_accept / _reject / _save──► the evaluator decides
+  ├─► RequirementPanel ──assessment_agent(…, choice, agent)──► the agent with knowledge of the task: that of the
+  │     evaluation, none, or another (step 57.4) ──► its passages (components/knowledge_agent, the words of the
+  │     requirement and of what the planner asks to check) ──assessment_context(…, passage, chosen)──► ticked or not
+  │   ──assessment_propose(…, onEvent)──► the task assessment (formal analysis): the whole requirement (where it
+  │     stands, parameters, links), its related elements word for word and the ticked passages of its agent, to
+  │     understand it, and the accepted fragments, the only evidence ──► four results and a verdict proposed ──assessment_accept / _reject / _save──► the evaluator decides
   └─► OutputPanel (only when its condition holds for the verdict) ──outputs_draft(…, onEvent)──► the task output_draft
         from the four results ──outputs_accept / _reject / _save──► the text of the output
 the instructions of the four tasks ──evaluation_lab_instructions_get / _save──►; "Stop" ──evaluation_lab_stop()──►
 ```
+
+**`knowledge`** (step 57; entry `views/knowledge/knowledge.rs`, page `ui/src/views/knowledge/`). The knowledge bases of the AI. A source keeps only its text, cut into passages of at most 1500 characters, never across a page (`model/knowledge.rs`), in the encrypted database of the evaluator; the passages are indexed by FTS5 of SQLite (the stems of English words, BM25), no new dependency.
+
+```text
+KnowledgeList ──knowledge_list_get / _create / _delete──► db/knowledge/ (bases, with their numbers)
+KnowledgeBase ──knowledge_base_get / _save──► the name and the description of a base, its sources
+  ──knowledge_base_add_file(id)──► a dialog of the system ──► a PDF (Poppler, page by page) or a text ──► passages
+  ──knowledge_base_catalogs() / _add_catalog(id, catalog)──► a catalog of OSCAL: groups and requirements ──► passages
+  ──knowledge_base_add_note(id, name, text)──► passages;  ──knowledge_base_remove(id, source)──► gone with its passages
+KnowledgeSearch ──knowledge_search_run(base, text)──► the words as phrases joined by OR (search_query) ──► FTS5 MATCH,
+  ranked by BM25 ──► the passages with their source, page or requirement, and relevance
+AgentList ──agent_list_get / _create(name) / _delete──► db/knowledge/ (agents, with the numbers of their bases)
+AgentForm ──agent_form_get / _save(id, form)──► name, instructions, glossary, limits, and the bases ticked in the form
+  ──agent_form_export(id)──► (after a word that the file holds the text of the sources) a dialog of the system ──►
+     one JSON file: the agent, its bases, their sources and every passage (step 57.7)
+AgentList ──agent_list_import()──► a dialog of the system ──► the file checked against every limit ──► the agent and
+     its bases stored in one transaction, a taken name with " (imported)" ──► its form opens
+ProvingGround ──proving_ground_find(agent, question)──► components/knowledge_agent: the question widened by the
+    glossary ──► FTS5 in the bases of the agent ──► the passages chosen within its limits (no AI)
+  ──proving_ground_ask(agent, question, onEvent)──► the same passages ──► the task knowledge_answer through ai/api/
+    (journal) ──► the answer and its quotes, each looked for in the passage it names ──► the trial kept
+  ──proving_ground_get(agent)──► the last trial;  "Stop" ──knowledge_stop()──►
+```
+
+**The configurator is apart** (user, 2026-10-25): the knowledge bases and the agents are made and joined only in this view, so that the views of the evaluation are not crowded; elsewhere a work of the AI only chooses an agent (steps 57.4 and 57.6): an evaluation and its tasks, a master project, a catalog in conversion, a chat. The choice of a project, a catalog or a chat is kept in `db/knowledge/` (`knowledge_attachments`); the passages always go after the question, in a section of their own (`ai/tasks/knowledge_context.rs`), never into what is stored of a chat.

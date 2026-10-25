@@ -8,7 +8,9 @@ use tokio::sync::watch;
 
 use crate::ai::api::completions;
 use crate::ai::tasks::catalog_outline::{self, Outline};
+use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
+use crate::components::knowledge_agent::find;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::evaluation_support::create::NewProposal;
 use crate::db::oscal as db_oscal;
@@ -16,6 +18,7 @@ use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model::ai::Task;
 use crate::model::evaluation_support::ProposalKind;
+use crate::model::knowledge::AgentPlace;
 use crate::model::standards::Part;
 
 use super::steps::{self, Asked};
@@ -31,14 +34,16 @@ pub async fn propose(
     stop: &watch::Receiver<bool>,
     events: &Channel<BuildEvent>,
 ) -> Result<(), AppError> {
-    let (model, instructions, parts) = {
+    let (model, instructions, parts, context) = {
         let db = session.db();
-        db_oscal::read::catalog(&db, uuid)?;
+        let catalog = db_oscal::read::catalog(&db, uuid)?;
+        // The context of the agent of the catalog (step 57.6), for its title.
+        let context = find::attached_context(&db, AgentPlace::Catalog, uuid, &catalog.metadata.title)?;
 
         let (model, instructions) = steps::model_and_instructions(&db, Task::CatalogOutline)?;
         let ranges = [(range.document_id, range.first_page, range.last_page)];
 
-        (model, instructions, steps::parts_with_documents(&db, &ranges, 0)?)
+        (model, instructions, steps::parts_with_documents(&db, &ranges, 0)?, context)
     };
 
     let model = Arc::new(model);
@@ -47,7 +52,8 @@ pub async fn propose(
     for (index, (part, document)) in parts.iter().enumerate() {
         // The groups known now, also those accepted during the work.
         let known = db_oscal::read::catalog(&session.db(), uuid)?.group_titles()?;
-        let turns = completions::single(catalog_outline::prompt(&instructions, document, part, &known));
+        let question = catalog_outline::prompt(&instructions, document, part, &known);
+        let turns = completions::single(knowledge_context::appended(question, &context));
 
         if *stop.borrow() || events.send(steps::part_event(index, parts.len(), part, document)).is_err() {
             stopped = true;
