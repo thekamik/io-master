@@ -214,7 +214,7 @@ model/                     The new models (2026-10-28).
     api_key.rs                   The API key of an integration with an AI service. It is a password to
     integration.rs               An integration with an external AI service: where the program sends
     journal.rs                   The journal of the AI: every question the program asked an AI service
-    rag.rs                       The knowledge for the AI (RAG, retrieval-augmented generation): bases
+    rag.rs                       The knowledge for the AI (RAG, retrieval-augmented generation): the
   evaluation/                  The plan of an evaluation and what it is made of.
     evaluation_plan.rs           An evaluation plan: the work units of an evaluation, with the
     lab_proof.rs                 A proof of the laboratory: the result of a functional test the

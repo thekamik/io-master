@@ -18,10 +18,10 @@ pub struct Agent {
     /// Its instructions: who it is and how it answers.
     pub instructions: String,
 
-    /// The knowledge bases it draws on (`KnowledgeBase`).
-    pub knowledge_bases: Vec<i64>,
+    /// The sources of knowledge it searches (`Source` of `rag.rs`).
+    pub sources: Vec<i64>,
 
-    /// Its glossary, used to widen a search in its knowledge bases.
+    /// Its glossary, used to widen a search in its sources.
     pub glossary: Vec<GlossaryEntry>,
 
     /// The most passages of its knowledge given with one question.
