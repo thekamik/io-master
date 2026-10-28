@@ -14,6 +14,10 @@ pub struct ProductDocument {
     /// reserved in the plan.
     pub id: i64,
 
+    /// What the document is ("ST", "IXIT"), given by the planner when
+    /// the place is reserved.
+    pub name: String,
+
     /// The file of the document, as it was delivered; `None` while the
     /// place is only reserved.
     pub content: Option<Vec<u8>>,

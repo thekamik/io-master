@@ -57,15 +57,20 @@ pub struct WorkUnit {
     /// `None` when none is assigned.
     pub ai_agent: Option<i64>,
 
-    /// The results of the assessment of the work unit.
+    /// The results of the assessment of the work unit. `findings` holds
+    /// every fault, for the Observation Report: those the AI found in
+    /// the evidence, and each dependency not met, written by the program
+    /// ("not met: its dependency ADV_ARC.1-1 is not met").
     pub findings: String,
     pub analysis: String,
     pub vulnerability_notes: String,
     pub notes: String,
 
     /// The verdict of the assessment; `None` while the work unit is not
-    /// assessed. A work unit that depends on this one may be assessed
-    /// only when it is `Met`.
+    /// assessed. A work unit is assessed by the AI even when a dependency
+    /// is not met, so that all its faults are found; its verdict is the
+    /// worst of the verdict of the AI and the verdicts of its
+    /// dependencies (user, 2026-10-28, as Common Criteria asks).
     pub verdict: Option<Verdict>,
 }
 
