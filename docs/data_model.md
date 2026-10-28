@@ -116,7 +116,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 ## 5. The user and the program
 
 - One Linux account holds one installation with one user. `User` and `Installation` are kept in the system database, which is not encrypted and holds nothing secret; the copies of the key of the encrypted database of the user are kept beside the user but belong to `db/encryption/` (`architecture.md`, section 5).
-- **The keys of a user** (`UserKeys`, user 2026-10-28) are a model of their own, apart from `User`: the two copies of the one random key of the database of the user, wrapped with the password (Argon2id) and with the recovery code, each bound to the id of the user (`account/access.rs`). None of it is secret. The two copies keep the shape they had in the earlier program.
+- **The keys of a user** (`UserKeys`, user 2026-10-28) are a model of their own, apart from `User`: the two copies of the one random key of the database of the user, wrapped with the password (Argon2id) and with the recovery code, each bound to the id of the user (`business_logic/program_start/access.rs`). None of it is secret. The two copies keep the shape they had in the earlier program.
 - `Settings` names every setting as a field of its own: today the integration used where no agent names one.
 
 ## 6. What the program drops

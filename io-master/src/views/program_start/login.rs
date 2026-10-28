@@ -3,8 +3,8 @@
 //! logged in), the login with a name and a password, and the logout.
 //!
 //! ```text
-//! App.svelte  ──login_get()──────────────► account::installed_user, Session ──► ProgramView
-//! LoginForm   ──login_log_in(name, pw)───► account::log_in ──► Session::log_in
+//! App.svelte  ──login_get()──────────────► program_start::installed_user, Session ──► ProgramView
+//! LoginForm   ──login_log_in(name, pw)───► program_start::log_in ──► Session::log_in
 //! the frame   ──login_log_out()──────────► Session::log_out
 //! ```
 
@@ -12,7 +12,7 @@ use serde::Serialize;
 use tauri::State;
 use zeroize::Zeroizing;
 
-use crate::account::access::{installed_user, log_in};
+use crate::business_logic::program_start::access::{installed_user, log_in};
 use crate::session::state::Session;
 use crate::views::error::ViewError;
 
@@ -30,7 +30,7 @@ pub struct ProgramView {
 /// logged in.
 ///
 /// Called by: `App.svelte`, when the window opens and after every change.
-/// Calls: `account::access::installed_user`, `Session::lock`.
+/// Calls: `program_start::access::installed_user`, `Session::lock`.
 #[tauri::command]
 pub fn login_get(session: State<'_, Session>) -> Result<ProgramView, ViewError> {
     let installed = installed_user(session.data_folder())?.is_some();
@@ -45,7 +45,7 @@ pub fn login_get(session: State<'_, Session>) -> Result<ProgramView, ViewError> 
 /// memory when the command ends.
 ///
 /// Called by: `LoginForm.svelte`, "Log in".
-/// Calls: `account::access::log_in`, `Session::log_in`.
+/// Calls: `program_start::access::log_in`, `Session::log_in`.
 #[tauri::command(async)]
 pub fn login_log_in(session: State<'_, Session>, name: String, password: String) -> Result<(), ViewError> {
     let password = Zeroizing::new(password);

@@ -12,7 +12,7 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 
 The parts come back one by one, rewritten on the new models (each a concept approved by the user first):
 1. **The functions of the making of a plan** in a folder of their own above `db/` (its name to be agreed): the order of the work, `cross_reference` and `blocked` set after every change of the dependencies; and the check of an OSCAL document against the schema of NIST in a file of its own (its name to be agreed).
-2. **The login and the session: built (2026-10-28)**, the first start, the recovery code shown once, the login and the logout (`account/`, `session/`, `views/program_start/`). Still to come: the login with the recovery code, the change of the password, a new recovery code.
+2. **The login and the session: built (2026-10-28)**, the first start, the recovery code shown once, the login and the logout (`business_logic/program_start/`, `session/`, `views/program_start/`). Still to come: the login with the recovery code (in `program_start`, user 2026-10-28), the change of the password and a new recovery code.
 3. **The AI layer** on the new models: the integration, the agent, the RAG, the journal (the HTTP and TLS client of `main` reused).
 4. **The views**, one by one, each with its page: the evaluation plan, the evaluation, the knowledge, the settings, the chat.
 

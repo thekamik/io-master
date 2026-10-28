@@ -10,7 +10,7 @@ const FOLDER: &str = "io-master";
 /// The data folder of the program; `None` when neither `XDG_DATA_HOME` nor
 /// `HOME` is set, so that the program cannot know where its data is.
 ///
-/// Called by: `main.rs` (the start of the window).
+/// Called by: `main.rs`
 pub fn default_data_folder() -> Option<PathBuf> {
     if let Some(base) = std::env::var_os("XDG_DATA_HOME")
         && !base.is_empty()

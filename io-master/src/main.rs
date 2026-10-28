@@ -107,17 +107,23 @@ mod db {
     }
 }
 
-// account/: the account of the user: the first start, the login; the
-// password and the recovery code that wrap the key of the database
-// (moved unchanged from the earlier program, audited later). The logic
-// only: the data is written by db/.
-#[allow(dead_code, reason = "the change of the password and the recovery come later (2026-10-28)")]
-mod account {
-    pub mod access;
-    pub mod generate_key;
-    pub mod keys;
-    pub mod recovery;
-    pub mod recovery_code;
+// business_logic/: the work behind the panels of the window, one folder per
+// panel, not called by the page itself (user, 2026-10-28): the views call
+// it, and it does its work with db/ and the models, the open database given
+// to it, never the session.
+mod business_logic {
+    // business_logic/program_start/: the first start, the login and the
+    // recovery of a forgotten password; the password and the recovery code
+    // that wrap the key of the database (moved unchanged from the earlier
+    // program, audited later).
+    #[allow(dead_code, reason = "the recovery and the change of the password come later (2026-10-28)")]
+    pub mod program_start {
+        pub mod access;
+        pub mod generate_key;
+        pub mod keys;
+        pub mod recovery;
+        pub mod recovery_code;
+    }
 }
 
 // session/: what every command of the window shares: the data folder, and

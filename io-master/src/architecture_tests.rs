@@ -3,13 +3,10 @@
 //! an auditor sees the rule and its check in one place:
 //!
 //! ```text
-//!      views/       (the commands the page calls)
+//!      views/       (the commands the page calls) ──► session/ (the user logged in)
 //!         │
 //!         ▼
-//!      session/     (the user logged in, their open database)
-//!         │
-//!         ▼
-//!      account/     (the first start, the login, the keys of the account)
+//!   business_logic/ (the work behind the panels: program_start, evaluation_plan, ...)
 //!         │
 //!         ▼
 //!        db/        (create, read and update of the models; the database files)
@@ -43,12 +40,15 @@ const ALLOWED: [(&str, &[&str]); 7] = [
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
     ("db", &["model", "security"]),
-    // The account: its logic on db/ and the models.
-    ("account", &["db", "model", "security"]),
+    // The work behind the panels, one folder per panel; a panel may use
+    // another (in one direction: chat and evaluation use rag and
+    // evaluation_plan, never the other way). It gets the open database as a
+    // parameter and never reaches the session.
+    ("business_logic", &["db", "model", "security"]),
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
     // The commands of the page: they do their work with the folders below.
-    ("views", &["account", "db", "model", "session"]),
+    ("views", &["business_logic", "db", "model", "session"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

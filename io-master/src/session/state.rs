@@ -1,7 +1,7 @@
 //! The session: what every command of the window shares (user,
 //! 2026-10-28): the data folder of the program, and, while the user is
 //! logged in, the user and their database, open. The database is opened
-//! once at the login (`account/access.rs`) and kept here until the logout
+//! once at the login (`business_logic/program_start/access.rs`) and kept here until the logout
 //! or the end of the program; the key that opened it is already wiped,
 //! SQLCipher keeps its own inside the connection.
 //!

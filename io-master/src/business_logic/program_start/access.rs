@@ -31,10 +31,10 @@ use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::account::generate_key::generate_database_key;
-use crate::account::keys::{self, KeyError};
-use crate::account::recovery::{self, RecoveryError};
-use crate::account::recovery_code::RecoveryCode;
+use crate::business_logic::program_start::generate_key::generate_database_key;
+use crate::business_logic::program_start::keys::{self, KeyError};
+use crate::business_logic::program_start::recovery::{self, RecoveryError};
+use crate::business_logic::program_start::recovery_code::RecoveryCode;
 use crate::db::database::{self, Database};
 use crate::db::error::DbError;
 use crate::db::system_database::{self, SystemDatabase};

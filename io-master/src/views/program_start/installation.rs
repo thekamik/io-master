@@ -5,14 +5,14 @@
 //!
 //! ```text
 //! InstallationForm ──installation_create(name, password, password repeated)──►
-//!     account::create_account ──► Session::log_in ──► the recovery code, once
+//!     program_start::create_account ──► Session::log_in ──► the recovery code, once
 //! ```
 
 use serde::Serialize;
 use tauri::State;
 use zeroize::Zeroizing;
 
-use crate::account::access::create_account;
+use crate::business_logic::program_start::access::create_account;
 use crate::session::state::Session;
 use crate::views::error::ViewError;
 
@@ -29,7 +29,7 @@ pub struct RecoveryCodeView {
 /// are wiped from memory when the command ends.
 ///
 /// Called by: `InstallationForm.svelte`, "Install".
-/// Calls: `account::access::create_account`, `Session::log_in`.
+/// Calls: `program_start::access::create_account`, `Session::log_in`.
 #[tauri::command(async)]
 pub fn installation_create(
     session: State<'_, Session>,

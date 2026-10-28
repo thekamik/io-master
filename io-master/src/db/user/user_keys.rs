@@ -2,7 +2,7 @@
 //! `user_keys` of the system database, which is not encrypted: create,
 //! read, update; never deleted (user, 2026-10-28). Nothing of it is
 //! secret: the two copies of the key are useless without the password or
-//! the recovery code (`account/keys.rs`, `account/recovery.rs`).
+//! the recovery code (`business_logic/program_start/keys.rs`, `business_logic/program_start/recovery.rs`).
 //!
 //! ```text
 //! user_keys   user (one row each); the copy wrapped with the password: key_salt, key_memory_kib,
@@ -57,7 +57,7 @@ fn check_keys(keys: &UserKeys) -> Result<(), DbError> {
 
 /// Stores the keys of a user that has none.
 ///
-/// Called by: `account/access.rs` (`create_account`).
+/// Called by: `business_logic/program_start/access.rs` (`create_account`).
 /// Calls: [`check_keys`].
 pub fn create_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), DbError> {
     check_keys(keys)?;
@@ -87,7 +87,7 @@ pub fn create_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), 
 
 /// Reads the keys of the user `user`.
 ///
-/// Called by: `account/access.rs` (`log_in`).
+/// Called by: `business_logic/program_start/access.rs` (`log_in`).
 pub fn read_user_keys(system: &SystemDatabase, user: i64) -> Result<UserKeys, DbError> {
     let connection = system.connection();
     let mut statement = connection.prepare(
