@@ -14,7 +14,9 @@ io-master/src/
                      layers, each group commented), main(), tauri_startup(); nothing else
   checks.rs          the macro ensure! (rule 5 of CLAUDE.md), known in the whole program
   model/             the data as it is kept in the databases: structures, fields only
-  db/                create, read and update of the models; the two databases; the encryption
+  account/           the account: the first start, the login; the password and the recovery code
+                     that wrap the key of the database (keys.rs, recovery.rs, recovery_code.rs)
+  db/                create, read and update of the models; the two databases; their encryption
   security/          the building blocks of protection: random numbers, no memory dumps
   pdf/               reading PDFs with Poppler (pdfinfo, pdftotext): another program, in one place
 io-master/ui/        the page (Svelte 5), a separate project: one line until the views come back
@@ -23,6 +25,9 @@ io-master/ui/        the page (Svelte 5), a separate project: one line until the
 ### 1.1 The direction of the dependencies
 
 ```text
+      account/
+         │
+         ▼
         db/
          │
          ▼
@@ -45,7 +50,11 @@ One structure per kind of data kept in the database, its fields each commented, 
 - **SQL lives only here**: the connection of a database is visible only inside `db/`.
 - A new object is given with `id` 0 and gets its id from the database. **What a model names must hold together**, checked at every write: a work unit and its plan (its standard, documents, dependencies, verdict, quotes), an API key and the address it was given for.
 - Columns are read by their names; statements with more than one parameter name them; one transaction per operation; a value the program never writes is `DbError::Corrupt`, never replaced in silence; every read of a list is bounded by its limit (rule 2).
-- `encryption/` holds all code of encryption, moved unchanged from the earlier program and audited by the user later.
+- `encryption/` holds the encryption of the database files (their key, SQLCipher), moved unchanged from the earlier program and audited by the user later; the wrapping of the key with the password and the recovery code is in `account/`.
+
+### 2.2a `account/`: the account
+
+The logic of the account, above `db/`, without SQL (user, 2026-10-28): `access.rs` (the first start: the data folder, `system.v2.db`, the installation, the user, the two copies of the key, the database of the user, the recovery code given once; the login: the key unwrapped with the password, the database opened; a wrong password and an unknown name fail the same way; a first start that fails half way removes the files it made). The building blocks, moved unchanged from the earlier program and audited by the user later: `keys.rs` (the password, Argon2id, AES-256-GCM), `recovery.rs` and `recovery_code.rs` (the recovery code), `generate_key.rs` (the random key). A copy of the key is bound to the id of its user, which never changes.
 
 ### 2.3 `security/` and `pdf/`
 
@@ -98,6 +107,7 @@ model/
   user/
     program_data.rs              The data of the program: the installation, made at the first start,
     user_data.rs                 The user of the installation: one Linux account holds one
+    user_keys.rs                 The keys of the database of a user, as they are kept in the system
 db/
   database.rs                  The database of the user, made anew for the models of `model/`
   error.rs                     The error of every function of `db/`: why a database could not be
@@ -113,10 +123,6 @@ db/
     rag.rs                       The knowledge for the AI (RAG): the knowledge bases (`KnowledgeBase`)
   encryption/
     database_key.rs              The key that encrypts a database of the program.
-    generate_key.rs              Generating the key that encrypts the database.
-    keys.rs                      The keys of the databases of the evaluators
-    recovery.rs                  The second copy of the key of a database, wrapped with the recovery
-    recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/history.md,
     sqlcipher.rs                 Opening and creating encrypted databases.
   evaluation/
     evaluation_plan.rs           The evaluation plans (`EvaluationPlan`: a plan, an evaluation copied
@@ -127,6 +133,13 @@ db/
   user/
     program_data.rs              The data of the program: the installation (`Installation`), in the table
     user_data.rs                 The user of the installation (`User`), in the table `users` of the
+    user_keys.rs                 The keys of the database of a user (`UserKeys`), in the table
+account/
+  access.rs                    The account of the user: the first start (the installation, the user,
+  generate_key.rs              Generating the key that encrypts the database.
+  keys.rs                      The keys of the databases of the evaluators
+  recovery.rs                  The second copy of the key of a database, wrapped with the recovery
+  recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/history.md,
 security/
   process.rs                   The protection of the memory of the process (step 47 of docs/history.md):
   random.rs                    Random bytes from the kernel.

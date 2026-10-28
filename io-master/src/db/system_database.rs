@@ -20,7 +20,7 @@ use rusqlite::Connection;
 
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
-use crate::db::user::{program_data, user_data};
+use crate::db::user::{program_data, user_data, user_keys};
 
 /// How long an operation waits for another that holds the database.
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
@@ -42,6 +42,7 @@ impl SystemDatabase {
         connection.busy_timeout(BUSY_TIMEOUT)?;
         connection.execute_batch(program_data::SYSTEM_SCHEMA)?;
         connection.execute_batch(user_data::SCHEMA)?;
+        connection.execute_batch(user_keys::SCHEMA)?;
 
         Ok(SystemDatabase { connection })
     }

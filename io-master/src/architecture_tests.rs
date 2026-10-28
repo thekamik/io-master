@@ -3,7 +3,10 @@
 //! an auditor sees the rule and its check in one place:
 //!
 //! ```text
-//!        db/        (create, read and update of the models; the encryption)
+//!      account/     (the first start, the login, the keys of the account)
+//!         │
+//!         ▼
+//!        db/        (create, read and update of the models; the database files)
 //!         │
 //!         ▼
 //!   model/, security/, pdf/     (nothing of the program)
@@ -28,12 +31,14 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-const ALLOWED: [(&str, &[&str]); 4] = [
+const ALLOWED: [(&str, &[&str]); 5] = [
     ("model", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
     ("db", &["model", "security"]),
+    // The account: its logic on db/ and the models.
+    ("account", &["db", "model", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

@@ -30,9 +30,10 @@ use hkdf::Hkdf;
 use sha2::Sha256;
 use zeroize::Zeroizing;
 
+use crate::model::user::user_keys::WrappedKey;
 use crate::security::random::fill_random;
 
-use super::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
+use crate::db::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 
 /// The fewest characters of a password.
 pub const PASSWORD_MIN: usize = 12;
@@ -109,24 +110,6 @@ pub fn check_password(password: &str) -> Result<(), KeyError> {
     }
 
     Ok(())
-}
-
-/// The key of a database, encrypted with an unlocking key.
-/// Everything needed to open it again, except the password; none of
-/// it is secret.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WrappedKey {
-    /// The random salt of Argon2id.
-    pub salt: Vec<u8>,
-    /// The parameters of Argon2id used, so that they can be raised
-    /// later without locking out existing accounts.
-    pub memory_kib: u32,
-    pub iterations: u32,
-    /// The nonce of AES-GCM: random, used once.
-    pub nonce: Vec<u8>,
-    /// The encrypted key and its authentication tag.
-    pub ciphertext: Vec<u8>,
-    pub tag: Vec<u8>,
 }
 
 /// Derives the unlocking key from a password.

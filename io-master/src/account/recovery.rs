@@ -20,10 +20,11 @@ use hkdf::Hkdf;
 use sha2::Sha256;
 use zeroize::Zeroizing;
 
-use crate::db::encryption::recovery_code::{CODE_BYTES, RecoveryCode};
+use crate::account::recovery_code::{CODE_BYTES, RecoveryCode};
+use crate::model::user::user_keys::RecoveryWrappedKey;
 use crate::security::random::fill_random;
 
-use super::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
+use crate::db::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 
 /// What the HKDF derivation is for: never the same key as the one of the
 /// password (`keys.rs`, "io-master unlocking key v1").
@@ -61,22 +62,9 @@ impl fmt::Display for RecoveryError {
 
 impl std::error::Error for RecoveryError {}
 
-/// The key of a database, wrapped with a recovery code. Everything
-/// needed to open it again, except the code; none of it is secret.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct RecoveryWrappedKey {
-    /// The random salt of HKDF.
-    pub salt: Vec<u8>,
-    /// The nonce of AES-GCM: random, used once.
-    pub nonce: Vec<u8>,
-    /// The encrypted key and its authentication tag.
-    pub ciphertext: Vec<u8>,
-    pub tag: Vec<u8>,
-}
-
 /// A new recovery code: 160 random bits from the kernel.
 ///
-/// Called by: `installation/accounts.rs` (the account made, the password
+/// Called by: `account/access.rs` (the account made, the password
 /// changed or recovered, a new code asked for).
 /// Calls: `security::random::fill_random`.
 pub fn new_code() -> Result<RecoveryCode, RecoveryError> {
@@ -105,7 +93,7 @@ fn recovery_key(code: &RecoveryCode, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>,
 /// Wraps the key of a database with a recovery code. `binding` ties the
 /// copy to its account, as in `keys::wrap`.
 ///
-/// Called by: `installation/accounts.rs`.
+/// Called by: `account/access.rs`.
 /// Calls: `fill_random`, [`recovery_key`], AES-256-GCM.
 pub fn wrap(key: &DatabaseKey, code: &RecoveryCode, binding: &[u8]) -> Result<RecoveryWrappedKey, RecoveryError> {
     ensure!(!binding.is_empty(), RecoveryError::Failed("a copy of a key needs its account".to_owned()));
@@ -132,7 +120,7 @@ pub fn wrap(key: &DatabaseKey, code: &RecoveryCode, binding: &[u8]) -> Result<Re
 /// Opens the key of a database with a recovery code. Fails with
 /// [`RecoveryError::WrongCode`] when the code (or `binding`) does not fit.
 ///
-/// Called by: `installation/accounts.rs` (`recover`).
+/// Called by: `account/access.rs` (`recover`).
 /// Calls: [`recovery_key`], AES-256-GCM.
 pub fn unwrap(wrapped: &RecoveryWrappedKey, code: &RecoveryCode, binding: &[u8]) -> Result<DatabaseKey, RecoveryError> {
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| RecoveryError::Damaged)?;

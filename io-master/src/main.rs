@@ -49,6 +49,7 @@ mod model {
     pub mod user {
         pub mod program_data;
         pub mod user_data;
+        pub mod user_keys;
     }
 }
 
@@ -70,14 +71,10 @@ mod db {
     pub mod error;
     pub mod lists;
     pub mod system_database;
-    // db/encryption/: all code of encryption of the databases, moved
-    // unchanged from the earlier program; audited by the user later.
+    // db/encryption/: the encryption of the database files: their key and
+    // SQLCipher; moved unchanged from the earlier program, audited later.
     pub mod encryption {
         pub mod database_key;
-        pub mod generate_key;
-        pub mod keys;
-        pub mod recovery;
-        pub mod recovery_code;
         pub mod sqlcipher;
     }
     // db/ai/: the integrations and their keys, the knowledge (RAG) and its
@@ -97,6 +94,7 @@ mod db {
     pub mod user {
         pub mod program_data;
         pub mod user_data;
+        pub mod user_keys;
     }
     // db/evaluation/: the plans, their work units, the standards, the
     // documents of the product, the proofs of the laboratory.
@@ -107,6 +105,19 @@ mod db {
         pub mod product_document;
         pub mod work_unit;
     }
+}
+
+// account/: the account of the user: the first start, the login; the
+// password and the recovery code that wrap the key of the database
+// (moved unchanged from the earlier program, audited later). The logic
+// only: the data is written by db/.
+#[allow(dead_code, reason = "used by the views of the first start and the login (2026-10-28)")]
+mod account {
+    pub mod access;
+    pub mod generate_key;
+    pub mod keys;
+    pub mod recovery;
+    pub mod recovery_code;
 }
 
 // pdf/: reading PDFs with the tools of Poppler (pdfinfo, pdftotext): the only

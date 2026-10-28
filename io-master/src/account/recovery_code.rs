@@ -11,7 +11,7 @@
 //! The alphabet has no 0, O, 1 and I, which are easy to mix up. When a
 //! code is typed, the letter case, the spaces and the dashes do not
 //! matter. This file only writes and reads the text; the random bytes
-//! are made by `db/encryption/recovery.rs`, which also wraps the key of
+//! are made by `account/recovery.rs`, which also wraps the key of
 //! the database with them.
 
 use std::fmt;
@@ -81,14 +81,14 @@ impl fmt::Debug for RecoveryCode {
 impl RecoveryCode {
     /// The code of these random bytes.
     ///
-    /// Called by: `db/encryption/recovery.rs` (`new_code`), and the tests.
+    /// Called by: `account/recovery.rs` (`new_code`), and the tests.
     pub fn from_bytes(bytes: [u8; CODE_BYTES]) -> RecoveryCode {
         RecoveryCode { bytes: Zeroizing::new(bytes) }
     }
 
     /// The bytes of the code, for the derivation of its key.
     ///
-    /// Called by: `db/encryption/recovery.rs`.
+    /// Called by: `account/recovery.rs`.
     pub fn expose(&self) -> &[u8; CODE_BYTES] {
         &self.bytes
     }
