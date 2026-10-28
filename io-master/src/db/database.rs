@@ -26,6 +26,7 @@ use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
 use crate::db::evaluation::{evaluation_plan, lab_proof, oscal_standard_document, product_document, work_unit};
+use crate::db::user::program_data;
 
 /// How long an operation waits for another that holds the database.
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
@@ -51,6 +52,7 @@ impl Database {
 
         connection.execute_batch(integration::SCHEMA)?;
         connection.execute_batch(api_key::SCHEMA)?;
+        connection.execute_batch(program_data::SCHEMA)?;
         connection.execute_batch(rag::SCHEMA)?;
         connection.execute_batch(agent::SCHEMA)?;
         connection.execute_batch(instructions::SCHEMA)?;

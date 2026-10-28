@@ -100,6 +100,7 @@ mod db {
     pub mod database;
     pub mod error;
     pub mod lists;
+    pub mod system_database;
     // db/encryption/: all code of encryption of the databases, moved from
     // db_old/ unchanged (2026-10-28); serves db/ and db_old/.
     pub mod encryption {
@@ -120,6 +121,12 @@ mod db {
         pub mod integration;
         pub mod journal;
         pub mod rag;
+    }
+    // db/user/: the user and the installation (the system database), the
+    // settings of the user.
+    pub mod user {
+        pub mod program_data;
+        pub mod user_data;
     }
     // db/evaluation/: the plans, their work units, the standards, the
     // documents of the product, the proofs of the laboratory.

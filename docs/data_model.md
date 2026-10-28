@@ -1,6 +1,6 @@
 # IO Master: the data model
 
-**State (2026-10-28):** the models of `io-master/src/model/` are agreed with the user, model by model, and written as plain structures; **no code uses them yet**. The code is moved to them from `model_old/` step by step, so that the program works all the time (`code_structure.md`, section 2.1). The tables named here are those of `db/` (`users/<id>.v2.db`): built for `model/evaluation/` and `model/ai/` (2026-10-28), planned for `model/user/`; the earlier tables are those of `db_old/`.
+**State (2026-10-28):** the models of `io-master/src/model/` are agreed with the user, model by model, and written as plain structures; **no code uses them yet**. The code is moved to them from `model_old/` step by step, so that the program works all the time (`code_structure.md`, section 2.1). The tables named here are those of `db/` (`users/<id>.v2.db`): built for every model (2026-10-28); `User` and `Installation` in the new system database `system.v2.db`; the earlier tables are those of `db_old/`.
 
 ## 1. The rules of a model (user, 2026-10-28)
 
@@ -71,9 +71,9 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 | Model | File | Fields | Table |
 |---|---|---|---|
-| `User` | `user_data.rs` | id, name, created | `users` (system database) |
-| `Installation` | `program_data.rs` | id, created | `installation` (system database) |
-| `Settings` | `program_data.rs` | active_integration | `settings` |
+| `User` | `user_data.rs` | id, name, created | `users` (`system.v2.db`) |
+| `Installation` | `program_data.rs` | id, created | `installation` (`system.v2.db`; create and read only) |
+| `Settings` | `program_data.rs` | active_integration | `settings` (one row) |
 
 ## 3. The evaluation plan
 
