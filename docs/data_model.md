@@ -1,6 +1,6 @@
 # IO Master: the data model
 
-**State (2026-10-28):** the models of `io-master/src/model/` are agreed with the user, model by model, and written as plain structures; **no code uses them yet**. The code is moved to them from `model_old/` step by step, so that the program works all the time (`code_structure.md`, section 2.1). The tables named here are those of `db/` (`users/<id>.v2.db`): built for every model (2026-10-28); `User` and `Installation` in the new system database `system.v2.db`; the earlier tables are those of `db_old/`.
+**State (2026-10-28):** the models of `io-master/src/model/` are agreed with the user, model by model, and written as plain structures; their create, read and update are built in `db/`, with the tables named here (`users/<id>.v2.db`; `User` and `Installation` in the system database `system.v2.db`). The earlier code was removed: the program is rebuilt on these models (`code_structure.md`).
 
 ## 1. The rules of a model (user, 2026-10-28)
 
@@ -117,4 +117,4 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 ## 6. What the program drops
 
-- **The Converter** (a catalog of OSCAL made from the PDFs of a standard) is dropped (user, 2026-10-28): a chat with an agent is enough to make a catalog. Its code is removed later, together with the rework of the views on the new models, since it reaches into many places (the catalog editor, the PDFs of the standards and their viewer, the state of the conversions used by the Evaluation plan).
+- **The Converter** (a catalog of OSCAL made from the PDFs of a standard) is dropped (user, 2026-10-28): a chat with an agent is enough to make a catalog. Its code went with the earlier program (2026-10-28) and does not come back.

@@ -1,25 +1,18 @@
 //! The direction of the dependencies between the folders of the
-//! program (step 40 of docs/history.md, docs/code_structure.md), checked
-//! on the source itself, so that an auditor sees the rule and its check
-//! in one place:
+//! program (docs/code_structure.md), checked on the source itself, so that
+//! an auditor sees the rule and its check in one place:
 //!
 //! ```text
-//!                         views/
-//!                  (one folder per view of the window)
-//!                            │
-//!                            ▼
-//!                       components/
-//!                  (the elements used more than once)
-//!        ┌──────────┬────────┼─────────┬──────────────┬───────────┐
-//!        ▼          ▼        ▼         ▼              ▼           ▼
-//!      app/        ai/   hardware_  installation/    pdf/      (model/,
-//!  (state, errors)  │     tests/        │                    model_old/,
-//!        │          │                   │                     security/)
-//!        │          │                   │
-//!        └──────────┴──► db/, db_old/ ◄──┘
-//!                            │
-//!          all of them ───► model/, model_old/, security/
+//!        db/        (create, read and update of the models; the encryption)
+//!         │
+//!         ▼
+//!   model/, security/, pdf/     (nothing of the program)
 //! ```
+//!
+//! **The program is being rebuilt (2026-10-28)**: the folders above `db/`
+//! (the AI, the login, the views) come back one by one, each with its row
+//! below, and the checks of the views and the components of the page with
+//! the views.
 //!
 //! A folder uses only itself and the folders below it, and never a
 //! folder above it: no cycle. The tests (the module `tests` at the end of
@@ -28,65 +21,19 @@
 //!
 //! The tests of a file are its last item (step 44): only the part above
 //! them is held to the rule, and a test checks that nothing of the program
-//! follows them. Two rules of step 43 (docs/architecture.md, section 10.2)
-//! are checked as well: a view never uses another view (what two views need is a
-//! component), and a component of the page never imports a view of the
-//! page.
+//! follows them.
 
 use std::fs;
 use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-// model_old/ is replaced by model/ step by step, and db_old/ by db/
-// (2026-10-28).
-const ALLOWED: [(&str, &[&str]); 11] = [
+const ALLOWED: [(&str, &[&str]); 4] = [
     ("model", &[]),
-    ("model_old", &["model"]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
-    (
-        "db",
-        &[
-            "model",
-            "security",
-            // The encryption, moved from db_old/ unchanged (2026-10-28): its
-            // error and the recovery code are still those of db_old/ and
-            // model_old/, until db/ has an error of its own.
-            "db_old::error::DbError",
-            "model_old::recovery_code",
-        ],
-    ),
-    // The error of the new db/ (its encryption) told to db_old/ as its own.
-    ("db_old", &["db::encryption", "db::error::DbError", "model", "model_old", "security"]),
-    ("ai", &["db", "db_old", "model", "model_old", "security"]),
-    // The installation, its account and the session: the core of the
-    // protection, below the window and the views.
-    ("installation", &["db", "db_old", "model", "model_old", "security"]),
-    (
-        "app",
-        &[
-            "installation",
-            "model",
-            "model_old",
-            // The errors of the folders below, turned into errors of the
-            // page; never a function of them.
-            "ai::api::completions::AiError",
-            "ai::api::connections::ConnectionSaveError",
-            "ai::api::roles::ModelError",
-            "db_old::error",
-            "db_old::oscal::error::OscalError",
-        ],
-    ),
-    // The components (components.rs): the elements used more than once,
-    // built as the elements of a view; never a view.
-    ("components", &["app", "ai", "db", "db_old", "installation", "model", "model_old", "pdf", "security"]),
-    // The views (views.rs): the commands of the elements of the window,
-    // on top of everything. They use the state and the errors of the
-    // window (app/) and the components, and do their work with the folders
-    // below. A view never uses another view (checked below).
-    ("views", &["app", "ai", "components", "db", "db_old", "installation", "model", "model_old", "pdf", "security"]),
+    ("db", &["model", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:
@@ -197,111 +144,6 @@ fn every_folder_uses_only_the_folders_below_it() {
     assert!(broken.is_empty(), "uses against the direction of the dependencies:\n{}", broken.join("\n"));
 }
 
-/// The views of the window: the folders of `views/`.
-fn view_folders(root: &Path) -> Vec<String> {
-    let mut found = Vec::new();
-
-    for entry in fs::read_dir(root.join("views")).expect("the folder views is read").flatten() {
-        if entry.path().is_dir() {
-            found.push(entry.file_name().to_string_lossy().into_owned());
-        }
-    }
-
-    found
-}
-
-/// How deep the module of `file` lies in the folder of its view: 1 for
-/// `chat/mod.rs`, 2 for `chat/conversation/mod.rs` and `chat/turn.rs`.
-fn depth_in_view(file: &Path) -> usize {
-    let parts = file.components().count();
-
-    if file.file_name().is_some_and(|name| name == "mod.rs") { parts - 1 } else { parts }
-}
-
-/// The paths of `text` that start with `super::`, as the number of their
-/// `super::` (a path `super::super::x` is 2).
-fn super_chains(text: &str) -> Vec<usize> {
-    let mut found = Vec::new();
-
-    for (at, _) in text.match_indices("super::") {
-        let before = text[..at].chars().next_back().unwrap_or(' ');
-
-        if before == ':' || before.is_alphanumeric() || before == '_' {
-            continue;
-        }
-
-        found.push(text[at..].split("::").take_while(|part| *part == "super").count());
-    }
-
-    found
-}
-
-#[test]
-fn a_view_never_uses_another_view() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
-    let views = view_folders(&root);
-    let mut broken = Vec::new();
-
-    assert!(views.len() > 1, "the views are found");
-
-    for view in &views {
-        for (file, text) in files(&root.join("views"), view) {
-            // By its name: `crate::views::<another view>`.
-            for path in paths(&text) {
-                let mut parts = path.split("::");
-
-                if parts.next() == Some("views") && parts.next().is_some_and(|other| other != view) {
-                    broken.push(format!("views/{file}: crate::{path}"));
-                }
-            }
-
-            // By `super::`: a chain that leaves the folder of the view.
-            let depth = depth_in_view(Path::new(&file));
-
-            for chain in super_chains(&text) {
-                if chain >= depth {
-                    broken.push(format!("views/{file}: a path with {chain} times super:: leaves the view {view}"));
-                }
-            }
-        }
-    }
-
-    broken.sort();
-    broken.dedup();
-    assert!(broken.is_empty(), "a view uses another view:\n{}", broken.join("\n"));
-}
-
-#[test]
-fn a_component_of_the_page_never_imports_a_view() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("ui").join("src").join("components");
-    let mut pending = vec![root.clone()];
-    let mut checked = 0;
-    let mut broken = Vec::new();
-
-    while let Some(directory) = pending.pop() {
-        for entry in fs::read_dir(&directory).expect("the folder of the components is read").flatten() {
-            let path = entry.path();
-
-            if path.is_dir() {
-                pending.push(path);
-                continue;
-            }
-
-            checked += 1;
-            let text = fs::read_to_string(&path).unwrap_or_default();
-
-            for line in text.lines() {
-                if line.trim_start().starts_with("import") && line.contains("/views/") {
-                    broken.push(format!("{}: {}", path.strip_prefix(&root).unwrap_or(&path).display(), line.trim()));
-                }
-            }
-        }
-    }
-
-    assert!(checked > 0, "the components of the page are found");
-    assert!(broken.is_empty(), "a component imports a view:\n{}", broken.join("\n"));
-}
-
 /// Every `.rs` file under `root`.
 fn all_rust_files(root: &Path) -> Vec<(String, String)> {
     let mut found = Vec::new();
@@ -380,7 +222,7 @@ fn the_tests_of_a_file_are_its_last_item() {
 
 /// The files of tests of their own: the tests of the whole program, which
 /// test no one file (step 44).
-const FILES_OF_TESTS: [&str; 2] = ["architecture_tests.rs", "command_lists_tests.rs"];
+const FILES_OF_TESTS: [&str; 1] = ["architecture_tests.rs"];
 
 #[test]
 fn the_tests_of_a_file_are_never_in_a_file_of_their_own() {

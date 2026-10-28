@@ -2,20 +2,19 @@
 
 Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md`, `docs/data_model.md` and `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English. A high-level overview of what the program does: `docs/presentation.md`.
 
-## Where the project is (2026-10-25)
+## Where the project is (2026-10-28)
 
-- Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branches **`main`** (the tested state) and **`test_branch`** (the work); no other branches and no version numbers yet.
-- **Steps 0 to 60 are built or settled** (53: zero warnings; 55, backups, dropped; 57 to 60 on 2026-10-25) (`docs/history.md`): the layers and their tests (step 40), the views and the components (42 to 47), the framework for the evaluation with AI without devices, master, TPM or keyring (48), the recovery code (49), the Converter (50), the master projects of the Evaluation plan with the schemes of tasks, the proposals of the AI and the work packages (51), the Evaluation lab with the evidence, the fragments, the assessment, the outputs and the report (52).
-- **The documents were read through on 2026-10-24** (step 48.2): the catalogue of the functions of version 0.2 and the console function of the removal of the installation were removed; `todo.md` keeps only the open steps (10, 12, 53 to 56 and reminders).
-- **The state of the branches (2026-10-24):** `main` and `test_branch` hold the same state after the merge of steps 48 to 52 and the documents; the user tests the functions of the AI by hand.
-- **The data of the tests is a temporary resource until version 1**: a change of a schema may need a fresh database (`~/.local/share/io-master` removed).
-- **The review starts anew** on the code of step 40 (`review.md`): no approval moved with the code.
+- Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branches **`main`** (the earlier program, the reference) and **`test_branch`** (the rebuild). **Nothing goes to `main` until the user revokes it** (2026-10-28).
+- **The rebuild (user, 2026-10-28):** the users of the program found it weak in its function, so it is rebuilt from its data up. Done: the new models (`model/`, agreed field by field with the user and frozen, `docs/data_model.md`), their database (`db/`: create, read, update, no delete, two new files `users/<id>.v2.db` and `system.v2.db`, the copy of a plan into an evaluation checked by Kahn's algorithm), the earlier code removed (it is in `main`). The window opens empty; 79 tests, clippy and svelte-check clean.
+- **The old databases are dropped**: nothing is moved from them; the data of the tests is temporary until version 1.
 
 ## What comes next
 
-The user chooses (`docs/todo.md`). The candidates:
-1. **Step 12, the user's review**, file by file: Claude answers precisely (the user knows C and is new to Rust: explain Rust through C analogies), points out errors, and changes code only on request; it does not push for decisions.
-2. **The workflow of 2026-10-25 is built** (steps 57 to 60: knowledge for the AI with agents, the journal of the AI on a page, the progress of an evaluation, a short presentation with screenshots in `docs/presentation/`). Open: 57.5 (embeddings, only if the search by words proves too weak on real standards), the user's tests of the AI on a real local model.
+The parts come back one by one, rewritten on the new models (each a concept approved by the user first):
+1. **The functions of the making of a plan** in a folder of their own above `db/` (its name to be agreed): the order of the work, `cross_reference` and `blocked` set after every change of the dependencies; and the check of an OSCAL document against the schema of NIST in a file of its own (its name to be agreed).
+2. **The login and the session** on `system.v2.db` and `users/<id>.v2.db`: the installation, the user, the keys (`db/encryption/`), the recovery code.
+3. **The AI layer** on the new models: the integration, the agent, the RAG, the journal (the HTTP and TLS client of `main` reused).
+4. **The views**, one by one, each with its page: the evaluation plan, the evaluation, the knowledge, the settings, the chat.
 
 ## Rules that are easy to forget
 
@@ -23,11 +22,11 @@ The user chooses (`docs/todo.md`). The candidates:
 - An approved step in short, mechanical phases runs to its end without asking before each phase; commit and push each; stop only for a decision of the user (a concept, a change of a rule) or for `main`.
 - Commits go to `test_branch` and are pushed at once; `main` only after the user's manual tests, asked each time.
 - A fake AI for the window tests: a small Python HTTP server on 127.0.0.1:11434 that answers in the chat-completions stream format, its answer chosen by the instructions in the question (a JSON object for the tasks that read JSON, a plain text for the chat and the outputs); the default new connection points there.
-- **A new file of the program is declared in the map of `main.rs`**, in the group of its folder; there is no `mod.rs` and no file that only declares modules. **A new command** goes into the entry of its view (`views/<view>/<view>.rs`), with the comment: what it does, where the page calls it, what it calls; its function on the page into `ui/src/lib/api/<view>.ts`, named as the command.
+- **A new file of the program is declared in the map of `main.rs`**, in the group of its folder; there is no `mod.rs` and no file that only declares modules. When the views come back (the rules of `main`): **a new command** goes into the entry of its view (`views/<view>/<view>.rs`), with the comment: what it does, where the page calls it, what it calls; its function on the page into `ui/src/lib/api/<view>.ts`, named as the command.
 - **Comments at the functions** (what, called from, calls); descriptions of the architecture only in `docs/` (Markdown with schemes).
-- Everything that touches the key of the database stays in `views/users/users.rs`; every end of the program goes through `AppState::log_out` (`main.rs`, `RunEvent::Exit`).
+- In the earlier program (to keep when the login comes back): everything that touches the key of the database stayed in `views/users/users.rs`; every end of the program went through `AppState::log_out` (`main.rs`, `RunEvent::Exit`).
 - The direction of the dependencies is checked by `src/architecture_tests.rs`; a new use against it is a finding, or an exception written there with its reason.
-- Every command of the window is listed in four places (the entry of its view or component, `routes.rs`, `build.rs`, `capabilities/default.json`); a test checks them.
+- When the commands come back, each is listed in four places (the entry of its view or component, `routes.rs`, `build.rs`, `capabilities/default.json`), checked by a test (`command_lists_tests.rs` of `main`); today there is none.
 - Serialization only in the `view.rs` of the elements of `src/views/` and in `src/app/serializer/` (the error of a command); the core types carry no serde attributes.
 - Secrets only in the encrypted database of the evaluator; never shown back, never printed; the page holds no secret.
 - Every connection leaving the computer: TLS 1.3, verified certificate. Plain HTTP only to 127.0.0.1/::1 (AI connections).

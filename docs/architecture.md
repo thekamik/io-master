@@ -2,6 +2,8 @@
 
 This document records the concept of the program, as agreed from 2026-10-14 on (one user per installation on 2026-10-15; the desktop window on 2026-10-16; the layers of the code on 2026-10-17; the standards in NIST OSCAL on 2026-10-18; the framework for the evaluation with AI, without devices, a master, the TPM and the keyring, on 2026-10-24, step 48; the Converter, the master projects and the Evaluation lab, steps 50 to 52 of the same day; all in `history.md`). It describes *what* the program is and *why* it is built this way. *Where* everything is in the code is in `code_structure.md`; the work with standards on NIST OSCAL in `oscal.md`; the open work in `todo.md`, the steps built in `history.md`.
 
+**The rebuild (user, 2026-10-28).** The program is being rebuilt on a new data model (`data_model.md`), and the earlier code was removed from `test_branch` (kept in `main`). The principles (section 2), the user and the secrets (sections 3 and 5) hold; **the sections about the views, their flow of data, the folders and the work on standards (7, 10 to 12) describe the earlier program**, the reference for the parts that come back, where `data_model.md` does not decide otherwise (it does for the plan, the evaluation, the documents and the AI). The code as it is: `code_structure.md`.
+
 Status markers: **agreed** is decided; **open** still needs a decision; **TODO** is known work that must not be forgotten.
 
 **The vocabulary of the project is in section 10, the tasks of the folders in section 11, the flow of data in the views in section 12.** They are at the end so that the numbers of the earlier sections, named all over the code and the documents, stay as they are.

@@ -1,9 +1,8 @@
-//! Help for the tests of the whole program: temporary directories, and
-//! a small standard (`standards.rs`).
+//! Help for the tests of the whole program: temporary directories, a new
+//! database with its data (`database.rs`), a small PDF (`pdf.rs`).
 
 pub mod database;
-pub mod db;
-pub mod standards;
+pub mod pdf;
 
 use std::fs;
 use std::os::unix::fs::DirBuilderExt;

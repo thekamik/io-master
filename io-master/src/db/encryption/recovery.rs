@@ -20,7 +20,7 @@ use hkdf::Hkdf;
 use sha2::Sha256;
 use zeroize::Zeroizing;
 
-use crate::model_old::recovery_code::{CODE_BYTES, RecoveryCode};
+use crate::db::encryption::recovery_code::{CODE_BYTES, RecoveryCode};
 use crate::security::random::fill_random;
 
 use super::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};

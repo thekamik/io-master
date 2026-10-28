@@ -169,7 +169,7 @@ mod tests {
 
     use super::*;
 
-    use crate::test_support::standards::pdf;
+    use crate::test_support::pdf::pdf;
 
     #[test]
     fn the_pages_and_the_title_are_read() {
