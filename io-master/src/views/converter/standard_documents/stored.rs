@@ -7,10 +7,10 @@
 use std::fmt;
 
 use crate::app::error::AppError;
-use crate::db::error::DbError;
-use crate::db::evaluation_support as db_evaluation_support;
-use crate::db::standards as db_standards;
-use crate::db::user::database::UserDb;
+use crate::db_old::error::DbError;
+use crate::db_old::evaluation_support as db_evaluation_support;
+use crate::db_old::standards as db_standards;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::standards::{DocumentFields, sha256_hex};
 use crate::model_old::text::Invalid;
 
@@ -173,7 +173,7 @@ mod tests {
     fn the_text_cannot_be_read_from_the_file() {
         let test = database();
         load(&test.db, b"%PDF secret");
-        let path = crate::db::user::database::path(test.directory.path(), 1);
+        let path = crate::db_old::user::database::path(test.directory.path(), 1);
 
         let bytes = fs::read(path).unwrap();
         assert!(!bytes.windows(17).any(|window| window == b"ADV_FSP.4 Complet"));

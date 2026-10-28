@@ -20,9 +20,9 @@ use crate::ai::tasks::knowledge_context;
 use crate::ai::tasks::related_elements;
 use crate::app::error::AppError;
 use crate::components::knowledge_agent::find;
-use crate::db::evaluation_project as db_evaluation_project;
-use crate::db::oscal as db_oscal;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation_project as db_evaluation_project;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model_old::ai::Task;
 use crate::model_old::evaluation_project::{MAX_LINKS, TaskLink};
@@ -262,8 +262,8 @@ mod tests {
             let first = crate::test_support::db::basic_catalog();
             let text = include_str!("../../../../oscal/examples/basic-catalog.json").replace(first.uuid(), OTHER);
             let other = OscalDocument::from_json(&text).unwrap();
-            crate::db::oscal::create::document(&db, &first).unwrap();
-            crate::db::oscal::create::document(&db, &other).unwrap();
+            crate::db_old::oscal::create::document(&db, &first).unwrap();
+            crate::db_old::oscal::create::document(&db, &other).unwrap();
             let fields = ProjectFields { title: "P".to_owned(), description: String::new() };
             db_evaluation_project::create::project(&db, "p", &fields, &[first.uuid().to_owned(), OTHER.to_owned()])
                 .unwrap();
@@ -309,7 +309,7 @@ mod tests {
             (OTHER, "s1.1.1", true)
         );
         assert_eq!(events.lock().unwrap().last().unwrap(), &json!({ "event": "end", "stopped": false }));
-        assert_eq!(crate::db::ai::journal::read::last(&db, 5).unwrap()[0].task, "related_elements");
+        assert_eq!(crate::db_old::ai::journal::read::last(&db, 5).unwrap()[0].task, "related_elements");
 
         let asked = service.received()[0].body.to_string();
         assert!(asked.contains("Information security roles and responsibilities"));

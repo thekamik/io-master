@@ -3,9 +3,9 @@
 //! end of a line and case do not matter; the snippet is the text as it is
 //! on the page.
 
-use crate::db::error::DbError;
-use crate::db::standards as db_standards;
-use crate::db::user::database::UserDb;
+use crate::db_old::error::DbError;
+use crate::db_old::standards as db_standards;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::standards::quote::{normalize, normalize_with_places};
 use crate::model_old::standards::{Hit, MAX_HITS};
 

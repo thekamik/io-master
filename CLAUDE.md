@@ -85,7 +85,8 @@ Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop win
 
 ## Database code (steps 37 and 40 of docs/history.md)
 
-- **SQL lives only in `io-master/src/db/`.** The views (`views/`) and `ai/` keep their logic and call the functions of `db/`; they never write SQL.
+- **The database code is written anew (user, 2026-10-28):** `db/` was renamed `db_old/`; the new `db/` holds the operations on the models of `model/`, moved to step by step while the program works. **Create, read and update only: no delete** (user, 2026-10-28). The rules below describe `db_old/` until the new layout is agreed.
+- **SQL lives only in `io-master/src/db/` (now also `db_old/`).** The views (`views/`) and `ai/` keep their logic and call the functions of `db/`; they never write SQL.
 - `db/` has one subfolder per area of data; each holds `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD: `create.rs`, `read.rs`, `update.rs`, `delete.rs` (a file that an area does not need is missing, which is visible in an audit).
 - Free functions only; a caller imports an area as `db_<area>` and calls `db_<area>::<operation>::<object>`. Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`, changes of the layout are migrations by version (`db/user/migrations.rs`).
 - `db/encryption/` holds all code of encryption; the head of every area states in which database its data lives and how it is protected.

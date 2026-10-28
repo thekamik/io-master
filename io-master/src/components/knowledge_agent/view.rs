@@ -4,8 +4,8 @@
 use serde::Serialize;
 
 use crate::app::error::AppError;
-use crate::db::knowledge as db_knowledge;
-use crate::db::user::database::UserDb;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::user::database::UserDb;
 
 /// An agent with knowledge that may be chosen.
 #[derive(Debug, Serialize)]

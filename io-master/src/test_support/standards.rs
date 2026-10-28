@@ -2,9 +2,9 @@
 //! directory, a small standard of three pages loaded into it, and a
 //! small but real PDF for the tests that run `pdftotext`.
 
-use crate::db::encryption::database_key::DatabaseKey;
-use crate::db::standards as db_standards;
-use crate::db::user::database::{self as user_db, UserDb};
+use crate::db_old::encryption::database_key::DatabaseKey;
+use crate::db_old::standards as db_standards;
+use crate::db_old::user::database::{self as user_db, UserDb};
 use crate::model_old::standards::{DocumentFields, sha256_hex};
 use crate::security::random::fill_random;
 use crate::test_support::TempDir;

@@ -163,7 +163,7 @@ mod tests {
     //! read back whole, and files that break the format or a limit.
 
     use super::*;
-    use crate::db::knowledge as db_knowledge;
+    use crate::db_old::knowledge as db_knowledge;
     use crate::test_support::standards::database;
     use crate::views::knowledge::agent_form::export::file_text;
 

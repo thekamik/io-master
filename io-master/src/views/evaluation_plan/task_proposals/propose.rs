@@ -18,9 +18,9 @@ use crate::ai::tasks::knowledge_context;
 use crate::ai::tasks::requirement_choice;
 use crate::app::error::AppError;
 use crate::components::knowledge_agent::find;
-use crate::db::evaluation_project as db_evaluation_project;
-use crate::db::oscal as db_oscal;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation_project as db_evaluation_project;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model_old::ai::Task;
 use crate::model_old::evaluation_project::TaskProposal;
@@ -210,7 +210,7 @@ mod tests {
             connections::set_key(&db, id, &ApiKey::new("sk-test".to_owned()).unwrap()).unwrap();
 
             let document = crate::test_support::db::basic_catalog();
-            crate::db::oscal::create::document(&db, &document).unwrap();
+            crate::db_old::oscal::create::document(&db, &document).unwrap();
             let catalog = document.uuid().to_owned();
             let fields = ProjectFields { title: "P".to_owned(), description: "A smart card.".to_owned() };
             db_evaluation_project::create::project(&db, "p", &fields, std::slice::from_ref(&catalog)).unwrap();
@@ -257,7 +257,7 @@ mod tests {
         let events = events.lock().unwrap();
         assert_eq!(events[0], json!({ "event": "part", "index": 1, "count": 1 }));
         assert_eq!(events.last().unwrap(), &json!({ "event": "end", "stopped": false }));
-        assert_eq!(crate::db::ai::journal::read::last(&db, 5).unwrap()[0].task, "requirement_choice");
+        assert_eq!(crate::db_old::ai::journal::read::last(&db, 5).unwrap()[0].task, "requirement_choice");
 
         let asked = service.received()[0].body.to_string();
         assert!(asked.contains("A smart card."));

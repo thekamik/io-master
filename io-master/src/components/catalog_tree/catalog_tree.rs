@@ -10,7 +10,7 @@ use tauri::State;
 
 use crate::app::error::AppError;
 use crate::app::state::AppState;
-use crate::db::oscal as db_oscal;
+use crate::db_old::oscal as db_oscal;
 
 use super::view::CatalogTreeView;
 

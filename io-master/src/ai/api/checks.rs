@@ -10,8 +10,8 @@
 
 use std::sync::{Arc, Mutex, PoisonError};
 
-use crate::db::error::DbError;
-use crate::db::user::database::UserDb;
+use crate::db_old::error::DbError;
+use crate::db_old::user::database::UserDb;
 
 use super::completions;
 use super::provider::client;

@@ -18,8 +18,8 @@ use crate::ai::api::{checks, connections};
 use crate::ai::presets::{self, field_help};
 use crate::app::error::AppError;
 use crate::app::state::AppState;
-use crate::db::ai::journal::read as journal;
-use crate::db::user::database::UserDb;
+use crate::db_old::ai::journal::read as journal;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::ai::Field;
 use crate::model_old::api_key::ApiKey;
 
@@ -568,8 +568,8 @@ mod tests {
             let session = window.session();
             let mut entry = crate::test_support::db::journal_entry("assessment");
             entry.request = r#"{"messages":[{"role":"user","content":"Assess FCS_CKM.1."}]}"#.to_owned();
-            crate::db::ai::journal::create::entry(&session.db(), &entry).unwrap();
-            crate::db::ai::journal::create::entry(&session.db(), &crate::test_support::db::journal_entry("chat"))
+            crate::db_old::ai::journal::create::entry(&session.db(), &entry).unwrap();
+            crate::db_old::ai::journal::create::entry(&session.db(), &crate::test_support::db::journal_entry("chat"))
                 .unwrap();
         }
 

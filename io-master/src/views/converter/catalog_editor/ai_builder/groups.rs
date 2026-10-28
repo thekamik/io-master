@@ -11,10 +11,10 @@ use crate::ai::tasks::catalog_outline::{self, Outline};
 use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::components::knowledge_agent::find;
-use crate::db::evaluation_support as db_evaluation_support;
-use crate::db::evaluation_support::create::NewProposal;
-use crate::db::oscal as db_oscal;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation_support as db_evaluation_support;
+use crate::db_old::evaluation_support::create::NewProposal;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model_old::ai::Task;
 use crate::model_old::evaluation_support::ProposalKind;
@@ -160,7 +160,7 @@ mod tests {
         assert!(db_oscal::read::catalog(&db, &uuid).unwrap().groups.is_empty());
 
         // The question is in the journal of the AI.
-        assert_eq!(crate::db::ai::journal::read::last(&db, 5).unwrap()[0].task, "catalog_outline");
+        assert_eq!(crate::db_old::ai::journal::read::last(&db, 5).unwrap()[0].task, "catalog_outline");
     }
 
     #[tokio::test]

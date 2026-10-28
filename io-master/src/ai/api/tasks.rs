@@ -28,9 +28,9 @@ use crate::ai::tasks::{
     assessment, catalog_contents, catalog_outline, catalog_section, evidence_fragments, input_chat, knowledge_answer,
     output_draft, related_elements, requirement_choice, task_scheme,
 };
-use crate::db::ai::instructions as db_instructions;
-use crate::db::error::DbError;
-use crate::db::user::database::UserDb;
+use crate::db_old::ai::instructions as db_instructions;
+use crate::db_old::error::DbError;
+use crate::db_old::user::database::UserDb;
 
 use crate::model_old::ai::Task;
 

@@ -2,9 +2,9 @@
 //! model (local models have small ones): the text a task of the AI
 //! sends, part by part (`groups.rs`, `controls.rs`).
 
-use crate::db::error::DbError;
-use crate::db::standards as db_standards;
-use crate::db::user::database::UserDb;
+use crate::db_old::error::DbError;
+use crate::db_old::standards as db_standards;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::standards::Part;
 use crate::pdf::poppler::MAX_PAGES;
 

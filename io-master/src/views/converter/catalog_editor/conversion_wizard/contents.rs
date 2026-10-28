@@ -12,8 +12,8 @@ use tokio::sync::watch;
 use crate::ai::api::completions;
 use crate::ai::tasks::catalog_contents::{self, FIRST_PAGES};
 use crate::app::error::AppError;
-use crate::db::conversion as db_conversion;
-use crate::db::standards as db_standards;
+use crate::db_old::conversion as db_conversion;
+use crate::db_old::standards as db_standards;
 use crate::installation::session::Session;
 use crate::model_old::ai::Task;
 use crate::model_old::conversion::Pages;
@@ -130,7 +130,7 @@ mod tests {
         assert_eq!(events.lock().unwrap().last().unwrap(), &json!({ "event": "end", "stopped": false }));
 
         // The question is in the journal of the AI.
-        assert_eq!(crate::db::ai::journal::read::last(&session.db(), 5).unwrap()[0].task, "catalog_contents");
+        assert_eq!(crate::db_old::ai::journal::read::last(&session.db(), 5).unwrap()[0].task, "catalog_contents");
     }
 
     #[tokio::test]

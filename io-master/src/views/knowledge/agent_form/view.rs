@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::app::error::AppError;
-use crate::db::knowledge as db_knowledge;
-use crate::db::user::database::UserDb;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::knowledge::{
     Agent, AgentFields, DEFAULT_AGENT_PASSAGES, DEFAULT_CONTEXT_CHARS, MAX_AGENT_PASSAGES, MAX_CONTEXT_CHARS,
     MIN_CONTEXT_CHARS,

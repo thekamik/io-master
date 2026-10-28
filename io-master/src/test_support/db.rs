@@ -6,12 +6,12 @@
 
 use serde_json::{Value, json};
 
-use crate::db::ai::journal::rows::Entry;
-use crate::db::encryption::keys::WrappedKey;
-use crate::db::encryption::recovery::RecoveryWrappedKey;
-use crate::db::evaluation_support::create::{self, NewProposal};
-use crate::db::system::database::SystemDb;
-use crate::db::user::database::UserDb;
+use crate::db_old::ai::journal::rows::Entry;
+use crate::db_old::encryption::keys::WrappedKey;
+use crate::db_old::encryption::recovery::RecoveryWrappedKey;
+use crate::db_old::evaluation_support::create::{self, NewProposal};
+use crate::db_old::system::database::SystemDb;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::ai::Connection;
 use crate::model_old::api_key::ApiKey;
 use crate::model_old::evaluation::{Evaluation, EvaluationFields, LabTask, Package, PackageTask, TaskState};
@@ -183,10 +183,10 @@ pub fn lab_evaluation(package: &Package) -> Evaluation {
 /// An agent with knowledge named "ISO agent" whose one base holds one
 /// passage, `text` (page 7 of "ISO 27002"); gives its id (step 57.6).
 pub fn knowledge_agent(db: &UserDb, text: &str) -> i64 {
-    let base = crate::db::knowledge::create::base(db, "ISO", "").unwrap();
+    let base = crate::db_old::knowledge::create::base(db, "ISO", "").unwrap();
     let passage = crate::model_old::knowledge::Passage { page: Some(7), label: String::new(), text: text.to_owned() };
     let kind = crate::model_old::knowledge::SourceKind::Pdf;
-    crate::db::knowledge::create::source(db, base, kind, "ISO 27002", &[passage]).unwrap();
+    crate::db_old::knowledge::create::source(db, base, kind, "ISO 27002", &[passage]).unwrap();
     let fields = crate::model_old::knowledge::AgentFields {
         name: "ISO agent".to_owned(),
         instructions: "You know ISO 27002.".to_owned(),
@@ -196,5 +196,5 @@ pub fn knowledge_agent(db: &UserDb, text: &str) -> i64 {
         bases: vec![base],
     };
 
-    crate::db::knowledge::create::agent(db, &fields).unwrap()
+    crate::db_old::knowledge::create::agent(db, &fields).unwrap()
 }

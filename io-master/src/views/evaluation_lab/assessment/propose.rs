@@ -17,8 +17,8 @@ use crate::ai::tasks::assessment;
 use crate::app::error::AppError;
 use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
-use crate::db::evaluation as db_evaluation;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation as db_evaluation;
+use crate::db_old::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model_old::ai::Task;
 use crate::model_old::evaluation::check_results;
@@ -190,7 +190,7 @@ mod tests {
         let asked = service.received()[0].body.to_string();
         assert!(asked.contains("Anna owns the keys"));
         assert!(!asked.contains("Bob owns the audit log"), "a fragment not accepted stays out");
-        assert_eq!(crate::db::ai::journal::read::last(&session.db(), 5).unwrap()[0].task, "assessment");
+        assert_eq!(crate::db_old::ai::journal::read::last(&session.db(), 5).unwrap()[0].task, "assessment");
     }
 
     #[tokio::test]
@@ -234,7 +234,7 @@ mod tests {
         let session = test.state.session().unwrap();
         let (kept, dropped) = {
             let db = session.db();
-            let base = crate::db::knowledge::create::base(&db, "ISO", "").unwrap();
+            let base = crate::db_old::knowledge::create::base(&db, "ISO", "").unwrap();
             let passages = [
                 crate::model_old::knowledge::Passage {
                     page: Some(7),
@@ -247,7 +247,7 @@ mod tests {
                     text: "Responsibilities for information security roles are documented.".to_owned(),
                 },
             ];
-            crate::db::knowledge::create::source(
+            crate::db_old::knowledge::create::source(
                 &db,
                 base,
                 crate::model_old::knowledge::SourceKind::Pdf,
@@ -262,10 +262,10 @@ mod tests {
             };
             let catalog = "Sample Security Catalog *for Demonstration* and Testing";
             let kind = crate::model_old::knowledge::SourceKind::Catalog;
-            crate::db::knowledge::create::source(&db, base, kind, catalog, &[itself]).unwrap();
+            crate::db_old::knowledge::create::source(&db, base, kind, catalog, &[itself]).unwrap();
             let mut fields = crate::views::knowledge::agent_form::view::new_agent("ISO agent");
             fields.bases = vec![base];
-            let agent = crate::db::knowledge::create::agent(&db, &fields).unwrap();
+            let agent = crate::db_old::knowledge::create::agent(&db, &fields).unwrap();
             db_evaluation::update::agent(&db, "e", Some(agent)).unwrap();
 
             let task = lab_task::task(&db, "e", "t").unwrap();

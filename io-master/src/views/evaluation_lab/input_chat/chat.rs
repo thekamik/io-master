@@ -16,7 +16,7 @@ use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
-use crate::db::evaluation as db_evaluation;
+use crate::db_old::evaluation as db_evaluation;
 use crate::installation::session::Session;
 use crate::model_old::ai::{Speaker, Task, Turn};
 use crate::model_old::evaluation::check_message;
@@ -75,7 +75,7 @@ pub async fn send(
 /// `context::question_text` and `knowledge_context::into_last` (the context of
 /// the agent of the task after the question, step 57.6; it is not kept in the chat).
 fn turns(
-    db: &crate::db::user::database::UserDb,
+    db: &crate::db_old::user::database::UserDb,
     evaluation: &str,
     block: &str,
     question: &str,

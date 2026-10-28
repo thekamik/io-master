@@ -16,12 +16,12 @@ use crate::ai::api::tasks;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::components::ai_work::view::AiEvent;
-use crate::db::conversion as db_conversion;
-use crate::db::evaluation_project as db_evaluation_project;
-use crate::db::knowledge as db_knowledge;
-use crate::db::oscal as db_oscal;
-use crate::db::oscal::ids::new_uuid;
-use crate::db::user::database::UserDb;
+use crate::db_old::conversion as db_conversion;
+use crate::db_old::evaluation_project as db_evaluation_project;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::oscal::ids::new_uuid;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::knowledge::AgentPlace;
 use crate::model_old::text::safe_file_name;
 
@@ -1534,7 +1534,7 @@ mod tests {
         let catalog = {
             let session = window.session();
             let document = crate::test_support::db::basic_catalog();
-            crate::db::oscal::create::document(&session.db(), &document).unwrap();
+            crate::db_old::oscal::create::document(&session.db(), &document).unwrap();
             document.uuid().to_owned()
         };
         let form = json!({ "title": " CC:2022 R1 ", "description": "All of it", "catalogs": [catalog] });
@@ -1624,7 +1624,7 @@ mod tests {
                 .unwrap()
                 .replace(document.uuid(), "11111111-2222-4333-8444-555555555555");
             document = crate::model_old::oscal::OscalDocument::from_json(&text).unwrap();
-            crate::db::oscal::create::document(&session.db(), &document).unwrap();
+            crate::db_old::oscal::create::document(&session.db(), &document).unwrap();
             document.uuid().to_owned()
         };
         let form = json!({ "title": "CC", "description": "", "catalogs": [other] });
@@ -1835,7 +1835,7 @@ mod tests {
     /// Two inputs proposed in task `task` and a correction of its requirement
     /// `requirement`, as the AI leaves them.
     fn proposals(window: &crate::views::test_support::TestWindow, task: &str, requirement: &str) {
-        use crate::db::evaluation_project as db_evaluation_project;
+        use crate::db_old::evaluation_project as db_evaluation_project;
         use crate::model_old::task_scheme::{Block, BlockFields, BlockKind, Correction};
 
         let session = window.session();
@@ -1929,7 +1929,7 @@ mod tests {
 
     #[test]
     fn a_proposed_task_is_accepted_into_the_list_or_rejected() {
-        use crate::db::evaluation_project as db_evaluation_project;
+        use crate::db_old::evaluation_project as db_evaluation_project;
         use crate::model_old::evaluation_project::TaskProposal;
 
         let (window, catalog, project) = with_project();
@@ -1974,7 +1974,7 @@ mod tests {
 
     #[test]
     fn a_related_element_is_accepted_and_removed() {
-        use crate::db::evaluation_project as db_evaluation_project;
+        use crate::db_old::evaluation_project as db_evaluation_project;
         use crate::model_old::evaluation_project::TaskLink;
 
         let (window, task) = with_task();
@@ -2056,7 +2056,7 @@ mod tests {
                 title: "P".to_owned(),
                 description: String::new(),
             };
-            crate::db::evaluation_project::create::project(&session.db(), "p", &fields, &[]).unwrap();
+            crate::db_old::evaluation_project::create::project(&session.db(), "p", &fields, &[]).unwrap();
             crate::test_support::db::knowledge_agent(&session.db(), "Roles.")
         };
 

@@ -4,8 +4,8 @@
 //! uses the same search to give an agent its passages.
 
 use crate::app::error::AppError;
-use crate::db::knowledge as db_knowledge;
-use crate::db::user::database::UserDb;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::knowledge::{Hit, MAX_HITS, QUERY_MAX, search_query};
 
 /// The passages of base `base` that fit the text `text`, the best first,

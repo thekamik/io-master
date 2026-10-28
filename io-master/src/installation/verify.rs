@@ -132,7 +132,7 @@ mod tests {
         };
 
         assert_eq!(data_dir, directory.path());
-        assert!(crate::db::system::read::user(&running.system_db, "anna").unwrap().is_some());
+        assert!(crate::db_old::system::read::user(&running.system_db, "anna").unwrap().is_some());
     }
 
     #[test]

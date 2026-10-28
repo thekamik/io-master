@@ -16,8 +16,8 @@ use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::components::ai_work::view::AiEvent;
 use crate::components::knowledge_agent::find;
-use crate::db::knowledge as db_knowledge;
-use crate::db::user::database::UserDb;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::knowledge::{check_agent, check_base};
 use crate::model_old::text::safe_file_name;
 
@@ -506,7 +506,7 @@ mod tests {
     fn a_base_is_renamed_and_given_a_catalog() {
         let window = logged_in_window();
         let catalog = basic_catalog();
-        crate::db::oscal::create::document(&window.session().db(), &catalog).unwrap();
+        crate::db_old::oscal::create::document(&window.session().db(), &catalog).unwrap();
         let base =
             window.call("knowledge_list_create", json!({ "form": { "name": "ISO", "description": "" } })).unwrap();
         let id = base["id"].clone();

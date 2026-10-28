@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::ai::api::checks::CheckReport;
 use crate::ai::api::completions::{ReplyEnd, StopReason};
-use crate::db::error::DbError;
+use crate::db_old::error::DbError;
 
 /// A header of the request of a check.
 #[derive(Debug, Serialize)]

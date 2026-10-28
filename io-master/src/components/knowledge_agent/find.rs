@@ -7,8 +7,8 @@
 
 use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
-use crate::db::knowledge as db_knowledge;
-use crate::db::user::database::UserDb;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::knowledge::{
     Agent, AgentPlace, Hit, MAX_HITS, QUESTION_MAX, chosen, glossary, search_query, widened,
 };

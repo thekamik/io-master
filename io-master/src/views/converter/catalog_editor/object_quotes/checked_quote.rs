@@ -3,9 +3,9 @@
 //! passage that is not on its page stays visible as such. Used for the
 //! quotes the evaluator adds and for those the AI proposes.
 
-use crate::db::oscal::error::OscalError;
-use crate::db::standards as db_standards;
-use crate::db::user::database::UserDb;
+use crate::db_old::oscal::error::OscalError;
+use crate::db_old::standards as db_standards;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::evaluation_support::QuoteDraft;
 use crate::model_old::standards::MAX_QUOTE;
 use crate::model_old::standards::quote::is_on_page;

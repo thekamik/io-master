@@ -30,9 +30,9 @@
 use std::path::Path;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
-use crate::db::encryption::database_key::DatabaseKey;
-use crate::db::error::DbError;
-use crate::db::user::database::{self as user_db, UserDb};
+use crate::db_old::encryption::database_key::DatabaseKey;
+use crate::db_old::error::DbError;
+use crate::db_old::user::database::{self as user_db, UserDb};
 
 use super::accounts::Account;
 

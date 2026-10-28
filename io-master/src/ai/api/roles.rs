@@ -16,9 +16,9 @@
 
 use std::fmt;
 
-use crate::db::ai::connection as db_connection;
-use crate::db::error::DbError;
-use crate::db::user::database::UserDb;
+use crate::db_old::ai::connection as db_connection;
+use crate::db_old::error::DbError;
+use crate::db_old::user::database::UserDb;
 
 use super::connection::Checked;
 use crate::model_old::ai::ConnectionError;
@@ -109,7 +109,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::connection::{create, update};
+    use crate::db_old::ai::connection::{create, update};
     use crate::model_old::ai::Connection;
     use crate::test_support::standards::database;
 

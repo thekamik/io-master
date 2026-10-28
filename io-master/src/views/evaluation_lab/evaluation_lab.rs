@@ -16,10 +16,10 @@ use crate::ai::api::tasks;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::components::ai_work::view::AiEvent;
-use crate::db::evaluation as db_evaluation;
-use crate::db::knowledge as db_knowledge;
-use crate::db::oscal::ids::new_uuid;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation as db_evaluation;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::oscal::ids::new_uuid;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::ai::{INSTRUCTIONS_MAX, Task};
 use crate::model_old::evaluation::{
     self, Evaluation, Fragment, TaskAgent, TaskState, check_fragment, check_output, quote_found,
@@ -1090,7 +1090,7 @@ mod tests {
         let agent = {
             let session = window.session();
             let fields = crate::views::knowledge::agent_form::view::new_agent("CC agent");
-            crate::db::knowledge::create::agent(&session.db(), &fields).unwrap()
+            crate::db_old::knowledge::create::agent(&session.db(), &fields).unwrap()
         };
 
         let view = window.call("lab_tasks_agent", json!({ "evaluation": "e", "agent": agent })).unwrap();

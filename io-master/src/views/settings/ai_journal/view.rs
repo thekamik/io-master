@@ -4,8 +4,8 @@
 
 use serde::Serialize;
 
-use crate::db::ai::journal::read::PAGE_SIZE;
-use crate::db::ai::journal::rows::{Entry, EntrySummary};
+use crate::db_old::ai::journal::read::PAGE_SIZE;
+use crate::db_old::ai::journal::rows::{Entry, EntrySummary};
 
 /// An entry as a row of the list.
 #[derive(Debug, Serialize)]

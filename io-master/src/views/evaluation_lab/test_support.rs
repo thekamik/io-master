@@ -12,7 +12,7 @@ use crate::ai::api::connections;
 use crate::ai::api::test_support::{FakeService, completions as connection_to};
 use crate::app::test_support::{TestState, logged_in};
 use crate::components::ai_work::view::AiEvent;
-use crate::db::evaluation as db_evaluation;
+use crate::db_old::evaluation as db_evaluation;
 use crate::model_old::api_key::ApiKey;
 use crate::test_support::db::{basic_catalog, lab_evaluation, lab_package};
 
@@ -30,7 +30,7 @@ pub async fn ready(service: &FakeService) -> TestState {
         connections::set_key(&db, id, &ApiKey::new("sk-test".to_owned()).unwrap()).unwrap();
 
         let catalog = basic_catalog();
-        crate::db::oscal::create::document(&db, &catalog).unwrap();
+        crate::db_old::oscal::create::document(&db, &catalog).unwrap();
         let package = lab_package(catalog.uuid());
         db_evaluation::create::evaluation(&db, &lab_evaluation(&package), &package).unwrap();
         super::evidence::add::add_note(&db, "e", "i", "Interview", NOTE).unwrap();
@@ -45,7 +45,7 @@ pub const PASSAGE: &str = "Information security roles shall be defined and alloc
 /// An agent with knowledge (a base with one passage on roles,
 /// `test_support/db.rs`) made the agent of the evaluation "e"; gives its id
 /// (step 57.6).
-pub fn with_agent(db: &crate::db::user::database::UserDb) -> i64 {
+pub fn with_agent(db: &crate::db_old::user::database::UserDb) -> i64 {
     let agent = crate::test_support::db::knowledge_agent(db, PASSAGE);
     db_evaluation::update::agent(db, "e", Some(agent)).unwrap();
 

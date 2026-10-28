@@ -94,10 +94,11 @@ mod security {
     pub mod random;
 }
 
-// db/: every operation on a database, as CRUD, one folder per area of data
+// db_old/: the earlier operations on the databases, replaced by db/ step by
+// step (2026-10-28). Every operation on a database, as CRUD, one folder per area of data
 // (CLAUDE.md, "Database code"). The schema.rs of an area says in which
 // database its data lives and how it is protected.
-mod db {
+mod db_old {
     pub mod error;
     // db/encryption/: all code of encryption of the databases.
     pub mod encryption {

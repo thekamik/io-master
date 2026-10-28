@@ -29,10 +29,10 @@ use crate::ai::tasks::chat as memory;
 use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::components::knowledge_agent::find;
-use crate::db::ai::chats as db_chats;
-use crate::db::error::DbError;
-use crate::db::knowledge as db_knowledge;
-use crate::db::user::database::UserDb;
+use crate::db_old::ai::chats as db_chats;
+use crate::db_old::error::DbError;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model_old::ai::{ConnectionError, Task, Turn};
 use crate::model_old::knowledge::AgentPlace;
@@ -252,9 +252,9 @@ mod tests {
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
     use crate::app::test_support::{TestState, logged_in};
 
-    use crate::db::ai::connection::{create as connections_create, update as connections_update};
-    use crate::db::encryption::database_key::DatabaseKey;
-    use crate::db::user::database as user_db;
+    use crate::db_old::ai::connection::{create as connections_create, update as connections_update};
+    use crate::db_old::encryption::database_key::DatabaseKey;
+    use crate::db_old::user::database as user_db;
     use crate::model_old::ai::Connection;
     use crate::model_old::ai::Speaker;
     use crate::model_old::api_key::ApiKey;

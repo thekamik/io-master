@@ -16,9 +16,9 @@
 use serde_json::{Value, json};
 
 use crate::app::error::AppError;
-use crate::db::evaluation_project as db_evaluation_project;
-use crate::db::oscal as db_oscal;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation_project as db_evaluation_project;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::evaluation_project::EvaluationTask;
 use crate::model_old::time::now;
 
@@ -193,7 +193,7 @@ mod tests {
     fn a_package_is_written_with_what_was_accepted_and_its_catalogs_attached() {
         let test = database();
         let catalog = crate::test_support::db::basic_catalog();
-        crate::db::oscal::create::document(&test.db, &catalog).unwrap();
+        crate::db_old::oscal::create::document(&test.db, &catalog).unwrap();
         let uuid = catalog.uuid().to_owned();
         let fields = ProjectFields { title: "CC".to_owned(), description: "A smart card.".to_owned() };
         db_evaluation_project::create::project(&test.db, "p", &fields, std::slice::from_ref(&uuid)).unwrap();

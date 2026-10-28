@@ -17,12 +17,12 @@ use tauri::ipc::Channel;
 use crate::ai::api::tasks;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
-use crate::db::conversion as db_conversion;
-use crate::db::evaluation_support as db_evaluation_support;
-use crate::db::knowledge as db_knowledge;
-use crate::db::oscal as db_oscal;
-use crate::db::oscal::error::OscalError;
-use crate::db::standards as db_standards;
+use crate::db_old::conversion as db_conversion;
+use crate::db_old::evaluation_support as db_evaluation_support;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::oscal::error::OscalError;
+use crate::db_old::standards as db_standards;
 use crate::model_old::ai::Task;
 use crate::model_old::conversion::{GroupState, Stage};
 use crate::model_old::knowledge::AgentPlace;
@@ -641,8 +641,8 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::db::evaluation_support as db_evaluation_support;
-    use crate::db::evaluation_support::create::NewProposal;
+    use crate::db_old::evaluation_support as db_evaluation_support;
+    use crate::db_old::evaluation_support::create::NewProposal;
     use crate::model_old::evaluation_support::{ProposalKind, QuoteDraft};
     use crate::views::converter::catalog_editor::test_support::{add_control, add_group, with_catalog};
     use crate::views::test_support::{TestWindow, logged_in_window};
@@ -958,7 +958,7 @@ mod tests {
         let uuid = {
             let session = window.session();
             let catalog = crate::test_support::db::basic_catalog();
-            crate::db::oscal::create::document(&session.db(), &catalog).unwrap();
+            crate::db_old::oscal::create::document(&session.db(), &catalog).unwrap();
             catalog.uuid().to_owned()
         };
 

@@ -17,17 +17,17 @@
 //! An installation has one account, made at the first start (step 48
 //! of docs/history.md); no further account can be added.
 
-use crate::db::system;
+use crate::db_old::system;
 use std::fmt;
 use std::path::Path;
 
-use crate::db::encryption::database_key::DatabaseKey;
-use crate::db::encryption::generate_key::generate_database_key;
-use crate::db::encryption::keys::{self, KeyError, WrappedKey};
-use crate::db::encryption::recovery::{self, RecoveryError, RecoveryWrappedKey};
-use crate::db::error::DbError;
-use crate::db::system::database::SystemDb;
-use crate::db::user::database as user_db;
+use crate::db_old::encryption::database_key::DatabaseKey;
+use crate::db_old::encryption::generate_key::generate_database_key;
+use crate::db_old::encryption::keys::{self, KeyError, WrappedKey};
+use crate::db_old::encryption::recovery::{self, RecoveryError, RecoveryWrappedKey};
+use crate::db_old::error::DbError;
+use crate::db_old::system::database::SystemDb;
+use crate::db_old::user::database as user_db;
 use crate::model_old::installation::{self, InvalidUserName};
 use crate::model_old::recovery_code::RecoveryCode;
 
@@ -291,7 +291,7 @@ mod tests {
     //! Unit tests of `accounts.rs`.
 
     use super::*;
-    use crate::db::system;
+    use crate::db_old::system;
 
     use crate::model_old::installation::Installation;
     use crate::test_support::TempDir;

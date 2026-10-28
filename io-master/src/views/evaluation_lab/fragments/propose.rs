@@ -19,9 +19,9 @@ use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
-use crate::db::evaluation as db_evaluation;
-use crate::db::oscal::ids::new_uuid;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation as db_evaluation;
+use crate::db_old::oscal::ids::new_uuid;
+use crate::db_old::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model_old::ai::Task;
 use crate::model_old::evaluation::{Evidence, Fragment, MAX_FRAGMENTS, check_fragment, quote_found};
@@ -239,7 +239,7 @@ mod tests {
         assert!(fragments[0].found && fragments[0].by_ai && !fragments[0].accepted);
         assert!(!fragments[1].found, "a quote that is not in the evidence");
         assert_eq!(events.lock().unwrap().last().unwrap(), &json!({ "event": "end", "stopped": false }));
-        assert_eq!(crate::db::ai::journal::read::last(&session.db(), 5).unwrap()[0].task, "evidence_fragments");
+        assert_eq!(crate::db_old::ai::journal::read::last(&session.db(), 5).unwrap()[0].task, "evidence_fragments");
         assert!(service.received()[0].body.to_string().contains("=== Page 1 ==="));
     }
 

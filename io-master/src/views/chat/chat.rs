@@ -14,8 +14,8 @@ use tauri::ipc::Channel;
 use crate::ai::api::connections;
 use crate::app::error::AppError;
 use crate::app::state::AppState;
-use crate::db::ai::chats as db_chats;
-use crate::db::knowledge as db_knowledge;
+use crate::db_old::ai::chats as db_chats;
+use crate::db_old::knowledge as db_knowledge;
 use crate::model_old::knowledge::AgentPlace;
 
 use super::chat_list::view::ChatSummaryView;

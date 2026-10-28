@@ -17,10 +17,10 @@ use crate::ai::tasks::knowledge_context;
 use crate::ai::tasks::task_scheme as scheme_question;
 use crate::app::error::AppError;
 use crate::components::knowledge_agent::find;
-use crate::db::evaluation_project as db_evaluation_project;
-use crate::db::oscal as db_oscal;
-use crate::db::oscal::ids::new_uuid;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation_project as db_evaluation_project;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::oscal::ids::new_uuid;
+use crate::db_old::user::database::UserDb;
 use crate::installation::session::Session;
 use crate::model_old::ai::Task;
 use crate::model_old::knowledge::AgentPlace;
@@ -224,7 +224,7 @@ mod tests {
             connections::set_key(&db, id, &ApiKey::new("sk-test".to_owned()).unwrap()).unwrap();
 
             let catalog = crate::test_support::db::basic_catalog();
-            crate::db::oscal::create::document(&db, &catalog).unwrap();
+            crate::db_old::oscal::create::document(&db, &catalog).unwrap();
             let fields = ProjectFields { title: "P".to_owned(), description: "A smart card.".to_owned() };
             db_evaluation_project::create::project(&db, "p", &fields, &[catalog.uuid().to_owned()]).unwrap();
             let task = EvaluationTask {
@@ -292,7 +292,7 @@ mod tests {
         assert_eq!(events.last().unwrap(), &json!({ "event": "end", "stopped": false }));
 
         // The question is in the journal of the AI, with the requirement in it.
-        assert_eq!(crate::db::ai::journal::read::last(&db, 5).unwrap()[0].task, "task_scheme");
+        assert_eq!(crate::db_old::ai::journal::read::last(&db, 5).unwrap()[0].task, "task_scheme");
         let asked = service.received()[0].body.to_string();
         assert!(asked.contains("A smart card."));
     }
@@ -304,7 +304,7 @@ mod tests {
         let session = test.state.session().unwrap();
         let text = "Information security roles and responsibilities are allocated by the management.";
         let agent = crate::test_support::db::knowledge_agent(&session.db(), text);
-        crate::db::knowledge::update::attachment(&session.db(), AgentPlace::Project, "p", Some(agent)).unwrap();
+        crate::db_old::knowledge::update::attachment(&session.db(), AgentPlace::Project, "p", Some(agent)).unwrap();
         let (_, channel) = collector();
 
         propose(&session, &task, &test.state.start_work(), &channel).await.unwrap();

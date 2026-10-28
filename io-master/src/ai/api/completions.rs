@@ -27,10 +27,10 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use tokio::sync::{mpsc, watch};
 
-use crate::db::ai::journal as db_journal;
-use crate::db::ai::journal::rows::Entry;
-use crate::db::error::DbError;
-use crate::db::user::database::UserDb;
+use crate::db_old::ai::journal as db_journal;
+use crate::db_old::ai::journal::rows::Entry;
+use crate::db_old::error::DbError;
+use crate::db_old::user::database::UserDb;
 
 use super::provider::client;
 use super::provider::request;
@@ -232,7 +232,7 @@ mod tests {
     use crate::ai::api::test_support::{
         FakeAnswer, FakeService, checked, completions as completions_format, completions_events, data,
     };
-    use crate::db::ai::journal::read as journal_read;
+    use crate::db_old::ai::journal::read as journal_read;
     use crate::model_old::api_key::ApiKey;
     use crate::test_support::standards::database;
 

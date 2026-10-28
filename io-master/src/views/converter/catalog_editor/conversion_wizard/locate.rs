@@ -7,8 +7,8 @@
 //! trust. The evaluator corrects what was not found.
 
 use crate::app::error::AppError;
-use crate::db::standards as db_standards;
-use crate::db::user::database::UserDb;
+use crate::db_old::standards as db_standards;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::conversion::{self, GroupPages, MAX_GROUPS, Pages};
 use crate::model_old::oscal::catalog::Catalog;
 use crate::model_old::standards::quote::is_on_page;
@@ -109,7 +109,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::oscal as db_oscal;
+    use crate::db_old::oscal as db_oscal;
     use crate::model_old::conversion::GroupState;
     use crate::model_old::oscal::catalog::Group;
     use crate::model_old::oscal::catalog::edit::Place;

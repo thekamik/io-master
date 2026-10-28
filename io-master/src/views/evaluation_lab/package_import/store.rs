@@ -8,9 +8,9 @@
 //! used, and when the two differ the evaluator is told.
 
 use crate::app::error::AppError;
-use crate::db::evaluation as db_evaluation;
-use crate::db::oscal as db_oscal;
-use crate::db::user::database::UserDb;
+use crate::db_old::evaluation as db_evaluation;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::evaluation::{Evaluation, Package};
 use crate::model_old::oscal::OscalDocument;
 

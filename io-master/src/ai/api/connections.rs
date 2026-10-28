@@ -24,10 +24,10 @@
 
 use std::fmt;
 
-use crate::db::ai::connection as db_connection;
-use crate::db::ai::connection::rows::SaveError;
-use crate::db::error::DbError;
-use crate::db::user::database::UserDb;
+use crate::db_old::ai::connection as db_connection;
+use crate::db_old::ai::connection::rows::SaveError;
+use crate::db_old::error::DbError;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::ai::{Connection, ConnectionError, SavedConnection, StoredConnection};
 use crate::model_old::api_key::ApiKey;
 
@@ -131,8 +131,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::encryption::database_key::DatabaseKey;
-    use crate::db::user::database as user_db;
+    use crate::db_old::encryption::database_key::DatabaseKey;
+    use crate::db_old::user::database as user_db;
     use crate::model_old::ai::Field;
     use crate::security::random::fill_random;
     use crate::test_support::TempDir;

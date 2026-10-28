@@ -9,9 +9,9 @@ use std::path::Path;
 
 use crate::ai::tasks::candidates::requirement_text;
 use crate::app::error::AppError;
-use crate::db::knowledge as db_knowledge;
-use crate::db::oscal as db_oscal;
-use crate::db::user::database::UserDb;
+use crate::db_old::knowledge as db_knowledge;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::user::database::UserDb;
 use crate::model_old::knowledge::{
     MAX_PAGES, MAX_PASSAGES, NAME_MAX, NOTE_MAX, PDF_MAX, Passage, SourceKind, TEXT_FILE_MAX, passages,
 };
@@ -170,7 +170,7 @@ mod tests {
     fn a_catalog_gives_its_groups_and_requirements() {
         let test = database();
         let catalog = basic_catalog();
-        crate::db::oscal::create::document(&test.db, &catalog).unwrap();
+        crate::db_old::oscal::create::document(&test.db, &catalog).unwrap();
         let base = db_knowledge::create::base(&test.db, "ISO", "").unwrap();
 
         add_catalog(&test.db, base, catalog.uuid()).unwrap();

@@ -10,7 +10,7 @@ use std::fs;
 use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-use crate::db::user::database::DIRECTORY;
+use crate::db_old::user::database::DIRECTORY;
 
 /// The most entries of a folder that are looked at.
 const MAX_ENTRIES: usize = 10_000;

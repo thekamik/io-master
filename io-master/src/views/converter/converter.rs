@@ -16,8 +16,8 @@ use tauri::{AppHandle, Runtime, State};
 
 use crate::app::error::AppError;
 use crate::app::state::AppState;
-use crate::db::oscal as db_oscal;
-use crate::db::standards as db_standards;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::standards as db_standards;
 
 use super::catalog_list::view::{self as catalog_view, CatalogView};
 use super::document_search::search::{self, MAX_SEARCH};
@@ -220,7 +220,7 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::db::oscal as db_oscal;
+    use crate::db_old::oscal as db_oscal;
     use crate::model_old::oscal::OscalDocument;
     use crate::test_support::db::basic_catalog;
     use crate::test_support::standards::load;

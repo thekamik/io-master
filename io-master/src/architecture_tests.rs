@@ -16,7 +16,7 @@
 //!  (state, errors)  │     tests/        │                    model_old/,
 //!        │          │                   │                     security/)
 //!        │          │                   │
-//!        └──────────┴──────► db/ ◄──────┘
+//!        └──────────┴──► db/, db_old/ ◄──┘
 //!                            │
 //!          all of them ───► model/, model_old/, security/
 //! ```
@@ -38,18 +38,20 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-// model_old/ is replaced by model/ step by step (2026-10-28).
+// model_old/ is replaced by model/ step by step, and db_old/ by db/
+// (2026-10-28); db/ gets its row with its first file (a folder without
+// files is refused below).
 const ALLOWED: [(&str, &[&str]); 10] = [
     ("model", &[]),
     ("model_old", &["model"]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
-    ("db", &["model", "model_old", "security"]),
-    ("ai", &["db", "model", "model_old", "security"]),
+    ("db_old", &["model", "model_old", "security"]),
+    ("ai", &["db", "db_old", "model", "model_old", "security"]),
     // The installation, its account and the session: the core of the
     // protection, below the window and the views.
-    ("installation", &["db", "model", "model_old", "security"]),
+    ("installation", &["db", "db_old", "model", "model_old", "security"]),
     (
         "app",
         &[
@@ -61,18 +63,18 @@ const ALLOWED: [(&str, &[&str]); 10] = [
             "ai::api::completions::AiError",
             "ai::api::connections::ConnectionSaveError",
             "ai::api::roles::ModelError",
-            "db::error",
-            "db::oscal::error::OscalError",
+            "db_old::error",
+            "db_old::oscal::error::OscalError",
         ],
     ),
     // The components (components.rs): the elements used more than once,
     // built as the elements of a view; never a view.
-    ("components", &["app", "ai", "db", "installation", "model", "model_old", "pdf", "security"]),
+    ("components", &["app", "ai", "db", "db_old", "installation", "model", "model_old", "pdf", "security"]),
     // The views (views.rs): the commands of the elements of the window,
     // on top of everything. They use the state and the errors of the
     // window (app/) and the components, and do their work with the folders
     // below. A view never uses another view (checked below).
-    ("views", &["app", "ai", "components", "db", "installation", "model", "model_old", "pdf", "security"]),
+    ("views", &["app", "ai", "components", "db", "db_old", "installation", "model", "model_old", "pdf", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

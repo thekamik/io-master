@@ -20,7 +20,7 @@ use std::sync::Arc;
 use tauri::ipc::Channel;
 use tokio::sync::watch;
 
-use crate::db::standards as db_standards;
+use crate::db_old::standards as db_standards;
 use crate::installation::session::Session;
 use crate::model_old::standards::DocumentFields;
 use crate::pdf::poppler::{self, MAX_FILE, MAX_PAGES, PART, PdfError, PdfInfo};

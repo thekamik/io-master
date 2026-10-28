@@ -2,10 +2,10 @@
 
 use serde_json::Value;
 
-use crate::db::evaluation_support as db_evaluation_support;
-use crate::db::oscal as db_oscal;
-use crate::db::oscal::error::OscalError;
-use crate::db::user::database::{UserDb, in_transaction};
+use crate::db_old::evaluation_support as db_evaluation_support;
+use crate::db_old::oscal as db_oscal;
+use crate::db_old::oscal::error::OscalError;
+use crate::db_old::user::database::{UserDb, in_transaction};
 use crate::model_old::evaluation_support::{Proposal, ProposalKind};
 use crate::model_old::oscal::catalog::edit::Place;
 use crate::model_old::oscal::catalog::{Control, Group};
@@ -87,7 +87,7 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::db::evaluation_support::create::NewProposal;
+    use crate::db_old::evaluation_support::create::NewProposal;
     use crate::model_old::evaluation_support::QuoteDraft;
     use crate::views::converter::catalog_editor::test_support::{add_group, with_catalog};
 
