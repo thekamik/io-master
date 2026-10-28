@@ -29,7 +29,9 @@ pub struct WorkUnit {
     /// The documents needed to find the work unit met.
     pub input_documents: Vec<i64>,
     /// The evidence of the laboratory needed to meet the work unit,
-    /// delivered as text; `None` when the work unit is conceptual.
+    /// delivered as text. `None` makes the work unit one of the
+    /// documentation: no results of functional tests are needed (user,
+    /// 2026-10-28: no separate field of the kind).
     pub input_functional: Option<Vec<i64>>,
     /// The AI agent made in the program that works on the work unit;
     /// `None` when none is assigned.
