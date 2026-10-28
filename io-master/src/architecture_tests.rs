@@ -3,10 +3,10 @@
 //! an auditor sees the rule and its check in one place:
 //!
 //! ```text
-//!      views/       (the commands the page calls) ──► session/ (the user logged in)
+//!   panels/views/   (the commands the page calls) ──► session/ (the user logged in)
 //!         │
 //!         ▼
-//!   business_logic/ (the work behind the panels: program_start, evaluation_plan, ...)
+//!   panels/logic/   (the work behind the panels: program_start, evaluation_plan, ...)
 //!         │
 //!         ▼
 //!        db/        (create, read and update of the models; the database files)
@@ -33,7 +33,9 @@ use std::fs;
 use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
-/// that start so (`crate::` left out).
+/// that start so (`crate::` left out). A folder is named by its path of
+/// modules: `panels::views` and `panels::logic` are two layers of one
+/// folder.
 const ALLOWED: [(&str, &[&str]); 7] = [
     ("model", &[]),
     ("security", &[]),
@@ -44,11 +46,11 @@ const ALLOWED: [(&str, &[&str]); 7] = [
     // another (in one direction: chat and evaluation use rag and
     // evaluation_plan, never the other way). It gets the open database as a
     // parameter and never reaches the session.
-    ("business_logic", &["db", "model", "security"]),
+    ("panels::logic", &["db", "model", "security"]),
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
     // The commands of the page: they do their work with the folders below.
-    ("views", &["business_logic", "db", "model", "session"]),
+    ("panels::views", &["panels::logic", "db", "model", "session"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:
@@ -136,16 +138,14 @@ fn every_folder_uses_only_the_folders_below_it() {
     let mut broken = Vec::new();
 
     for (folder, allowed) in ALLOWED {
-        let checked = files(&root, folder);
+        let checked = files(&root, &folder.replace("::", "/"));
         assert!(!checked.is_empty(), "the folder {folder} has no files");
 
         for (file, text) in checked {
             for path in paths(&text) {
-                let top = path.split("::").next().unwrap_or_default();
+                let own = path == folder || path.starts_with(&format!("{folder}::"));
 
-                if top == folder
-                    || allowed.iter().any(|prefix| path == *prefix || path.starts_with(&format!("{prefix}::")))
-                {
+                if own || allowed.iter().any(|prefix| path == *prefix || path.starts_with(&format!("{prefix}::"))) {
                     continue;
                 }
 

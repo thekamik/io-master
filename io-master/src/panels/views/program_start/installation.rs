@@ -12,9 +12,9 @@ use serde::Serialize;
 use tauri::State;
 use zeroize::Zeroizing;
 
-use crate::business_logic::program_start::access::create_account;
+use crate::panels::logic::program_start::access::create_account;
+use crate::panels::views::error::ViewError;
 use crate::session::state::Session;
-use crate::views::error::ViewError;
 
 /// The recovery code, as the page shows it: seven groups of five
 /// characters ("ABCDE-FGHJK-...").

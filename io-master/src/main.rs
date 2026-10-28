@@ -107,25 +107,6 @@ mod db {
     }
 }
 
-// business_logic/: the work behind the panels of the window, one folder per
-// panel, not called by the page itself (user, 2026-10-28): the views call
-// it, and it does its work with db/ and the models, the open database given
-// to it, never the session.
-mod business_logic {
-    // business_logic/program_start/: the first start, the login and the
-    // recovery of a forgotten password; the password and the recovery code
-    // that wrap the key of the database (moved unchanged from the earlier
-    // program, audited later).
-    #[allow(dead_code, reason = "the recovery and the change of the password come later (2026-10-28)")]
-    pub mod program_start {
-        pub mod access;
-        pub mod generate_key;
-        pub mod keys;
-        pub mod recovery;
-        pub mod recovery_code;
-    }
-}
-
 // session/: what every command of the window shares: the data folder, and
 // the user logged in with their open database (the only global state).
 mod session {
@@ -133,15 +114,32 @@ mod session {
     pub mod state;
 }
 
-// views/: the commands the page calls, one folder per part of the window,
-// and the error they give the page; they do their work with the folders
-// below (user, 2026-10-28).
-mod views {
-    pub mod error;
-    // views/program_start/: the first start and the login.
-    pub mod program_start {
-        pub mod installation;
-        pub mod login;
+// panels/: the panels of the window (user, 2026-10-28), each in two layers
+// with the same folders: views/ (only the commands the page calls, and
+// their error) and logic/ (the work behind them, not called by the page; it
+// gets the open database as a parameter and never reaches the session).
+mod panels {
+    pub mod logic {
+        // panels/logic/program_start/: the first start, the login and the
+        // recovery of a forgotten password; the password and the recovery
+        // code that wrap the key of the database (moved unchanged from the
+        // earlier program, audited later).
+        #[allow(dead_code, reason = "the recovery and the change of the password come later (2026-10-28)")]
+        pub mod program_start {
+            pub mod access;
+            pub mod generate_key;
+            pub mod keys;
+            pub mod recovery;
+            pub mod recovery_code;
+        }
+    }
+    pub mod views {
+        pub mod error;
+        // panels/views/program_start/: the first start and the login.
+        pub mod program_start {
+            pub mod installation;
+            pub mod login;
+        }
     }
 }
 
@@ -210,12 +208,12 @@ fn tauri_startup() -> ExitCode {
         .plugin(tauri_plugin_dialog::init())
         // What every command shares: the data folder, the user logged in.
         .manage(Session::new(data_folder))
-        // The commands the page may call (views/).
+        // The commands the page may call (panels/views/).
         .invoke_handler(tauri::generate_handler![
-            views::program_start::installation::installation_create,
-            views::program_start::login::login_get,
-            views::program_start::login::login_log_in,
-            views::program_start::login::login_log_out,
+            panels::views::program_start::installation::installation_create,
+            panels::views::program_start::login::login_get,
+            panels::views::program_start::login::login_log_in,
+            panels::views::program_start::login::login_log_out,
         ])
         .build(tauri::generate_context!());
 

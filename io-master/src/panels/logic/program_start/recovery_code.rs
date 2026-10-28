@@ -11,7 +11,7 @@
 //! The alphabet has no 0, O, 1 and I, which are easy to mix up. When a
 //! code is typed, the letter case, the spaces and the dashes do not
 //! matter. This file only writes and reads the text; the random bytes
-//! are made by `business_logic/program_start/recovery.rs`, which also wraps the key of
+//! are made by `panels/logic/program_start/recovery.rs`, which also wraps the key of
 //! the database with them.
 
 use std::fmt;
@@ -81,14 +81,14 @@ impl fmt::Debug for RecoveryCode {
 impl RecoveryCode {
     /// The code of these random bytes.
     ///
-    /// Called by: `business_logic/program_start/recovery.rs` (`new_code`), and the tests.
+    /// Called by: `panels/logic/program_start/recovery.rs` (`new_code`), and the tests.
     pub fn from_bytes(bytes: [u8; CODE_BYTES]) -> RecoveryCode {
         RecoveryCode { bytes: Zeroizing::new(bytes) }
     }
 
     /// The bytes of the code, for the derivation of its key.
     ///
-    /// Called by: `business_logic/program_start/recovery.rs`.
+    /// Called by: `panels/logic/program_start/recovery.rs`.
     pub fn expose(&self) -> &[u8; CODE_BYTES] {
         &self.bytes
     }
@@ -103,8 +103,8 @@ impl RecoveryCode {
 
     /// Reads a typed code: the letter case, spaces and dashes aside.
     ///
-    /// Called by: `views/users/users.rs` (the recovery of a forgotten
-    /// password), when the code comes from the page.
+    /// Called by: the recovery of a forgotten password, when the code comes
+    /// from the page (`panels/logic/program_start/`, to come).
     /// Calls: [`value_of`], [`symbols`].
     pub fn parse(typed: &str) -> Result<RecoveryCode, RecoveryCodeError> {
         ensure!(typed.len() <= TYPED_MAX, RecoveryCodeError::Length);

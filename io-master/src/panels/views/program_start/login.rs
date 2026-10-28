@@ -12,9 +12,9 @@ use serde::Serialize;
 use tauri::State;
 use zeroize::Zeroizing;
 
-use crate::business_logic::program_start::access::{installed_user, log_in};
+use crate::panels::logic::program_start::access::{installed_user, log_in};
+use crate::panels::views::error::ViewError;
 use crate::session::state::Session;
-use crate::views::error::ViewError;
 
 /// What the window shows at its start.
 #[derive(Serialize)]

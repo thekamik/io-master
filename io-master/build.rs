@@ -7,7 +7,7 @@
 //!
 //! The list names the same commands as `tauri::generate_handler!` in
 //! `src/main.rs` and the capability; each is defined in its file of
-//! `src/views/`.
+//! `src/panels/views/`.
 
 fn main() {
     let commands = tauri_build::AppManifest::new().commands(&[

@@ -1,7 +1,7 @@
 //! The session: what every command of the window shares (user,
 //! 2026-10-28): the data folder of the program, and, while the user is
 //! logged in, the user and their database, open. The database is opened
-//! once at the login (`business_logic/program_start/access.rs`) and kept here until the logout
+//! once at the login (`panels/logic/program_start/access.rs`) and kept here until the logout
 //! or the end of the program; the key that opened it is already wiped,
 //! SQLCipher keeps its own inside the connection.
 //!
@@ -50,7 +50,7 @@ impl Session {
 
     /// The data folder of the program.
     ///
-    /// Called by: the commands of `views/program_start/`.
+    /// Called by: the commands of `panels/views/program_start/`.
     pub fn data_folder(&self) -> &Path {
         &self.data_folder
     }
@@ -59,7 +59,7 @@ impl Session {
     /// logged in.
     ///
     /// Called by: [`Session::log_in`], [`Session::log_out`], the commands of
-    /// `views/`.
+    /// `panels/views/`.
     pub fn lock(&self) -> Result<MutexGuard<'_, Option<Opened>>, SessionBroken> {
         self.opened.lock().map_err(|_| SessionBroken)
     }
@@ -67,7 +67,7 @@ impl Session {
     /// Keeps `user` and their open `database` as the session; a session
     /// open before is closed.
     ///
-    /// Called by: `views/program_start/installation.rs`, `login.rs`.
+    /// Called by: `panels/views/program_start/installation.rs`, `login.rs`.
     /// Calls: [`Session::lock`].
     pub fn log_in(&self, user: User, database: Database) -> Result<(), SessionBroken> {
         *self.lock()? = Some(Opened { user, database });
@@ -77,7 +77,7 @@ impl Session {
 
     /// Ends the session: the database is closed, nobody is logged in.
     ///
-    /// Called by: `views/program_start/login.rs` (`login_log_out`); `main.rs`
+    /// Called by: `panels/views/program_start/login.rs` (`login_log_out`); `main.rs`
     /// (the end of the program, however it ends).
     /// Calls: [`Session::lock`].
     pub fn log_out(&self) -> Result<(), SessionBroken> {

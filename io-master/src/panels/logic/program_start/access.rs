@@ -31,10 +31,6 @@ use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::business_logic::program_start::generate_key::generate_database_key;
-use crate::business_logic::program_start::keys::{self, KeyError};
-use crate::business_logic::program_start::recovery::{self, RecoveryError};
-use crate::business_logic::program_start::recovery_code::RecoveryCode;
 use crate::db::database::{self, Database};
 use crate::db::error::DbError;
 use crate::db::system_database::{self, SystemDatabase};
@@ -44,6 +40,10 @@ use crate::db::user::user_keys::{create_user_keys, read_user_keys};
 use crate::model::user::program_data::{Installation, Settings};
 use crate::model::user::user_data::User;
 use crate::model::user::user_keys::UserKeys;
+use crate::panels::logic::program_start::generate_key::generate_database_key;
+use crate::panels::logic::program_start::keys::{self, KeyError};
+use crate::panels::logic::program_start::recovery::{self, RecoveryError};
+use crate::panels::logic::program_start::recovery_code::RecoveryCode;
 use crate::security::random::fill_random;
 
 /// What the first start gives: the user, its database (open), and the
@@ -224,7 +224,7 @@ fn removed(path: &Path, failure: AccountError) -> AccountError {
 /// the open database and the recovery code, which the window shows once.
 /// When it fails half way, the files it made are removed.
 ///
-/// Called by: nothing yet (`views/program_start/installation.rs`).
+/// Called by: `panels/views/program_start/installation.rs`.
 /// Calls: `keys::check_password`, `system_database::create`, [`install`],
 /// [`removed`].
 pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &str) -> Result<NewAccount, AccountError> {
@@ -263,7 +263,7 @@ pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &st
 /// the program is not installed yet, so that the window shows the first
 /// start.
 ///
-/// Called by: nothing yet (`views/program_start/login.rs`).
+/// Called by: `panels/views/program_start/login.rs`.
 /// Calls: `system_database::open`, `read_users`.
 pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
     let system = match system_database::open(data_dir) {
@@ -280,7 +280,7 @@ pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
 /// when this function ends. A wrong password and an unknown name fail the
 /// same way.
 ///
-/// Called by: nothing yet (`views/program_start/login.rs`).
+/// Called by: `panels/views/program_start/login.rs`.
 /// Calls: `system_database::open`, `read_users`, `read_user_keys`,
 /// `keys::unwrap`, `database::open`.
 pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, Database), AccountError> {

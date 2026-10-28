@@ -10,7 +10,7 @@
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
-use crate::business_logic::program_start::access::AccountError;
+use crate::panels::logic::program_start::access::AccountError;
 use crate::session::state::SessionBroken;
 
 /// Why a command failed.
