@@ -3,7 +3,7 @@
 //! `ai_integrations` of the encrypted database of the user; its API key
 //! is kept apart (`api_key.rs`).
 
-/// An integration with an AI service (proposal, 2026-10-28).
+/// An integration with an AI service (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
 pub struct Integration {

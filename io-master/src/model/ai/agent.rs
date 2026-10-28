@@ -2,7 +2,7 @@
 //! to be, and which knowledge it draws on. A work unit names its agent
 //! (`WorkUnit::ai_agent`). Kept in the table `ai_agents`.
 
-/// An AI agent (proposal, 2026-10-28).
+/// An AI agent (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
 pub struct Agent {

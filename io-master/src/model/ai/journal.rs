@@ -6,7 +6,7 @@
 //! The integration, the model and the agent are kept by their names, as
 //! text: the entry stays as it was when they are renamed or removed.
 
-/// An entry of the journal of the AI (proposal, 2026-10-28).
+/// An entry of the journal of the AI (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
 pub struct JournalEntry {
