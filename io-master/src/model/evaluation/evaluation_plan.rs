@@ -26,6 +26,25 @@ pub struct EvaluationPlan {
     /// out in an evaluation.
     pub state: PlanState,
 
+    /// The plan this evaluation was copied from (`EvaluationPlan`);
+    /// `None` for a plan. This and the four fields below identify an
+    /// evaluation, as ISO/IEC 17025 asks; they are empty in a plan.
+    pub source_plan: Option<i64>,
+
+    /// The product evaluated: its name and version ("Router R7, firmware
+    /// 2.4.1").
+    pub product: String,
+
+    /// The client who ordered the evaluation.
+    pub client: String,
+
+    /// The evaluator who carries it out.
+    pub evaluator: String,
+
+    /// When the evaluation was started: seconds since 1970 (UTC); `None`
+    /// for a plan.
+    pub started: Option<i64>,
+
     /// The standards of the plan (OSCAL catalogs: the CEM, PP1, PP2):
     /// the reference of the evaluation. The `reference` of every work
     /// unit is one of them.
