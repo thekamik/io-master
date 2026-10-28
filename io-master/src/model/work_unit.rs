@@ -15,8 +15,6 @@ pub struct WorkUnit {
     pub reference: i64,
     /// The identifier of the work unit in its standard ("ADV_ARC.1-1").
     pub label: String,
-    /// The short title of the work unit, for the lists and the report.
-    pub title: String,
     /// What is to be done in the work unit: the quote of the requirement
     /// from the standard.
     pub requirement: String,
@@ -41,4 +39,17 @@ pub struct WorkUnit {
     pub analysis: String,
     pub vulnerability_notes: String,
     pub notes: String,
+    /// The verdict of the assessment; `None` while the work unit is not
+    /// assessed. A work unit that depends on this one may be assessed
+    /// only when it is `Met`.
+    pub verdict: Option<Verdict>,
+}
+
+/// The verdict of the assessment of a work unit.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+pub enum Verdict {
+    Met,
+    NotMet,
+    Inconclusive,
 }
