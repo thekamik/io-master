@@ -80,7 +80,7 @@ The page never holds a secret. The key of the database of an evaluator opens the
 
 ### 2.1 `model/` and `model_old/`: the data
 
-**The models are built anew (user, 2026-10-28).** The earlier folder `model/` was renamed `model_old/`; the new `model/` gets the models one by one, each a structure that represents the data kept in the database, and the code is moved to them piece by piece so that the program works all the time. `model_old/` may use `model/`; everything above them may use both. What follows describes `model_old/`.
+**The models are built anew (user, 2026-10-28).** The earlier folder `model/` was renamed `model_old/`; the new `model/` gets the models one by one, each a structure that represents the data kept in the database, and the code is moved to them piece by piece so that the program works all the time. `model_old/` may use `model/`; everything above them may use both. The new models, their links and their rules: **`data_model.md`**. What follows describes `model_old/`.
 
 Plain types of every area, their rules of validity (`check`) and their normal form (`normalized`). **No I/O**: no database, no network, no file. The errors of the rules carry enums of the fields and of the objects (`model_old/text.rs`: `Field`), never text that is matched.
 

@@ -1,6 +1,6 @@
 # Handover for a new session
 
-Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md` and `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English. A high-level overview of what the program does: `docs/presentation.md`.
+Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/architecture.md`, `docs/data_model.md` and `docs/todo.md` before doing anything. The user talks in Polish; code comments and documents are in English. A high-level overview of what the program does: `docs/presentation.md`.
 
 ## Where the project is (2026-10-25)
 

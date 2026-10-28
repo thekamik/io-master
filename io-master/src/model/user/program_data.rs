@@ -2,7 +2,7 @@
 //! and the settings of the user. Every setting is a field of its own, so
 //! that the settings that exist can be read here.
 
-/// The installation of the program on one Linux account (proposal,
+/// The installation of the program on one Linux account (user,
 /// 2026-10-28). Kept in the table `installation` of the system
 /// database.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -16,7 +16,7 @@ pub struct Installation {
     pub created: i64,
 }
 
-/// The settings of the user (proposal, 2026-10-28). Kept in the table
+/// The settings of the user (user, 2026-10-28). Kept in the table
 /// `settings` of the encrypted database of the user.
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
