@@ -9,7 +9,7 @@
 
 #![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
 
-use rusqlite::named_params;
+use rusqlite::{Connection, named_params};
 
 use crate::db::database::Database;
 use crate::db::error::DbError;
@@ -29,11 +29,21 @@ pub const SCHEMA: &str = "
 /// object has no id yet (`id` 0): the database gives it.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
+/// Calls: [`insert_product_document`].
 pub fn create_product_document(db: &Database, document: &ProductDocument) -> Result<i64, DbError> {
+    insert_product_document(db.connection(), document)
+}
+
+/// Writes a new document and gives its id, inside the transaction of its
+/// caller (the copy of a plan writes its documents in its own).
+///
+/// Called by: [`create_product_document`], `evaluation_plan::create_evaluation`.
+pub(in crate::db) fn insert_product_document(
+    connection: &Connection,
+    document: &ProductDocument,
+) -> Result<i64, DbError> {
     ensure!(document.id == 0, DbError::Inconsistent("a new document has an id already".to_owned()));
     ensure!(!document.name.is_empty(), DbError::Inconsistent("a document without a name".to_owned()));
-
-    let connection = db.connection();
 
     connection.execute(
         "INSERT INTO product_documents (name, content, version) VALUES (:name, :content, :version)",

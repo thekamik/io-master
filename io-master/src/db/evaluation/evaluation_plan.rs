@@ -26,10 +26,14 @@ use rusqlite::{Connection, Row, named_params};
 
 use crate::db::database::Database;
 use crate::db::error::DbError;
-use crate::db::evaluation::work_unit::{MAX_WORK_UNITS, verdict_name, verdict_of};
+use crate::db::evaluation::lab_proof::{insert_lab_proof, read_lab_proof};
+use crate::db::evaluation::product_document::{insert_product_document, read_product_document};
+use crate::db::evaluation::work_unit::{MAX_WORK_UNITS, insert_work_unit, read_work_units, verdict_name, verdict_of};
 use crate::db::lists::{check_length, position, read_ids, write_ids};
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
-use crate::model::evaluation::work_unit::Verdict;
+use crate::model::evaluation::lab_proof::LabProof;
+use crate::model::evaluation::product_document::ProductDocument;
+use crate::model::evaluation::work_unit::{Quote, Verdict, WorkUnit};
 
 /// The most plans (with their evaluations and reports) of the user.
 pub const MAX_PLANS: usize = 2000;
@@ -165,21 +169,34 @@ fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Resul
 /// has no work units yet: they are added one by one (`create_work_unit`).
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-/// Calls: [`check_plan`], [`write_lists`].
+/// Calls: [`insert_plan`].
 pub fn create_evaluation_plan(db: &Database, plan: &EvaluationPlan) -> Result<i64, DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let id = insert_plan(&transaction, plan)?;
+
+    transaction.commit()?;
+
+    Ok(id)
+}
+
+/// Writes a new plan with its lists and gives its id, inside the
+/// transaction of its caller.
+///
+/// Called by: [`create_evaluation_plan`], [`create_evaluation`].
+/// Calls: [`check_plan`], [`write_lists`].
+fn insert_plan(connection: &Connection, plan: &EvaluationPlan) -> Result<i64, DbError> {
     ensure!(plan.id == 0, DbError::Inconsistent("a new plan has an id already".to_owned()));
     ensure!(plan.work_units.is_empty(), DbError::Inconsistent("a new plan has work units already".to_owned()));
     check_plan(plan)?;
 
-    let transaction = db.connection().unchecked_transaction()?;
-    let count: i64 = transaction.query_row("SELECT COUNT(*) FROM evaluation_plans", [], |row| row.get(0))?;
+    let count: i64 = connection.query_row("SELECT COUNT(*) FROM evaluation_plans", [], |row| row.get(0))?;
 
     ensure!(
         usize::try_from(count).map_err(|error| DbError::Inconsistent(error.to_string()))? < MAX_PLANS,
         DbError::Inconsistent(format!("more than {MAX_PLANS} plans"))
     );
 
-    transaction.execute(
+    connection.execute(
         "INSERT INTO evaluation_plans (name, description, state, source_plan, product, client, evaluator, started,
                                        blocked)
          VALUES (:name, :description, :state, :source_plan, :product, :client, :evaluator, :started, :blocked)",
@@ -196,10 +213,9 @@ pub fn create_evaluation_plan(db: &Database, plan: &EvaluationPlan) -> Result<i6
         },
     )?;
 
-    let id = transaction.last_insert_rowid();
+    let id = connection.last_insert_rowid();
 
-    write_lists(&transaction, id, plan)?;
-    transaction.commit()?;
+    write_lists(connection, id, plan)?;
 
     Ok(id)
 }
@@ -385,6 +401,233 @@ pub fn update_evaluation_plan(db: &Database, plan: &EvaluationPlan) -> Result<()
     Ok(())
 }
 
+/// The order in which the work units of a plan can be carried out: each
+/// after all its dependencies, otherwise in the order of the plan (Kahn's
+/// algorithm, without recursion: each work unit is taken once, and each
+/// taking looks once at every work unit). Gives the positions in `units`;
+/// a cross reference (a cycle of dependencies) leaves work units that can
+/// never be taken, and is refused with their labels.
+///
+/// Called by: [`create_evaluation`], which checks a plan again before it
+/// is copied (user, 2026-10-28).
+fn work_order(units: &[WorkUnit]) -> Result<Vec<usize>, DbError> {
+    let mut waiting: Vec<usize> = Vec::with_capacity(units.len());
+
+    for unit in units {
+        waiting.push(unit.dependencies.len());
+    }
+
+    let mut order: Vec<usize> = Vec::with_capacity(units.len());
+
+    for (index, count) in waiting.iter().enumerate() {
+        if *count == 0 {
+            order.push(index);
+        }
+    }
+
+    for taken in 0..units.len() {
+        let Some(&index) = order.get(taken) else { break };
+        let Some(taken_unit) = units.get(index) else { break };
+        let id = taken_unit.id;
+
+        for (other, unit) in units.iter().enumerate() {
+            if unit.dependencies.contains(&id)
+                && let Some(count) = waiting.get_mut(other)
+            {
+                *count = count.saturating_sub(1);
+
+                if *count == 0 {
+                    order.push(other);
+                }
+            }
+        }
+    }
+
+    ensure!(
+        order.len() == units.len(),
+        DbError::Inconsistent(format!("a cross reference: {}", left_over(units, &order)))
+    );
+
+    Ok(order)
+}
+
+/// The labels of the work units `order` does not hold: those in a cycle of
+/// dependencies, and those behind it.
+///
+/// Called by: [`work_order`].
+fn left_over(units: &[WorkUnit], order: &[usize]) -> String {
+    let mut labels = Vec::new();
+
+    for (index, unit) in units.iter().enumerate() {
+        if !order.contains(&index) {
+            labels.push(unit.label.as_str());
+        }
+    }
+
+    labels.join(", ")
+}
+
+/// The new id of `old` in the pairs (old id, new id) of a copy.
+///
+/// Called by: [`copied_unit`], [`create_evaluation`].
+fn mapped(pairs: &[(i64, i64)], old: i64) -> Result<i64, DbError> {
+    for (from, to) in pairs {
+        if *from == old {
+            return Ok(*to);
+        }
+    }
+
+    Err(DbError::Inconsistent(format!("{old} is not copied with its plan")))
+}
+
+/// The new ids of `old`, in their order.
+///
+/// Called by: [`copied_unit`].
+fn all_mapped(pairs: &[(i64, i64)], old: &[i64]) -> Result<Vec<i64>, DbError> {
+    let mut ids = Vec::with_capacity(old.len());
+
+    for id in old {
+        ids.push(mapped(pairs, *id)?);
+    }
+
+    Ok(ids)
+}
+
+/// The pairs (old id, new id) of what the copy of a plan makes anew: its
+/// work units, the places of its documents, the places of its proofs. The
+/// three are apart, since their ids come from different tables.
+struct Copies {
+    units: Vec<(i64, i64)>,
+    documents: Vec<(i64, i64)>,
+    proofs: Vec<(i64, i64)>,
+}
+
+/// The work unit `unit` of a plan as it is copied into an evaluation: no
+/// id yet, its dependencies, documents, proofs and quotes named by their
+/// copies.
+///
+/// Called by: [`create_evaluation`].
+fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
+    let mut quotes = Vec::with_capacity(unit.quotes.len());
+
+    for quote in &unit.quotes {
+        quotes.push(Quote {
+            product_document: mapped(&copies.documents, quote.product_document)?,
+            text: quote.text.clone(),
+        });
+    }
+
+    Ok(WorkUnit {
+        id: 0,
+        dependencies: all_mapped(&copies.units, &unit.dependencies)?,
+        input_product_documents: all_mapped(&copies.documents, &unit.input_product_documents)?,
+        input_functional: match &unit.input_functional {
+            Some(proofs) => Some(all_mapped(&copies.proofs, proofs)?),
+            None => None,
+        },
+        quotes,
+        ..unit.clone()
+    })
+}
+
+/// Reserves anew, for the copy of a plan, the places of its documents and
+/// of the proofs of its work units: their names, without files or texts.
+/// Gives their pairs (old id, new id); the work units are copied later.
+///
+/// Called by: [`create_evaluation`].
+fn copied_places(
+    db: &Database,
+    connection: &Connection,
+    plan: &EvaluationPlan,
+    units: &[WorkUnit],
+) -> Result<Copies, DbError> {
+    let mut copies = Copies { units: Vec::new(), documents: Vec::new(), proofs: Vec::new() };
+
+    for id in &plan.product_documents {
+        let name = read_product_document(db, *id)?.name;
+        let place = ProductDocument { id: 0, name, content: None, version: None };
+
+        copies.documents.push((*id, insert_product_document(connection, &place)?));
+    }
+
+    for unit in units {
+        let Some(proofs) = &unit.input_functional else { continue };
+
+        for id in proofs {
+            if mapped(&copies.proofs, *id).is_err() {
+                let name = read_lab_proof(db, *id)?.name;
+                let place = LabProof { id: 0, name, proof: None, performed: None, tester: None, equipment: None };
+
+                copies.proofs.push((*id, insert_lab_proof(connection, &place)?));
+            }
+        }
+    }
+
+    Ok(copies)
+}
+
+/// Begins an evaluation: copies the plan `source` (in planning, not
+/// blocked, checked again for cross references) in one transaction, as
+/// the evaluation of `product` for `client` by `evaluator`, begun at
+/// `started`. The copy has its own places of the documents and proofs and
+/// its own work units, in the order of the plan, their dependencies on
+/// each other; the plan stays as it was. Gives the id of the evaluation.
+///
+/// Called by: nothing yet (the view of the evaluation, user 2026-10-28).
+/// Calls: [`read_evaluation_plan`], `read_work_units`, [`work_order`],
+/// [`copied_places`], [`insert_plan`], [`copied_unit`], `insert_work_unit`,
+/// [`order_work_units`].
+pub fn create_evaluation(
+    db: &Database,
+    source: i64,
+    product: &str,
+    client: &str,
+    evaluator: &str,
+    started: i64,
+) -> Result<i64, DbError> {
+    let plan = read_evaluation_plan(db, source)?;
+    let units = read_work_units(db, source)?;
+
+    ensure!(plan.state == PlanState::Plan, DbError::Inconsistent("only a plan in planning is copied".to_owned()));
+    ensure!(!plan.blocked, DbError::Inconsistent("a blocked plan is not copied".to_owned()));
+
+    let order = work_order(&units)?;
+    let transaction = db.connection().unchecked_transaction()?;
+    let mut copies = copied_places(db, &transaction, &plan, &units)?;
+    let evaluation = EvaluationPlan {
+        id: 0,
+        state: PlanState::Evaluation,
+        source_plan: Some(source),
+        product: product.to_owned(),
+        client: client.to_owned(),
+        evaluator: evaluator.to_owned(),
+        started: Some(started),
+        product_documents: all_mapped(&copies.documents, &plan.product_documents)?,
+        work_units: Vec::new(),
+        blocked: false,
+        ..plan
+    };
+    let id = insert_plan(&transaction, &evaluation)?;
+
+    for index in order {
+        let Some(unit) = units.get(index) else { continue };
+        let new = insert_work_unit(&transaction, id, &copied_unit(unit, &copies)?)?;
+
+        copies.units.push((unit.id, new));
+    }
+
+    let mut in_plan_order = Vec::with_capacity(units.len());
+
+    for unit in &units {
+        in_plan_order.push(mapped(&copies.units, unit.id)?);
+    }
+
+    order_work_units(&transaction, id, &in_plan_order)?;
+    transaction.commit()?;
+
+    Ok(id)
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of the plans: stored with their lists, read, changed; the
@@ -392,7 +635,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::work_unit::{create_work_unit, read_work_unit};
+    use crate::db::evaluation::lab_proof::create_lab_proof;
+    use crate::db::evaluation::work_unit::{create_work_unit, read_work_unit, update_work_unit};
     use crate::model::evaluation::work_unit::WorkUnit;
     use crate::test_support::database::{database, plan, unit};
 
@@ -483,5 +727,76 @@ mod tests {
             update_evaluation_plan(&db, &EvaluationPlan { work_units: vec![unit], ..stored }),
             Err(DbError::Inconsistent(_))
         ));
+    }
+
+    /// A plan with two work units, the first depending on the second (a
+    /// dependency set after both were made), the second with a proof and a
+    /// quote of the document of the plan.
+    fn plan_with_units(db: &Database) -> (i64, i64, i64) {
+        let routers = plan(db);
+        let id = create_evaluation_plan(db, &routers).unwrap();
+        let proof =
+            LabProof { id: 0, name: "Scan".to_owned(), proof: None, performed: None, tester: None, equipment: None };
+        let second = WorkUnit {
+            input_functional: Some(vec![create_lab_proof(db, &proof).unwrap()]),
+            quotes: vec![Quote { product_document: routers.product_documents[0], text: "The TOE".to_owned() }],
+            ..unit(&routers, "ATE_IND.1-1")
+        };
+        let first = create_work_unit(db, id, &unit(&routers, "ASE_INT.1-1")).unwrap();
+        let second = create_work_unit(db, id, &second).unwrap();
+        let mut stored = read_work_unit(db, first).unwrap();
+
+        stored.dependencies = vec![second];
+        update_work_unit(db, &stored).unwrap();
+
+        (id, first, second)
+    }
+
+    #[test]
+    fn an_evaluation_is_a_copy_of_its_plan_with_its_own_places_and_work_units() {
+        let (_directory, db) = database();
+        let (source, first, second) = plan_with_units(&db);
+        let plan_before = read_evaluation_plan(&db, source).unwrap();
+        let id = create_evaluation(&db, source, "Router R7", "ACME", "K. K.", 1_793_000_000).unwrap();
+        let evaluation = read_evaluation_plan(&db, id).unwrap();
+        let units = read_work_units(&db, id).unwrap();
+
+        assert_eq!(read_evaluation_plan(&db, source).unwrap(), plan_before);
+        assert_eq!(evaluation.state, PlanState::Evaluation);
+        assert_eq!(evaluation.source_plan, Some(source));
+        assert_eq!(evaluation.oscal_documents, plan_before.oscal_documents);
+        assert_ne!(evaluation.product_documents, plan_before.product_documents);
+        assert_eq!(units.len(), 2);
+        assert_eq!(units[0].label, "ASE_INT.1-1");
+        assert!(!evaluation.work_units.contains(&first) && !evaluation.work_units.contains(&second));
+        assert_eq!(units[0].dependencies, vec![units[1].id]);
+        assert_eq!(units[1].input_product_documents, evaluation.product_documents);
+        assert_eq!(units[1].quotes[0].product_document, evaluation.product_documents[0]);
+        assert_ne!(units[1].input_functional, read_work_unit(&db, second).unwrap().input_functional);
+    }
+
+    #[test]
+    fn a_cross_reference_a_blocked_plan_and_an_evaluation_are_not_copied() {
+        let (_directory, db) = database();
+        let (source, first, second) = plan_with_units(&db);
+        let mut back = read_work_unit(&db, second).unwrap();
+
+        back.dependencies = vec![first];
+        update_work_unit(&db, &back).unwrap();
+
+        let refused = create_evaluation(&db, source, "R7", "ACME", "K. K.", 0).unwrap_err().to_string();
+
+        assert!(refused.contains("cross reference") && refused.contains("ASE_INT.1-1"), "{refused}");
+
+        let blocked = EvaluationPlan { blocked: true, ..read_evaluation_plan(&db, source).unwrap() };
+
+        update_evaluation_plan(&db, &blocked).unwrap();
+
+        assert!(matches!(create_evaluation(&db, source, "R7", "ACME", "K. K.", 0), Err(DbError::Inconsistent(_))));
+
+        let other = create_evaluation_plan(&db, &plan(&db)).unwrap();
+        let evaluation = create_evaluation(&db, other, "R7", "ACME", "K. K.", 0).unwrap();
+
+        assert!(matches!(create_evaluation(&db, evaluation, "R8", "ACME", "K. K.", 0), Err(DbError::Inconsistent(_))));
     }
 }

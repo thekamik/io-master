@@ -272,16 +272,28 @@ fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), 
 /// 0): the database gives it.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-/// Calls: [`check_lists`], [`check_links`], [`write_lists`].
+/// Calls: [`insert_work_unit`].
 pub fn create_work_unit(db: &Database, plan: i64, unit: &WorkUnit) -> Result<i64, DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let id = insert_work_unit(&transaction, plan, unit)?;
+
+    transaction.commit()?;
+
+    Ok(id)
+}
+
+/// Writes a new work unit as the last of the plan `plan`, with its lists,
+/// and gives its id, inside the transaction of its caller (the copy of a
+/// plan writes its work units in its own).
+///
+/// Called by: [`create_work_unit`], `evaluation_plan::create_evaluation`.
+/// Calls: [`check_lists`], [`check_links`], [`write_lists`].
+pub(in crate::db) fn insert_work_unit(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<i64, DbError> {
     ensure!(unit.id == 0, DbError::Inconsistent("a new work unit has an id already".to_owned()));
     check_lists(unit)?;
+    check_links(connection, plan, unit)?;
 
-    let transaction = db.connection().unchecked_transaction()?;
-
-    check_links(&transaction, plan, unit)?;
-
-    let count: i64 = transaction.query_row(
+    let count: i64 = connection.query_row(
         "SELECT COUNT(*) FROM work_units WHERE evaluation_plan = :plan",
         named_params! { ":plan": plan },
         |row| row.get(0),
@@ -292,7 +304,7 @@ pub fn create_work_unit(db: &Database, plan: i64, unit: &WorkUnit) -> Result<i64
         DbError::Inconsistent(format!("more than {MAX_WORK_UNITS} work units in a plan"))
     );
 
-    transaction.execute(
+    connection.execute(
         "INSERT INTO work_units (evaluation_plan, position, reference, label, oscal_key, requirement, guidance,
                                  cross_reference, functional, ai_agent, findings, analysis, vulnerability_notes,
                                  notes, verdict, author)
@@ -318,10 +330,9 @@ pub fn create_work_unit(db: &Database, plan: i64, unit: &WorkUnit) -> Result<i64
         },
     )?;
 
-    let id = transaction.last_insert_rowid();
+    let id = connection.last_insert_rowid();
 
-    write_lists(&transaction, id, unit)?;
-    transaction.commit()?;
+    write_lists(connection, id, unit)?;
 
     Ok(id)
 }

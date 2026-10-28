@@ -10,7 +10,7 @@
 
 #![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
 
-use rusqlite::named_params;
+use rusqlite::{Connection, named_params};
 
 use crate::db::database::Database;
 use crate::db::error::DbError;
@@ -32,11 +32,18 @@ pub const SCHEMA: &str = "
 /// object has no id yet (`id` 0): the database gives it.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
+/// Calls: [`insert_lab_proof`].
 pub fn create_lab_proof(db: &Database, proof: &LabProof) -> Result<i64, DbError> {
+    insert_lab_proof(db.connection(), proof)
+}
+
+/// Writes a new proof and gives its id, inside the transaction of its
+/// caller (the copy of a plan writes its proofs in its own).
+///
+/// Called by: [`create_lab_proof`], `evaluation_plan::create_evaluation`.
+pub(in crate::db) fn insert_lab_proof(connection: &Connection, proof: &LabProof) -> Result<i64, DbError> {
     ensure!(proof.id == 0, DbError::Inconsistent("a new proof has an id already".to_owned()));
     ensure!(!proof.name.is_empty(), DbError::Inconsistent("a proof without a name".to_owned()));
-
-    let connection = db.connection();
 
     connection.execute(
         "INSERT INTO lab_proofs (name, proof, performed, tester, equipment)
