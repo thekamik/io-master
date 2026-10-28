@@ -209,11 +209,19 @@ main.rs                      Entry point of IO Master.
 routes.rs                  The routes of the window: the list of every command the page may
 checks.rs                  The checks of conditions that should never happen (rule 5 of
 model/                     The new models (2026-10-28).
-  evaluation_plan.rs           An evaluation plan: the work units of an evaluation, with the
-  lab_proof.rs                 A proof of the laboratory: the result of a functional test the
-  oscal_document.rs            A document of a standard: an OSCAL catalog (the CEM, a protection
-  product_document.rs          A document of the product: a document of the client (ST, IXIT, ...)
-  work_unit.rs                 A work unit: one piece of the work of an evaluation, as the standard
+  ai/                          The integration with an external AI service, the agents, the RAG (empty yet).
+    agent.rs
+    integration.rs
+    rag.rs
+  evaluation/                  The plan of an evaluation and what it is made of.
+    evaluation_plan.rs           An evaluation plan: the work units of an evaluation, with the
+    lab_proof.rs                 A proof of the laboratory: the result of a functional test the
+    oscal_document.rs            A document of a standard: an OSCAL catalog (the CEM, a protection
+    product_document.rs          A document of the product: a document of the client (ST, IXIT, ...)
+    work_unit.rs                 A work unit: one piece of the work of an evaluation, as the standard
+  user/                        The user and the settings of the program (empty yet).
+    program_data.rs
+    user_data.rs
 model_old/                 The data of the program as plain Rust types, and the rules of
   ai.rs                        The data of the communication with AI services: a connection as
   api_key.rs                   The API key of an AI connection of one evaluator

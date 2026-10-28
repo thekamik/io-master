@@ -34,11 +34,28 @@ mod checks;
 // in the databases, built model by model; the code is moved to them from
 // model_old/ step by step, so that the program works all the time.
 mod model {
-    pub mod evaluation_plan;
-    pub mod lab_proof;
-    pub mod oscal_document;
-    pub mod product_document;
-    pub mod work_unit;
+    // model/ai/: the integration with an external AI service, the agents,
+    // the knowledge for the AI (RAG).
+    pub mod ai {
+        pub mod agent;
+        pub mod integration;
+        pub mod rag;
+    }
+    // model/evaluation/: the plan of an evaluation, its work units, the
+    // standards, the documents of the product and the proofs of the
+    // laboratory.
+    pub mod evaluation {
+        pub mod evaluation_plan;
+        pub mod lab_proof;
+        pub mod oscal_document;
+        pub mod product_document;
+        pub mod work_unit;
+    }
+    // model/user/: the user and the settings of the program.
+    pub mod user {
+        pub mod program_data;
+        pub mod user_data;
+    }
 }
 
 // model_old/: the earlier models: the data of the program as plain Rust

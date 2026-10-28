@@ -4,7 +4,7 @@
 //! evaluation of a product works on an identical copy of it, in which
 //! the evaluator gives the documents and assesses the work units.
 
-use crate::model::work_unit::WorkUnit;
+use crate::model::evaluation::work_unit::WorkUnit;
 
 /// An evaluation plan, or the copy of it for one product (user,
 /// 2026-10-28).
