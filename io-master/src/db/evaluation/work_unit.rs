@@ -38,8 +38,7 @@ pub const MAX_PROOFS: usize = 50;
 pub const MAX_QUOTES: usize = 100;
 
 /// The tables, made when they are missing (`database.rs`), after the
-/// tables they name. `ai_agent` names an agent of `db/ai/agent.rs`; its
-/// link is checked by SQLite when that table is made.
+/// tables they name (the agents among them, `db/ai/agent.rs`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS work_units (
         id                  INTEGER PRIMARY KEY,
@@ -52,7 +51,7 @@ pub const SCHEMA: &str = "
         guidance            TEXT NOT NULL,
         cross_reference     INTEGER NOT NULL,
         functional          INTEGER NOT NULL,
-        ai_agent            INTEGER,
+        ai_agent            INTEGER REFERENCES ai_agents(id),
         findings            TEXT NOT NULL,
         analysis            TEXT NOT NULL,
         vulnerability_notes TEXT NOT NULL,

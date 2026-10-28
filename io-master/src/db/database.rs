@@ -21,6 +21,7 @@ use std::time::Duration;
 
 use rusqlite::Connection;
 
+use crate::db::ai::{agent, api_key, chat, instructions, integration, journal, rag};
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
@@ -48,11 +49,18 @@ impl Database {
         // waits for the first instead of failing at once.
         connection.busy_timeout(BUSY_TIMEOUT)?;
 
+        connection.execute_batch(integration::SCHEMA)?;
+        connection.execute_batch(api_key::SCHEMA)?;
+        connection.execute_batch(rag::SCHEMA)?;
+        connection.execute_batch(agent::SCHEMA)?;
+        connection.execute_batch(instructions::SCHEMA)?;
         connection.execute_batch(oscal_standard_document::SCHEMA)?;
         connection.execute_batch(product_document::SCHEMA)?;
         connection.execute_batch(lab_proof::SCHEMA)?;
         connection.execute_batch(evaluation_plan::SCHEMA)?;
         connection.execute_batch(work_unit::SCHEMA)?;
+        connection.execute_batch(chat::SCHEMA)?;
+        connection.execute_batch(journal::SCHEMA)?;
 
         Ok(Database { connection })
     }

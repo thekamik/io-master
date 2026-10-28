@@ -109,6 +109,18 @@ mod db {
         pub mod recovery;
         pub mod sqlcipher;
     }
+    // db/ai/: the integrations and their keys, the knowledge (RAG) and its
+    // index, the agents, the instructions of the tasks, the chats, the
+    // journal of the AI.
+    pub mod ai {
+        pub mod agent;
+        pub mod api_key;
+        pub mod chat;
+        pub mod instructions;
+        pub mod integration;
+        pub mod journal;
+        pub mod rag;
+    }
     // db/evaluation/: the plans, their work units, the standards, the
     // documents of the product, the proofs of the laboratory.
     pub mod evaluation {

@@ -1,10 +1,13 @@
 //! Help for the tests of `db/`: a new database of the user in a temporary
-//! folder, removed with it; a plan and a work unit to store in it.
+//! folder, removed with it; a plan, a work unit, an integration and an
+//! agent to store in it.
 
 use crate::db::database::{self, Database};
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::evaluation::oscal_standard_document::create_oscal_standard_document;
 use crate::db::evaluation::product_document::create_product_document;
+use crate::model::ai::agent::Agent;
+use crate::model::ai::integration::{Integration, Protocol};
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::oscal_standard_document::OscalStandardDocument;
 use crate::model::evaluation::product_document::ProductDocument;
@@ -66,5 +69,33 @@ pub fn unit(plan: &EvaluationPlan, label: &str) -> WorkUnit {
         quotes: Vec::new(),
         verdict: None,
         author: None,
+    }
+}
+
+/// An integration with a local model, not stored yet.
+pub fn integration() -> Integration {
+    Integration {
+        id: 0,
+        name: "Ollama".to_owned(),
+        url: "http://127.0.0.1:11434/v1/chat/completions".to_owned(),
+        model: "llama3.1".to_owned(),
+        protocol: Protocol::OpenAiChat,
+        ca_certificate: None,
+        context_size: 32_768,
+    }
+}
+
+/// An agent of the integration `integration`, without knowledge, not
+/// stored yet.
+pub fn agent(integration: i64) -> Agent {
+    Agent {
+        id: 0,
+        name: "CC evaluator".to_owned(),
+        integration,
+        instructions: "You assess work units of the CEM.".to_owned(),
+        knowledge_bases: Vec::new(),
+        glossary: Vec::new(),
+        max_passages: 8,
+        max_characters: 12_000,
     }
 }

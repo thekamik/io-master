@@ -268,6 +268,14 @@ db/                        The new operations on the databases (2026-10-28).
   database.rs                  The database of the user, made anew for the models of `model/`
   error.rs                     The error of every function of `db/`: why a database could not be
   lists.rs                     The lists of a model kept in a table of their own: a list of ids (the
+  ai/                          The integrations and their keys, the RAG and its index, the agents, ...
+    agent.rs                     The AI agents (`Agent`), in the table `ai_agents` of the database of the
+    api_key.rs                   The API keys of the integrations (`ApiKey`), in the table
+    chat.rs                      The chats (`Chat`) and their messages (`Message`), in the tables
+    instructions.rs              The instructions of the tasks of the AI (`Instructions`), in the table
+    integration.rs               The integrations with AI services (`Integration`), in the table
+    journal.rs                   The journal of the AI (`JournalEntry`), in the table `ai_journal` of the
+    rag.rs                       The knowledge for the AI (RAG): the knowledge bases (`KnowledgeBase`)
   evaluation/                  The plans, their work units, the standards, the documents, the proofs.
     evaluation_plan.rs           The evaluation plans (`EvaluationPlan`: a plan, an evaluation copied
     lab_proof.rs                 The proofs of the laboratory (`LabProof`: the results of the functional
