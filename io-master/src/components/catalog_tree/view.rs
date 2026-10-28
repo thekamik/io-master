@@ -3,7 +3,7 @@
 use serde::Serialize;
 
 use crate::app::error::AppError;
-use crate::model::oscal::catalog::Catalog;
+use crate::model_old::oscal::catalog::Catalog;
 
 /// A row of the tree: a group or a control.
 #[derive(Debug, Serialize)]

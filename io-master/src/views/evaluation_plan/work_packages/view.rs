@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::work_package::{PackageFields, WorkPackage};
+use crate::model_old::work_package::{PackageFields, WorkPackage};
 
 /// A package.
 #[derive(Debug, Serialize)]

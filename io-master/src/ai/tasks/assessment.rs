@@ -5,7 +5,7 @@
 //! 2026-10-17); the answer gives the four results and a verdict proposed,
 //! with its reason. The evaluator corrects them and sets the verdict (P1).
 
-use crate::model::evaluation::{Results, Verdict};
+use crate::model_old::evaluation::{Results, Verdict};
 
 use super::json::{json_object, text_of};
 

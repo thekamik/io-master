@@ -12,8 +12,8 @@
 
 use serde::Serialize;
 
-use crate::model::ai::Speaker;
-use crate::model::chats::{ChatMessage, Ending};
+use crate::model_old::ai::Speaker;
+use crate::model_old::chats::{ChatMessage, Ending};
 
 /// A message of a chat.
 #[derive(Debug, Serialize)]

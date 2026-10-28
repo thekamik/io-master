@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::ai::presets::Preset;
 use crate::app::error::AppError;
-use crate::model::ai::{AnswerMode, Connection};
+use crate::model_old::ai::{AnswerMode, Connection};
 
 /// A connection as the page shows it.
 #[derive(Debug, Serialize)]

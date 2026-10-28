@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::evaluation::EvaluationFields;
+use crate::model_old::evaluation::EvaluationFields;
 
 use super::super::evaluation_list::view::EvaluationSummaryView;
 

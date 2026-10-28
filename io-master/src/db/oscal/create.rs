@@ -6,7 +6,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::oscal::OscalDocument;
+use crate::model_old::oscal::OscalDocument;
 
 use super::rows::checked_json;
 

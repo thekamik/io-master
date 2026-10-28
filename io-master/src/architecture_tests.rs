@@ -13,11 +13,12 @@
 //!        ┌──────────┬────────┼─────────┬──────────────┬───────────┐
 //!        ▼          ▼        ▼         ▼              ▼           ▼
 //!      app/        ai/   hardware_  installation/    pdf/      (model/,
-//!  (state, errors)  │     tests/        │                       security/)
+//!  (state, errors)  │     tests/        │                    model_old/,
+//!        │          │                   │                     security/)
 //!        │          │                   │
 //!        └──────────┴──────► db/ ◄──────┘
 //!                            │
-//!          all of them ───► model/, security/
+//!          all of them ───► model/, model_old/, security/
 //! ```
 //!
 //! A folder uses only itself and the folders below it, and never a
@@ -37,21 +38,24 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
+// model/ gets its row with its first file (a folder without files is
+// refused below); model_old/ is replaced by it step by step (2026-10-28).
 const ALLOWED: [(&str, &[&str]); 9] = [
-    ("model", &[]),
+    ("model_old", &["model"]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
-    ("db", &["model", "security"]),
-    ("ai", &["db", "model", "security"]),
+    ("db", &["model", "model_old", "security"]),
+    ("ai", &["db", "model", "model_old", "security"]),
     // The installation, its account and the session: the core of the
     // protection, below the window and the views.
-    ("installation", &["db", "model", "security"]),
+    ("installation", &["db", "model", "model_old", "security"]),
     (
         "app",
         &[
             "installation",
             "model",
+            "model_old",
             // The errors of the folders below, turned into errors of the
             // page; never a function of them.
             "ai::api::completions::AiError",
@@ -63,12 +67,12 @@ const ALLOWED: [(&str, &[&str]); 9] = [
     ),
     // The components (components.rs): the elements used more than once,
     // built as the elements of a view; never a view.
-    ("components", &["app", "ai", "db", "installation", "model", "pdf", "security"]),
+    ("components", &["app", "ai", "db", "installation", "model", "model_old", "pdf", "security"]),
     // The views (views.rs): the commands of the elements of the window,
     // on top of everything. They use the state and the errors of the
     // window (app/) and the components, and do their work with the folders
     // below. A view never uses another view (checked below).
-    ("views", &["app", "ai", "components", "db", "installation", "model", "pdf", "security"]),
+    ("views", &["app", "ai", "components", "db", "installation", "model", "model_old", "pdf", "security"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

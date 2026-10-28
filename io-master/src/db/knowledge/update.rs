@@ -4,7 +4,7 @@ use rusqlite::{Transaction, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{AgentFields, AgentPlace, MAX_BASES, Trial};
+use crate::model_old::knowledge::{AgentFields, AgentPlace, MAX_BASES, Trial};
 
 /// A limit as a number of SQL.
 fn limit(max: usize) -> Result<i64, DbError> {
@@ -117,7 +117,7 @@ pub fn trial(db: &UserDb, agent: i64, trial: &Trial) -> Result<(), DbError> {
     transaction.execute(
         "INSERT INTO knowledge_trials (agent_id, question, answer, asked)
          VALUES (:agent, :question, :answer, :asked)",
-        named_params! { ":agent": agent, ":question": trial.question, ":answer": trial.answer, ":asked": crate::model::time::now() },
+        named_params! { ":agent": agent, ":question": trial.question, ":answer": trial.answer, ":asked": crate::model_old::time::now() },
     )?;
 
     for (position, hit) in trial.passages.iter().enumerate() {

@@ -8,8 +8,8 @@ use crate::app::error::AppError;
 use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::EvaluationTask;
-use crate::model::oscal::catalog::Catalog;
+use crate::model_old::evaluation_project::EvaluationTask;
+use crate::model_old::oscal::catalog::Catalog;
 
 /// A task: a whole requirement.
 #[derive(Debug, Serialize)]

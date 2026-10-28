@@ -25,8 +25,8 @@ use crate::db::system::database::{self as system_db, SystemDb};
 use crate::installation::accounts::{self, Account, AccountError};
 use crate::security::random::fill_random;
 
-use crate::model::installation::{self, Installation, InstallationId};
-use crate::model::recovery_code::RecoveryCode;
+use crate::model_old::installation::{self, Installation, InstallationId};
+use crate::model_old::recovery_code::RecoveryCode;
 
 /// An installed program, ready to work: its open system database.
 #[derive(Debug)]

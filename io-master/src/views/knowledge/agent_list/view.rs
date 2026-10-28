@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::knowledge::AgentSummary;
+use crate::model_old::knowledge::AgentSummary;
 
 /// An agent as a row of the list, with the number of its bases.
 #[derive(Debug, Serialize)]

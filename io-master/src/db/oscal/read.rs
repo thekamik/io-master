@@ -4,8 +4,8 @@ use rusqlite::{OptionalExtension, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::oscal::catalog::Catalog;
-use crate::model::oscal::{OscalDocument, OscalSummary};
+use crate::model_old::oscal::catalog::Catalog;
+use crate::model_old::oscal::{OscalDocument, OscalSummary};
 
 use super::error::OscalError;
 
@@ -62,7 +62,7 @@ mod tests {
     use super::*;
 
     use crate::db::oscal::create;
-    use crate::model::oscal::OscalModel;
+    use crate::model_old::oscal::OscalModel;
     use crate::test_support::db::basic_catalog;
     use crate::test_support::standards::database;
 

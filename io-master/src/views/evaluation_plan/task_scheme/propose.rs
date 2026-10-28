@@ -22,10 +22,10 @@ use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::knowledge::AgentPlace;
-use crate::model::task_scheme::{self, Block, BlockKind};
-use crate::model::text::Invalid;
+use crate::model_old::ai::Task;
+use crate::model_old::knowledge::AgentPlace;
+use crate::model_old::task_scheme::{self, Block, BlockKind};
+use crate::model_old::text::Invalid;
 
 use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
@@ -207,9 +207,9 @@ mod tests {
     use crate::ai::api::connections;
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions as connection_to, completions_events};
     use crate::app::test_support::{TestState, logged_in};
-    use crate::model::api_key::ApiKey;
-    use crate::model::evaluation_project::{EvaluationTask, ProjectFields};
-    use crate::model::task_scheme::{BlockFields, new_scheme};
+    use crate::model_old::api_key::ApiKey;
+    use crate::model_old::evaluation_project::{EvaluationTask, ProjectFields};
+    use crate::model_old::task_scheme::{BlockFields, new_scheme};
 
     /// "anna" logged in, her AI the fake `service`, a project of the basic
     /// catalog with the task of requirement s1.1.1 and one output; gives the

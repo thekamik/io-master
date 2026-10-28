@@ -4,8 +4,8 @@
 //! (its name, format, target and instructions: the template of the
 //! laboratory). The evaluator corrects and accepts it.
 
-use crate::model::evaluation::Results;
-use crate::model::task_scheme::{BlockFields, OutputFormat};
+use crate::model_old::evaluation::Results;
+use crate::model_old::task_scheme::{BlockFields, OutputFormat};
 
 /// The instructions when the evaluator has not changed them.
 pub const DEFAULT_INSTRUCTIONS: &str = "You write one part of the report of a security evaluation from the results the evaluator accepted. Keep to what the results say: add no finding, no verdict and no quote of your own. Follow what the output asks (its target and instructions). Answer with the text of the part only, nothing before or after it.";
@@ -57,7 +57,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::evaluation::Verdict;
+    use crate::model_old::evaluation::Verdict;
 
     #[test]
     fn the_question_holds_the_output_and_the_results() {

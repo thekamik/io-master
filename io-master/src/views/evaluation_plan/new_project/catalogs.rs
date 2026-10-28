@@ -7,8 +7,8 @@ use crate::app::error::AppError;
 use crate::db::conversion as db_conversion;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project;
-use crate::model::oscal::OscalModel;
+use crate::model_old::evaluation_project;
+use crate::model_old::oscal::OscalModel;
 
 use super::view::CatalogChoiceView;
 

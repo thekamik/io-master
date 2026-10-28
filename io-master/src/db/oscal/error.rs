@@ -5,8 +5,8 @@
 use std::fmt;
 
 use crate::db::error::DbError;
-use crate::model::oscal::NotOscal;
-use crate::model::oscal::catalog::CatalogError;
+use crate::model_old::oscal::NotOscal;
+use crate::model_old::oscal::catalog::CatalogError;
 
 /// Why an operation on a document of OSCAL was refused.
 #[derive(Debug)]

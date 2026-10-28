@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 
-use crate::model::knowledge::Trial;
+use crate::model_old::knowledge::Trial;
 
 use super::super::knowledge_search::view::{self as search_view, HitView};
 

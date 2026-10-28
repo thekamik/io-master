@@ -4,7 +4,7 @@
 
 use serde::Serialize;
 
-use crate::model::oscal::{OscalModel, OscalSummary};
+use crate::model_old::oscal::{OscalModel, OscalSummary};
 
 /// A catalog of OSCAL, as a row of the list.
 #[derive(Debug, Clone, Serialize)]

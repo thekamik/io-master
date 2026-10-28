@@ -24,7 +24,7 @@
 //! of the headers that never hold a secret ([`PLAIN_HEADERS`]). The CA
 //! certificate is left out as well (long, and of no use here).
 
-use crate::model::ai::{
+use crate::model_old::ai::{
     API_KEY, AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, Field, MESSAGES, MODEL, RESERVED_HEADERS, ROLE, SYSTEM,
     TEXT,
 };

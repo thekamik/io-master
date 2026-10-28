@@ -10,9 +10,9 @@ use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
-use crate::model::conversion::{self, Pages, Stage};
-use crate::model::knowledge::AgentPlace;
-use crate::model::oscal::catalog::Catalog;
+use crate::model_old::conversion::{self, Pages, Stage};
+use crate::model_old::knowledge::AgentPlace;
+use crate::model_old::oscal::catalog::Catalog;
 
 use super::view::{GroupView, PagesForm, PagesView, ReviewView, WizardView};
 

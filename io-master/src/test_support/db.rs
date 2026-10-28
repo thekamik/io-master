@@ -12,13 +12,13 @@ use crate::db::encryption::recovery::RecoveryWrappedKey;
 use crate::db::evaluation_support::create::{self, NewProposal};
 use crate::db::system::database::SystemDb;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Connection;
-use crate::model::api_key::ApiKey;
-use crate::model::evaluation::{Evaluation, EvaluationFields, LabTask, Package, PackageTask, TaskState};
-use crate::model::evaluation_support::{ProposalKind, QuoteDraft};
-use crate::model::installation::{ID_LENGTH, Installation};
-use crate::model::oscal::OscalDocument;
-use crate::model::task_scheme::{self, Block, BlockFields, BlockKind, OutputCondition, OutputFormat};
+use crate::model_old::ai::Connection;
+use crate::model_old::api_key::ApiKey;
+use crate::model_old::evaluation::{Evaluation, EvaluationFields, LabTask, Package, PackageTask, TaskState};
+use crate::model_old::evaluation_support::{ProposalKind, QuoteDraft};
+use crate::model_old::installation::{ID_LENGTH, Installation};
+use crate::model_old::oscal::OscalDocument;
+use crate::model_old::task_scheme::{self, Block, BlockFields, BlockKind, OutputCondition, OutputFormat};
 use crate::test_support::TempDir;
 
 /// The API key of the tests; it must never be found in the file of the
@@ -184,10 +184,10 @@ pub fn lab_evaluation(package: &Package) -> Evaluation {
 /// passage, `text` (page 7 of "ISO 27002"); gives its id (step 57.6).
 pub fn knowledge_agent(db: &UserDb, text: &str) -> i64 {
     let base = crate::db::knowledge::create::base(db, "ISO", "").unwrap();
-    let passage = crate::model::knowledge::Passage { page: Some(7), label: String::new(), text: text.to_owned() };
-    let kind = crate::model::knowledge::SourceKind::Pdf;
+    let passage = crate::model_old::knowledge::Passage { page: Some(7), label: String::new(), text: text.to_owned() };
+    let kind = crate::model_old::knowledge::SourceKind::Pdf;
     crate::db::knowledge::create::source(db, base, kind, "ISO 27002", &[passage]).unwrap();
-    let fields = crate::model::knowledge::AgentFields {
+    let fields = crate::model_old::knowledge::AgentFields {
         name: "ISO agent".to_owned(),
         instructions: "You know ISO 27002.".to_owned(),
         glossary: String::new(),

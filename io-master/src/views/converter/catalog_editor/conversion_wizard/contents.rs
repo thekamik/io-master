@@ -15,8 +15,8 @@ use crate::app::error::AppError;
 use crate::db::conversion as db_conversion;
 use crate::db::standards as db_standards;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::conversion::Pages;
+use crate::model_old::ai::Task;
+use crate::model_old::conversion::Pages;
 
 use super::super::ai_builder::parts::PART_RANGE;
 use super::super::ai_builder::steps::{self, Asked};

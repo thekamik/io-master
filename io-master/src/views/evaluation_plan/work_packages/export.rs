@@ -19,8 +19,8 @@ use crate::app::error::AppError;
 use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::EvaluationTask;
-use crate::model::time::now;
+use crate::model_old::evaluation_project::EvaluationTask;
+use crate::model_old::time::now;
 
 use super::super::task_list::view as task_view;
 use super::super::task_scheme::view::{BlockView, result_titles};
@@ -184,9 +184,9 @@ mod tests {
 
     use super::*;
 
-    use crate::model::evaluation_project::{ProjectFields, TaskLink};
-    use crate::model::task_scheme::{Block, BlockFields, BlockKind, new_scheme};
-    use crate::model::work_package::{PackageFields, WorkPackage};
+    use crate::model_old::evaluation_project::{ProjectFields, TaskLink};
+    use crate::model_old::task_scheme::{Block, BlockFields, BlockKind, new_scheme};
+    use crate::model_old::work_package::{PackageFields, WorkPackage};
     use crate::test_support::standards::database;
 
     #[test]

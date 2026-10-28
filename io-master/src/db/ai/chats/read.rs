@@ -4,7 +4,7 @@ use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::chats::{ChatMessage, ChatSummary};
+use crate::model_old::chats::{ChatMessage, ChatSummary};
 
 use super::rows::{local_time, message_from_row, summary_from_row};
 

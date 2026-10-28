@@ -28,11 +28,17 @@ mod checks;
 // The comment of a group says which part of the project it is; what each
 // file holds is said at its functions. Since steps 45 and 46 of
 // docs/history.md every module is written here, except those of a file with code
-// that has modules of its own (model/oscal.rs), which declares them itself.
+// that has modules of its own (model_old/oscal.rs), which declares them itself.
 
-// model/: the data of the program as plain Rust types and the rules of
-// their validity; no I/O (no database, no network, no file).
-mod model {
+// model/: the new models (2026-10-28): the data of the program as it is kept
+// in the databases, built model by model; the code is moved to them from
+// model_old/ step by step, so that the program works all the time.
+mod model {}
+
+// model_old/: the earlier models: the data of the program as plain Rust
+// types and the rules of their validity; no I/O (no database, no network,
+// no file). Replaced by model/ step by step.
+mod model_old {
     pub mod ai;
     pub mod api_key;
     pub mod chats;

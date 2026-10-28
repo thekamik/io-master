@@ -28,8 +28,8 @@ use crate::db::encryption::recovery::{self, RecoveryError, RecoveryWrappedKey};
 use crate::db::error::DbError;
 use crate::db::system::database::SystemDb;
 use crate::db::user::database as user_db;
-use crate::model::installation::{self, InvalidUserName};
-use crate::model::recovery_code::RecoveryCode;
+use crate::model_old::installation::{self, InvalidUserName};
+use crate::model_old::recovery_code::RecoveryCode;
 
 /// A logged-in account.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -293,7 +293,7 @@ mod tests {
     use super::*;
     use crate::db::system;
 
-    use crate::model::installation::Installation;
+    use crate::model_old::installation::Installation;
     use crate::test_support::TempDir;
 
     const PASSWORD: &str = "correct horse battery";

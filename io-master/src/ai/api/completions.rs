@@ -35,12 +35,12 @@ use crate::db::user::database::UserDb;
 use super::provider::client;
 use super::provider::request;
 use super::roles::Model;
-use crate::model::ai::Task;
+use crate::model_old::ai::Task;
 
 pub use super::provider::ai_error::AiError;
 pub use super::provider::client::{Reply, ReplyEnd};
 pub use super::provider::response::StopReason;
-pub use crate::model::ai::{Speaker, Turn};
+pub use crate::model_old::ai::{Speaker, Turn};
 
 /// How many pieces of a reply may wait for the caller.
 const PIECE_QUEUE: usize = 256;
@@ -233,7 +233,7 @@ mod tests {
         FakeAnswer, FakeService, checked, completions as completions_format, completions_events, data,
     };
     use crate::db::ai::journal::read as journal_read;
-    use crate::model::api_key::ApiKey;
+    use crate::model_old::api_key::ApiKey;
     use crate::test_support::standards::database;
 
     /// The first piece of a reply that never ends: the service then stays

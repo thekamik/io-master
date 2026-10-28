@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::chats::ChatSummary;
+use crate::model_old::chats::ChatSummary;
 
 /// A chat in the list.
 #[derive(Debug, Serialize)]

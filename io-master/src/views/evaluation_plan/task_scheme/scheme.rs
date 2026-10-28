@@ -7,7 +7,7 @@ use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
-use crate::model::task_scheme::{self, Block, NewScheme};
+use crate::model_old::task_scheme::{self, Block, NewScheme};
 
 use super::super::own_requirement::catalog as own_catalog;
 use super::super::standard_browser::requirement;

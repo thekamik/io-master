@@ -27,7 +27,7 @@ use tokio_rustls::rustls::pki_types::{CertificateDer, PrivateKeyDer, PrivatePkcs
 use tokio_rustls::rustls::{self, ServerConfig};
 
 use super::connection::Checked;
-use crate::model::ai::{AnswerMode, Connection};
+use crate::model_old::ai::{AnswerMode, Connection};
 
 /// What the fake service answers.
 #[derive(Debug, Clone)]

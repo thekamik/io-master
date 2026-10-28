@@ -54,7 +54,7 @@ use reqwest::{Certificate, Url};
 use serde_json::Value;
 
 use super::provider::json_path::JsonPath;
-use crate::model::ai::{
+use crate::model_old::ai::{
     API_KEY, AnswerMode, Connection, ConnectionError, Field, MAX_NAME, MESSAGES, MODEL, RESERVED_HEADERS, ROLE, SYSTEM,
     TEXT,
 };

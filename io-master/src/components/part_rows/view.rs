@@ -6,8 +6,8 @@
 use serde::Serialize;
 
 use crate::app::error::AppError;
-use crate::model::oscal::catalog::tree::flat_parts;
-use crate::model::oscal::common::Part;
+use crate::model_old::oscal::catalog::tree::flat_parts;
+use crate::model_old::oscal::common::Part;
 
 /// A part, as a row.
 #[derive(Debug, Serialize)]

@@ -9,9 +9,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::app::error::AppError;
 use crate::components::part_rows::view::PartRowView;
-use crate::model::ai::{Speaker, Turn};
-use crate::model::evaluation::{Evidence, Fragment, Results, Verdict};
-use crate::model::task_scheme::Block;
+use crate::model_old::ai::{Speaker, Turn};
+use crate::model_old::evaluation::{Evidence, Fragment, Results, Verdict};
+use crate::model_old::task_scheme::Block;
 
 use crate::components::knowledge_agent::view::AgentOptionView;
 

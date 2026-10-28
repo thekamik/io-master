@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 
-use crate::model::standards::Document;
+use crate::model_old::standards::Document;
 
 /// A document the viewer can show.
 #[derive(Debug, Serialize)]

@@ -6,7 +6,7 @@
 use crate::app::error::AppError;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{Hit, MAX_HITS, QUERY_MAX, search_query};
+use crate::model_old::knowledge::{Hit, MAX_HITS, QUERY_MAX, search_query};
 
 /// The passages of base `base` that fit the text `text`, the best first,
 /// at most `MAX_HITS`; none when the text has no word to look for.
@@ -36,7 +36,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::knowledge::{Passage, SourceKind};
+    use crate::model_old::knowledge::{Passage, SourceKind};
     use crate::test_support::standards::database;
 
     #[test]

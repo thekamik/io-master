@@ -4,11 +4,11 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Speaker;
-use crate::model::evaluation::{
+use crate::model_old::ai::Speaker;
+use crate::model_old::evaluation::{
     Evaluation, Evidence, Fragment, MAX_EVALUATIONS, MAX_EVIDENCE, MAX_FRAGMENTS, MAX_MESSAGES, Package, PackageTask,
 };
-use crate::model::time::now;
+use crate::model_old::time::now;
 
 use super::rows::{PAGE_BREAK, speaker_name};
 
@@ -266,7 +266,7 @@ mod tests {
     use super::*;
 
     use crate::db::evaluation::read;
-    use crate::model::evaluation::{EvidenceKind, TaskState};
+    use crate::model_old::evaluation::{EvidenceKind, TaskState};
     use crate::test_support::db::{lab_evaluation, lab_package};
     use crate::test_support::standards::database;
 

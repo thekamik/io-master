@@ -34,8 +34,8 @@ use crate::db::error::DbError;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{ConnectionError, Task, Turn};
-use crate::model::knowledge::AgentPlace;
+use crate::model_old::ai::{ConnectionError, Task, Turn};
+use crate::model_old::knowledge::AgentPlace;
 
 use super::stored;
 use super::view::{ReplyEvent, ending_notice};
@@ -255,9 +255,9 @@ mod tests {
     use crate::db::ai::connection::{create as connections_create, update as connections_update};
     use crate::db::encryption::database_key::DatabaseKey;
     use crate::db::user::database as user_db;
-    use crate::model::ai::Connection;
-    use crate::model::ai::Speaker;
-    use crate::model::api_key::ApiKey;
+    use crate::model_old::ai::Connection;
+    use crate::model_old::ai::Speaker;
+    use crate::model_old::api_key::ApiKey;
     use crate::security::random::fill_random;
     use crate::test_support::TempDir;
 
@@ -384,7 +384,7 @@ mod tests {
     }
 
     /// The messages of chat `chat_id`.
-    fn messages(test: &TestState, chat_id: i64) -> Vec<crate::model::chats::ChatMessage> {
+    fn messages(test: &TestState, chat_id: i64) -> Vec<crate::model_old::chats::ChatMessage> {
         db_chats::read::messages(&test.state.session().unwrap().db(), chat_id).unwrap()
     }
 
@@ -447,7 +447,7 @@ mod tests {
 
         let stored = messages(&test, 1);
         assert_eq!(stored[1].text, "First");
-        assert_eq!(stored[1].ending, crate::model::chats::Ending::Stopped);
+        assert_eq!(stored[1].ending, crate::model_old::chats::Ending::Stopped);
     }
 
     #[tokio::test]

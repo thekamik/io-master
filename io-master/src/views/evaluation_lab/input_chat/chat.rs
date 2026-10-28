@@ -18,9 +18,9 @@ use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
 use crate::installation::session::Session;
-use crate::model::ai::{Speaker, Task, Turn};
-use crate::model::evaluation::check_message;
-use crate::model::task_scheme::BlockKind;
+use crate::model_old::ai::{Speaker, Task, Turn};
+use crate::model_old::evaluation::check_message;
+use crate::model_old::task_scheme::BlockKind;
 
 use super::super::assessment::context;
 use super::super::lab_task::read as lab_task;

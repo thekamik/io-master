@@ -17,8 +17,11 @@ io-master/src/
                      layers, each group commented), main(), tauri_startup(); nothing else
   routes.rs          the list of the commands the page may call (as urls.py of Django), above views/
   checks.rs          the macro ensure! (rule 5 of CLAUDE.md), known in the whole program
-  model/             the data as plain Rust types and the rules of their validity; no I/O
-  db/                every operation on a database, as CRUD; depends only on model/ and security/
+  model/             the new models (2026-10-28): the data as it is kept in the databases; empty yet
+  model_old/         the earlier models: the data as plain Rust types and the rules of their
+                     validity; no I/O; replaced by model/ step by step
+  db/                every operation on a database, as CRUD; depends only on model/, model_old/
+                     and security/
   ai/                the whole communication with AI services
   pdf/               reading PDFs with Poppler (pdfinfo, pdftotext): another program, in one place
   security/          the building blocks of protection: random numbers, no memory dumps
@@ -75,9 +78,11 @@ The page never holds a secret. The key of the database of an evaluator opens the
 
 ## 2. The folders
 
-### 2.1 `model/`: the data
+### 2.1 `model/` and `model_old/`: the data
 
-Plain types of every area, their rules of validity (`check`) and their normal form (`normalized`). **No I/O**: no database, no network, no file. The errors of the rules carry enums of the fields and of the objects (`model/text.rs`: `Field`), never text that is matched.
+**The models are built anew (user, 2026-10-28).** The earlier folder `model/` was renamed `model_old/`; the new `model/` gets the models one by one, each a structure that represents the data kept in the database, and the code is moved to them piece by piece so that the program works all the time. `model_old/` may use `model/`; everything above them may use both. What follows describes `model_old/`.
+
+Plain types of every area, their rules of validity (`check`) and their normal form (`normalized`). **No I/O**: no database, no network, no file. The errors of the rules carry enums of the fields and of the objects (`model_old/text.rs`: `Field`), never text that is matched.
 
 - **The normal form is the only place where text is trimmed.** A command of a view normalizes what it gets before it checks and stores it; `db/` writes what it gets; so memory and the database hold the same text.
 
@@ -184,13 +189,13 @@ The modules of a view are declared in the map of `main.rs`; its flow of data is 
 | Topic | Rule |
 |---|---|
 | Names | No file repeats the name of its folder (`db/system/schema.rs`, not `system/system.rs`). Functions of a resource are verbs. |
-| Modules | **`main.rs` is the map of the program** (step 45, user 2026-10-23): every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment that says which part of the project it is; a file that would only declare modules does not exist. A file with code that has modules of its own (`model/oscal.rs`) declares them itself. |
+| Modules | **`main.rs` is the map of the program** (step 45, user 2026-10-23): every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment that says which part of the project it is; a file that would only declare modules does not exist. A file with code that has modules of its own (`model_old/oscal.rs`) declares them itself. |
 | Rules of the code | CLAUDE.md, "The rules for Rust" (The Power of 10 adapted). A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error; never `assert!` outside the tests. |
 | Comments | Code comments and documentation in English, thorough; the head of every file says what it holds and, where it helps, draws the path of the data. |
 | Tests | In the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }` (step 44; a file `*_tests.rs` besides the two tests of the whole program is refused by `architecture_tests.rs`). Help for the tests in `test_support.rs` (of an area), `src/test_support.rs` (temporary folders) and `src/test_support/` (`db.rs`: the data of the tests of `db/`; `standards.rs`: a database with a small standard); a test of a whole area of CRUD is split by the function it checks, so that `read.rs` ends with the tests of reading; the tests of the whole program in `src/architecture_tests.rs` and `src/command_lists_tests.rs`. |
 | Formatting | `rustfmt.toml` (120 characters); `cargo fmt --check` must be clean before a commit. |
 | Checks | `cargo test` (with the test of the architecture and the test of the command lists), `npm run check` (svelte-check, clean), clippy. |
-| Serialization | Only at the boundary to the page: `views/**/view.rs` and `app/serializer/`; the types of the core carry no serde attributes. **The one exception** (user, 2026-10-18, `docs/oscal.md`): the types of `model/oscal/` *are* the published format of NIST and carry serde with the names of OSCAL. |
+| Serialization | Only at the boundary to the page: `views/**/view.rs` and `app/serializer/`; the types of the core carry no serde attributes. **The one exception** (user, 2026-10-18, `docs/oscal.md`): the types of `model_old/oscal/` *are* the published format of NIST and carry serde with the names of OSCAL. |
 | Secrets | Only in the encrypted database of the evaluator; never shown back, never printed, never in the page. |
 
 ---
@@ -203,7 +208,8 @@ Generated from the heads of the files (the tests left out):
 main.rs                      Entry point of IO Master.
 routes.rs                  The routes of the window: the list of every command the page may
 checks.rs                  The checks of conditions that should never happen (rule 5 of
-model/                     The data of the program as plain Rust types, and the rules of
+model/                     The new models (2026-10-28), empty yet.
+model_old/                 The data of the program as plain Rust types, and the rules of
   ai.rs                        The data of the communication with AI services: a connection as
   api_key.rs                   The API key of an AI connection of one evaluator
   chats.rs                     The chats of an evaluator with an AI model, as data: a chat in the
@@ -266,7 +272,7 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     create.rs                    Starting the conversion of a catalog.
     delete.rs                    Deleting a conversion.
     read.rs                      Reading the conversions.
-    rows.rs                      The rows of the conversions and the types of `model/conversion.rs` they
+    rows.rs                      The rows of the conversions and the types of `model_old/conversion.rs` they
     schema.rs                    The tables of the conversions of the documents of standards into
     update.rs                    Changing a conversion: its stage, the pages of its table of contents,
   evaluation/                  The evaluations of the Evaluation lab (step 52): the frozen copy of a
@@ -275,7 +281,7 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     create.rs                    Storing evaluations and what the evaluator adds to them.
     delete.rs                    Deleting evaluations and what the evaluator added to them.
     read.rs                      Reading evaluations and what the evaluator added to them.
-    rows.rs                      The rows of the evaluations and the types of `model/evaluation.rs`.
+    rows.rs                      The rows of the evaluations and the types of `model_old/evaluation.rs`.
     schema.rs                    The tables of the evaluations.
     update.rs                    The state of a task, the fragments accepted, the results, the outputs,
                                  the agents with knowledge and the passages unticked (step 57.4).
@@ -296,7 +302,7 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
                                  with its bases in one transaction, under free names (step 57.7).
     delete.rs                    Deleting a base, a source, an agent with what belongs to them.
     read.rs                      Reading bases, sources, agents and trials; the search of the passages.
-    rows.rs                      The rows of the knowledge bases and the types of `model/knowledge.rs`.
+    rows.rs                      The rows of the knowledge bases and the types of `model_old/knowledge.rs`.
     schema.rs                    The tables of the knowledge bases (a virtual table of FTS5).
     update.rs                    A base, an agent with its bases, the last trial of an agent.
   encryption/                  All code of encryption of the databases.
@@ -315,7 +321,7 @@ db/                        Every operation on a database (CLAUDE.md, "Database c
     delete.rs                    Deleting from the evaluation support.
     read.rs                      Reading the evaluation support.
     rows.rs                      The rows of the evaluation support and the types they become
-    schema.rs                    The tables of the evaluation support (`model/evaluation_support.rs`),
+    schema.rs                    The tables of the evaluation support (`model_old/evaluation_support.rs`),
   oscal/                       The documents of NIST OSCAL (step 41): catalogs, mappings, profiles,
     create.rs                    Storing a new document of OSCAL, checked against the schema of NIST.
     delete.rs                    Deleting a document of OSCAL. Its text is overwritten in the file,

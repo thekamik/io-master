@@ -490,7 +490,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::task_scheme::{BlockFields, new_scheme};
+    use crate::model_old::task_scheme::{BlockFields, new_scheme};
 
     fn package_task() -> PackageTask {
         let mut output = BlockFields::empty();

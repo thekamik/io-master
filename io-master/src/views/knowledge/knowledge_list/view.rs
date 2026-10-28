@@ -2,7 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::knowledge::BaseSummary;
+use crate::model_old::knowledge::BaseSummary;
 
 /// A base as a row of the list, with the numbers of its sources and passages.
 #[derive(Debug, Serialize)]

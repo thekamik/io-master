@@ -18,7 +18,7 @@ use crate::app::error::AppError;
 use crate::components::knowledge_agent::find;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
-use crate::model::time::now;
+use crate::model_old::time::now;
 
 /// The name of the format, written into every file.
 pub const FORMAT: &str = "io-master-agent";

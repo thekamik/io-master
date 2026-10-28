@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::conversion::Pages;
+use crate::model_old::conversion::Pages;
 
 /// Pages of a document, as the page gets them.
 #[derive(Debug, Serialize, PartialEq, Eq)]

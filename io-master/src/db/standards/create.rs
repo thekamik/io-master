@@ -6,7 +6,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::standards::DocumentFields;
+use crate::model_old::standards::DocumentFields;
 
 /// Stores a document with the text of its pages (one text per page,
 /// in order, numbered from 1), in one transaction; returns its number.

@@ -275,7 +275,7 @@ mod tests {
     //! Unit tests of `tree.rs`.
 
     use super::*;
-    use crate::model::oscal::OscalDocument;
+    use crate::model_old::oscal::OscalDocument;
 
     /// The basic catalog of the examples of NIST.
     fn catalog() -> Catalog {

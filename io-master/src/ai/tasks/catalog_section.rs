@@ -15,10 +15,10 @@
 
 use serde_json::Value;
 
-use crate::model::oscal::catalog::Control;
-use crate::model::oscal::common::{Parameter, Part, Property, Selection};
-use crate::model::oscal::values::token;
-use crate::model::standards::{Document, Part as PagePart};
+use crate::model_old::oscal::catalog::Control;
+use crate::model_old::oscal::common::{Parameter, Part, Property, Selection};
+use crate::model_old::oscal::values::token;
+use crate::model_old::standards::{Document, Part as PagePart};
 
 use super::catalog_outline::{document_name, label, quote_of};
 use super::json::{json_object, text_of};
@@ -301,7 +301,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::oscal::OscalDocument;
+    use crate::model_old::oscal::OscalDocument;
 
     fn part() -> PagePart {
         PagePart { document_id: 3, first_page: 30, last_page: 32, text: String::new() }

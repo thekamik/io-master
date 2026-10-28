@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::oscal::OscalSummary;
+use crate::model_old::oscal::OscalSummary;
 
 /// A stored document of OSCAL.
 #[derive(Debug, Clone, Serialize)]

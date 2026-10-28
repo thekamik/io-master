@@ -2,12 +2,12 @@
 //! become.
 
 use crate::db::error::{Corrupt, DbError};
-use crate::model::ai::{Speaker, Turn};
-use crate::model::evaluation::{
+use crate::model_old::ai::{Speaker, Turn};
+use crate::model_old::evaluation::{
     Evaluation, EvaluationFields, EvaluationSummary, Evidence, EvidenceKind, Fragment, LabTask, OutputText, Related,
     Results, TaskProgress, TaskState, Verdict,
 };
-use crate::model::task_scheme::{Block, BlockFields, BlockKind, Connection, OutputCondition, OutputFormat};
+use crate::model_old::task_scheme::{Block, BlockFields, BlockKind, Connection, OutputCondition, OutputFormat};
 
 /// The character that joins the pages of a piece of evidence.
 pub(super) const PAGE_BREAK: char = '\u{c}';

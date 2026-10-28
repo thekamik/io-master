@@ -26,7 +26,7 @@ mod tests {
     use super::*;
 
     use crate::db::conversion::{create, read, update};
-    use crate::model::conversion::{GroupPages, GroupState};
+    use crate::model_old::conversion::{GroupPages, GroupState};
     use crate::test_support::standards::database;
 
     #[test]

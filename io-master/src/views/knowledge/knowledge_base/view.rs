@@ -6,7 +6,7 @@ use crate::app::error::AppError;
 use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
-use crate::model::oscal::OscalModel;
+use crate::model_old::oscal::OscalModel;
 
 /// A source of a base.
 #[derive(Debug, Serialize)]

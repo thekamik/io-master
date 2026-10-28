@@ -13,7 +13,7 @@ use crate::ai::api::test_support::{FakeService, completions as connection_to};
 use crate::app::test_support::{TestState, logged_in};
 use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
-use crate::model::api_key::ApiKey;
+use crate::model_old::api_key::ApiKey;
 use crate::test_support::db::{basic_catalog, lab_evaluation, lab_package};
 
 /// The text of the note given to input "i".

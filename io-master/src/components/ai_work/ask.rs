@@ -13,7 +13,7 @@ use tokio::sync::watch;
 use crate::ai::api::completions::{self, Outcome};
 use crate::ai::api::roles::Model;
 use crate::installation::session::Session;
-use crate::model::ai::{Task, Turn};
+use crate::model_old::ai::{Task, Turn};
 
 use super::view::AiEvent;
 

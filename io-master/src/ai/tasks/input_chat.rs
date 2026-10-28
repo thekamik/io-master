@@ -6,9 +6,9 @@
 //! [`MEMORY`] messages) and the question of the evaluator. The answers are
 //! advice: they decide nothing.
 
-use crate::model::ai::{Speaker, Turn};
-use crate::model::evaluation::Evidence;
-use crate::model::task_scheme::BlockFields;
+use crate::model_old::ai::{Speaker, Turn};
+use crate::model_old::evaluation::Evidence;
+use crate::model_old::task_scheme::BlockFields;
 
 use super::evidence_text::excerpt;
 

@@ -23,7 +23,7 @@ use crate::ai::api::completions::{Reply, ReplyEnd, StopReason};
 use crate::db::ai::chats as db_chats;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::chats::Ending;
+use crate::model_old::chats::Ending;
 
 /// The longest title of a chat, in characters; the title is the
 /// beginning of the first message.
@@ -99,7 +99,7 @@ mod tests {
     use crate::ai::api::completions::AiError;
     use crate::db::encryption::database_key::DatabaseKey;
     use crate::db::user::database as user_db;
-    use crate::model::ai::Speaker;
+    use crate::model_old::ai::Speaker;
     use crate::security::random::fill_random;
     use crate::test_support::TempDir;
 

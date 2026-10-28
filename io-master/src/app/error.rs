@@ -15,8 +15,8 @@ use crate::db::error::DbError;
 use crate::db::oscal::error::OscalError;
 use crate::installation::accounts::AccountError;
 use crate::installation::lifecycle::LifecycleError;
-use crate::model::ai::{ConnectionError, Field};
-use crate::model::oscal::catalog::CatalogError;
+use crate::model_old::ai::{ConnectionError, Field};
+use crate::model_old::oscal::catalog::CatalogError;
 
 /// Why a command failed.
 #[derive(Debug)]

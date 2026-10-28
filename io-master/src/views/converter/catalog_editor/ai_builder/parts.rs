@@ -5,7 +5,7 @@
 use crate::db::error::DbError;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
-use crate::model::standards::Part;
+use crate::model_old::standards::Part;
 use crate::pdf::poppler::MAX_PAGES;
 
 /// The size of a part when the user gives none, in characters: about

@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::evaluation_project::ProjectSummary;
+use crate::model_old::evaluation_project::ProjectSummary;
 
 /// A master project, as a row of the list.
 #[derive(Debug, Serialize)]

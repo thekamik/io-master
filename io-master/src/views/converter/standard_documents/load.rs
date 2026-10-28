@@ -22,7 +22,7 @@ use tokio::sync::watch;
 
 use crate::db::standards as db_standards;
 use crate::installation::session::Session;
-use crate::model::standards::DocumentFields;
+use crate::model_old::standards::DocumentFields;
 use crate::pdf::poppler::{self, MAX_FILE, MAX_PAGES, PART, PdfError, PdfInfo};
 
 use super::stored::{self, DocumentError};
@@ -277,7 +277,7 @@ mod tests {
     }
 
     /// The documents stored for the evaluator of `test`.
-    fn stored(test: &TestState) -> Vec<crate::model::standards::Document> {
+    fn stored(test: &TestState) -> Vec<crate::model_old::standards::Document> {
         db_standards::read::documents(&test.state.session().unwrap().db()).unwrap()
     }
 

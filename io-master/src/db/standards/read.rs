@@ -4,7 +4,7 @@ use rusqlite::{OptionalExtension, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::standards::Document;
+use crate::model_old::standards::Document;
 
 use super::rows::{COLUMNS, document_from_row};
 

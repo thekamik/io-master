@@ -5,8 +5,8 @@
 use rusqlite::Row;
 
 use crate::db::error::{corrupt, named};
-use crate::model::ai::Speaker;
-use crate::model::chats::{ChatMessage, ChatSummary, Ending};
+use crate::model_old::ai::Speaker;
+use crate::model_old::chats::{ChatMessage, ChatSummary, Ending};
 
 /// The current time in SQL, as seconds since 1970.
 pub(super) const NOW: &str = "CAST(strftime('%s', 'now') AS INTEGER)";

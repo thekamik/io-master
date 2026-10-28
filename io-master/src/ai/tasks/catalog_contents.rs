@@ -4,7 +4,7 @@
 //! contents. The evaluator confirms them before the groups are read from
 //! them (`catalog_outline.rs`); the program never takes them on trust.
 
-use crate::model::standards::{Document, Part};
+use crate::model_old::standards::{Document, Part};
 
 use super::catalog_outline::document_name;
 use super::json::json_object;
@@ -76,7 +76,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::standards::DocumentFields;
+    use crate::model_old::standards::DocumentFields;
 
     fn part() -> Part {
         Part { document_id: 3, first_page: 1, last_page: 25, text: "=== Page 1 ===\nCover".to_owned() }

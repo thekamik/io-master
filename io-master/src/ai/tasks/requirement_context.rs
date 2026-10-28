@@ -5,8 +5,8 @@
 //! elements (for example the work units of the methodology). On plain data;
 //! the view gathers it from the catalogs (`views/evaluation_lab/lab_task/read.rs`).
 
-use crate::model::oscal::catalog::Control;
-use crate::model::oscal::common::Parameter;
+use crate::model_old::oscal::catalog::Control;
+use crate::model_old::oscal::common::Parameter;
 
 use super::candidates::requirement_text;
 
@@ -123,7 +123,7 @@ mod tests {
     //! Unit tests of `requirement_context.rs`.
 
     use super::*;
-    use crate::model::oscal::common::{Other, Selection};
+    use crate::model_old::oscal::common::{Other, Selection};
 
     fn control(params: Vec<Parameter>) -> Control {
         serde_json::from_value::<Control>(serde_json::json!({

@@ -4,7 +4,7 @@ use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Task;
+use crate::model_old::ai::Task;
 
 /// The instructions the evaluator wrote for `task`; `None` when they
 /// use the default ones.

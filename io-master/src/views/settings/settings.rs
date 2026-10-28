@@ -20,8 +20,8 @@ use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::db::ai::journal::read as journal;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Field;
-use crate::model::api_key::ApiKey;
+use crate::model_old::ai::Field;
+use crate::model_old::api_key::ApiKey;
 
 use super::ai_journal::view::{self as journal_view, JournalEntryView, JournalPageView};
 use super::api_key::view::ApiKeyView;
@@ -340,8 +340,8 @@ mod tests {
 
     use crate::ai::api::connections;
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
-    use crate::model::ai::Connection;
-    use crate::model::api_key::ApiKey;
+    use crate::model_old::ai::Connection;
+    use crate::model_old::api_key::ApiKey;
     use crate::views::settings::connection_form::view::ConnectionView;
     use crate::views::test_support::{TestWindow, logged_in_window, logged_out_window};
 

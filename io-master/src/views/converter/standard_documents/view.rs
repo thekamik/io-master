@@ -14,7 +14,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::standards::{Document, DocumentFields};
+use crate::model_old::standards::{Document, DocumentFields};
 
 /// A loaded document.
 #[derive(Debug, Clone, Serialize)]

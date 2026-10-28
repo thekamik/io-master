@@ -20,9 +20,9 @@ use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::evaluation::check_results;
-use crate::model::task_scheme::{BlockKind, check_reason};
+use crate::model_old::ai::Task;
+use crate::model_old::evaluation::check_results;
+use crate::model_old::task_scheme::{BlockKind, check_reason};
 
 use super::super::lab_task::read as lab_task;
 use super::context;
@@ -146,7 +146,7 @@ mod tests {
     use serde_json::json;
 
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions_events};
-    use crate::model::evaluation::{Fragment, Related, Verdict};
+    use crate::model_old::evaluation::{Fragment, Related, Verdict};
     use crate::views::evaluation_lab::test_support::{collector, ready};
 
     #[tokio::test]
@@ -236,12 +236,12 @@ mod tests {
             let db = session.db();
             let base = crate::db::knowledge::create::base(&db, "ISO", "").unwrap();
             let passages = [
-                crate::model::knowledge::Passage {
+                crate::model_old::knowledge::Passage {
                     page: Some(7),
                     label: String::new(),
                     text: "Information security roles shall be defined and allocated.".to_owned(),
                 },
-                crate::model::knowledge::Passage {
+                crate::model_old::knowledge::Passage {
                     page: Some(9),
                     label: String::new(),
                     text: "Responsibilities for information security roles are documented.".to_owned(),
@@ -250,18 +250,18 @@ mod tests {
             crate::db::knowledge::create::source(
                 &db,
                 base,
-                crate::model::knowledge::SourceKind::Pdf,
+                crate::model_old::knowledge::SourceKind::Pdf,
                 "ISO 27002",
                 &passages,
             )
             .unwrap();
-            let itself = crate::model::knowledge::Passage {
+            let itself = crate::model_old::knowledge::Passage {
                 page: None,
                 label: "1.1.1".to_owned(),
                 text: "1.1.1: Information security roles and responsibilities".to_owned(),
             };
             let catalog = "Sample Security Catalog *for Demonstration* and Testing";
-            let kind = crate::model::knowledge::SourceKind::Catalog;
+            let kind = crate::model_old::knowledge::SourceKind::Catalog;
             crate::db::knowledge::create::source(&db, base, kind, catalog, &[itself]).unwrap();
             let mut fields = crate::views::knowledge::agent_form::view::new_agent("ISO agent");
             fields.bases = vec![base];
@@ -284,7 +284,7 @@ mod tests {
         assert!(asked.contains("ISO agent") && asked.contains(&kept));
         assert!(!asked.contains(&dropped), "an unticked passage stays out");
 
-        db_evaluation::update::task_agent(&session.db(), "e", "t", crate::model::evaluation::TaskAgent::NoAgent)
+        db_evaluation::update::task_agent(&session.db(), "e", "t", crate::model_old::evaluation::TaskAgent::NoAgent)
             .unwrap();
         propose(&session, "e", "t", &test.state.start_work(), &channel).await.unwrap();
         assert!(

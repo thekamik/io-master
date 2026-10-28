@@ -24,7 +24,7 @@ use crate::components::recovery_code::view::RecoveryCodeView;
 use crate::installation::accounts::{self, AccountError};
 use crate::installation::lifecycle;
 use crate::installation::session::Session;
-use crate::model::recovery_code::RecoveryCode;
+use crate::model_old::recovery_code::RecoveryCode;
 
 // ── Before anybody is logged in ───────────────────────────────────────
 

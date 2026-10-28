@@ -1,8 +1,8 @@
 //! New UUIDs and the time of a change, for the documents of OSCAL the
 //! program makes and changes.
 
-use crate::model::oscal::values::{date_time, uuid_v4};
-use crate::model::time::now;
+use crate::model_old::oscal::values::{date_time, uuid_v4};
+use crate::model_old::time::now;
 use crate::security::random::fill_random;
 
 use super::error::OscalError;

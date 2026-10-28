@@ -7,7 +7,7 @@ use std::fmt;
 use std::io;
 use std::path::PathBuf;
 
-use crate::model::oscal::NotOscal;
+use crate::model_old::oscal::NotOscal;
 
 /// Why a database could not be used.
 #[derive(Debug)]

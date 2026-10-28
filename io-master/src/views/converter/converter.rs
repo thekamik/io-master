@@ -221,7 +221,7 @@ mod tests {
     use serde_json::json;
 
     use crate::db::oscal as db_oscal;
-    use crate::model::oscal::OscalDocument;
+    use crate::model_old::oscal::OscalDocument;
     use crate::test_support::db::basic_catalog;
     use crate::test_support::standards::load;
     use crate::views::test_support::{logged_in_window, logged_out_window};

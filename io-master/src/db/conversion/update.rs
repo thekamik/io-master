@@ -5,7 +5,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::conversion::{GroupPages, GroupState, MAX_GROUPS, Pages, Stage};
+use crate::model_old::conversion::{GroupPages, GroupState, MAX_GROUPS, Pages, Stage};
 
 /// Sets the stage of the conversion of catalog `uuid`.
 ///

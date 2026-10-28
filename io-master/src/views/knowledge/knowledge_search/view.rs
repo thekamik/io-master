@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::knowledge::Hit;
+use crate::model_old::knowledge::Hit;
 
 /// A passage found, with its source, where it stands, and its score.
 #[derive(Debug, Serialize)]

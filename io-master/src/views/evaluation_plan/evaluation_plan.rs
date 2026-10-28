@@ -22,17 +22,17 @@ use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::AgentPlace;
-use crate::model::text::safe_file_name;
+use crate::model_old::knowledge::AgentPlace;
+use crate::model_old::text::safe_file_name;
 
 use super::oscal_documents::dialog::{choose_file, choose_place};
 use super::oscal_documents::file::{self, read_file};
-use crate::model::ai::{INSTRUCTIONS_MAX, Task};
-use crate::model::evaluation_project::{self, EvaluationTask};
-use crate::model::oscal::catalog::Catalog;
-use crate::model::own_requirement;
-use crate::model::task_scheme::{self, Block, BlockFields, BlockKind, StandardOutput};
-use crate::model::work_package::{self, WorkPackage};
+use crate::model_old::ai::{INSTRUCTIONS_MAX, Task};
+use crate::model_old::evaluation_project::{self, EvaluationTask};
+use crate::model_old::oscal::catalog::Catalog;
+use crate::model_old::own_requirement;
+use crate::model_old::task_scheme::{self, Block, BlockFields, BlockKind, StandardOutput};
+use crate::model_old::work_package::{self, WorkPackage};
 
 use super::new_project::catalogs;
 use super::new_project::view::CatalogChoiceView;
@@ -1623,7 +1623,7 @@ mod tests {
             let text = serde_json::to_string(&document)
                 .unwrap()
                 .replace(document.uuid(), "11111111-2222-4333-8444-555555555555");
-            document = crate::model::oscal::OscalDocument::from_json(&text).unwrap();
+            document = crate::model_old::oscal::OscalDocument::from_json(&text).unwrap();
             crate::db::oscal::create::document(&session.db(), &document).unwrap();
             document.uuid().to_owned()
         };
@@ -1836,7 +1836,7 @@ mod tests {
     /// `requirement`, as the AI leaves them.
     fn proposals(window: &crate::views::test_support::TestWindow, task: &str, requirement: &str) {
         use crate::db::evaluation_project as db_evaluation_project;
-        use crate::model::task_scheme::{Block, BlockFields, BlockKind, Correction};
+        use crate::model_old::task_scheme::{Block, BlockFields, BlockKind, Correction};
 
         let session = window.session();
         let db = session.db();
@@ -1905,7 +1905,7 @@ mod tests {
 
     #[test]
     fn the_instructions_of_the_scheme_are_changed_and_restored() {
-        use crate::model::ai::INSTRUCTIONS_MAX;
+        use crate::model_old::ai::INSTRUCTIONS_MAX;
 
         let window = logged_in_window();
         let default = window.call("ai_work_instructions_get", json!({ "which": "task_scheme" })).unwrap();
@@ -1930,7 +1930,7 @@ mod tests {
     #[test]
     fn a_proposed_task_is_accepted_into_the_list_or_rejected() {
         use crate::db::evaluation_project as db_evaluation_project;
-        use crate::model::evaluation_project::TaskProposal;
+        use crate::model_old::evaluation_project::TaskProposal;
 
         let (window, catalog, project) = with_project();
         window.call("standard_outputs_add", json!({ "project": project, "output": output("pETR", "always") })).unwrap();
@@ -1975,7 +1975,7 @@ mod tests {
     #[test]
     fn a_related_element_is_accepted_and_removed() {
         use crate::db::evaluation_project as db_evaluation_project;
-        use crate::model::evaluation_project::TaskLink;
+        use crate::model_old::evaluation_project::TaskLink;
 
         let (window, task) = with_task();
         let catalog = window.call("task_scheme_get", json!({ "task": task })).unwrap()["task"]["catalog_uuid"].clone();
@@ -2052,8 +2052,10 @@ mod tests {
         let window = logged_in_window();
         let project = {
             let session = window.session();
-            let fields =
-                crate::model::evaluation_project::ProjectFields { title: "P".to_owned(), description: String::new() };
+            let fields = crate::model_old::evaluation_project::ProjectFields {
+                title: "P".to_owned(),
+                description: String::new(),
+            };
             crate::db::evaluation_project::create::project(&session.db(), "p", &fields, &[]).unwrap();
             crate::test_support::db::knowledge_agent(&session.db(), "Roles.")
         };

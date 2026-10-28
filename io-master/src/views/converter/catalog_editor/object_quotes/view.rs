@@ -2,8 +2,8 @@
 
 use serde::Serialize;
 
-use crate::model::evaluation_support::Quote;
-use crate::model::standards::Document;
+use crate::model_old::evaluation_support::Quote;
+use crate::model_old::standards::Document;
 
 /// A quote of an object.
 #[derive(Debug, Serialize)]

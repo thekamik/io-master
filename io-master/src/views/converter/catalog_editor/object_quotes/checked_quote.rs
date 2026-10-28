@@ -6,9 +6,9 @@
 use crate::db::oscal::error::OscalError;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_support::QuoteDraft;
-use crate::model::standards::MAX_QUOTE;
-use crate::model::standards::quote::is_on_page;
+use crate::model_old::evaluation_support::QuoteDraft;
+use crate::model_old::standards::MAX_QUOTE;
+use crate::model_old::standards::quote::is_on_page;
 
 /// The quote `text` of page `page` of document `source`, with `found`
 /// set by the program.

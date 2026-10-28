@@ -5,7 +5,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::app::error::AppError;
-use crate::model::task_scheme::{
+use crate::model_old::task_scheme::{
     Block, BlockFields, Connection, Correction, OutputCondition, OutputFormat, ResultText,
 };
 

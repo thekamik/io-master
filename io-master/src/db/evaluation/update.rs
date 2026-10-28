@@ -5,7 +5,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation::{Results, TaskAgent, TaskState};
+use crate::model_old::evaluation::{Results, TaskAgent, TaskState};
 
 /// The name of a verdict in the database, or none.
 fn verdict_name(results: &Results) -> Option<&'static str> {
@@ -234,7 +234,7 @@ mod tests {
     use super::*;
 
     use crate::db::evaluation::{create, read};
-    use crate::model::evaluation::{Fragment, Verdict};
+    use crate::model_old::evaluation::{Fragment, Verdict};
     use crate::test_support::db::{lab_evaluation, lab_package};
     use crate::test_support::standards::database;
 

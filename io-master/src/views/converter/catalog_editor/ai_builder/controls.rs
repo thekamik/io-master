@@ -18,10 +18,10 @@ use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::evaluation_support::ProposalKind;
-use crate::model::knowledge::AgentPlace;
-use crate::model::standards::{Document, Part};
+use crate::model_old::ai::Task;
+use crate::model_old::evaluation_support::ProposalKind;
+use crate::model_old::knowledge::AgentPlace;
+use crate::model_old::standards::{Document, Part};
 
 use super::steps::{self, Asked};
 use super::view::{BuildEvent, PageRange};
@@ -208,7 +208,7 @@ mod tests {
     use serde_json::json;
 
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions_events};
-    use crate::model::oscal::catalog::edit::Place;
+    use crate::model_old::oscal::catalog::edit::Place;
     use crate::views::converter::catalog_editor::test_support::{collector, ready};
 
     #[tokio::test]

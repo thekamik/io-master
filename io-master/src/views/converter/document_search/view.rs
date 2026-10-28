@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::standards::{Document, Hit};
+use crate::model_old::standards::{Document, Hit};
 
 /// A hit of a search.
 #[derive(Debug, Serialize)]

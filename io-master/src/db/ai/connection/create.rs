@@ -5,7 +5,7 @@
 use crate::db::error::DbError;
 use crate::db::user;
 use crate::db::user::database::UserDb;
-use crate::model::ai::{Connection, SavedConnection};
+use crate::model_old::ai::{Connection, SavedConnection};
 
 use super::read;
 use super::rows::{ACTIVE, COLUMNS, SaveError, with_connection_values};

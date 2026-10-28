@@ -4,14 +4,14 @@ use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Turn;
-use crate::model::evaluation::{
+use crate::model_old::ai::Turn;
+use crate::model_old::evaluation::{
     Evaluation, EvaluationSummary, Evidence, Fragment, LabTask, MAX_EVALUATIONS, MAX_EVIDENCE, MAX_FRAGMENTS,
     MAX_MESSAGES, OutputText, Related, Results, TaskAgent, TaskProgress,
 };
-use crate::model::evaluation_project::{MAX_LINKS, MAX_TASKS};
-use crate::model::knowledge::MAX_HITS;
-use crate::model::task_scheme::{Block, Connection, MAX_BLOCKS};
+use crate::model_old::evaluation_project::{MAX_LINKS, MAX_TASKS};
+use crate::model_old::knowledge::MAX_HITS;
+use crate::model_old::task_scheme::{Block, Connection, MAX_BLOCKS};
 
 use super::rows;
 

@@ -4,7 +4,7 @@
 //! requirement, and the words a search looks for. Plain data and rules; the
 //! passages are kept and searched by `db/knowledge/` (FTS5 of SQLite).
 
-use crate::model::text::{Field, Invalid, check_text};
+use crate::model_old::text::{Field, Invalid, check_text};
 
 /// The most knowledge bases of an evaluator.
 pub const MAX_BASES: usize = 50;

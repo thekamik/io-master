@@ -13,7 +13,7 @@
 //! are in its stream. Names of models change often; the evaluator
 //! checks the model before saving.
 
-use crate::model::ai::{AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, DEFAULT_SYSTEM_PROMPT};
+use crate::model_old::ai::{AnswerMode, Connection, DEFAULT_MESSAGE_TEMPLATE, DEFAULT_SYSTEM_PROMPT};
 
 // The help for the fields of a connection, for a chatbot of the
 // evaluator's choice.
@@ -217,7 +217,7 @@ mod tests {
     use crate::ai::api::test_support::{
         FakeAnswer, FakeRequest, FakeService, completions_events, data, messages_events,
     };
-    use crate::model::api_key::ApiKey;
+    use crate::model_old::api_key::ApiKey;
 
     fn preset(id: &str) -> Preset {
         all().into_iter().find(|preset| preset.id == id).unwrap()
@@ -353,7 +353,7 @@ mod tests {
         assert!(request.head.starts_with("POST /v1beta/models/gemini-4-argon:streamGenerateContent?alt=sse "));
         assert_eq!(request.header("x-goog-api-key"), Some("sk-test"));
         assert_eq!(request.body["contents"], json!([{"role": "user", "parts": [{"text": "Hi"}]}]));
-        assert_eq!(request.body["systemInstruction"]["parts"][0]["text"], crate::model::ai::DEFAULT_SYSTEM_PROMPT);
+        assert_eq!(request.body["systemInstruction"]["parts"][0]["text"], crate::model_old::ai::DEFAULT_SYSTEM_PROMPT);
     }
 
     #[tokio::test]

@@ -16,7 +16,7 @@ use crate::app::error::AppError;
 use crate::app::state::AppState;
 use crate::db::ai::chats as db_chats;
 use crate::db::knowledge as db_knowledge;
-use crate::model::knowledge::AgentPlace;
+use crate::model_old::knowledge::AgentPlace;
 
 use super::chat_list::view::ChatSummaryView;
 use super::connection_line::view::ConnectionLineView;
@@ -154,7 +154,7 @@ mod tests {
     use serde_json::json;
 
     use crate::ai::api::connections;
-    use crate::model::ai::Connection;
+    use crate::model_old::ai::Connection;
     use crate::views::chat::conversation::stored;
     use crate::views::test_support::{logged_in_window, logged_out_window};
 

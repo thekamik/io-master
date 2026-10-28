@@ -3,7 +3,7 @@
 //! cut into parts of a bounded size by whole pages (a page is never cut).
 //! Shared by the chat of an input, the fragments and the assessment.
 
-use crate::model::evaluation::Evidence;
+use crate::model_old::evaluation::Evidence;
 
 /// The most characters of evidence in one question.
 pub const PART_CHARS: usize = 24_000;
@@ -102,7 +102,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::evaluation::EvidenceKind;
+    use crate::model_old::evaluation::EvidenceKind;
 
     fn evidence(name: &str, pages: &[usize]) -> Evidence {
         Evidence {

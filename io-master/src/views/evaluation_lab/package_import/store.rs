@@ -11,8 +11,8 @@ use crate::app::error::AppError;
 use crate::db::evaluation as db_evaluation;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation::{Evaluation, Package};
-use crate::model::oscal::OscalDocument;
+use crate::model_old::evaluation::{Evaluation, Package};
+use crate::model_old::oscal::OscalDocument;
 
 /// Stores `made` with the frozen copy of `package` and the catalogs of
 /// `catalogs` not stored yet; gives the notices for the evaluator (an
@@ -136,7 +136,7 @@ mod tests {
         let test = database();
         let catalog = basic_catalog();
         let mut package = lab_package(catalog.uuid());
-        package.tasks[0].related = vec![crate::model::evaluation::Related {
+        package.tasks[0].related = vec![crate::model_old::evaluation::Related {
             catalog_uuid: "no-such-catalog".to_owned(),
             control_id: "x".to_owned(),
             label: "X".to_owned(),

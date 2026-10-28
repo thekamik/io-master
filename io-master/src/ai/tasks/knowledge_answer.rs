@@ -8,7 +8,7 @@
 
 use serde_json::Value;
 
-use crate::model::knowledge::{Hit, MAX_QUOTES};
+use crate::model_old::knowledge::{Hit, MAX_QUOTES};
 
 use super::json::{json_object, text_of};
 
@@ -86,7 +86,7 @@ mod tests {
     //! Unit tests of `knowledge_answer.rs`.
 
     use super::*;
-    use crate::model::knowledge::Passage;
+    use crate::model_old::knowledge::Passage;
 
     fn hit(label: &str, page: Option<u32>, text: &str) -> Hit {
         Hit {

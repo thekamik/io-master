@@ -5,10 +5,10 @@ use rusqlite::{Transaction, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{
+use crate::model_old::knowledge::{
     AgentFields, MAX_AGENTS, MAX_BASES, MAX_PASSAGES, MAX_SOURCES, NAME_MAX, NewBase, Passage, SourceKind,
 };
-use crate::model::time::now;
+use crate::model_old::time::now;
 
 /// The most names tried for an imported base or agent whose name is taken.
 const MAX_NAME_TRIES: usize = 100;
@@ -230,7 +230,7 @@ mod tests {
 
     use super::*;
     use crate::db::knowledge::read;
-    use crate::model::knowledge::NewSource;
+    use crate::model_old::knowledge::NewSource;
     use crate::test_support::standards::database;
 
     fn fields(name: &str) -> AgentFields {

@@ -6,7 +6,7 @@ use serde::Serialize;
 
 use crate::app::error::AppError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::{EvaluationTask, TaskProposal};
+use crate::model_old::evaluation_project::{EvaluationTask, TaskProposal};
 
 use super::super::task_list::view as task_view;
 

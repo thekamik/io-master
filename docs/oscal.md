@@ -49,10 +49,10 @@ Tables of their own, linked to OSCAL objects only by their UUID or id (`catalog 
 
 ## 3. The code
 
-- `model/oscal/`: the types of the subset of OSCAL we use (catalog, mapping, profile, assessment plan, assessment results, the common metadata and back matter), with the names of OSCAL; they carry serde, **the one exception to the rule of serialization** (decision 8 below): these types *are* the published format.
+- `model_old/oscal/`: the types of the subset of OSCAL we use (catalog, mapping, profile, assessment plan, assessment results, the common metadata and back matter), with the names of OSCAL; they carry serde, **the one exception to the rule of serialization** (decision 8 below): these types *are* the published format.
 - `db/oscal/`: every document kept as its JSON, checked against the schema at every write, with tables of index for its UUIDs and ids.
 - The view Converter (`views/converter/`) makes catalogs; the view Evaluation plan (`views/evaluation_plan/`) imports, exports and deletes the documents and uses the catalogs in the master projects; the view Evaluation lab (`views/evaluation_lab/`) imports the catalogs attached to a work package.
-- `model/oscal/schema.rs`: the check against the JSON schemas of NIST (the crate `jsonschema`).
+- `model_old/oscal/schema.rs`: the check against the JSON schemas of NIST (the crate `jsonschema`).
 
 ---
 

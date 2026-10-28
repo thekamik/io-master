@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::app::error::AppError;
-use crate::model::task_scheme::{BlockFields, OutputCondition, OutputFormat, StandardOutput};
+use crate::model_old::task_scheme::{BlockFields, OutputCondition, OutputFormat, StandardOutput};
 
 /// An output of the template.
 #[derive(Debug, Serialize)]

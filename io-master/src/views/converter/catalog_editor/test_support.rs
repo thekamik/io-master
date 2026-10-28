@@ -10,7 +10,7 @@ use tauri::ipc::{Channel, InvokeResponseBody};
 use crate::ai::api::connections;
 use crate::ai::api::test_support::{FakeService, completions as connection_to};
 use crate::app::test_support::{TestState, logged_in};
-use crate::model::api_key::ApiKey;
+use crate::model_old::api_key::ApiKey;
 use crate::test_support::standards::load;
 use crate::views::converter::catalog_editor::ai_builder::view::BuildEvent;
 use crate::views::converter::new_catalog::made;

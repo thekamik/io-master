@@ -11,8 +11,8 @@ use std::path::{Path, PathBuf};
 use crate::app::error::AppError;
 use crate::db::evaluation as db_evaluation;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation::output_applies;
-use crate::model::task_scheme::{BlockKind, OutputFormat};
+use crate::model_old::evaluation::output_applies;
+use crate::model_old::task_scheme::{BlockKind, OutputFormat};
 
 /// A file of the report: its name and its text.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -86,7 +86,7 @@ pub fn files(db: &UserDb, evaluation: &str) -> Result<Vec<ReportFile>, AppError>
 /// The head of a file: what the report is of.
 ///
 /// Called by: [`files`].
-fn header(evaluation: &crate::model::evaluation::Evaluation, output: &str, format: OutputFormat) -> String {
+fn header(evaluation: &crate::model_old::evaluation::Evaluation, output: &str, format: OutputFormat) -> String {
     let product = format!("{} {}", evaluation.fields.product, evaluation.fields.product_version);
     let lines = [
         output.to_owned(),
@@ -170,7 +170,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::evaluation::{Results, Verdict};
+    use crate::model_old::evaluation::{Results, Verdict};
     use crate::test_support::TempDir;
     use crate::test_support::db::{lab_evaluation, lab_package};
     use crate::test_support::standards::database;

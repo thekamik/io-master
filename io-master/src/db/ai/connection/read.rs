@@ -7,8 +7,8 @@ use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::ai::StoredConnection;
-use crate::model::api_key::ApiKey;
+use crate::model_old::ai::StoredConnection;
+use crate::model_old::api_key::ApiKey;
 
 use super::rows::{ACTIVE, connection_from_row, key_name};
 

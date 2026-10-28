@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 
-use crate::model::standards::Document;
+use crate::model_old::standards::Document;
 
 /// A document a catalog can come from.
 #[derive(Debug, Serialize)]

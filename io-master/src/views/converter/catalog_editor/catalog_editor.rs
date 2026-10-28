@@ -23,10 +23,10 @@ use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
 use crate::db::standards as db_standards;
-use crate::model::ai::Task;
-use crate::model::conversion::{GroupState, Stage};
-use crate::model::knowledge::AgentPlace;
-use crate::model::oscal::catalog::{Control, Group};
+use crate::model_old::ai::Task;
+use crate::model_old::conversion::{GroupState, Stage};
+use crate::model_old::knowledge::AgentPlace;
+use crate::model_old::oscal::catalog::{Control, Group};
 
 use super::ai_builder::view::{self as builder_view, BuildEvent, PageRange, SourceView};
 use super::ai_builder::{controls, groups};
@@ -643,7 +643,7 @@ mod tests {
 
     use crate::db::evaluation_support as db_evaluation_support;
     use crate::db::evaluation_support::create::NewProposal;
-    use crate::model::evaluation_support::{ProposalKind, QuoteDraft};
+    use crate::model_old::evaluation_support::{ProposalKind, QuoteDraft};
     use crate::views::converter::catalog_editor::test_support::{add_control, add_group, with_catalog};
     use crate::views::test_support::{TestWindow, logged_in_window};
 

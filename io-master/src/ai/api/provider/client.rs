@@ -34,9 +34,9 @@ use super::request::{self, MASK, Request};
 use super::response::{AnswerReader, StopReason};
 use super::sse::SseDecoder;
 use crate::ai::api::connection::Checked;
-use crate::model::ai::AnswerMode;
-use crate::model::ai::{Speaker, Turn};
-use crate::model::api_key::ApiKey;
+use crate::model_old::ai::AnswerMode;
+use crate::model_old::ai::{Speaker, Turn};
+use crate::model_old::api_key::ApiKey;
 
 /// How long a connection may take to open.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -443,7 +443,7 @@ mod tests {
     use crate::ai::api::test_support::{
         FakeAnswer, FakeService, checked, completions, completions_events, data, messages_events, messages_format, sse,
     };
-    use crate::model::ai::Connection;
+    use crate::model_old::ai::Connection;
 
     const KEY: &str = "sk-test-secret-key";
 
@@ -510,7 +510,7 @@ mod tests {
         let request = &service.received()[0];
         assert_eq!(request.header("x-api-key"), Some(KEY));
         assert_eq!(request.header("x-version"), Some("1"));
-        assert_eq!(request.body["system"], crate::model::ai::DEFAULT_SYSTEM_PROMPT);
+        assert_eq!(request.body["system"], crate::model_old::ai::DEFAULT_SYSTEM_PROMPT);
         assert_eq!(request.body["messages"], json!([{"role": "user", "content": "Hello"}]));
     }
 

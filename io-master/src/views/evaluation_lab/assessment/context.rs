@@ -12,9 +12,9 @@ use crate::components::knowledge_agent::find;
 use crate::db::evaluation as db_evaluation;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation::{LabTask, TaskAgent};
-use crate::model::knowledge::{Agent, Hit, QUESTION_MAX};
-use crate::model::task_scheme::BlockKind;
+use crate::model_old::evaluation::{LabTask, TaskAgent};
+use crate::model_old::knowledge::{Agent, Hit, QUESTION_MAX};
+use crate::model_old::task_scheme::BlockKind;
 
 use super::super::lab_task::read as lab_task;
 

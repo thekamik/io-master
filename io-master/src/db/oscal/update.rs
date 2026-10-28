@@ -5,8 +5,8 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::oscal::OscalDocument;
-use crate::model::oscal::catalog::Catalog;
+use crate::model_old::oscal::OscalDocument;
+use crate::model_old::oscal::catalog::Catalog;
 
 use super::error::OscalError;
 use super::ids::now_date_time;

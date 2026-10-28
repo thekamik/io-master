@@ -12,8 +12,8 @@
 
 use serde_json::{Value, json};
 
-use crate::model::oscal::catalog::Control;
-use crate::model::task_scheme::{Block, BlockFields, BlockKind, Correction, MAX_BLOCKS, MAX_INPUTS};
+use crate::model_old::oscal::catalog::Control;
+use crate::model_old::task_scheme::{Block, BlockFields, BlockKind, Correction, MAX_BLOCKS, MAX_INPUTS};
 
 use super::candidates::requirement_text;
 use super::json::{json_object, text_of};

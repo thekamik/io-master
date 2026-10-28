@@ -14,9 +14,9 @@ use crate::app::error::AppError;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::{Task, Turn};
-use crate::model::evaluation_support::QuoteDraft;
-use crate::model::standards::{Document, Part};
+use crate::model_old::ai::{Task, Turn};
+use crate::model_old::evaluation_support::QuoteDraft;
+use crate::model_old::standards::{Document, Part};
 
 use super::super::object_quotes::checked_quote;
 use super::parts;

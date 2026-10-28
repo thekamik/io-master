@@ -4,7 +4,7 @@ use rusqlite::{OptionalExtension, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{
+use crate::model_old::knowledge::{
     Agent, AgentPlace, AgentSummary, BaseSummary, Hit, KnowledgeBase, MAX_AGENT_PASSAGES, MAX_AGENTS, MAX_BASES,
     MAX_HITS, MAX_PASSAGES, MAX_QUOTES, MAX_SOURCES, Passage, Source, Trial,
 };
@@ -230,7 +230,7 @@ mod tests {
 
     use super::*;
     use crate::db::knowledge::{create, delete, update};
-    use crate::model::knowledge::{Passage, SourceKind};
+    use crate::model_old::knowledge::{Passage, SourceKind};
     use crate::test_support::standards::database;
 
     fn passage(page: u32, text: &str) -> Passage {
@@ -298,7 +298,7 @@ mod tests {
     #[test]
     fn an_agent_is_attached_and_goes_with_its_agent() {
         let test = database();
-        let fields = crate::model::knowledge::AgentFields {
+        let fields = crate::model_old::knowledge::AgentFields {
             name: "CC".to_owned(),
             instructions: String::new(),
             glossary: String::new(),

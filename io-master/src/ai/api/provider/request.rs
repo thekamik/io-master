@@ -21,9 +21,9 @@ use zeroize::Zeroizing;
 
 use super::ai_error::AiError;
 use crate::ai::api::connection::Checked;
-use crate::model::ai::{API_KEY, MESSAGES, MODEL, ROLE, SYSTEM, TEXT};
-use crate::model::ai::{Speaker, Turn};
-use crate::model::api_key::ApiKey;
+use crate::model_old::ai::{API_KEY, MESSAGES, MODEL, ROLE, SYSTEM, TEXT};
+use crate::model_old::ai::{Speaker, Turn};
+use crate::model_old::api_key::ApiKey;
 
 /// What stands in place of the key where a request is shown.
 pub const MASK: &str = "••••••••";
@@ -154,7 +154,7 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::model::ai::Connection;
+    use crate::model_old::ai::Connection;
 
     fn evaluator(text: &str) -> Turn {
         Turn { speaker: Speaker::Evaluator, text: text.to_owned() }

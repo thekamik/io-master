@@ -16,10 +16,10 @@ use crate::db::evaluation_support::create::NewProposal;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::evaluation_support::ProposalKind;
-use crate::model::knowledge::AgentPlace;
-use crate::model::standards::Part;
+use crate::model_old::ai::Task;
+use crate::model_old::evaluation_support::ProposalKind;
+use crate::model_old::knowledge::AgentPlace;
+use crate::model_old::standards::Part;
 
 use super::steps::{self, Asked};
 use super::view::{BuildEvent, PageRange};

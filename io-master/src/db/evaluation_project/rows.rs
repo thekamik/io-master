@@ -2,11 +2,11 @@
 //! `model/evaluation_project.rs` they become.
 
 use crate::db::error::{Corrupt, DbError};
-use crate::model::evaluation_project::{EvaluationTask, ProjectFields, ProjectSummary, TaskLink, TaskProposal};
-use crate::model::task_scheme::{
+use crate::model_old::evaluation_project::{EvaluationTask, ProjectFields, ProjectSummary, TaskLink, TaskProposal};
+use crate::model_old::task_scheme::{
     Block, BlockFields, BlockKind, Connection, Correction, OutputCondition, OutputFormat, StandardOutput,
 };
-use crate::model::work_package::PackageFields;
+use crate::model_old::work_package::PackageFields;
 
 /// A row of `evaluation_projects` with its counts (`read::projects`).
 ///

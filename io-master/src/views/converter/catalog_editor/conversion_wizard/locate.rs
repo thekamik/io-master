@@ -9,9 +9,9 @@
 use crate::app::error::AppError;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
-use crate::model::conversion::{self, GroupPages, MAX_GROUPS, Pages};
-use crate::model::oscal::catalog::Catalog;
-use crate::model::standards::quote::is_on_page;
+use crate::model_old::conversion::{self, GroupPages, MAX_GROUPS, Pages};
+use crate::model_old::oscal::catalog::Catalog;
+use crate::model_old::standards::quote::is_on_page;
 
 /// The pages of every group of `catalog` that holds no group, from the
 /// pages of the document after its table of contents `contents`.
@@ -110,9 +110,9 @@ mod tests {
     use super::*;
 
     use crate::db::oscal as db_oscal;
-    use crate::model::conversion::GroupState;
-    use crate::model::oscal::catalog::Group;
-    use crate::model::oscal::catalog::edit::Place;
+    use crate::model_old::conversion::GroupState;
+    use crate::model_old::oscal::catalog::Group;
+    use crate::model_old::oscal::catalog::edit::Place;
     use crate::test_support::standards::{database, load};
     use crate::views::converter::new_catalog::made;
 

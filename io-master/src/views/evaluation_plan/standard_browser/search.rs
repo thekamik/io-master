@@ -3,8 +3,8 @@
 //! text of the parts of every control.
 
 use crate::app::error::AppError;
-use crate::model::oscal::catalog::Catalog;
-use crate::model::oscal::catalog::tree::flat_parts;
+use crate::model_old::oscal::catalog::Catalog;
+use crate::model_old::oscal::catalog::tree::flat_parts;
 
 use super::view::HitView;
 

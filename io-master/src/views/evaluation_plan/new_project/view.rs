@@ -3,7 +3,7 @@
 
 use serde::Serialize;
 
-use crate::model::oscal::OscalSummary;
+use crate::model_old::oscal::OscalSummary;
 
 /// A catalog a project can use.
 #[derive(Debug, Clone, Serialize, PartialEq, Eq)]

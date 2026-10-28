@@ -9,11 +9,11 @@ use std::path::Path;
 use serde_json::Value;
 
 use crate::app::error::AppError;
-use crate::model::knowledge::{
+use crate::model_old::knowledge::{
     AGENT_FILE_MAX, AgentFields, MAX_BASES, MAX_PASSAGES, MAX_SOURCES, NAME_MAX, NewBase, NewSource, PASSAGE_CHARS,
     Passage, SourceKind, check_agent, check_base,
 };
-use crate::model::text::{Field, check_text};
+use crate::model_old::text::{Field, check_text};
 
 use super::super::agent_form::export::{FORMAT, FORMAT_VERSION};
 

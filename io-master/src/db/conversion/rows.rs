@@ -2,7 +2,7 @@
 //! become. A value the program never writes is `DbError::Corrupt`.
 
 use crate::db::error::{Corrupt, DbError};
-use crate::model::conversion::{Conversion, GroupPages, GroupState, Pages, Stage};
+use crate::model_old::conversion::{Conversion, GroupPages, GroupState, Pages, Stage};
 
 /// Pages from three columns that are all set or all NULL.
 ///

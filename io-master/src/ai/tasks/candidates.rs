@@ -8,8 +8,8 @@
 
 use serde_json::Value;
 
-use crate::model::oscal::catalog::Control;
-use crate::model::oscal::catalog::tree::flat_parts;
+use crate::model_old::oscal::catalog::Control;
+use crate::model_old::oscal::catalog::tree::flat_parts;
 
 use super::json::{json_object, text_of};
 

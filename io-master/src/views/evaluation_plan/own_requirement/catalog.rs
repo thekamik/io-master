@@ -9,10 +9,10 @@ use crate::db::oscal as db_oscal;
 use crate::db::oscal::ids::{new_uuid, now_date_time};
 use crate::db::own_requirements as db_own_requirements;
 use crate::db::user::database::UserDb;
-use crate::model::oscal::OscalDocument;
-use crate::model::oscal::catalog::Catalog;
-use crate::model::oscal::catalog::edit::Place;
-use crate::model::own_requirement::{self, CATALOG_TITLE, OwnRequirement};
+use crate::model_old::oscal::OscalDocument;
+use crate::model_old::oscal::catalog::Catalog;
+use crate::model_old::oscal::catalog::edit::Place;
+use crate::model_old::own_requirement::{self, CATALOG_TITLE, OwnRequirement};
 
 /// The UUID of the shared catalog, if it exists (its document may have been
 /// deleted: then there is none).

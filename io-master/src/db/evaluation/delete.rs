@@ -111,8 +111,8 @@ mod tests {
     use super::*;
 
     use crate::db::evaluation::{create, read};
-    use crate::model::ai::Speaker;
-    use crate::model::evaluation::{Evidence, EvidenceKind, Fragment};
+    use crate::model_old::ai::Speaker;
+    use crate::model_old::evaluation::{Evidence, EvidenceKind, Fragment};
     use crate::test_support::db::{lab_evaluation, lab_package};
     use crate::test_support::standards::database;
 

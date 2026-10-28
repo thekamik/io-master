@@ -5,9 +5,9 @@ use serde_json::Value;
 
 use crate::app::error::AppError;
 use crate::components::part_rows::view::{self as part_rows, PartRowView};
-use crate::model::evaluation_support::{Proposal, ProposalKind, QuoteDraft};
-use crate::model::oscal::catalog::{Control, Group};
-use crate::model::standards::Document;
+use crate::model_old::evaluation_support::{Proposal, ProposalKind, QuoteDraft};
+use crate::model_old::oscal::catalog::{Control, Group};
+use crate::model_old::standards::Document;
 
 /// A quote of a proposal, looked for on its page.
 #[derive(Debug, Serialize)]

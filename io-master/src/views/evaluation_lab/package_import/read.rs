@@ -9,10 +9,12 @@
 use serde_json::Value;
 
 use crate::app::error::AppError;
-use crate::model::evaluation::{self, LabTask, Package, PackageTask, Related, TaskState};
-use crate::model::evaluation_project::{MAX_LINKS, MAX_TASKS};
-use crate::model::oscal::{OscalDocument, OscalModel};
-use crate::model::task_scheme::{Block, BlockFields, BlockKind, Connection, MAX_BLOCKS, OutputCondition, OutputFormat};
+use crate::model_old::evaluation::{self, LabTask, Package, PackageTask, Related, TaskState};
+use crate::model_old::evaluation_project::{MAX_LINKS, MAX_TASKS};
+use crate::model_old::oscal::{OscalDocument, OscalModel};
+use crate::model_old::task_scheme::{
+    Block, BlockFields, BlockKind, Connection, MAX_BLOCKS, OutputCondition, OutputFormat,
+};
 
 /// The name of the format a package file must carry.
 const FORMAT: &str = "io-master-work-package";

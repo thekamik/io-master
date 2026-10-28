@@ -11,8 +11,8 @@ use rusqlite::types::ToSql;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::ai::{Connection, SavedConnection};
-use crate::model::api_key::ApiKey;
+use crate::model_old::ai::{Connection, SavedConnection};
+use crate::model_old::api_key::ApiKey;
 
 use super::delete;
 use super::read;
@@ -100,7 +100,7 @@ mod tests {
 
     use crate::db::ai::connection::{create, read};
     use crate::db::user::database as user_db;
-    use crate::model::ai::AnswerMode;
+    use crate::model_old::ai::AnswerMode;
     use crate::test_support::db::{SECRET_KEY, key, named};
     use crate::test_support::standards::database;
 

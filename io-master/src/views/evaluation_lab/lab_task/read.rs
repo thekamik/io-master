@@ -11,9 +11,9 @@ use crate::components::part_rows::view as part_rows;
 use crate::db::evaluation as db_evaluation;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation::{LabTask, TaskAgent, output_applies};
-use crate::model::oscal::catalog::{Catalog, Control};
-use crate::model::task_scheme::{BlockKind, ResultText};
+use crate::model_old::evaluation::{LabTask, TaskAgent, output_applies};
+use crate::model_old::oscal::catalog::{Catalog, Control};
+use crate::model_old::task_scheme::{BlockKind, ResultText};
 
 use super::super::assessment::context;
 use super::view::{
@@ -235,7 +235,7 @@ fn knowledge(db: &UserDb, evaluation: &str, task: &LabTask) -> Result<KnowledgeV
 fn inputs(
     db: &UserDb,
     evaluation: &str,
-    blocks: &[crate::model::task_scheme::Block],
+    blocks: &[crate::model_old::task_scheme::Block],
 ) -> Result<Vec<InputView>, AppError> {
     let mut found = Vec::new();
 
@@ -274,8 +274,8 @@ fn inputs(
 fn outputs(
     db: &UserDb,
     evaluation: &str,
-    blocks: &[crate::model::task_scheme::Block],
-    results: &crate::model::evaluation::Results,
+    blocks: &[crate::model_old::task_scheme::Block],
+    results: &crate::model_old::evaluation::Results,
 ) -> Result<Vec<OutputView>, AppError> {
     let mut found = Vec::new();
 

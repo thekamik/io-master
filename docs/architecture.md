@@ -121,7 +121,7 @@ key of the database ┤                                                         
 - **A forgotten password:** "I do not remember my password" on the login page; the code opens copy B, the evaluator sets a new password (a new copy A); the database is not re-encrypted.
 - **A new code after every change of the password** (user, 2026-10-24), the old one stops working: after the change on the page User and after the recovery with the code. **"Make a new recovery code"** on the page User needs the password of the user.
 - **Limits, said in the window:** the code is a second key to the data (whoever finds it has the data); a lost password *and* a lost code mean lost data (only what was exported is left: the work packages, the reports); a replaced code protects the files on the computer, not copies of them taken earlier.
-- **Built in step 49** (2026-10-24): `model/recovery_code.rs` (the text of a code), `db/encryption/recovery.rs` (its copy of the key), `installation/accounts.rs` and `views/users/users.rs` (the operations), the component `recovery_code` of the page (the code shown once). The way of the key: section 12.
+- **Built in step 49** (2026-10-24): `model_old/recovery_code.rs` (the text of a code), `db/encryption/recovery.rs` (its copy of the key), `installation/accounts.rs` and `views/users/users.rs` (the operations), the component `recovery_code` of the page (the code shown once). The way of the key: section 12.
 
 ### 5.5 (Dropped 2026-10-25) Backup
 
@@ -261,7 +261,8 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 | `pdf/` | reading PDFs with Poppler: the only place where the program starts another program on a document | nothing of the program |
 | `db/` | every operation on a database, as CRUD, one folder per area of data; all SQL and all encryption of the databases | `model/`, `security/` |
 | `security/` | the building blocks of protection: random numbers, no memory dumps of the process | nothing of the program |
-| `model/` | the data as plain Rust types and the rules of their validity; no I/O | nothing of the program |
+| `model/` | the new models (2026-10-28): the data as it is kept in the databases, built one by one | nothing of the program |
+| `model_old/` | the earlier models: the data as plain Rust types and the rules of their validity; no I/O; replaced by `model/` step by step | `model/` |
 | `ui/` (the page) | what the evaluator sees: the views and the components of the page, and one typed function per command (`ui/src/lib/api/`) | the commands only |
 
 ## 12. The flow of data in the views (agreed 2026-10-21 and 2026-10-23)
@@ -527,7 +528,7 @@ LabTask ──lab_task_get(evaluation, task)──► the scheme read only (LabS
 the instructions of the four tasks ──evaluation_lab_instructions_get / _save──►; "Stop" ──evaluation_lab_stop()──►
 ```
 
-**`knowledge`** (step 57; entry `views/knowledge/knowledge.rs`, page `ui/src/views/knowledge/`). The knowledge bases of the AI. A source keeps only its text, cut into passages of at most 1500 characters, never across a page (`model/knowledge.rs`), in the encrypted database of the evaluator; the passages are indexed by FTS5 of SQLite (the stems of English words, BM25), no new dependency.
+**`knowledge`** (step 57; entry `views/knowledge/knowledge.rs`, page `ui/src/views/knowledge/`). The knowledge bases of the AI. A source keeps only its text, cut into passages of at most 1500 characters, never across a page (`model_old/knowledge.rs`), in the encrypted database of the evaluator; the passages are indexed by FTS5 of SQLite (the stems of English words, BM25), no new dependency.
 
 ```text
 KnowledgeList ──knowledge_list_get / _create / _delete──► db/knowledge/ (bases, with their numbers)

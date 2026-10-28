@@ -24,11 +24,11 @@ use crate::db::evaluation_project as db_evaluation_project;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::evaluation_project::{MAX_LINKS, TaskLink};
-use crate::model::knowledge::AgentPlace;
-use crate::model::oscal::catalog::Control;
-use crate::model::task_scheme::check_reason;
+use crate::model_old::ai::Task;
+use crate::model_old::evaluation_project::{MAX_LINKS, TaskLink};
+use crate::model_old::knowledge::AgentPlace;
+use crate::model_old::oscal::catalog::Control;
+use crate::model_old::task_scheme::check_reason;
 
 use crate::components::ai_work::ask::{self, Asked};
 use crate::components::ai_work::view::AiEvent;
@@ -238,10 +238,10 @@ mod tests {
     use crate::ai::api::connections;
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions as connection_to, completions_events};
     use crate::app::test_support::{TestState, logged_in};
-    use crate::model::api_key::ApiKey;
-    use crate::model::evaluation_project::{EvaluationTask, ProjectFields};
-    use crate::model::oscal::OscalDocument;
-    use crate::model::task_scheme::new_scheme;
+    use crate::model_old::api_key::ApiKey;
+    use crate::model_old::evaluation_project::{EvaluationTask, ProjectFields};
+    use crate::model_old::oscal::OscalDocument;
+    use crate::model_old::task_scheme::new_scheme;
 
     /// The UUID of the second catalog of the tests: the basic catalog again,
     /// standing for the methodology.

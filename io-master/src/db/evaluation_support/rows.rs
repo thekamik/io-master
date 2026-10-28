@@ -6,7 +6,7 @@ use rusqlite::Row;
 use serde_json::{Value, json};
 
 use crate::db::error::{corrupt, named};
-use crate::model::evaluation_support::{Proposal, ProposalKind, Quote, QuoteDraft};
+use crate::model_old::evaluation_support::{Proposal, ProposalKind, Quote, QuoteDraft};
 
 /// A quote from a row of `support_quotes`.
 pub(super) fn quote_from_row(row: &Row<'_>) -> rusqlite::Result<Quote> {

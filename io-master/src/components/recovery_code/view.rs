@@ -7,7 +7,7 @@
 use serde::Serialize;
 use zeroize::Zeroizing;
 
-use crate::model::recovery_code::RecoveryCode;
+use crate::model_old::recovery_code::RecoveryCode;
 
 /// A recovery code, as the page shows it once.
 #[derive(Serialize)]

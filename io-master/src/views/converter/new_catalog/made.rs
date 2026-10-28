@@ -8,10 +8,10 @@ use crate::db::oscal::error::OscalError;
 use crate::db::oscal::ids::{new_uuid, now_date_time};
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
-use crate::model::oscal::catalog::Catalog;
-use crate::model::oscal::common::{BackMatter, Hash, Other, Resource, ResourceLink};
-use crate::model::oscal::{OscalDocument, OscalSummary};
-use crate::model::standards::Document;
+use crate::model_old::oscal::catalog::Catalog;
+use crate::model_old::oscal::common::{BackMatter, Hash, Other, Resource, ResourceLink};
+use crate::model_old::oscal::{OscalDocument, OscalSummary};
+use crate::model_old::standards::Document;
 
 /// The most documents a catalog may come from.
 pub const MAX_SOURCES: usize = 100;
@@ -93,7 +93,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::oscal::OSCAL_VERSION;
+    use crate::model_old::oscal::OSCAL_VERSION;
 
     use crate::test_support::standards::{database, load};
 

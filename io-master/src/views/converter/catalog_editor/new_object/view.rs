@@ -3,7 +3,7 @@
 use serde::Deserialize;
 
 use crate::app::error::AppError;
-use crate::model::oscal::catalog::edit::Place;
+use crate::model_old::oscal::catalog::edit::Place;
 
 /// Where a new object goes: `{"kind": "top"}`, `{"kind": "group", "id":
 /// "ADV"}`, `{"kind": "control", "id": "ADV_FSP.1"}`.

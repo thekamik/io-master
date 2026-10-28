@@ -124,7 +124,7 @@ mod tests {
     //! Unit tests of `text.rs`.
 
     use super::*;
-    use crate::model::text::Field;
+    use crate::model_old::text::Field;
 
     #[test]
     fn a_text_keeps_its_length_and_has_no_control_characters() {

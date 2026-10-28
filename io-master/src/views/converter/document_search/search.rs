@@ -6,8 +6,8 @@
 use crate::db::error::DbError;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
-use crate::model::standards::quote::{normalize, normalize_with_places};
-use crate::model::standards::{Hit, MAX_HITS};
+use crate::model_old::standards::quote::{normalize, normalize_with_places};
+use crate::model_old::standards::{Hit, MAX_HITS};
 
 /// The longest text searched for, in characters.
 pub const MAX_SEARCH: usize = 1000;

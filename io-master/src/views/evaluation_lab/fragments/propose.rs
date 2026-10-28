@@ -23,9 +23,9 @@ use crate::db::evaluation as db_evaluation;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::evaluation::{Evidence, Fragment, MAX_FRAGMENTS, check_fragment, quote_found};
-use crate::model::task_scheme::{BlockFields, BlockKind};
+use crate::model_old::ai::Task;
+use crate::model_old::evaluation::{Evidence, Fragment, MAX_FRAGMENTS, check_fragment, quote_found};
+use crate::model_old::task_scheme::{BlockFields, BlockKind};
 
 use super::super::assessment::context;
 use super::super::lab_task::read as lab_task;

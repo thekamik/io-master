@@ -12,12 +12,12 @@ use crate::app::error::AppError;
 use crate::db::knowledge as db_knowledge;
 use crate::db::oscal as db_oscal;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{
+use crate::model_old::knowledge::{
     MAX_PAGES, MAX_PASSAGES, NAME_MAX, NOTE_MAX, PDF_MAX, Passage, SourceKind, TEXT_FILE_MAX, passages,
 };
-use crate::model::oscal::catalog::Catalog;
-use crate::model::oscal::catalog::tree::flat_parts;
-use crate::model::text::{Field, check_text};
+use crate::model_old::oscal::catalog::Catalog;
+use crate::model_old::oscal::catalog::tree::flat_parts;
+use crate::model_old::text::{Field, check_text};
 use crate::pdf::poppler;
 
 /// A file read as a source: its name, its kind and its passages.

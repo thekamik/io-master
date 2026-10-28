@@ -11,7 +11,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::standards::Document;
+use crate::model_old::standards::Document;
 
 /// Pages of a document to read, as the page sends them.
 #[derive(Debug, Deserialize)]

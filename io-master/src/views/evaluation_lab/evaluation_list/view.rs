@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::evaluation::EvaluationSummary;
+use crate::model_old::evaluation::EvaluationSummary;
 
 /// An evaluation as a row of the list, with its progress.
 #[derive(Debug, Serialize)]

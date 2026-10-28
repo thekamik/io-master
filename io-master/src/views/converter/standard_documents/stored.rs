@@ -11,8 +11,8 @@ use crate::db::error::DbError;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::standards as db_standards;
 use crate::db::user::database::UserDb;
-use crate::model::standards::{DocumentFields, sha256_hex};
-use crate::model::text::Invalid;
+use crate::model_old::standards::{DocumentFields, sha256_hex};
+use crate::model_old::text::Invalid;
 
 /// Why a document was not stored, changed or removed.
 #[derive(Debug)]

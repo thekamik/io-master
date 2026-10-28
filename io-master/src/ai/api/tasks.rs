@@ -32,7 +32,7 @@ use crate::db::ai::instructions as db_instructions;
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
-use crate::model::ai::Task;
+use crate::model_old::ai::Task;
 
 /// The instructions when the evaluator has not changed them; `None`
 /// for a task without instructions of its own.
@@ -86,7 +86,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::ai::Role;
+    use crate::model_old::ai::Role;
 
     use crate::test_support::standards::database;
 

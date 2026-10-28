@@ -9,12 +9,12 @@ use crate::app::error::AppError;
 use crate::db::evaluation as db_evaluation;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation::{
+use crate::model_old::evaluation::{
     EVIDENCE_NAME_MAX, Evidence, EvidenceKind, MAX_PAGES, NOTE_MAX, PDF_MAX, TEXT_FILE_MAX,
 };
-use crate::model::task_scheme::BlockKind;
-use crate::model::text::{Field, check_text};
-use crate::model::time::now;
+use crate::model_old::task_scheme::BlockKind;
+use crate::model_old::text::{Field, check_text};
+use crate::model_old::time::now;
 use crate::pdf::poppler;
 
 /// A file read for evidence: its name, its kind, its bytes and its pages.
@@ -152,7 +152,7 @@ mod tests {
         assert_eq!(db_evaluation::read::evidence_of(&test.db, "e", "i").unwrap()[0].name, "Interview");
         assert_eq!(
             db_evaluation::read::task(&test.db, "e", "t").unwrap().unwrap().state,
-            crate::model::evaluation::TaskState::Working
+            crate::model_old::evaluation::TaskState::Working
         );
         assert!(add_note(&test.db, "e", "o", "x", "text").is_err(), "an output takes no evidence");
         assert!(add_note(&test.db, "e", "i", "x", " ").is_err());

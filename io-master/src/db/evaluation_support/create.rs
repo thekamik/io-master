@@ -4,7 +4,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_support::{ProposalKind, QuoteDraft};
+use crate::model_old::evaluation_support::{ProposalKind, QuoteDraft};
 
 use super::rows::quotes_json;
 

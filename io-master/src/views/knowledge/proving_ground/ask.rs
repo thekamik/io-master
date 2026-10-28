@@ -20,9 +20,9 @@ use crate::components::knowledge_agent::find;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::evaluation::quote_found;
-use crate::model::knowledge::{Hit, Trial, TrialQuote};
+use crate::model_old::ai::Task;
+use crate::model_old::evaluation::quote_found;
+use crate::model_old::knowledge::{Hit, Trial, TrialQuote};
 
 /// What a question is asked with: the model, its text, and the passages in it.
 struct Question {
@@ -135,8 +135,8 @@ mod tests {
     use crate::ai::api::connections;
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
     use crate::app::test_support::logged_in;
-    use crate::model::api_key::ApiKey;
-    use crate::model::knowledge::{Passage, SourceKind};
+    use crate::model_old::api_key::ApiKey;
+    use crate::model_old::knowledge::{Passage, SourceKind};
 
     /// A channel that collects the events it gets, as JSON.
     fn collector() -> (std::sync::Arc<std::sync::Mutex<Vec<serde_json::Value>>>, Channel<AiEvent>) {

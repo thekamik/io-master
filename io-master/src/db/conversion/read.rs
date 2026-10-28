@@ -4,7 +4,7 @@ use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::conversion::{Conversion, GroupPages, MAX_GROUPS, Stage};
+use crate::model_old::conversion::{Conversion, GroupPages, MAX_GROUPS, Stage};
 
 use super::rows;
 

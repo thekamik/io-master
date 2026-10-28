@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::ai::StoredConnection;
+use crate::model_old::ai::StoredConnection;
 
 /// A connection in the list.
 #[derive(Debug, Serialize)]

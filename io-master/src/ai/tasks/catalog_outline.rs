@@ -12,10 +12,10 @@
 
 use serde_json::Value;
 
-use crate::model::oscal::catalog::Group;
-use crate::model::oscal::common::Property;
-use crate::model::oscal::values::token;
-use crate::model::standards::{Document, MAX_QUOTE, Part};
+use crate::model_old::oscal::catalog::Group;
+use crate::model_old::oscal::common::Property;
+use crate::model_old::oscal::values::token;
+use crate::model_old::standards::{Document, MAX_QUOTE, Part};
 
 use super::json::{json_object, text_of};
 
@@ -158,7 +158,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::standards::DocumentFields;
+    use crate::model_old::standards::DocumentFields;
 
     fn document() -> Document {
         Document {

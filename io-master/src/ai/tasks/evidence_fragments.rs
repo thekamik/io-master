@@ -9,8 +9,8 @@
 
 use serde_json::Value;
 
-use crate::model::evaluation::QUOTE_MAX;
-use crate::model::task_scheme::BlockFields;
+use crate::model_old::evaluation::QUOTE_MAX;
+use crate::model_old::task_scheme::BlockFields;
 
 use super::json::{json_object, text_of};
 

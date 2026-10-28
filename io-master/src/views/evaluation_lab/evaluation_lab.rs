@@ -20,11 +20,11 @@ use crate::db::evaluation as db_evaluation;
 use crate::db::knowledge as db_knowledge;
 use crate::db::oscal::ids::new_uuid;
 use crate::db::user::database::UserDb;
-use crate::model::ai::{INSTRUCTIONS_MAX, Task};
-use crate::model::evaluation::{
+use crate::model_old::ai::{INSTRUCTIONS_MAX, Task};
+use crate::model_old::evaluation::{
     self, Evaluation, Fragment, TaskAgent, TaskState, check_fragment, check_output, quote_found,
 };
-use crate::model::task_scheme::BlockKind;
+use crate::model_old::task_scheme::BlockKind;
 
 use super::assessment::propose as assessment_ask;
 use super::evaluation_list::view::{self as list_view, EvaluationSummaryView};
@@ -1041,9 +1041,9 @@ mod tests {
         let window = with_evaluation();
         {
             let session = window.session();
-            let mut proposed = crate::model::evaluation::Results::empty();
+            let mut proposed = crate::model_old::evaluation::Results::empty();
             proposed.findings = "F".to_owned();
-            proposed.verdict = Some(crate::model::evaluation::Verdict::Met);
+            proposed.verdict = Some(crate::model_old::evaluation::Verdict::Met);
             db_evaluation::update::results_proposal(&session.db(), "e", "t", &proposed, "Why.").unwrap();
             db_evaluation::update::output_proposal(&session.db(), "e", "o", "Drafted.").unwrap();
         }
@@ -1133,8 +1133,8 @@ mod tests {
 
         {
             let session = window.session();
-            let mut results = crate::model::evaluation::Results::empty();
-            results.verdict = Some(crate::model::evaluation::Verdict::NotMet);
+            let mut results = crate::model_old::evaluation::Results::empty();
+            results.verdict = Some(crate::model_old::evaluation::Verdict::NotMet);
             db_evaluation::update::results(&session.db(), "e", "t", &results).unwrap();
             db_evaluation::update::output_text(&session.db(), "e", "o", "The pETR text.").unwrap();
         }

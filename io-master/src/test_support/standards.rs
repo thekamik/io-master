@@ -5,7 +5,7 @@
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::standards as db_standards;
 use crate::db::user::database::{self as user_db, UserDb};
-use crate::model::standards::{DocumentFields, sha256_hex};
+use crate::model_old::standards::{DocumentFields, sha256_hex};
 use crate::security::random::fill_random;
 use crate::test_support::TempDir;
 

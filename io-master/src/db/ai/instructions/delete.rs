@@ -2,7 +2,7 @@
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Task;
+use crate::model_old::ai::Task;
 
 /// Removes the instructions the evaluator wrote for `task`.
 pub fn text(db: &UserDb, task: Task) -> Result<(), DbError> {

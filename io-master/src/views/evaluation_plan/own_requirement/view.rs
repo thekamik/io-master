@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::own_requirement::OwnRequirement;
+use crate::model_old::own_requirement::OwnRequirement;
 
 /// A requirement of the laboratory, as the page sends it.
 #[derive(Debug, Deserialize)]

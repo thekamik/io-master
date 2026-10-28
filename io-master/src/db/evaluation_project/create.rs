@@ -4,10 +4,12 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::{EvaluationTask, MAX_LINKS, MAX_TASKS, ProjectFields, TaskLink, TaskProposal};
-use crate::model::task_scheme::{Block, Correction, MAX_BLOCKS, MAX_OUTPUTS, NewScheme, StandardOutput};
-use crate::model::time::now;
-use crate::model::work_package::{MAX_PACKAGES, WorkPackage};
+use crate::model_old::evaluation_project::{
+    EvaluationTask, MAX_LINKS, MAX_TASKS, ProjectFields, TaskLink, TaskProposal,
+};
+use crate::model_old::task_scheme::{Block, Correction, MAX_BLOCKS, MAX_OUTPUTS, NewScheme, StandardOutput};
+use crate::model_old::time::now;
+use crate::model_old::work_package::{MAX_PACKAGES, WorkPackage};
 
 /// Stores a new project `uuid` with its fields and its catalogs, in one
 /// transaction.
@@ -334,7 +336,7 @@ mod tests {
     use super::*;
 
     use crate::db::evaluation_project::read;
-    use crate::model::task_scheme::{BlockFields, BlockKind, new_scheme};
+    use crate::model_old::task_scheme::{BlockFields, BlockKind, new_scheme};
     use crate::test_support::standards::database;
 
     fn fields() -> ProjectFields {

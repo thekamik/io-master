@@ -165,7 +165,7 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::model::ai::{AnswerMode, Connection};
+    use crate::model_old::ai::{AnswerMode, Connection};
 
     /// The paths of the chat API of local servers (the template).
     fn completions() -> Checked {

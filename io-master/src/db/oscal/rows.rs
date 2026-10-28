@@ -7,7 +7,7 @@ use rusqlite::Row;
 use serde_json::Value;
 
 use crate::db::error::{DbError, corrupt, named};
-use crate::model::oscal::{OscalDocument, OscalModel, OscalSummary};
+use crate::model_old::oscal::{OscalDocument, OscalModel, OscalSummary};
 
 const TABLE: &str = "oscal_documents";
 

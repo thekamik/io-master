@@ -41,7 +41,7 @@ use rusqlite::Connection;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
 use crate::db::user::database::BUSY_TIMEOUT;
-use crate::model::installation::Installation;
+use crate::model_old::installation::Installation;
 
 use super::{create, schema};
 

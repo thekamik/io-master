@@ -6,8 +6,8 @@ use crate::app::error::AppError;
 use crate::components::part_rows::view as part_rows;
 use crate::db::evaluation_support as db_evaluation_support;
 use crate::db::user::database::UserDb;
-use crate::model::oscal::catalog::Catalog;
-use crate::model::own_requirement;
+use crate::model_old::oscal::catalog::Catalog;
+use crate::model_old::own_requirement;
 
 use super::super::own_requirement::view::OwnRequirementView;
 

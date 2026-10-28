@@ -192,8 +192,8 @@ mod tests {
     use super::*;
 
     use crate::db::evaluation_project::{create, read};
-    use crate::model::evaluation_project::{EvaluationTask, ProjectFields};
-    use crate::model::task_scheme::{BlockFields, StandardOutput, new_scheme};
+    use crate::model_old::evaluation_project::{EvaluationTask, ProjectFields};
+    use crate::model_old::task_scheme::{BlockFields, StandardOutput, new_scheme};
     use crate::test_support::standards::database;
 
     #[test]
@@ -236,7 +236,7 @@ mod tests {
 
     #[test]
     fn a_scheme_has_its_requirement_and_goes_with_its_blocks() {
-        use crate::model::task_scheme::{Block, BlockFields, BlockKind};
+        use crate::model_old::task_scheme::{Block, BlockFields, BlockKind};
 
         let test = database();
         let fields = ProjectFields { title: "p".to_owned(), description: String::new() };
@@ -271,7 +271,7 @@ mod tests {
     #[test]
     fn the_proposals_of_a_task_are_accepted_or_rejected() {
         use crate::db::evaluation_project::update;
-        use crate::model::task_scheme::{Block, BlockKind, Correction};
+        use crate::model_old::task_scheme::{Block, BlockKind, Correction};
 
         let test = database();
         let fields = ProjectFields { title: "p".to_owned(), description: String::new() };
@@ -319,7 +319,7 @@ mod tests {
     #[test]
     fn a_related_element_is_accepted_removed_or_rejected_with_the_others_proposed() {
         use crate::db::evaluation_project::update;
-        use crate::model::evaluation_project::TaskLink;
+        use crate::model_old::evaluation_project::TaskLink;
 
         let test = database();
         let fields = ProjectFields { title: "p".to_owned(), description: String::new() };
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn a_work_package_keeps_a_task_once_and_frees_it_when_deleted() {
         use crate::db::evaluation_project::update;
-        use crate::model::work_package::{PackageFields, WorkPackage};
+        use crate::model_old::work_package::{PackageFields, WorkPackage};
 
         let test = database();
         let fields = ProjectFields { title: "p".to_owned(), description: String::new() };
@@ -385,7 +385,7 @@ mod tests {
 
     #[test]
     fn a_proposed_task_is_rejected_or_decided_by_the_task_made() {
-        use crate::model::evaluation_project::TaskProposal;
+        use crate::model_old::evaluation_project::TaskProposal;
 
         let test = database();
         let fields = ProjectFields { title: "p".to_owned(), description: String::new() };

@@ -4,12 +4,12 @@ use rusqlite::OptionalExtension;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::{
+use crate::model_old::evaluation_project::{
     EvaluationProject, EvaluationTask, MAX_CATALOGS, MAX_LINKS, MAX_PROJECTS, MAX_TASKS, ProjectSummary, TaskLink,
     TaskProposal,
 };
-use crate::model::task_scheme::{Block, Connection, Correction, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
-use crate::model::work_package::{MAX_PACKAGES, WorkPackage};
+use crate::model_old::task_scheme::{Block, Connection, Correction, MAX_BLOCKS, MAX_OUTPUTS, StandardOutput};
+use crate::model_old::work_package::{MAX_PACKAGES, WorkPackage};
 
 use super::rows;
 
@@ -362,8 +362,8 @@ mod tests {
     use super::*;
 
     use crate::db::evaluation_project::create;
-    use crate::model::evaluation_project::ProjectFields;
-    use crate::model::task_scheme::new_scheme;
+    use crate::model_old::evaluation_project::ProjectFields;
+    use crate::model_old::task_scheme::new_scheme;
     use crate::test_support::standards::database;
 
     #[test]

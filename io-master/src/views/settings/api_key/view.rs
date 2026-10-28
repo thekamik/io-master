@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use crate::model::ai::{API_KEY, StoredConnection};
+use crate::model_old::ai::{API_KEY, StoredConnection};
 
 /// What the page may know of the key of a connection.
 #[derive(Debug, Serialize)]

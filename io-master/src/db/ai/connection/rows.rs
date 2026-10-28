@@ -9,7 +9,7 @@ use rusqlite::Row;
 use rusqlite::types::ToSql;
 
 use crate::db::error::{DbError, named};
-use crate::model::ai::{AnswerMode, Connection};
+use crate::model_old::ai::{AnswerMode, Connection};
 
 /// Name of the setting with the active connection (`db/user/`).
 pub(super) const ACTIVE: &str = "ai.active_connection";

@@ -5,10 +5,10 @@ use rusqlite::{OptionalExtension, named_params};
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::evaluation_project::{MAX_CATALOGS, ProjectFields};
-use crate::model::task_scheme::BlockFields;
-use crate::model::time::now;
-use crate::model::work_package::PackageFields;
+use crate::model_old::evaluation_project::{MAX_CATALOGS, ProjectFields};
+use crate::model_old::task_scheme::BlockFields;
+use crate::model_old::time::now;
+use crate::model_old::work_package::PackageFields;
 
 use super::create::insert_package_tasks;
 
@@ -292,8 +292,8 @@ mod tests {
     use super::*;
 
     use crate::db::evaluation_project::{create, read};
-    use crate::model::evaluation_project::EvaluationTask;
-    use crate::model::task_scheme::new_scheme;
+    use crate::model_old::evaluation_project::EvaluationTask;
+    use crate::model_old::task_scheme::new_scheme;
     use crate::test_support::standards::database;
 
     fn fields(title: &str) -> ProjectFields {
@@ -340,7 +340,7 @@ mod tests {
 
     #[test]
     fn the_fields_and_the_place_of_a_block_are_kept() {
-        use crate::model::task_scheme::{BlockFields, OutputCondition, OutputFormat};
+        use crate::model_old::task_scheme::{BlockFields, OutputCondition, OutputFormat};
 
         let test = database();
         create::project(&test.db, "p", &fields("p"), &["c".to_owned()]).unwrap();
@@ -361,7 +361,7 @@ mod tests {
 
     #[test]
     fn the_fields_of_a_standard_output_are_kept() {
-        use crate::model::task_scheme::{BlockFields, OutputCondition, OutputFormat, StandardOutput};
+        use crate::model_old::task_scheme::{BlockFields, OutputCondition, OutputFormat, StandardOutput};
 
         let test = database();
         create::project(&test.db, "p", &fields("p"), &["c".to_owned()]).unwrap();

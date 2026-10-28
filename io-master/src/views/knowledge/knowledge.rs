@@ -18,8 +18,8 @@ use crate::components::ai_work::view::AiEvent;
 use crate::components::knowledge_agent::find;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{check_agent, check_base};
-use crate::model::text::safe_file_name;
+use crate::model_old::knowledge::{check_agent, check_base};
+use crate::model_old::text::safe_file_name;
 
 use super::agent_form::dialog::choose_place;
 use super::agent_form::export as agent_export;

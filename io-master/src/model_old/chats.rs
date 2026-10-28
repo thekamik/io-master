@@ -13,7 +13,7 @@
 //!            text written before the failure
 //! ```
 
-use crate::model::ai::Speaker;
+use crate::model_old::ai::Speaker;
 
 /// A chat in the list of chats.
 #[derive(Debug, Clone, PartialEq, Eq)]

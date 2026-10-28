@@ -5,8 +5,8 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::ai::Speaker;
-use crate::model::chats::Ending;
+use crate::model_old::ai::Speaker;
+use crate::model_old::chats::Ending;
 
 use super::rows::{NOW, speaker_name};
 

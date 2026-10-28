@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::evaluation_project::ProjectFields;
+use crate::model_old::evaluation_project::ProjectFields;
 
 use super::super::new_project::view::CatalogChoiceView;
 

@@ -4,8 +4,8 @@
 //! question in a section of their own. The passages tell the model what the
 //! standard says; they are never evidence.
 
-use crate::model::ai::Turn;
-use crate::model::knowledge::Hit;
+use crate::model_old::ai::Turn;
+use crate::model_old::knowledge::Hit;
 
 use super::knowledge_answer::passages_text;
 
@@ -52,8 +52,8 @@ mod tests {
     //! Unit tests of `knowledge_context.rs`.
 
     use super::*;
-    use crate::model::ai::Speaker;
-    use crate::model::knowledge::Passage;
+    use crate::model_old::ai::Speaker;
+    use crate::model_old::knowledge::Passage;
 
     fn hit() -> Hit {
         Hit {

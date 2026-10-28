@@ -25,7 +25,7 @@ pub mod quote;
 
 use sha2::{Digest, Sha256};
 
-use crate::model::text::{Field, Invalid, check_text};
+use crate::model_old::text::{Field, Invalid, check_text};
 
 /// The longest title, part or version, in characters.
 pub const MAX_SHORT: usize = 200;

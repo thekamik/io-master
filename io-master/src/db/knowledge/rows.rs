@@ -2,7 +2,7 @@
 //! they become.
 
 use crate::db::error::{Corrupt, DbError};
-use crate::model::knowledge::{
+use crate::model_old::knowledge::{
     AgentFields, AgentSummary, BaseSummary, Hit, KnowledgeBase, Passage, Source, SourceKind, TrialQuote,
 };
 

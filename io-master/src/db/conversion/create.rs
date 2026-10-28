@@ -4,7 +4,7 @@ use rusqlite::named_params;
 
 use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
-use crate::model::conversion::Stage;
+use crate::model_old::conversion::Stage;
 
 /// Starts the conversion of catalog `uuid`, at the stage of the table of
 /// contents.
@@ -27,7 +27,7 @@ mod tests {
     use super::*;
 
     use crate::db::conversion::read;
-    use crate::model::conversion::Conversion;
+    use crate::model_old::conversion::Conversion;
     use crate::test_support::standards::database;
 
     #[test]

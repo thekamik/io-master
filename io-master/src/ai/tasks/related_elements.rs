@@ -7,7 +7,7 @@
 //! reason. The planner accepts or rejects each
 //! (`views/evaluation_plan/task_links/`).
 
-use crate::model::oscal::catalog::Control;
+use crate::model_old::oscal::catalog::Control;
 
 use super::candidates::{ANSWER_FORM, Candidate, listing, requirement_text};
 

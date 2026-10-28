@@ -20,9 +20,9 @@ use crate::components::ai_work::view::AiEvent;
 use crate::db::evaluation as db_evaluation;
 use crate::db::user::database::UserDb;
 use crate::installation::session::Session;
-use crate::model::ai::Task;
-use crate::model::evaluation::{check_output, output_applies};
-use crate::model::task_scheme::BlockKind;
+use crate::model_old::ai::Task;
+use crate::model_old::evaluation::{check_output, output_applies};
+use crate::model_old::task_scheme::BlockKind;
 
 use super::super::assessment::context;
 use super::super::lab_task::read as lab_task;
@@ -107,7 +107,7 @@ mod tests {
     use super::*;
 
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions_events};
-    use crate::model::evaluation::{Results, Verdict};
+    use crate::model_old::evaluation::{Results, Verdict};
     use crate::views::evaluation_lab::test_support::{collector, ready};
 
     #[tokio::test]

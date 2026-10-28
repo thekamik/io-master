@@ -278,7 +278,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::oscal::OscalDocument;
+    use crate::model_old::oscal::OscalDocument;
 
     /// The catalog of NIST in the examples, without groups and controls of
     /// its own.
@@ -391,7 +391,7 @@ mod tests {
         let mut catalog = empty();
         let mut place = Place::Top;
 
-        for level in 0..=crate::model::oscal::catalog::tree::MAX_DEPTH {
+        for level in 0..=crate::model_old::oscal::catalog::tree::MAX_DEPTH {
             let id = format!("C{level}");
             catalog.add_control(&place, control(&id)).unwrap_or(());
             place = Place::Control(id);

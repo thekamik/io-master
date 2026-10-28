@@ -9,7 +9,7 @@ use crate::ai::tasks::knowledge_context;
 use crate::app::error::AppError;
 use crate::db::knowledge as db_knowledge;
 use crate::db::user::database::UserDb;
-use crate::model::knowledge::{
+use crate::model_old::knowledge::{
     Agent, AgentPlace, Hit, MAX_HITS, QUESTION_MAX, chosen, glossary, search_query, widened,
 };
 
@@ -84,7 +84,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::knowledge::{AgentFields, Passage, SourceKind};
+    use crate::model_old::knowledge::{AgentFields, Passage, SourceKind};
     use crate::test_support::standards::database;
 
     #[test]

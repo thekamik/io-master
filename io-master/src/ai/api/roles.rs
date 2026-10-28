@@ -21,8 +21,8 @@ use crate::db::error::DbError;
 use crate::db::user::database::UserDb;
 
 use super::connection::Checked;
-use crate::model::ai::ConnectionError;
-use crate::model::api_key::ApiKey;
+use crate::model_old::ai::ConnectionError;
+use crate::model_old::api_key::ApiKey;
 
 /// The connection a question goes over: checked, with its key.
 #[derive(Debug)]
@@ -110,7 +110,7 @@ mod tests {
     use super::*;
 
     use crate::db::ai::connection::{create, update};
-    use crate::model::ai::Connection;
+    use crate::model_old::ai::Connection;
     use crate::test_support::standards::database;
 
     /// A connection named `name` that needs a key.

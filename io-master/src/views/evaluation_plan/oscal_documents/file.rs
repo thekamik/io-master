@@ -12,7 +12,7 @@ use crate::db::oscal as db_oscal;
 use crate::db::oscal::error::OscalError;
 use crate::db::own_requirements as db_own_requirements;
 use crate::db::user::database::UserDb;
-use crate::model::oscal::{NotOscal, OscalDocument, OscalSummary};
+use crate::model_old::oscal::{NotOscal, OscalDocument, OscalSummary};
 
 /// The largest file of OSCAL that is read, in bytes (the catalog of NIST
 /// SP 800-53 has about 10 MiB).
@@ -89,7 +89,7 @@ mod tests {
 
     use super::*;
 
-    use crate::model::oscal::OscalModel;
+    use crate::model_old::oscal::OscalModel;
     use crate::test_support::standards::database;
 
     const CATALOG: &str = include_str!("../../../../oscal/examples/basic-catalog.json");
@@ -129,6 +129,6 @@ mod tests {
 
     #[test]
     fn a_name_for_a_file_keeps_only_safe_characters() {
-        assert_eq!(crate::model::text::safe_file_name(" CC Part 2: SFR / v1.0 ", "oscal"), "CC Part 2_ SFR _ v1.0");
+        assert_eq!(crate::model_old::text::safe_file_name(" CC Part 2: SFR / v1.0 ", "oscal"), "CC Part 2_ SFR _ v1.0");
     }
 }
