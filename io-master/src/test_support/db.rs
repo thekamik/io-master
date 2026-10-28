@@ -6,9 +6,9 @@
 
 use serde_json::{Value, json};
 
+use crate::db::encryption::keys::WrappedKey;
+use crate::db::encryption::recovery::RecoveryWrappedKey;
 use crate::db_old::ai::journal::rows::Entry;
-use crate::db_old::encryption::keys::WrappedKey;
-use crate::db_old::encryption::recovery::RecoveryWrappedKey;
 use crate::db_old::evaluation_support::create::{self, NewProposal};
 use crate::db_old::system::database::SystemDb;
 use crate::db_old::user::database::UserDb;

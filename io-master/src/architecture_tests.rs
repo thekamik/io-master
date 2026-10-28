@@ -39,15 +39,26 @@ use std::path::Path;
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
 // model_old/ is replaced by model/ step by step, and db_old/ by db/
-// (2026-10-28); db/ gets its row with its first file (a folder without
-// files is refused below).
-const ALLOWED: [(&str, &[&str]); 10] = [
+// (2026-10-28).
+const ALLOWED: [(&str, &[&str]); 11] = [
     ("model", &[]),
     ("model_old", &["model"]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
-    ("db_old", &["model", "model_old", "security"]),
+    (
+        "db",
+        &[
+            "model",
+            "security",
+            // The encryption, moved from db_old/ unchanged (2026-10-28): its
+            // error and the recovery code are still those of db_old/ and
+            // model_old/, until db/ has an error of its own.
+            "db_old::error::DbError",
+            "model_old::recovery_code",
+        ],
+    ),
+    ("db_old", &["db::encryption", "model", "model_old", "security"]),
     ("ai", &["db", "db_old", "model", "model_old", "security"]),
     // The installation, its account and the session: the core of the
     // protection, below the window and the views.

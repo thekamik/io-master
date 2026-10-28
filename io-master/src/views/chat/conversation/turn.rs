@@ -252,8 +252,8 @@ mod tests {
     use crate::ai::api::test_support::{FakeAnswer, FakeService, completions, completions_events};
     use crate::app::test_support::{TestState, logged_in};
 
+    use crate::db::encryption::database_key::DatabaseKey;
     use crate::db_old::ai::connection::{create as connections_create, update as connections_update};
-    use crate::db_old::encryption::database_key::DatabaseKey;
     use crate::db_old::user::database as user_db;
     use crate::model_old::ai::Connection;
     use crate::model_old::ai::Speaker;

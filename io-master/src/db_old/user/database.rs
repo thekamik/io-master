@@ -43,8 +43,8 @@ use std::time::Duration;
 
 use rusqlite::Connection;
 
-use crate::db_old::encryption::database_key::DatabaseKey;
-use crate::db_old::encryption::sqlcipher;
+use crate::db::encryption::database_key::DatabaseKey;
+use crate::db::encryption::sqlcipher;
 use crate::db_old::error::DbError;
 use crate::db_old::{ai, conversion, evaluation, evaluation_project, evaluation_support, knowledge, oscal, standards};
 

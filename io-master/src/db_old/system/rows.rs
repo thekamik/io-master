@@ -1,7 +1,7 @@
 //! The rows of the system database and the Rust types they become.
 
-use crate::db_old::encryption::keys::WrappedKey;
-use crate::db_old::encryption::recovery::RecoveryWrappedKey;
+use crate::db::encryption::keys::WrappedKey;
+use crate::db::encryption::recovery::RecoveryWrappedKey;
 
 /// An account as the system database knows it.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -19,7 +19,7 @@ use std::fs;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
 
-use crate::db_old::encryption::keys;
+use crate::db::encryption::keys;
 use crate::db_old::error::DbError;
 use crate::db_old::system::database::{self as system_db, SystemDb};
 use crate::installation::accounts::{self, Account, AccountError};

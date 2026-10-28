@@ -51,7 +51,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db_old::encryption::database_key::DatabaseKey;
+    use crate::db::encryption::database_key::DatabaseKey;
     use crate::db_old::user::database::{self as user_db, UserDb};
     use crate::security::random::fill_random;
     use crate::test_support::TempDir;

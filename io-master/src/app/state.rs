@@ -153,7 +153,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db_old::encryption::database_key::DatabaseKey;
+    use crate::db::encryption::database_key::DatabaseKey;
     use crate::db_old::user::database as user_db;
     use crate::installation::session::Session;
     use crate::security::random::fill_random;

@@ -38,7 +38,7 @@ use std::sync::{Mutex, MutexGuard};
 
 use rusqlite::Connection;
 
-use crate::db_old::encryption::sqlcipher;
+use crate::db::encryption::sqlcipher;
 use crate::db_old::error::DbError;
 use crate::db_old::user::database::BUSY_TIMEOUT;
 use crate::model_old::installation::Installation;

@@ -3,8 +3,8 @@
 
 use rusqlite::{Connection, named_params};
 
-use crate::db_old::encryption::keys::WrappedKey;
-use crate::db_old::encryption::recovery::RecoveryWrappedKey;
+use crate::db::encryption::keys::WrappedKey;
+use crate::db::encryption::recovery::RecoveryWrappedKey;
 use crate::db_old::error::DbError;
 use crate::model_old::installation::Installation;
 use crate::model_old::time::now;

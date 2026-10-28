@@ -94,13 +94,11 @@ mod security {
     pub mod random;
 }
 
-// db_old/: the earlier operations on the databases, replaced by db/ step by
-// step (2026-10-28). Every operation on a database, as CRUD, one folder per area of data
-// (CLAUDE.md, "Database code"). The schema.rs of an area says in which
-// database its data lives and how it is protected.
-mod db_old {
-    pub mod error;
-    // db/encryption/: all code of encryption of the databases.
+// db/: the new operations on the databases (2026-10-28): create, read and
+// update of the models of model/, one file per file of model/, no delete.
+mod db {
+    // db/encryption/: all code of encryption of the databases, moved from
+    // db_old/ unchanged (2026-10-28); serves db/ and db_old/.
     pub mod encryption {
         pub mod database_key;
         pub mod generate_key;
@@ -108,6 +106,14 @@ mod db_old {
         pub mod recovery;
         pub mod sqlcipher;
     }
+}
+
+// db_old/: the earlier operations on the databases, replaced by db/ step by
+// step (2026-10-28). Every operation on a database, as CRUD, one folder per area of data
+// (CLAUDE.md, "Database code"). The schema.rs of an area says in which
+// database its data lives and how it is protected.
+mod db_old {
+    pub mod error;
     // db/system/: the system database of the installation (not encrypted).
     pub mod system {
         pub mod create;

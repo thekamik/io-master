@@ -259,8 +259,8 @@ Each folder does one thing; a folder uses only itself and the folders below it, 
 | `installation/` | the installation of the Linux account, its one account and the session of the logged-in evaluator: the core of the protection | `db/`, `security/`, `model/` |
 | `ai/` | the whole communication with AI services: `ai/api/` the only way to a model, `ai/tasks/` the questions and the reading of the answers | `db/`, `model/` |
 | `pdf/` | reading PDFs with Poppler: the only place where the program starts another program on a document | nothing of the program |
-| `db/` | the new operations on the databases (2026-10-28), on the models of `model/`: create, read, update, no delete | `model/`, `db_old/` (the encryption and the opening of a database) |
-| `db_old/` | the earlier operations on a database, as CRUD, one folder per area of data; all SQL and all encryption of the databases; replaced by `db/` step by step | `model/`, `model_old/`, `security/` |
+| `db/` | the new operations on the databases (2026-10-28), on the models of `model/`: create, read, update, no delete | `model/`, `security/`; the error of `db_old/` until it has its own |
+| `db_old/` | the earlier operations on a database, as CRUD, one folder per area of data; replaced by `db/` step by step | `db/encryption/`, `model/`, `model_old/`, `security/` |
 | `security/` | the building blocks of protection: random numbers, no memory dumps of the process | nothing of the program |
 | `model/` | the new models (2026-10-28): the data as it is kept in the databases, built one by one | nothing of the program |
 | `model_old/` | the earlier models: the data as plain Rust types and the rules of their validity; no I/O; replaced by `model/` step by step | `model/` |

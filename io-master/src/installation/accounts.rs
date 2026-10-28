@@ -21,10 +21,10 @@ use crate::db_old::system;
 use std::fmt;
 use std::path::Path;
 
-use crate::db_old::encryption::database_key::DatabaseKey;
-use crate::db_old::encryption::generate_key::generate_database_key;
-use crate::db_old::encryption::keys::{self, KeyError, WrappedKey};
-use crate::db_old::encryption::recovery::{self, RecoveryError, RecoveryWrappedKey};
+use crate::db::encryption::database_key::DatabaseKey;
+use crate::db::encryption::generate_key::generate_database_key;
+use crate::db::encryption::keys::{self, KeyError, WrappedKey};
+use crate::db::encryption::recovery::{self, RecoveryError, RecoveryWrappedKey};
 use crate::db_old::error::DbError;
 use crate::db_old::system::database::SystemDb;
 use crate::db_old::user::database as user_db;

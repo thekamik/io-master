@@ -97,7 +97,7 @@ mod tests {
     use super::*;
 
     use crate::ai::api::completions::AiError;
-    use crate::db_old::encryption::database_key::DatabaseKey;
+    use crate::db::encryption::database_key::DatabaseKey;
     use crate::db_old::user::database as user_db;
     use crate::model_old::ai::Speaker;
     use crate::security::random::fill_random;

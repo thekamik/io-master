@@ -21,7 +21,7 @@ io-master/src/
   model_old/         the earlier models: the data as plain Rust types and the rules of their
                      validity; no I/O; replaced by model/ step by step
   db/                the new operations on the databases (2026-10-28), on the models of model/;
-                     empty yet
+                     the encryption of the databases (encryption/)
   db_old/            the earlier operations on a database, as CRUD; depends only on model/,
                      model_old/ and security/; replaced by db/ step by step
   ai/                the whole communication with AI services
@@ -90,7 +90,7 @@ Plain types of every area, their rules of validity (`check`) and their normal fo
 
 ### 2.2 `db/` and `db_old/`: the databases
 
-**The operations on the databases are written anew (user, 2026-10-28)** on the models of `model/`: the earlier folder `db/` was renamed `db_old/`, and the new `db/` gets them one by one, while the program works all the time. **Create, read and update only, no delete** (user, 2026-10-28). The code of encryption (`db_old/encryption/`) and the opening of a database stay where they are and serve both. What follows describes `db_old/`.
+**The operations on the databases are written anew (user, 2026-10-28)** on the models of `model/`: the earlier folder `db/` was renamed `db_old/`, and the new `db/` gets them one by one, while the program works all the time. **Create, read and update only, no delete** (user, 2026-10-28). The code of encryption was moved unchanged to `db/encryption/` and serves both; its error and the recovery code are still those of `db_old/` and `model_old/` (two exceptions in `architecture_tests.rs`) until `db/` has an error of its own. What follows describes `db_old/`.
 
 - **SQL lives only here** (the connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile).
 - One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `standards/`, `oscal/`, `evaluation_support/`, `conversion/`, `own_requirements/`, `evaluation_project/`, `evaluation/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
@@ -264,7 +264,13 @@ model_old/                 The data of the program as plain Rust types, and the 
     quote.rs                     Finding a quote in the text of a page of a standard.
   text.rs                      The rules every text field of the program follows, the error when
   time.rs                      The time stamps of the program: seconds since 1970 (UTC), as the
-db/                        The new operations on the databases (2026-10-28), empty yet.
+db/                        The new operations on the databases (2026-10-28).
+  encryption/                  All code of encryption of the databases.
+    database_key.rs              The key that encrypts a database of the program.
+    generate_key.rs              Generating the key that encrypts the database.
+    keys.rs                      The keys of the databases of the evaluators
+    recovery.rs                  The second copy of the key of a database, wrapped with the recovery
+    sqlcipher.rs                 Opening and creating encrypted databases.
 db_old/                    Every operation on a database (CLAUDE.md, "Database code").
   ai/                          The data of the AI, in the database of the evaluator.
     chats/                       The chats with the AI.
@@ -327,12 +333,6 @@ db_old/                    Every operation on a database (CLAUDE.md, "Database c
     rows.rs                      The rows of the knowledge bases and the types of `model_old/knowledge.rs`.
     schema.rs                    The tables of the knowledge bases (a virtual table of FTS5).
     update.rs                    A base, an agent with its bases, the last trial of an agent.
-  encryption/                  All code of encryption of the databases.
-    database_key.rs              The key that encrypts a database of the program.
-    generate_key.rs              Generating the key that encrypts the database.
-    keys.rs                      The keys of the databases of the evaluators
-    recovery.rs                  The second copy of the key of a database, wrapped with the recovery
-    sqlcipher.rs                 Opening and creating encrypted databases.
   error.rs                     The error of every function of the database layer (`db/`).
   own_requirements/            Which catalog is the shared catalog of the requirements of the laboratory.
     delete.rs                    Forgetting the shared catalog of the requirements of the laboratory.
