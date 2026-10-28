@@ -11,7 +11,7 @@ pub struct WorkUnit {
     /// The id of the work unit in the database.
     pub id: i64,
     /// The standard the work unit belongs to.
-    pub reference: String,
+    pub reference: i64,
     /// What is to be done in the work unit: the quote of the requirement
     /// from the standard.
     pub requirement: String,
