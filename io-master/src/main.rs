@@ -34,11 +34,13 @@ mod checks;
 // in the databases, built model by model; the code is moved to them from
 // model_old/ step by step, so that the program works all the time.
 mod model {
-    // model/ai/: the integration with an external AI service, the agents,
-    // the knowledge for the AI (RAG).
+    // model/ai/: the integration with an external AI service and its key,
+    // the agents, the knowledge for the AI (RAG), the journal of the AI.
     pub mod ai {
         pub mod agent;
+        pub mod api_key;
         pub mod integration;
+        pub mod journal;
         pub mod rag;
     }
     // model/evaluation/: the plan of an evaluation, its work units, the
