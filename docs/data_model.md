@@ -36,7 +36,8 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 | Model | File | Fields | Table |
 |---|---|---|---|
-| `EvaluationPlan` | `evaluation_plan.rs` | id, name, description, oscal_documents, product_documents, work_units, blocked | `evaluation_plans` |
+| `EvaluationPlan` | `evaluation_plan.rs` | id, name, description, state, oscal_documents, product_documents, work_units, blocked | `evaluation_plans` |
+| `PlanState` | `evaluation_plan.rs` | Plan, Evaluation | (a column) |
 | `WorkUnit` | `work_unit.rs` | id, reference, label, oscal_key, requirement, guidance, dependencies, cross_reference, input_product_documents, input_functional, ai_agent, findings, analysis, vulnerability_notes, notes, verdict | `work_units` |
 | `Verdict` | `work_unit.rs` | Met, NotMet, Inconclusive | (a column) |
 | `OscalDocument` | `oscal_document.rs` | id, doc, version | `oscal_documents` |
@@ -67,7 +68,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 ## 3. The evaluation plan
 
-- **A plan and its copies (user, 2026-10-28).** The planner makes a plan once (for example for routers, which share their tests); every evaluation of a product works on an identical copy of it. In the plan the results of the work units are empty and the documents of the product and the proofs of the laboratory are only places reserved with their ids and names ("ST", "IXIT", "results of the scan of the ports"); in the copy the evaluator gives the files and the texts and the work units are assessed.
+- **A plan and its copies (user, 2026-10-28).** The planner makes a plan once (for example for routers, which share their tests); every evaluation of a product works on an identical copy of it. In the plan the results of the work units are empty and the documents of the product and the proofs of the laboratory are only places reserved with their ids and names ("ST", "IXIT", "results of the scan of the ports"); in the copy the evaluator gives the files and the texts and the work units are assessed. The field `state` tells which of the two a record is (`Plan` or `Evaluation`).
 - **Two kinds of documents, never mixed.** The standards (`OscalDocument`: the CEM, PP1, PP2) are the reference, kept as their OSCAL JSON in the database; the documents of the product (`ProductDocument`: the ST, the IXIT) come from the client, their files kept in the database, encrypted with it, so that what was assessed cannot change after the assessment.
 - **A plan declares its standards.** The `reference` of every work unit is one of the `oscal_documents` of its plan (a plan may hold the CEM and two protection profiles; a work unit belongs to one of them), and its `input_product_documents` are among the `product_documents` of its plan. `reference` with `oscal_key` (the `id` of the control in the JSON of the catalog) is the place of the work unit in its standard; `label` is its number in the standard.
 - **A work unit of the documentation** is one whose `input_functional` is `None`: it needs no results of functional tests.

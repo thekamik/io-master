@@ -20,6 +20,10 @@ pub struct EvaluationPlan {
     /// What the plan is for.
     pub description: String,
 
+    /// Whether this is the plan the planner made or the copy of it an
+    /// evaluator works on.
+    pub state: PlanState,
+
     /// The standards of the plan (OSCAL catalogs: the CEM, PP1, PP2):
     /// the reference of the evaluation. The `reference` of every work
     /// unit is one of them.
@@ -36,4 +40,16 @@ pub struct EvaluationPlan {
     /// `true` when at least one work unit is a `cross_reference`: the
     /// plan cannot be carried out until the planner corrects it.
     pub blocked: bool,
+}
+
+/// What an evaluation plan is (user, 2026-10-28).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+pub enum PlanState {
+    /// The plan the planner made: its places of documents and proofs
+    /// only reserved, its work units not assessed.
+    Plan,
+    /// The copy of a plan for one product: the evaluator gives the
+    /// documents and the proofs, and the work units are assessed.
+    Evaluation,
 }
