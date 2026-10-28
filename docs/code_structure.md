@@ -210,6 +210,8 @@ routes.rs                  The routes of the window: the list of every command t
 checks.rs                  The checks of conditions that should never happen (rule 5 of
 model/                     The new models (2026-10-28).
   evaluation_plan.rs           An evaluation plan: the work units of an evaluation, with the
+  lab_proof.rs                 A proof of the laboratory: the result of a functional test the
+  oscal_document.rs            A document of a standard: an OSCAL catalog (the CEM, a protection
   product_document.rs          A document of the product: a document of the client (ST, IXIT, ...)
   work_unit.rs                 A work unit: one piece of the work of an evaluation, as the standard
 model_old/                 The data of the program as plain Rust types, and the rules of

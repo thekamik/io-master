@@ -47,8 +47,8 @@ pub struct WorkUnit {
     /// `reference`.
     pub input_product_documents: Vec<i64>,
 
-    /// The evidence of the laboratory needed to meet the work unit,
-    /// delivered as text. `None` makes the work unit one of the
+    /// The proofs of the laboratory (`LabProof`) needed to meet the work
+    /// unit, delivered as text. `None` makes the work unit one of the
     /// documentation: no results of functional tests are needed (user,
     /// 2026-10-28: no separate field of the kind).
     pub input_functional: Option<Vec<i64>>,

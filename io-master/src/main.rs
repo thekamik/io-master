@@ -35,6 +35,8 @@ mod checks;
 // model_old/ step by step, so that the program works all the time.
 mod model {
     pub mod evaluation_plan;
+    pub mod lab_proof;
+    pub mod oscal_document;
     pub mod product_document;
     pub mod work_unit;
 }
