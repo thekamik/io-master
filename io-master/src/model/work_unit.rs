@@ -36,8 +36,10 @@ pub struct WorkUnit {
     /// this one can be assessed.
     pub dependencies: Vec<i64>,
 
-    /// The documents needed to find the work unit met.
-    pub input_documents: Vec<i64>,
+    /// The documents of the product (of the client: ST, IXIT, ...)
+    /// needed to find the work unit met; never a standard, which is
+    /// `reference`.
+    pub input_product_documents: Vec<i64>,
 
     /// The evidence of the laboratory needed to meet the work unit,
     /// delivered as text. `None` makes the work unit one of the
