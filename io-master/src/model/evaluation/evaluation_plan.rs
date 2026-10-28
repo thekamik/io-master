@@ -2,9 +2,11 @@
 //! standards they come from and the documents of the product they need.
 //! The planner makes the plan once (for example for routers); every
 //! evaluation of a product works on an identical copy of it, in which
-//! the evaluator gives the documents and assesses the work units.
+//! the evaluator gives the documents and assesses the work units. A new
+//! version of a document (a new ST) is a new evaluation. When its last
+//! work unit is assessed, the filled plan is the report.
 
-use crate::model::evaluation::work_unit::WorkUnit;
+use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
 
 /// An evaluation plan, or the copy of it for one product (user,
 /// 2026-10-28).
@@ -34,6 +36,11 @@ pub struct EvaluationPlan {
     /// `input_product_documents` of every work unit are among them.
     pub product_documents: Vec<i64>,
 
+    /// The verdicts the standards of the plan know: `Pass` and `Fail`
+    /// when a plan is made, as Common Criteria; the planner may add
+    /// `Inconclusive` (ETSI EN 303 645).
+    pub possible_verdicts: Vec<Verdict>,
+
     /// The work units, in the order of the standard.
     pub work_units: Vec<WorkUnit>,
 
@@ -53,4 +60,6 @@ pub enum PlanState {
     /// The evaluation is being carried out: the evaluator gives the
     /// documents and the proofs, and the work units are assessed.
     Evaluation,
+    /// The last work unit is assessed: the filled plan is the report.
+    Report,
 }

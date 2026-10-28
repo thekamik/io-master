@@ -212,13 +212,15 @@ model/                     The new models (2026-10-28).
   ai/                          The integration with an external AI service, the agents, the RAG, the journal.
     agent.rs                     An AI agent made in the program: which model it asks, what it is told
     api_key.rs                   The API key of an integration with an AI service. It is a password to
+    chat.rs                      A chat: the place where the user consults an agent, for example the
+    instructions.rs              The instructions of the program for a task of the AI: the fixed part
     integration.rs               An integration with an external AI service: where the program sends
     journal.rs                   The journal of the AI: every question the program asked an AI service
     rag.rs                       The knowledge for the AI (RAG, retrieval-augmented generation): the
   evaluation/                  The plan of an evaluation and what it is made of.
     evaluation_plan.rs           An evaluation plan: the work units of an evaluation, with the
     lab_proof.rs                 A proof of the laboratory: the result of a functional test the
-    oscal_document.rs            A document of a standard: an OSCAL catalog (the CEM, a protection
+    oscal_standard_document.rs   An OSCAL document of a standard: the catalog of a standard (the CEM,
     product_document.rs          A document of the product: a document of the client (ST, IXIT, ...)
     work_unit.rs                 A work unit: one piece of the work of an evaluation, as the standard
   user/                        The user and the settings of the program.

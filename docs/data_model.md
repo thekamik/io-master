@@ -16,16 +16,18 @@
 model/evaluation/                                   model/ai/
 ─────────────────                                   ─────────
 EvaluationPlan                                      Integration ◄── ApiKey (integration)
-  ├── oscal_documents ──────► OscalDocument              ▲
+  ├── oscal_documents ──────► OscalStandardDocument      ▲
   ├── product_documents ────► ProductDocument            │ integration
   └── work_units: Vec<WorkUnit>                        Agent ──knowledge_bases──► KnowledgeBase ◄── Source
         WorkUnit                                         ▲                                       (knowledge_base)
-          ├── reference ────► OscalDocument               │                                       text ──► index (db/)
+          ├── reference ────► OscalStandardDocument       │                                       text ──► index (db/)
           ├── dependencies ─► WorkUnit (same plan)        │
           ├── input_product_documents ─► ProductDocument  │
           ├── input_functional ────────► LabProof          │
           └── ai_agent ────────────────────────────────────┘
                                                     JournalEntry (work_unit ──► WorkUnit)
+                                                    Chat (agent ──► Agent, work_unit ──► WorkUnit)
+                                                    Instructions (one per AiTask)
 
 model/user/
 ───────────
@@ -36,13 +38,14 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 | Model | File | Fields | Table |
 |---|---|---|---|
-| `EvaluationPlan` | `evaluation_plan.rs` | id, name, description, state, oscal_documents, product_documents, work_units, blocked | `evaluation_plans` |
-| `PlanState` | `evaluation_plan.rs` | Plan, Evaluation | (a column) |
-| `WorkUnit` | `work_unit.rs` | id, reference, label, oscal_key, requirement, guidance, dependencies, cross_reference, input_product_documents, input_functional, ai_agent, findings, analysis, vulnerability_notes, notes, verdict | `work_units` |
-| `Verdict` | `work_unit.rs` | Met, NotMet, Inconclusive | (a column) |
-| `OscalDocument` | `oscal_document.rs` | id, doc, version | `oscal_documents` |
+| `EvaluationPlan` | `evaluation_plan.rs` | id, name, description, state, oscal_documents, product_documents, possible_verdicts, work_units, blocked | `evaluation_plans` |
+| `PlanState` | `evaluation_plan.rs` | Plan, Evaluation, Report | (a column) |
+| `WorkUnit` | `work_unit.rs` | id, reference, label, oscal_key, requirement, guidance, dependencies, cross_reference, input_product_documents, input_functional, ai_agent, findings, analysis, vulnerability_notes, notes, quotes, verdict, author | `work_units` |
+| `Verdict` | `work_unit.rs` | Pass, Fail, Inconclusive | (a column) |
+| `Author` | `work_unit.rs` | Ai, User | (a column) |
+| `OscalStandardDocument` | `oscal_standard_document.rs` | id, title, doc, version | `oscal_documents` |
 | `ProductDocument` | `product_document.rs` | id, name, content, version | `product_documents` |
-| `LabProof` | `lab_proof.rs` | id, name, proof | `lab_proofs` |
+| `LabProof` | `lab_proof.rs` | id, name, proof, performed, tester, equipment | `lab_proofs` |
 
 ### 2.2 `model/ai/`
 
@@ -57,6 +60,11 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `Source` | `rag.rs` | id, knowledge_base, name, text | `knowledge_sources` |
 | `JournalEntry` | `journal.rs` | id, time, integration, model, agent, work_unit, request, answer, ending, input_tokens, output_tokens | `ai_journal` |
 | `Ending` | `journal.rs` | Complete, Cut, Stopped, Refused, Failed | (a column) |
+| `Instructions` | `instructions.rs` | task, text (proposal) | `ai_instructions` |
+| `AiTask` | `instructions.rs` | Assessment, Consultation (proposal) | (a column) |
+| `Chat` | `chat.rs` | id, title, agent, work_unit, messages (proposal) | `chats` |
+| `Message` | `chat.rs` | speaker, text, time (proposal) | `chat_messages` |
+| `Speaker` | `chat.rs` | User, Ai (proposal) | (a column) |
 
 ### 2.3 `model/user/`
 
@@ -68,8 +76,10 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 ## 3. The evaluation plan
 
-- **A plan and its copies (user, 2026-10-28).** The planner makes a plan once (for example for routers, which share their tests); every evaluation of a product works on an identical copy of it. In the plan the results of the work units are empty and the documents of the product and the proofs of the laboratory are only places reserved with their ids and names ("ST", "IXIT", "results of the scan of the ports"); in the copy the evaluator gives the files and the texts and the work units are assessed. The field `state` tells where a plan is in its life (user, 2026-10-28): `Plan` while it is being planned, `Evaluation` while the evaluation is being carried out.
-- **Two kinds of documents, never mixed.** The standards (`OscalDocument`: the CEM, PP1, PP2) are the reference, kept as their OSCAL JSON in the database; the documents of the product (`ProductDocument`: the ST, the IXIT) come from the client, their files kept in the database, encrypted with it, so that what was assessed cannot change after the assessment.
+- **A plan and its copies (user, 2026-10-28).** The planner makes a plan once (for example for routers, which share their tests); every evaluation of a product works on an identical copy of it. In the plan the results of the work units are empty and the documents of the product and the proofs of the laboratory are only places reserved with their ids and names ("ST", "IXIT", "results of the scan of the ports"); in the copy the evaluator gives the files and the texts and the work units are assessed. The field `state` tells where a plan is in its life (user, 2026-10-28): `Plan` while it is being planned, `Evaluation` while the evaluation is being carried out, `Report` when its last work unit is assessed: **the report is the filled plan**, no model of its own.
+- **Every check is an evaluation (user, 2026-10-28).** A new version of a document of the product (a new ST) is a new copy of the plan, a new evaluation: the earlier checks stay as they were, with their documents and results.
+- **The copy of a plan** gives its work units new ids; their `dependencies` are written anew with the new ids.
+- **Two kinds of documents, never mixed.** The standards (`OscalStandardDocument`: the CEM, PP1, PP2) are the reference, kept as their OSCAL JSON in the database; the documents of the product (`ProductDocument`: the ST, the IXIT) come from the client, their files kept in the database, encrypted with it, so that what was assessed cannot change after the assessment. A proof of the laboratory (`LabProof`) keeps the record of its test that ISO/IEC 17025 asks for: when, by whom, with which equipment.
 - **A plan declares its standards.** The `reference` of every work unit is one of the `oscal_documents` of its plan (a plan may hold the CEM and two protection profiles; a work unit belongs to one of them), and its `input_product_documents` are among the `product_documents` of its plan. `reference` with `oscal_key` (the `id` of the control in the JSON of the catalog) is the place of the work unit in its standard; `label` is its number in the standard.
 - **A work unit of the documentation** is one whose `input_functional` is `None`: it needs no results of functional tests.
 
@@ -81,18 +91,27 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 ### 3.2 The verdict (user, 2026-10-28, as Common Criteria asks)
 
-- A work unit is assessed by the AI even when a dependency is not met, so that all its faults are found for the Observation Report.
-- Its verdict is the worst of the verdict of the AI and the verdicts of its dependencies: a work unit that depends on one `NotMet` is `NotMet`.
-- `findings` holds every fault: those the AI found, and each dependency not met, written by the program ("not met: its dependency ADV_ARC.1-1 is not met").
+- **The verdicts of a plan.** Common Criteria knows only `Pass` and `Fail`; ETSI EN 303 645 also `Inconclusive`. A plan names those its standards know (`possible_verdicts`): `Pass` and `Fail` when it is made; the planner may add `Inconclusive`. From the worst to the best: `Fail`, `Inconclusive`, `Pass`.
+- A work unit is assessed by the AI even when a dependency did not pass, so that all its faults are found for the Observation Report.
+- Its verdict is the worst of its own and the verdicts of its dependencies: a work unit that depends on one `Fail` is `Fail`.
+- `findings` holds every fault: those the AI found, and each dependency that did not pass, written by the program ("fail: its dependency ADV_ARC.1-1 failed").
+- **The quotes (P5).** The assessment rests on quotes of the documents of the product, word for word (`quotes`); whether each stands in the documents is checked by the program, never taken from the AI, so that a fault of the document is told from an invention of the model.
+- **The author (P1).** `author` tells whether the results and the verdict are those the AI proposed, or the user wrote or changed them.
 
 ## 4. The AI
 
 - **An integration** is where the program sends its questions: the address, the model, the protocol (the chat completions of OpenAI, which most local servers offer, or the messages of Anthropic), the trusted CA certificate, and the size of the context of the model: a question that does not fit is refused before it is sent, never shortened in silence. **Its API key** is kept apart, only in the encrypted database, never printed (no `Debug`) and never copied (no `Clone`).
 - **An agent** asks one integration, with its instructions, its knowledge bases, its glossary and its limits. A work unit names its agent.
 - **The knowledge (RAG)** is a search before the question, not a training of the model. A knowledge base is a folder of sources, shared by the agents that name it; a source is one text (an earlier evaluation, a note). Whenever a text is stored, `db/` cuts it into passages of a bounded length and indexes them (FTS5); at a question the passages of the bases of the agent that fit it best are given to the model with the question. The passages are an index, made again from the text, not a model.
+- **The instructions of a task** (proposal) are the fixed part of every question of the task ("assess this work unit, answer in this form"), which the user may change; they go with the instructions of the agent.
+- **A chat** (proposal) is the place where the user consults an agent, for example the agent of one work unit about that work unit.
 - **The journal of the AI** keeps every question and its answer, only ever added to, with the work unit it was asked for: every result of the AI can be traced to what it rests on. The integration, the model and the agent are kept by their names, so that an entry stays as it was.
 
 ## 5. The user and the program
 
 - One Linux account holds one installation with one user. `User` and `Installation` are kept in the system database, which is not encrypted and holds nothing secret; the copies of the key of the encrypted database of the user are kept beside the user but belong to `db/encryption/` (`architecture.md`, section 5).
 - `Settings` names every setting as a field of its own: today the integration used where no agent names one.
+
+## 6. What the program drops
+
+- **The Converter** (a catalog of OSCAL made from the PDFs of a standard) is dropped (user, 2026-10-28): a chat with an agent is enough to make a catalog. Its code is removed in a step of its own.

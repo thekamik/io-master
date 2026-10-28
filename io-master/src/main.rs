@@ -35,10 +35,13 @@ mod checks;
 // model_old/ step by step, so that the program works all the time.
 mod model {
     // model/ai/: the integration with an external AI service and its key,
-    // the agents, the knowledge for the AI (RAG), the journal of the AI.
+    // the agents, the knowledge for the AI (RAG), the instructions of the
+    // tasks, the chats, the journal of the AI.
     pub mod ai {
         pub mod agent;
         pub mod api_key;
+        pub mod chat;
+        pub mod instructions;
         pub mod integration;
         pub mod journal;
         pub mod rag;
@@ -49,7 +52,7 @@ mod model {
     pub mod evaluation {
         pub mod evaluation_plan;
         pub mod lab_proof;
-        pub mod oscal_document;
+        pub mod oscal_standard_document;
         pub mod product_document;
         pub mod work_unit;
     }

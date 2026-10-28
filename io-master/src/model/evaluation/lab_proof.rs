@@ -17,4 +17,16 @@ pub struct LabProof {
 
     /// The text of the proof; `None` while the place is only reserved.
     pub proof: Option<String>,
+
+    /// When the test was carried out: seconds since 1970 (UTC); `None`
+    /// while the place is only reserved. This and the two fields below
+    /// are the record of the test ISO/IEC 17025 asks for.
+    pub performed: Option<i64>,
+
+    /// Who carried out the test; `None` while the place is only reserved.
+    pub tester: Option<String>,
+
+    /// The equipment the test was carried out with (its names and
+    /// inventory numbers); `None` while the place is only reserved.
+    pub equipment: Option<String>,
 }
