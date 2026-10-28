@@ -5,14 +5,14 @@ Read this file, `CLAUDE.md`, `review.md`, `docs/code_structure.md`, `docs/archit
 ## Where the project is (2026-10-28)
 
 - Repository `/home/kamil/Projects/io-master`, crate `io-master/` (Rust 2024, Tauri 2 + Svelte 5), branches **`main`** (the earlier program, the reference) and **`test_branch`** (the rebuild). **Nothing goes to `main` until the user revokes it** (2026-10-28).
-- **The rebuild (user, 2026-10-28):** the users of the program found it weak in its function, so it is rebuilt from its data up. Done: the new models (`model/`, agreed field by field with the user and frozen, `docs/data_model.md`), their database (`db/`: create, read, update, no delete, two new files `users/<id>.v2.db` and `system.v2.db`, the copy of a plan into an evaluation checked by Kahn's algorithm), the earlier code removed (it is in `main`). The window opens empty; 79 tests, clippy and svelte-check clean.
+- **The rebuild (user, 2026-10-28):** the users of the program found it weak in its function, so it is rebuilt from its data up. Done: the new models (`model/`, agreed field by field with the user and frozen, `docs/data_model.md`), their database (`db/`: create, read, update, no delete, two new files `users/<id>.v2.db` and `system.v2.db`, the copy of a plan into an evaluation checked by Kahn's algorithm), the earlier code removed (it is in `main`). The window shows the first start and the login (tried on a private display); 86 tests, clippy and svelte-check clean.
 - **The old databases are dropped**: nothing is moved from them; the data of the tests is temporary until version 1.
 
 ## What comes next
 
 The parts come back one by one, rewritten on the new models (each a concept approved by the user first):
 1. **The functions of the making of a plan** in a folder of their own above `db/` (its name to be agreed): the order of the work, `cross_reference` and `blocked` set after every change of the dependencies; and the check of an OSCAL document against the schema of NIST in a file of its own (its name to be agreed).
-2. **The login and the session** on `system.v2.db` and `users/<id>.v2.db`: the installation, the user, the keys (`db/encryption/`), the recovery code.
+2. **The login and the session: built (2026-10-28)**, the first start, the recovery code shown once, the login and the logout (`account/`, `session/`, `views/program_start/`). Still to come: the login with the recovery code, the change of the password, a new recovery code.
 3. **The AI layer** on the new models: the integration, the agent, the RAG, the journal (the HTTP and TLS client of `main` reused).
 4. **The views**, one by one, each with its page: the evaluation plan, the evaluation, the knowledge, the settings, the chat.
 

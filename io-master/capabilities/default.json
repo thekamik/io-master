@@ -1,9 +1,14 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "What the page of the main window may do: call the commands of IO Master and nothing else (no files, no shell, no network). No command yet: the program is being rebuilt (2026-10-28).",
+  "description": "What the page of the main window may do: call the commands of IO Master and nothing else (no files, no shell, no network).",
   "windows": [
     "main"
   ],
-  "permissions": []
+  "permissions": [
+    "allow-installation-create",
+    "allow-login-get",
+    "allow-login-log-in",
+    "allow-login-log-out"
+  ]
 }

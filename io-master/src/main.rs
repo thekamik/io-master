@@ -111,13 +111,32 @@ mod db {
 // password and the recovery code that wrap the key of the database
 // (moved unchanged from the earlier program, audited later). The logic
 // only: the data is written by db/.
-#[allow(dead_code, reason = "used by the views of the first start and the login (2026-10-28)")]
+#[allow(dead_code, reason = "the change of the password and the recovery come later (2026-10-28)")]
 mod account {
     pub mod access;
     pub mod generate_key;
     pub mod keys;
     pub mod recovery;
     pub mod recovery_code;
+}
+
+// session/: what every command of the window shares: the data folder, and
+// the user logged in with their open database (the only global state).
+mod session {
+    pub mod data_folder;
+    pub mod state;
+}
+
+// views/: the commands the page calls, one folder per part of the window,
+// and the error they give the page; they do their work with the folders
+// below (user, 2026-10-28).
+mod views {
+    pub mod error;
+    // views/program_start/: the first start and the login.
+    pub mod program_start {
+        pub mod installation;
+        pub mod login;
+    }
 }
 
 // pdf/: reading PDFs with the tools of Poppler (pdfinfo, pdftotext): the only
@@ -138,6 +157,10 @@ mod test_support;
 mod architecture_tests;
 
 use std::process::ExitCode;
+
+use session::data_folder::default_data_folder;
+use session::state::Session;
+use tauri::{Manager, RunEvent};
 
 /// Starts the program: refuses parameters, then opens the window.
 fn main() -> ExitCode {
@@ -160,9 +183,15 @@ fn main() -> ExitCode {
 ///
 /// The page is built into the program (`ui/dist`, made with
 /// `npm run build`); it is never loaded from the network, and no network
-/// port is opened. It may call no command yet: the commands come back
-/// with the views (`build.rs`, `capabilities/default.json`).
+/// port is opened. It may call only the commands listed in
+/// `tauri::generate_handler!` below, in `build.rs` and in
+/// `capabilities/default.json`; the three lists name the same commands.
 fn tauri_startup() -> ExitCode {
+    let Some(data_folder) = default_data_folder() else {
+        eprintln!("Error: the data folder of IO Master cannot be found: neither XDG_DATA_HOME nor HOME is set.");
+        return ExitCode::FAILURE;
+    };
+
     // The decrypted data is only in RAM: the system must never write the
     // memory of the process into a file (security/process.rs).
     if let Err(error) = security::process::forbid_memory_dumps() {
@@ -173,6 +202,15 @@ fn tauri_startup() -> ExitCode {
     let built = tauri::Builder::default()
         // The dialogs of the system, used only from Rust.
         .plugin(tauri_plugin_dialog::init())
+        // What every command shares: the data folder, the user logged in.
+        .manage(Session::new(data_folder))
+        // The commands the page may call (views/).
+        .invoke_handler(tauri::generate_handler![
+            views::program_start::installation::installation_create,
+            views::program_start::login::login_get,
+            views::program_start::login::login_log_in,
+            views::program_start::login::login_log_out,
+        ])
         .build(tauri::generate_context!());
 
     let app = match built {
@@ -183,9 +221,17 @@ fn tauri_startup() -> ExitCode {
         }
     };
 
-    // The closure is the one Tauri requires for its events (a library
-    // place, rule 9 of CLAUDE.md); no event needs an answer yet.
-    let code = app.run_return(|_handle, _event| {});
+    // However the program ends (the cross of the window, the end of the
+    // session of the desktop), the user is logged out: their database is
+    // closed. The closure is the one Tauri requires for its events (a
+    // library place, rule 9 of CLAUDE.md).
+    let code = app.run_return(|handle, event| {
+        if let RunEvent::Exit = event
+            && handle.state::<Session>().log_out().is_err()
+        {
+            eprintln!("Error: the session could not be ended cleanly.");
+        }
+    });
 
     ExitCode::from(u8::try_from(code).unwrap_or(1))
 }

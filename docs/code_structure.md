@@ -14,17 +14,25 @@ io-master/src/
                      layers, each group commented), main(), tauri_startup(); nothing else
   checks.rs          the macro ensure! (rule 5 of CLAUDE.md), known in the whole program
   model/             the data as it is kept in the databases: structures, fields only
+  views/             the commands the page calls, one folder per part of the window; their error
+  session/           what every command shares: the data folder, the user logged in, their database
   account/           the account: the first start, the login; the password and the recovery code
                      that wrap the key of the database (keys.rs, recovery.rs, recovery_code.rs)
   db/                create, read and update of the models; the two databases; their encryption
   security/          the building blocks of protection: random numbers, no memory dumps
   pdf/               reading PDFs with Poppler (pdfinfo, pdftotext): another program, in one place
-io-master/ui/        the page (Svelte 5), a separate project: one line until the views come back
+io-master/ui/        the page (Svelte 5), a separate project: the first start and the login so far
 ```
 
 ### 1.1 The direction of the dependencies
 
 ```text
+      views/
+         │
+         ▼
+      session/
+         │
+         ▼
       account/
          │
          ▼
@@ -52,6 +60,17 @@ One structure per kind of data kept in the database, its fields each commented, 
 - Columns are read by their names; statements with more than one parameter name them; one transaction per operation; a value the program never writes is `DbError::Corrupt`, never replaced in silence; every read of a list is bounded by its limit (rule 2).
 - `encryption/` holds the encryption of the database files (their key, SQLCipher), moved unchanged from the earlier program and audited by the user later; the wrapping of the key with the password and the recovery code is in `account/`.
 
+### 2.1a `views/`: the commands of the page
+
+Only what the page calls (user, 2026-10-28): one folder per part of the window, one file per element, each command with `#[tauri::command]` and its comment (what it does, where the page calls it, what it calls). The data the page gets is a structure of the file (`...View`, with serde): serialization only here. The error of every command is `views/error.rs` (`{kind, message}`), never a password, a key or a code in it. A command is listed in three places that name the same commands: `tauri::generate_handler!` in `main.rs`, `build.rs` and `capabilities/default.json`; its function on the page in `ui/src/lib/api/<folder>.ts`, named as the command. A command that takes a moment (Argon2id) runs apart from the window (`async`).
+
+- `program_start/installation.rs`: `installation_create` (the first start; gives the recovery code once).
+- `program_start/login.rs`: `login_get` (installed or not, who is logged in), `login_log_in`, `login_log_out`.
+
+### 2.1b `session/`: the session
+
+What every command shares (user, 2026-10-28), kept by Tauri: the data folder (`data_folder.rs`: `$XDG_DATA_HOME/io-master` or `~/.local/share/io-master`) and, behind a lock, the user logged in with their open database (`state.rs`), the only global state of the program. The database is opened at the login and closed at the logout and at every end of the program (`main.rs`, `RunEvent::Exit`).
+
 ### 2.2a `account/`: the account
 
 The logic of the account, above `db/`, without SQL (user, 2026-10-28): `access.rs` (the first start: the data folder, `system.v2.db`, the installation, the user, the two copies of the key, the database of the user, the recovery code given once; the login: the key unwrapped with the password, the database opened; a wrong password and an unknown name fail the same way; a first start that fails half way removes the files it made). The building blocks, moved unchanged from the earlier program and audited by the user later: `keys.rs` (the password, Argon2id, AES-256-GCM), `recovery.rs` and `recovery_code.rs` (the recovery code), `generate_key.rs` (the random key). A copy of the key is bound to the id of its user, which never changes.
@@ -62,7 +81,7 @@ The logic of the account, above `db/`, without SQL (user, 2026-10-28): `access.r
 
 ### 2.4 `ui/`: the page
 
-A separate project (Svelte 5, TypeScript strict), built into `ui/dist` and embedded in the program. Today one line (`App.svelte`); the styles of the earlier page are kept in `ui/src/styles/` for the views that come back. The page calls no command yet: `build.rs` and `capabilities/default.json` list none.
+A separate project (Svelte 5, TypeScript strict), built into `ui/dist` and embedded in the program. `App.svelte` shows the first start, the login or the user logged in, from `login_get`; `views/program_start/` (`InstallationForm.svelte`, `LoginForm.svelte`), `components/recovery_code/` (the code shown once, confirmed by typing one of its groups), `lib/api/` (one function per command, `errors.ts`). The styles of the earlier page are kept in `ui/src/styles/` for the views that come back. The page holds no secret: the passwords are cleared after each call.
 
 ## 3. Conventions
 
@@ -140,6 +159,14 @@ account/
   keys.rs                      The keys of the databases of the evaluators
   recovery.rs                  The second copy of the key of a database, wrapped with the recovery
   recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/history.md,
+session/
+  data_folder.rs               Where the data of the program is: `$XDG_DATA_HOME/io-master`, or
+  state.rs                     The session: what every command of the window shares (user,
+views/
+  error.rs                     The error of a command, as the page gets it:
+  program_start/
+    installation.rs              The first start, as the page calls it (`ui/src/views/program_start/`):
+    login.rs                     The login, as the page calls it (`ui/src/views/program_start/`): what
 security/
   process.rs                   The protection of the memory of the process (step 47 of docs/history.md):
   random.rs                    Random bytes from the kernel.

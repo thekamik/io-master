@@ -5,11 +5,17 @@
 //! window may call a command only when its capability
 //! (`capabilities/default.json`) lists that permission.
 //!
-//! **No command yet** (2026-10-28): the program is being rebuilt on the
-//! new models, and the commands come back with the views.
+//! The list names the same commands as `tauri::generate_handler!` in
+//! `src/main.rs` and the capability; each is defined in its file of
+//! `src/views/`.
 
 fn main() {
-    let commands = tauri_build::AppManifest::new().commands(&[]);
+    let commands = tauri_build::AppManifest::new().commands(&[
+        "installation_create",
+        "login_get",
+        "login_log_in",
+        "login_log_out",
+    ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))
         .expect("the desktop interface is prepared");

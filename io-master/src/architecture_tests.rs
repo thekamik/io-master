@@ -3,6 +3,12 @@
 //! an auditor sees the rule and its check in one place:
 //!
 //! ```text
+//!      views/       (the commands the page calls)
+//!         │
+//!         ▼
+//!      session/     (the user logged in, their open database)
+//!         │
+//!         ▼
 //!      account/     (the first start, the login, the keys of the account)
 //!         │
 //!         ▼
@@ -31,7 +37,7 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-const ALLOWED: [(&str, &[&str]); 5] = [
+const ALLOWED: [(&str, &[&str]); 7] = [
     ("model", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
@@ -39,6 +45,10 @@ const ALLOWED: [(&str, &[&str]); 5] = [
     ("db", &["model", "security"]),
     // The account: its logic on db/ and the models.
     ("account", &["db", "model", "security"]),
+    // The session: the user logged in and their open database.
+    ("session", &["db", "model"]),
+    // The commands of the page: they do their work with the folders below.
+    ("views", &["account", "db", "model", "session"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:
