@@ -11,6 +11,10 @@ pub struct LabProof {
     /// reserved in the plan.
     pub id: i64,
 
+    /// What the proof is ("results of the scan of the ports"), given by
+    /// the planner when the place is reserved.
+    pub name: String,
+
     /// The text of the proof; `None` while the place is only reserved.
     pub proof: Option<String>,
 }

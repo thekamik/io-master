@@ -2,7 +2,9 @@
 //! kept in the table `product_documents`, never with the standards
 //! (`oscal_documents`; user, 2026-10-28: the two are never mixed). Its
 //! place is reserved, with its id, when the plan is made; the file comes
-//! with the copy of the plan the evaluator works on.
+//! with the copy of the plan the evaluator works on. The file itself is
+//! kept in the database, encrypted with it, so that what was assessed
+//! cannot change after the assessment.
 
 /// A document of the product (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,8 +14,9 @@ pub struct ProductDocument {
     /// reserved in the plan.
     pub id: i64,
 
-    /// The path of the file; `None` while the place is only reserved.
-    pub path: Option<String>,
+    /// The file of the document, as it was delivered; `None` while the
+    /// place is only reserved.
+    pub content: Option<Vec<u8>>,
 
     /// The version of the document as the client gives it ("1.3");
     /// `None` while the place is only reserved.
