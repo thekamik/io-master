@@ -67,11 +67,10 @@ pub struct WorkUnit {
     pub notes: String,
 
     /// The quotes of the documents of the product the assessment rests
-    /// on, each word for word (user, 2026-10-28). Whether a quote stands
-    /// in the documents is checked by the program, never taken from the
-    /// AI, so that a fault of the document is told from an invention of
-    /// the model.
-    pub quotes: Vec<String>,
+    /// on (user, 2026-10-28). Whether a quote stands in its document is
+    /// checked by the program, never taken from the AI, so that a fault
+    /// of the document is told from an invention of the model.
+    pub quotes: Vec<Quote>,
 
     /// The verdict of the assessment, one of the `possible_verdicts` of
     /// the plan; `None` while the work unit is not assessed. A work unit
@@ -108,4 +107,16 @@ pub enum Author {
     Ai,
     /// The user wrote them, or changed what the AI proposed.
     User,
+}
+
+/// A quote of a document of the product (user, 2026-10-28).
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+pub struct Quote {
+    /// The document it is taken from (`ProductDocument`), one of the
+    /// `input_product_documents` of the work unit.
+    pub product_document: i64,
+
+    /// The quote, word for word.
+    pub text: String,
 }

@@ -18,7 +18,7 @@ model/evaluation/                                   model/ai/
 EvaluationPlan                                      Integration ◄── ApiKey (integration)
   ├── oscal_documents ──────► OscalStandardDocument      ▲
   ├── product_documents ────► ProductDocument            │ integration
-  └── work_units: Vec<WorkUnit>                        Agent ──knowledge_bases──► KnowledgeBase ◄── Source
+  └── work_units ───► WorkUnit                         Agent ──knowledge_bases──► KnowledgeBase ◄── Source
         WorkUnit                                         ▲                                       (knowledge_base)
           ├── reference ────► OscalStandardDocument       │                                       text ──► index (db/)
           ├── dependencies ─► WorkUnit (same plan)        │
@@ -41,6 +41,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `EvaluationPlan` | `evaluation_plan.rs` | id, name, description, state, source_plan, product, client, evaluator, started, oscal_documents, product_documents, possible_verdicts, work_units, blocked | `evaluation_plans` |
 | `PlanState` | `evaluation_plan.rs` | Plan, Evaluation, Report | (a column) |
 | `WorkUnit` | `work_unit.rs` | id, reference, label, oscal_key, requirement, guidance, dependencies, cross_reference, input_product_documents, input_functional, ai_agent, findings, analysis, vulnerability_notes, notes, quotes, verdict, author | `work_units` |
+| `Quote` | `work_unit.rs` | product_document, text | `work_unit_quotes` |
 | `Verdict` | `work_unit.rs` | Pass, Fail, Inconclusive | (a column) |
 | `Author` | `work_unit.rs` | Ai, User | (a column) |
 | `OscalStandardDocument` | `oscal_standard_document.rs` | id, title, doc, version | `oscal_documents` |
@@ -97,7 +98,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 - A work unit is assessed by the AI even when a dependency did not pass, so that all its faults are found for the Observation Report.
 - Its verdict is the worst of its own and the verdicts of its dependencies: a work unit that depends on one `Fail` is `Fail`.
 - `findings` holds every fault: those the AI found, and each dependency that did not pass, written by the program ("fail: its dependency ADV_ARC.1-1 failed").
-- **The quotes (P5).** The assessment rests on quotes of the documents of the product, word for word (`quotes`); whether each stands in the documents is checked by the program, never taken from the AI, so that a fault of the document is told from an invention of the model.
+- **The quotes (P5).** The assessment rests on quotes of the documents of the product, word for word, each with the document it is taken from (`Quote`); whether each stands in the documents is checked by the program, never taken from the AI, so that a fault of the document is told from an invention of the model.
 - **The author (P1).** `author` tells whether the results and the verdict are those the AI proposed, or the user wrote or changed them.
 
 ## 4. The AI

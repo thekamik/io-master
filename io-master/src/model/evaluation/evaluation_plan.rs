@@ -6,7 +6,7 @@
 //! version of a document (a new ST) is a new evaluation. When its last
 //! work unit is assessed, the filled plan is the report.
 
-use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
+use crate::model::evaluation::work_unit::Verdict;
 
 /// An evaluation plan, or the copy of it for one product (user,
 /// 2026-10-28).
@@ -60,8 +60,12 @@ pub struct EvaluationPlan {
     /// `Inconclusive` (ETSI EN 303 645).
     pub possible_verdicts: Vec<Verdict>,
 
-    /// The work units, in the order of the standard.
-    pub work_units: Vec<WorkUnit>,
+    /// The work units of the plan (`WorkUnit`), in the order of the
+    /// standard. They are rows of the table `work_units` of their own,
+    /// read and changed one by one, so that reading a plan does not read
+    /// its hundreds of work units and a change of one is a small
+    /// transaction (user, 2026-10-28).
+    pub work_units: Vec<i64>,
 
     /// `true` when at least one work unit is a `cross_reference`: the
     /// plan cannot be carried out until the planner corrects it.
