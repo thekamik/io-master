@@ -13,7 +13,10 @@ pub struct WorkUnit {
     pub id: i64,
     /// The standard the work unit belongs to.
     pub reference: i64,
-    /// The identifier of the work unit in its standard ("ADV_ARC.1-1").
+    /// The identifier of the work unit in its standard ("ADV_ARC.1-1"),
+    /// as the standard gives it: the only name of the work unit (user,
+    /// 2026-10-28: ISO/IEC 17025 asks for an unambiguous identification,
+    /// so the laboratory gives no names of its own).
     pub label: String,
     /// What is to be done in the work unit: the quote of the requirement
     /// from the standard.
