@@ -17,7 +17,7 @@ io-master/src/
                      layers, each group commented), main(), tauri_startup(); nothing else
   routes.rs          the list of the commands the page may call (as urls.py of Django), above views/
   checks.rs          the macro ensure! (rule 5 of CLAUDE.md), known in the whole program
-  model/             the new models (2026-10-28): the data as it is kept in the databases; empty yet
+  model/             the new models (2026-10-28): the data as it is kept in the databases
   model_old/         the earlier models: the data as plain Rust types and the rules of their
                      validity; no I/O; replaced by model/ step by step
   db/                every operation on a database, as CRUD; depends only on model/, model_old/
@@ -208,7 +208,8 @@ Generated from the heads of the files (the tests left out):
 main.rs                      Entry point of IO Master.
 routes.rs                  The routes of the window: the list of every command the page may
 checks.rs                  The checks of conditions that should never happen (rule 5 of
-model/                     The new models (2026-10-28), empty yet.
+model/                     The new models (2026-10-28).
+  work_unit.rs                 A work unit: one piece of the work of an evaluation, as the standard
 model_old/                 The data of the program as plain Rust types, and the rules of
   ai.rs                        The data of the communication with AI services: a connection as
   api_key.rs                   The API key of an AI connection of one evaluator

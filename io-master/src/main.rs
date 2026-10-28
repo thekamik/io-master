@@ -33,7 +33,9 @@ mod checks;
 // model/: the new models (2026-10-28): the data of the program as it is kept
 // in the databases, built model by model; the code is moved to them from
 // model_old/ step by step, so that the program works all the time.
-mod model {}
+mod model {
+    pub mod work_unit;
+}
 
 // model_old/: the earlier models: the data of the program as plain Rust
 // types and the rules of their validity; no I/O (no database, no network,

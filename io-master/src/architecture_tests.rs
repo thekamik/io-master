@@ -38,9 +38,9 @@ use std::path::Path;
 
 /// What each folder may use besides itself: whole folders, or paths
 /// that start so (`crate::` left out).
-// model/ gets its row with its first file (a folder without files is
-// refused below); model_old/ is replaced by it step by step (2026-10-28).
-const ALLOWED: [(&str, &[&str]); 9] = [
+// model_old/ is replaced by model/ step by step (2026-10-28).
+const ALLOWED: [(&str, &[&str]); 10] = [
+    ("model", &[]),
     ("model_old", &["model"]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
