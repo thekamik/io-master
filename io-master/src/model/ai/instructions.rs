@@ -4,7 +4,7 @@
 //! instructions of the agent, which say who the agent is. Kept in the
 //! table `ai_instructions`, one row per task.
 
-/// The instructions of a task of the AI (proposal, 2026-10-28).
+/// The instructions of a task of the AI (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
 pub struct Instructions {
@@ -15,7 +15,7 @@ pub struct Instructions {
     pub text: String,
 }
 
-/// A task of the AI (proposal, 2026-10-28).
+/// A task of the AI (user, 2026-10-28).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
 pub enum AiTask {

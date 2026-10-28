@@ -3,7 +3,7 @@
 //! Kept in the tables `chats` and `chat_messages`. Every question of a
 //! chat is also in the journal of the AI.
 
-/// A chat with an agent (proposal, 2026-10-28).
+/// A chat with an agent (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
 pub struct Chat {
@@ -26,7 +26,7 @@ pub struct Chat {
     pub messages: Vec<Message>,
 }
 
-/// A message of a chat (proposal, 2026-10-28).
+/// A message of a chat (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
 pub struct Message {

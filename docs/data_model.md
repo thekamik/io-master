@@ -60,11 +60,11 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `Source` | `rag.rs` | id, knowledge_base, name, text | `knowledge_sources` |
 | `JournalEntry` | `journal.rs` | id, time, integration, model, agent, work_unit, request, answer, ending, input_tokens, output_tokens | `ai_journal` |
 | `Ending` | `journal.rs` | Complete, Cut, Stopped, Refused, Failed | (a column) |
-| `Instructions` | `instructions.rs` | task, text (proposal) | `ai_instructions` |
-| `AiTask` | `instructions.rs` | Assessment, Consultation (proposal) | (a column) |
-| `Chat` | `chat.rs` | id, title, agent, work_unit, messages (proposal) | `chats` |
-| `Message` | `chat.rs` | speaker, text, time (proposal) | `chat_messages` |
-| `Speaker` | `chat.rs` | User, Ai (proposal) | (a column) |
+| `Instructions` | `instructions.rs` | task, text | `ai_instructions` |
+| `AiTask` | `instructions.rs` | Assessment, Consultation | (a column) |
+| `Chat` | `chat.rs` | id, title, agent, work_unit, messages | `chats` |
+| `Message` | `chat.rs` | speaker, text, time | `chat_messages` |
+| `Speaker` | `chat.rs` | User, Ai | (a column) |
 
 ### 2.3 `model/user/`
 
@@ -103,8 +103,8 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 - **An integration** is where the program sends its questions: the address, the model, the protocol (the chat completions of OpenAI, which most local servers offer, or the messages of Anthropic), the trusted CA certificate, and the size of the context of the model: a question that does not fit is refused before it is sent, never shortened in silence. **Its API key** is kept apart, only in the encrypted database, never printed (no `Debug`) and never copied (no `Clone`).
 - **An agent** asks one integration, with its instructions, its knowledge bases, its glossary and its limits. A work unit names its agent.
 - **The knowledge (RAG)** is a search before the question, not a training of the model. A knowledge base is a folder of sources, shared by the agents that name it; a source is one text (an earlier evaluation, a note). Whenever a text is stored, `db/` cuts it into passages of a bounded length and indexes them (FTS5); at a question the passages of the bases of the agent that fit it best are given to the model with the question. The passages are an index, made again from the text, not a model.
-- **The instructions of a task** (proposal) are the fixed part of every question of the task ("assess this work unit, answer in this form"), which the user may change; they go with the instructions of the agent.
-- **A chat** (proposal) is the place where the user consults an agent, for example the agent of one work unit about that work unit.
+- **The instructions of a task** are the fixed part of every question of the task ("assess this work unit, answer in this form"), which the user may change; they go with the instructions of the agent.
+- **A chat** is the place where the user consults an agent, for example the agent of one work unit about that work unit.
 - **The journal of the AI** keeps every question and its answer, only ever added to, with the work unit it was asked for: every result of the AI can be traced to what it rests on. The integration, the model and the agent are kept by their names, so that an entry stays as it was.
 
 ## 5. The user and the program
