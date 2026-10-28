@@ -116,4 +116,4 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 ## 6. What the program drops
 
-- **The Converter** (a catalog of OSCAL made from the PDFs of a standard) is dropped (user, 2026-10-28): a chat with an agent is enough to make a catalog. Its code is removed in a step of its own.
+- **The Converter** (a catalog of OSCAL made from the PDFs of a standard) is dropped (user, 2026-10-28): a chat with an agent is enough to make a catalog. Its code is removed later, together with the rework of the views on the new models, since it reaches into many places (the catalog editor, the PDFs of the standards and their viewer, the state of the conversions used by the Evaluation plan).
