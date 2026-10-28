@@ -36,6 +36,12 @@ pub struct WorkUnit {
     /// this one can be assessed.
     pub dependencies: Vec<i64>,
 
+    /// `true` when the dependencies of the work unit close a cycle (a
+    /// cross reference: the work unit depends, directly or through
+    /// others, on itself), a mistake of the planner; `false` when a work
+    /// unit is made. A plan with one such work unit is blocked.
+    pub cross_reference: bool,
+
     /// The documents of the product (of the client: ST, IXIT, ...)
     /// needed to find the work unit met; never a standard, which is
     /// `reference`.

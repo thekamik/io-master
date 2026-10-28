@@ -209,6 +209,8 @@ main.rs                      Entry point of IO Master.
 routes.rs                  The routes of the window: the list of every command the page may
 checks.rs                  The checks of conditions that should never happen (rule 5 of
 model/                     The new models (2026-10-28).
+  evaluation_plan.rs           An evaluation plan: the work units of an evaluation, with the
+  product_document.rs          A document of the product: a document of the client (ST, IXIT, ...)
   work_unit.rs                 A work unit: one piece of the work of an evaluation, as the standard
 model_old/                 The data of the program as plain Rust types, and the rules of
   ai.rs                        The data of the communication with AI services: a connection as

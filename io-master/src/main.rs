@@ -34,6 +34,8 @@ mod checks;
 // in the databases, built model by model; the code is moved to them from
 // model_old/ step by step, so that the program works all the time.
 mod model {
+    pub mod evaluation_plan;
+    pub mod product_document;
     pub mod work_unit;
 }
 
