@@ -1,8 +1,9 @@
 //! A work unit: one piece of the work of an evaluation, as the standard
 //! says it (for example a work unit of the CEM), with what it needs
-//! before it can be assessed: the work units it depends on, the
-//! documents of the manufacturer and the evidence of the laboratory.
-//! Every other object is named by its id in the database.
+//! before it can be assessed (the work units it depends on, the
+//! documents of the manufacturer, the evidence of the laboratory) and
+//! the results of its assessment. Every other object is named by its id
+//! in the database.
 
 /// A work unit of a standard (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -12,9 +13,16 @@ pub struct WorkUnit {
     pub id: i64,
     /// The standard the work unit belongs to.
     pub reference: i64,
+    /// The identifier of the work unit in its standard ("ADV_ARC.1-1").
+    pub label: String,
+    /// The short title of the work unit, for the lists and the report.
+    pub title: String,
     /// What is to be done in the work unit: the quote of the requirement
     /// from the standard.
     pub requirement: String,
+    /// The explanations and application notes of the standard for the
+    /// requirement, given to the AI with it.
+    pub guidance: String,
     /// The work units this one depends on: each must be passed before
     /// this one can be assessed.
     pub dependencies: Vec<i64>,
@@ -26,4 +34,9 @@ pub struct WorkUnit {
     /// The AI agent made in the program that works on the work unit;
     /// `None` when none is assigned.
     pub ai_agent: Option<i64>,
+    /// The results of the assessment of the work unit.
+    pub findings: String,
+    pub analysis: String,
+    pub vulnerability_notes: String,
+    pub notes: String,
 }
