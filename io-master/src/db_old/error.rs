@@ -59,6 +59,25 @@ impl fmt::Display for DbError {
 
 impl std::error::Error for DbError {}
 
+impl From<crate::db::error::DbError> for DbError {
+    /// The error of the encryption, moved to `db/` with its own error
+    /// (2026-10-28), told to the code of `db_old/` by the same kind.
+    fn from(error: crate::db::error::DbError) -> DbError {
+        use crate::db::error::DbError as New;
+
+        match error {
+            New::NotFound(path) => DbError::NotFound(path),
+            New::Exists(path) => DbError::Exists(path),
+            New::WrongKey(path) => DbError::WrongKey(path),
+            New::Sql(message) => DbError::Sql(message),
+            New::Corrupt { table, column, value } => DbError::Corrupt(Corrupt { table, column, value }),
+            New::NoRow { table, id } => DbError::NoRow { table, id },
+            New::Inconsistent(reason) => DbError::Inconsistent(reason),
+            New::Io { path, source } => DbError::Io { path, source },
+        }
+    }
+}
+
 impl From<rusqlite::Error> for DbError {
     /// A [`Corrupt`] value found while a row was read comes through
     /// rusqlite as the cause of a failed conversion ([`corrupt`]); it

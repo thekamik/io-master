@@ -5,7 +5,7 @@
 
 /// An integration with an AI service (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct Integration {
     /// The id of the integration in the database.
     pub id: i64,
@@ -34,7 +34,7 @@ pub struct Integration {
 
 /// The way the program speaks with an AI service.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub enum Protocol {
     /// The chat completions of OpenAI (`/v1/chat/completions`), which
     /// most local servers offer as well: Ollama, llama.cpp, vLLM.

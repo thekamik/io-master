@@ -8,7 +8,7 @@ use zeroize::Zeroizing;
 /// The API key of an integration (user, 2026-10-28). It derives no
 /// `Debug` and no `Clone`, so that it is never printed into a log or an
 /// error and has one copy in memory, wiped when it is dropped.
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct ApiKey {
     /// The integration the key belongs to.
     pub integration: i64,

@@ -1,6 +1,6 @@
 # IO Master: the data model
 
-**State (2026-10-28):** the models of `io-master/src/model/` are agreed with the user, model by model, and written as plain structures; **no code uses them yet**. The code is moved to them from `model_old/` step by step, so that the program works all the time (`code_structure.md`, section 2.1). The tables named here are the plan for `db/`; the tables of today are those of `model_old/`.
+**State (2026-10-28):** the models of `io-master/src/model/` are agreed with the user, model by model, and written as plain structures; **no code uses them yet**. The code is moved to them from `model_old/` step by step, so that the program works all the time (`code_structure.md`, section 2.1). The tables named here are those of `db/` (`users/<id>.v2.db`): built for `model/evaluation/` (2026-10-28), planned for the others; the earlier tables are those of `db_old/`.
 
 ## 1. The rules of a model (user, 2026-10-28)
 
@@ -38,13 +38,13 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 | Model | File | Fields | Table |
 |---|---|---|---|
-| `EvaluationPlan` | `evaluation_plan.rs` | id, name, description, state, source_plan, product, client, evaluator, started, oscal_documents, product_documents, possible_verdicts, work_units, blocked | `evaluation_plans` |
+| `EvaluationPlan` | `evaluation_plan.rs` | id, name, description, state, source_plan, product, client, evaluator, started, oscal_documents, product_documents, possible_verdicts, work_units, blocked | `evaluation_plans` (lists: `evaluation_plan_standards`, `_documents`, `_verdicts`) |
 | `PlanState` | `evaluation_plan.rs` | Plan, Evaluation, Report | (a column) |
-| `WorkUnit` | `work_unit.rs` | id, reference, label, oscal_key, requirement, guidance, dependencies, cross_reference, input_product_documents, input_functional, ai_agent, findings, analysis, vulnerability_notes, notes, quotes, verdict, author | `work_units` |
+| `WorkUnit` | `work_unit.rs` | id, reference, label, oscal_key, requirement, guidance, dependencies, cross_reference, input_product_documents, input_functional, ai_agent, findings, analysis, vulnerability_notes, notes, quotes, verdict, author | `work_units` (lists: `work_unit_dependencies`, `_documents`, `_proofs`, `_quotes`) |
 | `Quote` | `work_unit.rs` | product_document, text | `work_unit_quotes` |
 | `Verdict` | `work_unit.rs` | Pass, Fail, Inconclusive | (a column) |
 | `Author` | `work_unit.rs` | Ai, User | (a column) |
-| `OscalStandardDocument` | `oscal_standard_document.rs` | id, title, doc, version | `oscal_documents` |
+| `OscalStandardDocument` | `oscal_standard_document.rs` | id, title, doc, version | `oscal_standard_documents` |
 | `ProductDocument` | `product_document.rs` | id, name, content, version | `product_documents` |
 | `LabProof` | `lab_proof.rs` | id, name, proof, performed, tester, equipment | `lab_proofs` |
 

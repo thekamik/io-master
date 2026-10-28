@@ -11,7 +11,7 @@ use crate::model::evaluation::work_unit::Verdict;
 /// An evaluation plan, or the copy of it for one product (user,
 /// 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct EvaluationPlan {
     /// The id of the plan in the database.
     pub id: i64,
@@ -74,7 +74,7 @@ pub struct EvaluationPlan {
 
 /// Where an evaluation plan is in its life (user, 2026-10-28).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub enum PlanState {
     /// The plan is being made: the planner chooses the standards and
     /// the work units, reserves the places of the documents and the

@@ -58,7 +58,7 @@ use std::path::Path;
 use rusqlite::Connection;
 use zeroize::Zeroizing;
 
-use crate::db_old::error::DbError;
+use crate::db::error::DbError;
 
 use super::database_key::DatabaseKey;
 

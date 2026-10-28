@@ -8,7 +8,7 @@
 
 /// An entry of the journal of the AI (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct JournalEntry {
     /// The id of the entry in the database.
     pub id: i64,
@@ -46,7 +46,7 @@ pub struct JournalEntry {
 
 /// How an answer of the AI ended.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub enum Ending {
     /// The model finished its answer.
     Complete,

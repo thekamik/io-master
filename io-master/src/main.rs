@@ -97,6 +97,9 @@ mod security {
 // db/: the new operations on the databases (2026-10-28): create, read and
 // update of the models of model/, one file per file of model/, no delete.
 mod db {
+    pub mod database;
+    pub mod error;
+    pub mod lists;
     // db/encryption/: all code of encryption of the databases, moved from
     // db_old/ unchanged (2026-10-28); serves db/ and db_old/.
     pub mod encryption {
@@ -105,6 +108,15 @@ mod db {
         pub mod keys;
         pub mod recovery;
         pub mod sqlcipher;
+    }
+    // db/evaluation/: the plans, their work units, the standards, the
+    // documents of the product, the proofs of the laboratory.
+    pub mod evaluation {
+        pub mod evaluation_plan;
+        pub mod lab_proof;
+        pub mod oscal_standard_document;
+        pub mod product_document;
+        pub mod work_unit;
     }
 }
 

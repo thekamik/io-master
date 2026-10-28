@@ -1,6 +1,7 @@
 //! Help for the tests of the whole program: temporary directories, and
 //! a small standard (`standards.rs`).
 
+pub mod database;
 pub mod db;
 pub mod standards;
 

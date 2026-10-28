@@ -90,7 +90,7 @@ Plain types of every area, their rules of validity (`check`) and their normal fo
 
 ### 2.2 `db/` and `db_old/`: the databases
 
-**The operations on the databases are written anew (user, 2026-10-28)** on the models of `model/`: the earlier folder `db/` was renamed `db_old/`, and the new `db/` gets them one by one, while the program works all the time. **Create, read and update only, no delete** (user, 2026-10-28). The code of encryption was moved unchanged to `db/encryption/` and serves both; its error and the recovery code are still those of `db_old/` and `model_old/` (two exceptions in `architecture_tests.rs`) until `db/` has an error of its own. What follows describes `db_old/`.
+**The operations on the databases are written anew (user, 2026-10-28)** on the models of `model/`: the earlier folder `db/` was renamed `db_old/`, and the new `db/` gets them one by one, while the program works all the time. **Create, read and update only, no delete** (user, 2026-10-28). **The layout of `db/` mirrors `model/`** (user, 2026-10-28): one file per file of a model, holding its tables (`SCHEMA`), the reading of its rows and its functions `create_<model>`, `read_<model>` (and `read_<model>s` for a list), `update_<model>`; a list of a model is a table of its own, one row per element with its position (`lists.rs`). Its tables live in a new file of the database, `users/<id>.v2.db` (`database.rs`), beside the earlier one of `db_old/`, until every view is rewritten. A new object is given with `id` 0 and gets its id from the database; what a model names must hold together (a work unit and its plan), checked at every write. The code of encryption was moved unchanged to `db/encryption/` and serves both; its error and the recovery code are still those of `db_old/` and `model_old/` (two exceptions in `architecture_tests.rs`) until `db/` has an error of its own. What follows describes `db_old/`.
 
 - **SQL lives only here** (the connection of the database of an evaluator is visible only inside `db/`, so SQL elsewhere does not compile).
 - One folder per area of data (`system/`, `user/`, `ai/chats/`, `ai/connection/`, `ai/instructions/`, `ai/journal/`, `standards/`, `oscal/`, `evaluation_support/`, `conversion/`, `own_requirements/`, `evaluation_project/`, `evaluation/`), each with `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD `create.rs`, `read.rs`, `update.rs`, `delete.rs`; a file an area does not need is missing.
@@ -265,6 +265,15 @@ model_old/                 The data of the program as plain Rust types, and the 
   text.rs                      The rules every text field of the program follows, the error when
   time.rs                      The time stamps of the program: seconds since 1970 (UTC), as the
 db/                        The new operations on the databases (2026-10-28).
+  database.rs                  The database of the user, made anew for the models of `model/`
+  error.rs                     The error of every function of `db/`: why a database could not be
+  lists.rs                     The lists of a model kept in a table of their own: a list of ids (the
+  evaluation/                  The plans, their work units, the standards, the documents, the proofs.
+    evaluation_plan.rs           The evaluation plans (`EvaluationPlan`: a plan, an evaluation copied
+    lab_proof.rs                 The proofs of the laboratory (`LabProof`: the results of the functional
+    oscal_standard_document.rs   The OSCAL documents of the standards (`OscalStandardDocument`), in the
+    product_document.rs          The documents of the product (`ProductDocument`: the ST, the IXIT), in
+    work_unit.rs                 The work units of the plans (`WorkUnit`), in the table `work_units` of
   encryption/                  All code of encryption of the databases.
     database_key.rs              The key that encrypts a database of the program.
     generate_key.rs              Generating the key that encrypts the database.

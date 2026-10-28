@@ -5,7 +5,7 @@
 
 /// A chat with an agent (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct Chat {
     /// The id of the chat in the database.
     pub id: i64,
@@ -28,7 +28,7 @@ pub struct Chat {
 
 /// A message of a chat (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct Message {
     /// Who wrote it.
     pub speaker: Speaker,
@@ -42,7 +42,7 @@ pub struct Message {
 
 /// Who wrote a message of a chat.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub enum Speaker {
     User,
     Ai,

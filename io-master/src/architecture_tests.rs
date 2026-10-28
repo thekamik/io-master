@@ -58,7 +58,8 @@ const ALLOWED: [(&str, &[&str]); 11] = [
             "model_old::recovery_code",
         ],
     ),
-    ("db_old", &["db::encryption", "model", "model_old", "security"]),
+    // The error of the new db/ (its encryption) told to db_old/ as its own.
+    ("db_old", &["db::encryption", "db::error::DbError", "model", "model_old", "security"]),
     ("ai", &["db", "db_old", "model", "model_old", "security"]),
     // The installation, its account and the session: the core of the
     // protection, below the window and the views.

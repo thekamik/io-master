@@ -23,7 +23,7 @@
 /// A knowledge base: a named group of sources (user, 2026-10-28). Kept
 /// in the table `knowledge_bases`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct KnowledgeBase {
     /// The id of the base in the database.
     pub id: i64,
@@ -38,7 +38,7 @@ pub struct KnowledgeBase {
 /// A source of knowledge: one text of a base (user, 2026-10-28). Kept in
 /// the table `knowledge_sources`.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[expect(dead_code, reason = "a new model (2026-10-28), not used by the code yet")]
+#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct Source {
     /// The id of the source in the database.
     pub id: i64,
