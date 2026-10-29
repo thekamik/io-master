@@ -154,17 +154,57 @@ fn checked(db: &Database, agent: &Agent) -> Result<Agent, AgentError> {
     })
 }
 
+/// The words of `text` in lower case: what lies between the signs that are
+/// no letter or digit.
+///
+/// Called by: [`names_term`].
+fn words(text: &str) -> Vec<String> {
+    let mut found = Vec::new();
+
+    // The closure tells `split` where a word ends (a library place, rule 9).
+    for word in text.split(|character: char| !character.is_alphanumeric()) {
+        if !word.is_empty() {
+            found.push(word.to_lowercase());
+        }
+    }
+
+    found
+}
+
+/// Whether the question names the term: the words of the term follow one
+/// another among the words of the question, whole (user, 2026-10-29: "ST"
+/// is not named by "test").
+///
+/// Called by: [`widened`].
+/// Calls: [`words`].
+fn names_term(question: &[String], term: &str) -> bool {
+    let term = words(term);
+
+    if term.is_empty() {
+        return false;
+    }
+
+    for window in question.windows(term.len()) {
+        if window == term.as_slice() {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// The question widened by the glossary of the agent: the meaning of every
 /// term the question names is added, so that the search finds a text that
 /// writes the term out ("TSF" also finds "TOE Security Functionality").
 ///
 /// Called by: [`agent_knowledge`].
+/// Calls: [`words`], [`names_term`].
 fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
-    let lower = question.to_lowercase();
+    let asked = words(question);
     let mut widened = question.to_owned();
 
     for entry in glossary {
-        if lower.contains(&entry.term.to_lowercase()) {
+        if names_term(&asked, &entry.term) {
             widened.push(' ');
             widened.push_str(&entry.meaning);
         }
@@ -288,5 +328,17 @@ mod tests {
         assert_eq!(found.len(), 1);
         assert!(found[0].contains(paragraph));
         assert!(found.iter().map(String::len).sum::<usize>() <= 12_000);
+    }
+
+    #[test]
+    fn a_term_is_named_only_by_whole_words() {
+        let glossary = [
+            GlossaryEntry { term: "ST".to_owned(), meaning: "Security Target".to_owned() },
+            GlossaryEntry { term: "TOE scope".to_owned(), meaning: "the boundary".to_owned() },
+        ];
+
+        assert_eq!(widened("the test of the TOE", &glossary), "the test of the TOE");
+        assert_eq!(widened("Read the ST.", &glossary), "Read the ST. Security Target");
+        assert_eq!(widened("the toe Scope", &glossary), "the toe Scope the boundary");
     }
 }

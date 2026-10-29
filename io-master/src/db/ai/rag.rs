@@ -35,6 +35,17 @@ pub const MAX_SOURCE_CHARS: usize = 20_000_000;
 pub const MAX_FOUND: usize = 50;
 const MAX_WORDS: usize = 64;
 
+/// The words of English a search passes over (user, 2026-10-29): they are
+/// in almost every passage, so a question that names them ("What is the
+/// TSF?") would find passages by "is" and "the" instead of by "TSF".
+const STOP_WORDS: [&str; 64] = [
+    "a", "about", "all", "also", "an", "and", "any", "are", "as", "at", "be", "been", "but", "by", "can", "do", "does",
+    "each", "for", "from", "has", "have", "he", "her", "his", "how", "i", "if", "in", "into", "is", "it", "its", "me",
+    "my", "no", "not", "of", "on", "or", "other", "our", "shall", "she", "should", "so", "such", "that", "the",
+    "their", "them", "then", "there", "these", "they", "this", "to", "was", "we", "what", "when", "which", "who",
+    "with",
+];
+
 /// The tables, made when they are missing (`database.rs`). The tokenizer
 /// `porter` finds an English word by its stem ("keys" finds "key"),
 /// `unicode61` folds the case and the diacritics.
@@ -345,9 +356,9 @@ pub fn update_source(db: &Database, source: &Source) -> Result<(), DbError> {
     Ok(())
 }
 
-/// The query of FTS5 for a question: its words, each quoted (so that no
-/// word is read as an operator of FTS5), any of them; `None` for a
-/// question without words.
+/// The query of FTS5 for a question: its words but the [`STOP_WORDS`], each
+/// quoted (so that no word is read as an operator of FTS5), any of them;
+/// `None` for a question without such words.
 ///
 /// Called by: [`read_passages`].
 fn query_of(question: &str) -> Option<String> {
@@ -356,7 +367,7 @@ fn query_of(question: &str) -> Option<String> {
     // The closure tells `split` where a word ends: at every sign that is no
     // letter or digit (quotes and operators of FTS5 among them).
     for word in question.split(|character: char| !character.is_alphanumeric()).take(MAX_WORDS * 4) {
-        if !word.is_empty() && words.len() < MAX_WORDS {
+        if !word.is_empty() && words.len() < MAX_WORDS && !STOP_WORDS.contains(&word.to_lowercase().as_str()) {
             words.push(format!("\"{word}\""));
         }
     }
@@ -470,5 +481,8 @@ mod tests {
         assert_eq!(read_passages(&db, &[one], "key", 8).unwrap(), vec!["Generated keys are stored encrypted."]);
         assert_eq!(read_passages(&db, &[one, two], "key", 8).unwrap().len(), 2);
         assert!(read_passages(&db, &[one], "\"OR NOT(", 8).unwrap().is_empty());
+        // "What is the" are passed over: only "key" is looked for.
+        assert_eq!(read_passages(&db, &[one, two], "What is the key?", 8).unwrap().len(), 2);
+        assert!(read_passages(&db, &[one, two], "What is the", 8).unwrap().is_empty());
     }
 }
