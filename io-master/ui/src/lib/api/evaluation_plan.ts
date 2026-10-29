@@ -81,6 +81,8 @@ export interface WorkUnitView {
   documents: number[];
   proofs: ProofView[];
   aiAgent: number | null;
+  /** Every agent, to choose the one that works on the unit. */
+  agents: { id: number; name: string }[];
   crossReference: boolean;
 }
 

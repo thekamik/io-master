@@ -6,7 +6,7 @@
   standard whole, the requirement read only, the work units it depends on
   (chosen ones, and others found by a filter of the labels), those that
   depend on it (read only), the documents of the product it needs, the
-  guidance, the proofs of the laboratory (with one or more it is a
+  agent that will work on it (made in the panel Agents), the guidance, the proofs of the laboratory (with one or more it is a
   functional test, without any a test of the documentation). Every write
   locks the buttons, reads the work unit again and shows its time.
 -->
@@ -37,6 +37,7 @@
   let dependencies: number[] = $state([]);
   let chosenDocuments: number[] = $state([]);
   let guidance = $state("");
+  let agent: number | null = $state(null);
   let proofName = $state("");
   let filter = $state("");
   let problem = $state("");
@@ -69,6 +70,7 @@
       dependencies = [...view.dependencies];
       chosenDocuments = [...view.documents];
       guidance = view.guidance;
+      agent = view.aiAgent;
     } catch (error) {
       problem = sentence(error);
     }
@@ -111,7 +113,7 @@
         dependencies,
         documents: chosenDocuments,
         proofs: view?.proofs.map((proof) => proof.id) ?? [],
-        aiAgent: view?.aiAgent ?? null,
+        aiAgent: agent,
         guidance,
       }),
     );
@@ -190,6 +192,21 @@
         <p class="note">The plan has no document yet: add one in the data of the plan.</p>
       {/each}
 
+      <h3>Agent</h3>
+      {#if (view?.agents ?? []).length === 0}
+        <p class="note">No agent yet: make one in the panel Agents.</p>
+      {:else}
+        <label>
+          The agent that will work on this unit (its knowledge goes with the questions of the evaluation)
+          <select bind:value={agent}>
+            <option value={null}>— none —</option>
+            {#each view?.agents ?? [] as one (one.id)}
+              <option value={one.id}>{one.name}</option>
+            {/each}
+          </select>
+        </label>
+      {/if}
+
       <h3>Guidance</h3>
       <textarea rows="6" bind:value={guidance}></textarea>
 
@@ -210,8 +227,6 @@
       <button type="submit" disabled={busy}>Add a proof</button>
     </form>
   </section>
-
-  <p class="note">The agent of the work unit comes with the agents of the AI.</p>
 {/if}
 
 <style>

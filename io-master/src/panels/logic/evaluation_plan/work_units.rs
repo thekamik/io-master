@@ -14,6 +14,7 @@
 //! 2026-10-29). A work unit with proofs of the laboratory is a functional
 //! test; without any (`None`), a test of the documentation.
 
+use crate::db::ai::agent::read_agent;
 use crate::db::database::Database;
 use crate::db::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::evaluation::lab_proof::create_lab_proof;
@@ -201,11 +202,12 @@ pub fn remove_work_unit(db: &Database, plan: i64, unit: i64) -> Result<(), PlanE
 
 /// Gives the work unit `unit` of the plan `plan` in planning the
 /// `parameters` of the planner, and marks the cross references again. An
-/// empty list of proofs makes it a test of the documentation (`None`).
+/// empty list of proofs makes it a test of the documentation (`None`); the
+/// agent named must exist (`ai_agent`, the agent that will work on it).
 ///
 /// Called by: `panels/views/evaluation_plan/` (the form of a work unit).
-/// Calls: [`plan_in_planning`], `read_work_unit`, `update_work_unit`,
-/// `order::check_order`.
+/// Calls: [`plan_in_planning`], `read_agent`, `read_work_unit`,
+/// `update_work_unit`, `order::check_order`.
 pub fn update_work_unit_parameters(
     db: &Database,
     plan: i64,
@@ -215,6 +217,10 @@ pub fn update_work_unit_parameters(
     let stored = plan_in_planning(db, plan)?;
 
     ensure!(stored.work_units.contains(&unit), PlanError::Refused("the work unit is not one of the plan".to_owned()));
+
+    if let Some(agent) = parameters.ai_agent {
+        read_agent(db, agent)?;
+    }
 
     let changed = WorkUnit {
         dependencies: parameters.dependencies.clone(),
@@ -266,9 +272,11 @@ mod tests {
 
     use super::*;
 
+    use crate::db::ai::agent::create_agent;
+    use crate::db::ai::integration::create_integration;
     use crate::panels::logic::evaluation_plan::plans::{add_document_place, create_plan, update_plan};
     use crate::panels::logic::evaluation_plan::standards::import_standard;
-    use crate::test_support::database::database;
+    use crate::test_support::database::{agent, database, integration};
 
     const NIST_SAMPLE: &str = include_str!("../../../../oscal/examples/basic-catalog.json");
 
@@ -331,6 +339,30 @@ mod tests {
         let proof = add_proof_place(&db, plan, second, "Scan of the ports").unwrap();
 
         assert_eq!(read_work_unit(&db, second).unwrap().input_functional, Some(vec![proof]));
+    }
+
+    #[test]
+    fn a_work_unit_names_an_agent_that_exists() {
+        let (_directory, db) = database();
+        let (plan, standard) = plan_with_standard(&db);
+        let unit = add_work_unit(&db, plan, standard, "s1.1.1").unwrap();
+        let integration = create_integration(&db, &integration()).unwrap();
+        let worker = create_agent(&db, &agent(integration)).unwrap();
+        let named = |ai_agent: Option<i64>| WorkUnitParameters {
+            dependencies: Vec::new(),
+            input_product_documents: Vec::new(),
+            input_functional: Vec::new(),
+            ai_agent,
+            guidance: String::new(),
+        };
+
+        update_work_unit_parameters(&db, plan, unit, &named(Some(worker))).unwrap();
+
+        assert_eq!(read_work_unit(&db, unit).unwrap().ai_agent, Some(worker));
+        assert!(matches!(
+            update_work_unit_parameters(&db, plan, unit, &named(Some(worker + 1))),
+            Err(PlanError::Db(_))
+        ));
     }
 
     #[test]

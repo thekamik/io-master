@@ -15,6 +15,7 @@
 use serde::Serialize;
 use tauri::State;
 
+use crate::db::ai::agent::read_agents;
 use crate::db::database::Database;
 use crate::db::evaluation::lab_proof::read_lab_proof;
 use crate::db::evaluation::oscal_standard_document::read_oscal_standard_document;
@@ -58,6 +59,13 @@ pub struct ProofView {
     name: String,
 }
 
+/// An agent the work unit may name.
+#[derive(Serialize)]
+pub struct AgentChoiceView {
+    id: i64,
+    name: String,
+}
+
 /// A work unit, as its form shows it.
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -70,6 +78,8 @@ pub struct WorkUnitView {
     documents: Vec<i64>,
     proofs: Vec<ProofView>,
     ai_agent: Option<i64>,
+    /// Every agent of the user, to choose the one that works on the unit.
+    agents: Vec<AgentChoiceView>,
     cross_reference: bool,
 }
 
@@ -190,19 +200,25 @@ pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Re
     Ok(remove_work_unit(database(&opened)?, plan, unit)?)
 }
 
-/// The work unit `unit`, for its form, with the names of its proofs.
+/// The work unit `unit`, for its form, with the names of its proofs and
+/// every agent to choose from.
 ///
-/// Called by: `WorkUnitForm.svelte`, when a work unit is chosen.
-/// Calls: `read_work_unit`, `read_lab_proof`.
+/// Called by: `WorkUnitEditor.svelte`, when a work unit is opened.
+/// Calls: `read_work_unit`, `read_lab_proof`, `read_agents`.
 #[tauri::command]
 pub fn work_unit_get(session: State<'_, Session>, unit: i64) -> Result<WorkUnitView, ViewError> {
     let opened = session.lock()?;
     let db = database(&opened)?;
     let stored = read_work_unit(db, unit)?;
     let mut proofs = Vec::new();
+    let mut agents = Vec::new();
 
     for id in stored.input_functional.unwrap_or_default() {
         proofs.push(ProofView { id, name: read_lab_proof(db, id)?.name });
+    }
+
+    for agent in read_agents(db)? {
+        agents.push(AgentChoiceView { id: agent.id, name: agent.name });
     }
 
     Ok(WorkUnitView {
@@ -214,6 +230,7 @@ pub fn work_unit_get(session: State<'_, Session>, unit: i64) -> Result<WorkUnitV
         documents: stored.input_product_documents,
         proofs,
         ai_agent: stored.ai_agent,
+        agents,
         cross_reference: stored.cross_reference,
     })
 }
