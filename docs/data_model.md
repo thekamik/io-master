@@ -93,7 +93,9 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 - The `dependencies` of a work unit are work units of the same plan, each named once, never the work unit itself.
 - **A cross reference** is a cycle of dependencies (A depends on B, B on A, directly or through others), a mistake of the planner. The work units that close a cycle get `cross_reference = true`, and the plan with at least one of them `blocked = true`: it cannot be carried out until the planner corrects it. Both fields are set by one function after every change of the dependencies of a plan, so that they never disagree with them.
-- **The order of the work** comes from the same function (Kahn's algorithm, without recursion, each work unit and each dependency visited once): a work unit comes after all its dependencies, otherwise in the order of the standard.
+- **The order of the work** comes from the same function (Kahn's algorithm, without recursion): a work unit comes after all its dependencies, otherwise in the order of the plan. What Kahn's algorithm leaves depends on a cycle; the same algorithm backward on it leaves only the work units of the cycles themselves, which are the cross references (a work unit that only depends on a cycle is not marked). The function is `panels/logic/evaluation_plan/order.rs` (user, 2026-10-29: not a part of `db/`), called after every change of the work units of a plan; the copy of a plan into an evaluation is refused while the plan is blocked or a work unit is marked.
+- **A work unit is removed** only from a plan in planning (`delete_work_unit`, user 2026-10-29), with the dependencies of the others on it.
+- **A new work unit** is made from a control of a standard of its plan: its label, its key, the text of its statement (the requirement) and of its guidance; no documents, proofs or agent yet, which the planner gives (and later an agent that reads the standard, user 2026-10-29). A work unit becomes a functional test when the planner gives it a proof of the laboratory.
 
 ### 3.2 The verdict (user, 2026-10-28, as Common Criteria asks)
 

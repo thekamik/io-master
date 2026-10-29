@@ -268,6 +268,25 @@ fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), 
     Ok(())
 }
 
+/// Writes the dependencies of the work unit `id` anew, inside the
+/// transaction of its caller: the copy of a plan gives its work units their
+/// dependencies once every copy has its id.
+///
+/// Called by: `evaluation_plan.rs` (`create_evaluation`).
+/// Calls: `lists::write_ids`.
+pub(in crate::db) fn write_dependencies(connection: &Connection, id: i64, dependencies: &[i64]) -> Result<(), DbError> {
+    check_length(dependencies.len(), MAX_DEPENDENCIES, "dependencies of a work unit")?;
+    ensure!(!dependencies.contains(&id), DbError::Inconsistent("a work unit that depends on itself".to_owned()));
+
+    write_ids(
+        connection,
+        "DELETE FROM work_unit_dependencies WHERE work_unit = :owner",
+        "INSERT INTO work_unit_dependencies (work_unit, position, depends_on) VALUES (:owner, :position, :id)",
+        id,
+        dependencies,
+    )
+}
+
 /// Stores a new work unit as the last of the plan `plan` and gives its id,
 /// in one transaction with its lists. A new object has no id yet (`id`
 /// 0): the database gives it.

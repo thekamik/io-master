@@ -26,7 +26,9 @@ use crate::db::database::Database;
 use crate::db::error::DbError;
 use crate::db::evaluation::lab_proof::{insert_lab_proof, read_lab_proof};
 use crate::db::evaluation::product_document::{insert_product_document, read_product_document};
-use crate::db::evaluation::work_unit::{MAX_WORK_UNITS, insert_work_unit, read_work_units, verdict_name, verdict_of};
+use crate::db::evaluation::work_unit::{
+    MAX_WORK_UNITS, insert_work_unit, read_work_units, verdict_name, verdict_of, write_dependencies,
+};
 use crate::db::lists::{check_length, position, read_ids, write_ids};
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::lab_proof::LabProof;
@@ -396,72 +398,6 @@ pub fn update_evaluation_plan(db: &Database, plan: &EvaluationPlan) -> Result<()
     Ok(())
 }
 
-/// The order in which the work units of a plan can be carried out: each
-/// after all its dependencies, otherwise in the order of the plan (Kahn's
-/// algorithm, without recursion: each work unit is taken once, and each
-/// taking looks once at every work unit). Gives the positions in `units`;
-/// a cross reference (a cycle of dependencies) leaves work units that can
-/// never be taken, and is refused with their labels.
-///
-/// Called by: [`create_evaluation`], which checks a plan again before it
-/// is copied (user, 2026-10-28).
-fn work_order(units: &[WorkUnit]) -> Result<Vec<usize>, DbError> {
-    let mut waiting: Vec<usize> = Vec::with_capacity(units.len());
-
-    for unit in units {
-        waiting.push(unit.dependencies.len());
-    }
-
-    let mut order: Vec<usize> = Vec::with_capacity(units.len());
-
-    for (index, count) in waiting.iter().enumerate() {
-        if *count == 0 {
-            order.push(index);
-        }
-    }
-
-    for taken in 0..units.len() {
-        let Some(&index) = order.get(taken) else { break };
-        let Some(taken_unit) = units.get(index) else { break };
-        let id = taken_unit.id;
-
-        for (other, unit) in units.iter().enumerate() {
-            if unit.dependencies.contains(&id)
-                && let Some(count) = waiting.get_mut(other)
-            {
-                *count = count.saturating_sub(1);
-
-                if *count == 0 {
-                    order.push(other);
-                }
-            }
-        }
-    }
-
-    ensure!(
-        order.len() == units.len(),
-        DbError::Inconsistent(format!("a cross reference: {}", left_over(units, &order)))
-    );
-
-    Ok(order)
-}
-
-/// The labels of the work units `order` does not hold: those in a cycle of
-/// dependencies, and those behind it.
-///
-/// Called by: [`work_order`].
-fn left_over(units: &[WorkUnit], order: &[usize]) -> String {
-    let mut labels = Vec::new();
-
-    for (index, unit) in units.iter().enumerate() {
-        if !order.contains(&index) {
-            labels.push(unit.label.as_str());
-        }
-    }
-
-    labels.join(", ")
-}
-
 /// The new id of `old` in the pairs (old id, new id) of a copy.
 ///
 /// Called by: [`copied_unit`], [`create_evaluation`].
@@ -498,8 +434,8 @@ struct Copies {
 }
 
 /// The work unit `unit` of a plan as it is copied into an evaluation: no
-/// id yet, its dependencies, documents, proofs and quotes named by their
-/// copies.
+/// id yet, its documents, proofs and quotes named by their copies (its
+/// dependencies are given by the caller, once every copy has its id).
 ///
 /// Called by: [`create_evaluation`].
 fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
@@ -514,7 +450,6 @@ fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
 
     Ok(WorkUnit {
         id: 0,
-        dependencies: all_mapped(&copies.units, &unit.dependencies)?,
         input_product_documents: all_mapped(&copies.documents, &unit.input_product_documents)?,
         input_functional: match &unit.input_functional {
             Some(proofs) => Some(all_mapped(&copies.proofs, proofs)?),
@@ -561,17 +496,19 @@ fn copied_places(
     Ok(copies)
 }
 
-/// Begins an evaluation: copies the plan `source` (in planning, not
-/// blocked, checked again for cross references) in one transaction, as
-/// the evaluation of `product` for `client` by `evaluator`, begun at
-/// `started`. The copy has its own places of the documents and proofs and
-/// its own work units, in the order of the plan, their dependencies on
-/// each other; the plan stays as it was. Gives the id of the evaluation.
+/// Begins an evaluation: copies the plan `source` (in planning, neither
+/// blocked nor with a cross reference, as `panels/logic/evaluation_plan/order.rs`
+/// marks them) in one transaction, as the evaluation of `product` for
+/// `client` by `evaluator`, begun at `started`. The copy has its own places
+/// of the documents and proofs and its own work units, in the order of the
+/// plan: first written without their dependencies, then given them by their
+/// new ids, so that the order of the writing does not matter. The plan
+/// stays as it was. Gives the id of the evaluation.
 ///
 /// Called by: nothing yet (the view of the evaluation, user 2026-10-28).
-/// Calls: [`read_evaluation_plan`], `read_work_units`, [`work_order`],
-/// [`copied_places`], [`insert_plan`], [`copied_unit`], `insert_work_unit`,
-/// [`order_work_units`].
+/// Calls: [`read_evaluation_plan`], `read_work_units`, [`copied_places`],
+/// [`insert_plan`], [`copied_unit`], `insert_work_unit`,
+/// `write_dependencies`.
 pub fn create_evaluation(
     db: &Database,
     source: i64,
@@ -586,7 +523,13 @@ pub fn create_evaluation(
     ensure!(plan.state == PlanState::Plan, DbError::Inconsistent("only a plan in planning is copied".to_owned()));
     ensure!(!plan.blocked, DbError::Inconsistent("a blocked plan is not copied".to_owned()));
 
-    let order = work_order(&units)?;
+    for unit in &units {
+        ensure!(
+            !unit.cross_reference,
+            DbError::Inconsistent(format!("a plan with a cross reference is not copied ({})", unit.label))
+        );
+    }
+
     let transaction = db.connection().unchecked_transaction()?;
     let mut copies = copied_places(db, &transaction, &plan, &units)?;
     let evaluation = EvaluationPlan {
@@ -604,20 +547,20 @@ pub fn create_evaluation(
     };
     let id = insert_plan(&transaction, &evaluation)?;
 
-    for index in order {
-        let Some(unit) = units.get(index) else { continue };
-        let new = insert_work_unit(&transaction, id, &copied_unit(unit, &copies)?)?;
+    for unit in &units {
+        let alone = WorkUnit { dependencies: Vec::new(), ..copied_unit(unit, &copies)? };
 
-        copies.units.push((unit.id, new));
+        copies.units.push((unit.id, insert_work_unit(&transaction, id, &alone)?));
     }
-
-    let mut in_plan_order = Vec::with_capacity(units.len());
 
     for unit in &units {
-        in_plan_order.push(mapped(&copies.units, unit.id)?);
+        write_dependencies(
+            &transaction,
+            mapped(&copies.units, unit.id)?,
+            &all_mapped(&copies.units, &unit.dependencies)?,
+        )?;
     }
 
-    order_work_units(&transaction, id, &in_plan_order)?;
     transaction.commit()?;
 
     Ok(id)
@@ -773,27 +716,28 @@ mod tests {
     }
 
     #[test]
-    fn a_cross_reference_a_blocked_plan_and_an_evaluation_are_not_copied() {
+    fn a_dependency_on_a_later_work_unit_is_copied_and_a_marked_plan_is_not() {
         let (_directory, db) = database();
-        let (source, first, second) = plan_with_units(&db);
-        let mut back = read_work_unit(&db, second).unwrap();
+        let (source, first, _second) = plan_with_units(&db);
+        let evaluation = create_evaluation(&db, source, "R7", "ACME", "K. K.", 0).unwrap();
 
-        back.dependencies = vec![first];
-        update_work_unit(&db, &back).unwrap();
+        assert_eq!(read_work_units(&db, evaluation).unwrap().len(), 2);
 
-        let refused = create_evaluation(&db, source, "R7", "ACME", "K. K.", 0).unwrap_err().to_string();
+        let mut crossed = read_work_unit(&db, first).unwrap();
 
-        assert!(refused.contains("cross reference") && refused.contains("ASE_INT.1-1"), "{refused}");
+        crossed.cross_reference = true;
+        update_work_unit(&db, &crossed).unwrap();
+
+        assert!(matches!(create_evaluation(&db, source, "R7", "ACME", "K. K.", 0), Err(DbError::Inconsistent(_))));
+
+        crossed.cross_reference = false;
+        update_work_unit(&db, &crossed).unwrap();
 
         let blocked = EvaluationPlan { blocked: true, ..read_evaluation_plan(&db, source).unwrap() };
 
         update_evaluation_plan(&db, &blocked).unwrap();
 
         assert!(matches!(create_evaluation(&db, source, "R7", "ACME", "K. K.", 0), Err(DbError::Inconsistent(_))));
-
-        let other = create_evaluation_plan(&db, &plan(&db)).unwrap();
-        let evaluation = create_evaluation(&db, other, "R7", "ACME", "K. K.", 0).unwrap();
-
         assert!(matches!(create_evaluation(&db, evaluation, "R8", "ACME", "K. K.", 0), Err(DbError::Inconsistent(_))));
     }
 }

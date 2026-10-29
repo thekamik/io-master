@@ -69,6 +69,10 @@ Only what the page calls (user, 2026-10-28): one folder per part of the window, 
 
 What every command shares (user, 2026-10-28), kept by Tauri: the data folder (`data_folder.rs`: `$XDG_DATA_HOME/io-master` or `~/.local/share/io-master`) and, behind a lock, the user logged in with their open database (`state.rs`), the only global state of the program. The database is opened at the login and closed at the logout and at every end of the program (`main.rs`, `RunEvent::Exit`).
 
+### 2.2b `panels/logic/evaluation_plan/`: the making of a plan
+
+The backend of the panel of the plan (user, 2026-10-29), without SQL: `oscal.rs` (an OSCAL catalog checked against the schema of NIST built into the program, and its controls in the order of the document, the tree walked with an explicit stack), `standards.rs` (`import_standard`), `plans.rs` (`create_plan` with the verdicts of Common Criteria, `update_plan` only in planning and never taking away a standard or a document a work unit uses, `add_document_place`), `work_units.rs` (`add_work_unit`, `add_all_work_units`, `remove_work_unit`, `update_work_unit_parameters`, `add_proof_place`), `order.rs` (Kahn's algorithm: the order of the work, the cross references, `blocked`, marked after every change of the work units), `error.rs` (`PlanError`).
+
 ### 2.2a `panels/logic/program_start/`: the account
 
 The backend of the panel of the first start and the login (user, 2026-10-28), also of the recovery of a forgotten password, which starts at the login; without SQL: `access.rs` (the first start: the data folder, `system.v2.db`, the installation, the user, the two copies of the key, the database of the user, the recovery code given once; the login: the key unwrapped with the password, the database opened; a wrong password and an unknown name fail the same way; a first start that fails half way removes the files it made). The building blocks, moved unchanged from the earlier program and audited by the user later: `keys.rs` (the password, Argon2id, AES-256-GCM), `recovery.rs` and `recovery_code.rs` (the recovery code), `generate_key.rs` (the random key). A copy of the key is bound to the id of its user, which never changes.
@@ -153,6 +157,13 @@ db/
     user_keys.rs                 The keys of the database of a user (`UserKeys`), in the table
 panels/
   logic/
+    evaluation_plan/
+      error.rs                     The error of the making of a plan: a document that is no catalog, a
+      order.rs                     The order of the work of a plan and its cross references (user,
+      oscal.rs                     The OSCAL catalogs of the standards, read for the plan: a document
+      plans.rs                     The plans in planning: a new plan, its data changed by the planner
+      standards.rs                 The standards of the plans: an OSCAL catalog imported by the user,
+      work_units.rs                The work units of a plan in planning: added from a control of one of the
     program_start/
       access.rs                    The account of the user: the first start (the installation, the user,
       generate_key.rs              Generating the key that encrypts the database.

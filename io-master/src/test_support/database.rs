@@ -99,3 +99,28 @@ pub fn agent(integration: i64) -> Agent {
         max_characters: 12_000,
     }
 }
+
+/// A work unit `id` depending on `dependencies`, never stored: for the
+/// tests of the order of the work alone.
+pub fn node(id: i64, dependencies: &[i64]) -> WorkUnit {
+    WorkUnit {
+        id,
+        reference: 1,
+        label: format!("WU {id}"),
+        oscal_key: format!("wu-{id}"),
+        requirement: String::new(),
+        guidance: String::new(),
+        dependencies: dependencies.to_vec(),
+        cross_reference: false,
+        input_product_documents: Vec::new(),
+        input_functional: None,
+        ai_agent: None,
+        findings: String::new(),
+        analysis: String::new(),
+        vulnerability_notes: String::new(),
+        notes: String::new(),
+        quotes: Vec::new(),
+        verdict: None,
+        author: None,
+    }
+}
