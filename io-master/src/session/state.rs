@@ -14,8 +14,14 @@
 //! This is the only global state of the program (rule 6 of CLAUDE.md): the
 //! commands run each on its own, and the session is how they find the open
 //! database. The lock makes two commands use it one after the other.
+//!
+//! Besides, the session knows whether a long work of the AI runs ("Fill
+//! with AI", user 2026-10-29), so that only one runs at a time, and whether
+//! the user asked it to stop: the work holds the lock only for its short
+//! steps, and "Stop" is another command.
 
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
 use crate::db::database::Database;
@@ -31,6 +37,20 @@ pub struct Opened {
 pub struct Session {
     data_folder: PathBuf,
     opened: Mutex<Option<Opened>>,
+    /// A long work of the AI runs.
+    working: AtomicBool,
+    /// The user asked the long work to stop.
+    stop: AtomicBool,
+}
+
+/// A long work of the AI that runs; when it is dropped, however the work
+/// ends, the session knows it no more runs.
+pub struct Work<'session>(&'session Session);
+
+impl Drop for Work<'_> {
+    fn drop(&mut self) {
+        self.0.working.store(false, Ordering::SeqCst);
+    }
 }
 
 /// The lock of the session could not be taken: a command failed while it
@@ -44,7 +64,7 @@ impl Session {
     ///
     /// Called by: `main.rs` (the start of the window).
     pub fn new(data_folder: PathBuf) -> Session {
-        Session { data_folder, opened: Mutex::new(None) }
+        Session { data_folder, opened: Mutex::new(None), working: AtomicBool::new(false), stop: AtomicBool::new(false) }
     }
 
     /// The data folder of the program.
@@ -72,6 +92,34 @@ impl Session {
         *self.lock()? = Some(Opened { user, database });
 
         Ok(())
+    }
+
+    /// Begins a long work of the AI: `None` when one runs already. The
+    /// request to stop of an earlier work is forgotten.
+    ///
+    /// Called by: `panels/views/evaluation_plan/fill.rs` (`plan_fill`).
+    pub fn begin_work(&self) -> Option<Work<'_>> {
+        if self.working.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+            return None;
+        }
+
+        self.stop.store(false, Ordering::SeqCst);
+
+        Some(Work(self))
+    }
+
+    /// Asks the long work that runs to stop after its present step.
+    ///
+    /// Called by: `panels/views/evaluation_plan/fill.rs` (`plan_fill_stop`).
+    pub fn request_stop(&self) {
+        self.stop.store(true, Ordering::SeqCst);
+    }
+
+    /// Whether the user asked the long work to stop.
+    ///
+    /// Called by: `panels/views/evaluation_plan/fill.rs` (before each step).
+    pub fn stop_requested(&self) -> bool {
+        self.stop.load(Ordering::SeqCst)
     }
 
     /// Ends the session: the database is closed, nobody is logged in.
@@ -110,5 +158,20 @@ mod tests {
 
         assert!(session.lock().unwrap().is_none());
         assert_eq!(session.data_folder(), directory.path());
+    }
+
+    #[test]
+    fn one_long_work_runs_at_a_time_and_can_be_asked_to_stop() {
+        let session = Session::new(std::path::PathBuf::from("/nowhere"));
+        let work = session.begin_work();
+
+        assert!(work.is_some() && session.begin_work().is_none());
+
+        session.request_stop();
+        assert!(session.stop_requested());
+
+        drop(work);
+
+        assert!(session.begin_work().is_some() && !session.stop_requested());
     }
 }

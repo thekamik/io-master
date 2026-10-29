@@ -15,9 +15,8 @@
 
 use serde::{Deserialize, Serialize};
 use tauri::State;
-use tokio::sync::mpsc;
 
-use crate::ai::ask::{Prepared, Sent, record, send};
+use crate::ai::ask::record;
 use crate::db::ai::integration::read_integrations;
 use crate::db::user::program_data::read_settings;
 use crate::model::ai::integration::{Integration, Protocol};
@@ -25,6 +24,7 @@ use crate::model::ai::journal::Ending;
 use crate::panels::logic::settings::integrations::{
     activate_integration, add_integration, change_integration, check_question, has_key, set_key,
 };
+use crate::panels::views::answer::send_drained;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;
@@ -36,10 +36,6 @@ const MAX_FIELD: usize = 2048;
 /// The longest CA certificate from the page, in bytes: a chain of a few
 /// certificates.
 const MAX_CERTIFICATE: usize = 64 * 1024;
-
-/// The most pieces of an answer the check drains: every piece has at least
-/// one byte of the stream, whose limit is 32 MiB (`ai/client.rs`).
-const MAX_PIECES: usize = 32 * 1024 * 1024;
 
 /// An integration, as the page lists it. The key is never in it: only
 /// whether there is one.
@@ -223,32 +219,12 @@ pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) ->
     Ok(set_key(database(&opened)?, id, &key)?)
 }
 
-/// Sends the prepared question and drains the pieces of its answer: the
-/// check shows the whole text at once. Uses no database.
-///
-/// Called by: [`integration_check`].
-/// Calls: `ask::send`.
-async fn send_drained(prepared: &Prepared) -> Sent {
-    let (pieces, mut receiver) = mpsc::channel::<String>(64);
-    let sending = async move { send(prepared, &pieces).await };
-    let draining = async move {
-        for _ in 0..MAX_PIECES {
-            if receiver.recv().await.is_none() {
-                break;
-            }
-        }
-    };
-    let (sent, ()) = tokio::join!(sending, draining);
-
-    sent
-}
-
 /// Checks the integration `id` with one short question. It has no agent, so
 /// it is not kept in a journal. The lock of the session is released while
 /// the answer is awaited, so the window stays usable.
 ///
 /// Called by: `Integrations.svelte`, "Check the connection".
-/// Calls: `check_question`, [`send_drained`], `ask::record`.
+/// Calls: `check_question`, `answer::send_drained`, `ask::record`.
 #[tauri::command]
 pub async fn integration_check(session: State<'_, Session>, id: i64) -> Result<CheckView, ViewError> {
     let prepared = {

@@ -169,6 +169,7 @@ mod panels {
         }
     }
     pub mod views {
+        pub mod answer;
         pub mod error;
         pub mod opened;
         // panels/views/agents/: the agents, the knowledge bases and their
@@ -181,6 +182,7 @@ mod panels {
         // panels/views/evaluation_plan/: the standards, the plans in
         // planning, their work units.
         pub mod evaluation_plan {
+            pub mod fill;
             pub mod plans;
             pub mod standards;
             pub mod work_units;
@@ -283,6 +285,8 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation_plan::work_units::work_unit_get,
             panels::views::evaluation_plan::work_units::work_unit_save,
             panels::views::evaluation_plan::work_units::work_unit_add_proof,
+            panels::views::evaluation_plan::fill::plan_fill,
+            panels::views::evaluation_plan::fill::plan_fill_stop,
             panels::views::settings::integrations::integration_list,
             panels::views::settings::integrations::integration_create,
             panels::views::settings::integrations::integration_save,

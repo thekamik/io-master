@@ -94,11 +94,13 @@ Only what the page calls (user, 2026-10-28): one folder per part of the window, 
 - `agents/knowledge.rs`: `knowledge_base_list`, `knowledge_base_create`, `knowledge_base_save`, `knowledge_source_list` (without the texts), `knowledge_source_add` and `knowledge_source_replace` (a `.txt`, `.md` or `.pdf` file chosen in the dialog of the system opened in Rust), `knowledge_source_rename`, `knowledge_search` (the passages of one base).
 - `agents/journal.rs`: `agent_journal_list` (the entries of one agent, pages of 50, the newest first), `agent_journal_get` (the request and the answer); the journal is only read.
 - `settings/integrations.rs`: `integration_list` (the active one, whether each has a key; never the key), `integration_create`, `integration_save` (the form as one structure), `integration_activate`, `integration_set_key` (the key goes in only), `integration_check` (one short question through `ai/`, the lock released while the answer is awaited; not kept in a journal).
+- `evaluation_plan/fill.rs`: `plan_fill` ("Fill with AI": every work unit of the plan in its order; for each, the question prepared under the lock of the session, sent without it, the answer written into the journal of the agent of the planner and its proposal into the work unit under it again; each step sent to the page through a channel of Tauri; a work unit not filled is told and passed over), `plan_fill_stop` (the filling ends after its present work unit). One filling at a time (`Session::begin_work`).
+- `answer.rs`: the answer of the AI awaited whole (`send_drained`), for `integration_check` and `plan_fill`.
 - `opened.rs`: the open database of the session for a command, or "nobody is logged in"; the lock of the session is held for the whole command (except `integration_check`, which releases it while the AI answers).
 
 ### 2.1b `session/`: the session
 
-What every command shares (user, 2026-10-28), kept by Tauri: the data folder (`data_folder.rs`: `$XDG_DATA_HOME/io-master` or `~/.local/share/io-master`) and, behind a lock, the user logged in with their open database (`state.rs`), the only global state of the program. The database is opened at the login and closed at the logout and at every end of the program (`main.rs`, `RunEvent::Exit`).
+What every command shares (user, 2026-10-28), kept by Tauri: whether a long work of the AI runs and whether the user asked it to stop (`Work`, `begin_work`, `request_stop`; user 2026-10-29, "Fill with AI"); the data folder (`data_folder.rs`: `$XDG_DATA_HOME/io-master` or `~/.local/share/io-master`) and, behind a lock, the user logged in with their open database (`state.rs`), the only global state of the program. The database is opened at the login and closed at the logout and at every end of the program (`main.rs`, `RunEvent::Exit`).
 
 ### 2.2b `panels/logic/evaluation_plan/`: the making of a plan
 
@@ -216,6 +218,7 @@ panels/
       error.rs                     The error of the settings of the AI: a change refused, an integration
       integrations.rs              The integrations with AI services, as the settings of the AI change
   views/
+    answer.rs                    The answer of the AI as a command awaits it whole: the prepared question
     error.rs                     The error of a command, as the page gets it:
     opened.rs                    The open database of the user logged in, as every command of a panel
     agents/
@@ -223,6 +226,7 @@ panels/
       journal.rs                   The journal of an agent, as the page reads it: one page of its entries,
       knowledge.rs                 The knowledge bases of the panel of the agents, as the page calls them:
     evaluation_plan/
+      fill.rs                      "Fill with AI", as the page calls it (user, 2026-10-29): the agent of
       plans.rs                     The plans of the panel of the plan, as the page calls them: the list of
       standards.rs                 The standards of the panel of the plan, as the page calls them: their
       work_units.rs                The work units of the panel of the plan, as the page calls them: the list

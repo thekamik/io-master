@@ -30,6 +30,8 @@ fn main() {
         "work_unit_get",
         "work_unit_save",
         "work_unit_add_proof",
+        "plan_fill",
+        "plan_fill_stop",
         "integration_list",
         "integration_create",
         "integration_save",
