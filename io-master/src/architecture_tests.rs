@@ -49,7 +49,8 @@ const ALLOWED: [(&str, &[&str]); 8] = [
     // another (in one direction: chat and evaluation use rag and
     // evaluation_plan, never the other way). It gets the open database as a
     // parameter and never reaches the session.
-    ("panels::logic", &["ai", "db", "model", "security"]),
+    // The sources of the knowledge of an agent are read from PDFs too.
+    ("panels::logic", &["ai", "db", "model", "security", "pdf"]),
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
     // The commands of the page: they do their work with the folders below.

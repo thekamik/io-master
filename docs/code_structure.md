@@ -90,6 +90,9 @@ Only what the page calls (user, 2026-10-28): one folder per part of the window, 
 - `evaluation_plan/standards.rs`: `standard_list`, `standard_import` (the dialog of the system opened in Rust, the file read within its limit; the page never sees a path).
 - `evaluation_plan/plans.rs`: `plan_list` (the plans in planning), `plan_create`, `plan_get`, `plan_save`, `plan_add_document`.
 - `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls` (the controls a plan does not hold yet), `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`.
+- `agents/agent.rs`: `agent_list`, `agent_create` (a name and an integration), `agent_get` (the agent with every integration and knowledge base to choose), `agent_save` (the form as one structure), `agent_knowledge_test` (the passages the agent would give with a question; nothing is sent to an AI service).
+- `agents/knowledge.rs`: `knowledge_base_list`, `knowledge_base_create`, `knowledge_base_save`, `knowledge_source_list` (without the texts), `knowledge_source_add` and `knowledge_source_replace` (a `.txt`, `.md` or `.pdf` file chosen in the dialog of the system opened in Rust), `knowledge_source_rename`, `knowledge_search` (the passages of one base).
+- `agents/journal.rs`: `agent_journal_list` (the entries of one agent, pages of 50, the newest first), `agent_journal_get` (the request and the answer); the journal is only read.
 - `settings/integrations.rs`: `integration_list` (the active one, whether each has a key; never the key), `integration_create`, `integration_save` (the form as one structure), `integration_activate`, `integration_set_key` (the key goes in only), `integration_check` (one short question through `ai/`, the lock released while the answer is awaited; not kept in a journal).
 - `opened.rs`: the open database of the session for a command, or "nobody is logged in"; the lock of the session is held for the whole command (except `integration_check`, which releases it while the AI answers).
 
@@ -104,6 +107,10 @@ The backend of the panel of the plan (user, 2026-10-29), without SQL: `oscal.rs`
 ### 2.2d `panels/logic/settings/`: the settings of the AI
 
 The backend of the panel "AI settings", which handles only the model `Integration` (user, 2026-10-29), without SQL: `integrations.rs` (an integration checked before it is stored: a name, an address and a CA certificate `ai/` accepts, a model, a context of 512 tokens at least; the first one made becomes the active one; the key stored trimmed and bound to the present address, replaced by a new one, never read back but as "has a key"; `check_question`, the question that checks an integration), `error.rs` (`SettingsError`).
+
+### 2.2e `panels/logic/agents/`: the agents and their knowledge
+
+The backend of the panel "Agents" (user, 2026-10-29), which handles the models `Agent`, `KnowledgeBase` and `Source`, reads `JournalEntry` (the journal of an agent) and `Integration` (to choose one), without SQL. An agent is a layer of knowledge over the model of an integration; it is changed freely until its answers are good enough. `agent.rs` (`new_agent` with default instructions and limits; `change_agent`, checked: an integration and bases that exist, each base once, the glossary trimmed with its empty rows taken out, the limits in their ranges; `agent_knowledge`, **the knowledge an agent gives with a question**: the question widened by the meanings of the terms of its glossary it names, the passages of its bases that fit best, at most `max_passages`, as many as fit whole in `max_characters`, the same in the test of the panel and in an evaluation), `knowledge.rs` (the bases, shared by the agents; a source from a `.txt` or `.md` file in UTF-8 or a `.pdf` read through `pdf/` by parts of pages; its text replaced by a newer file or its name changed, never removed; the search in one base), `error.rs` (`AgentError`). It is the only panel of `panels/logic/` that uses `pdf/`.
 
 ### 2.2a `panels/logic/program_start/`: the account
 
@@ -187,6 +194,10 @@ db/
     user_keys.rs                 The keys of the database of a user (`UserKeys`), in the table
 panels/
   logic/
+    agents/
+      agent.rs                     The agents, as their panel makes and changes them, and the knowledge an
+      error.rs                     The error of the panel of the agents: a change refused, a file of a
+      knowledge.rs                 The knowledge bases and their sources, as the panel of the agents makes
     evaluation_plan/
       error.rs                     The error of the making of a plan: a document that is no catalog, a
       order.rs                     The order of the work of a plan and its cross references (user,
@@ -206,6 +217,10 @@ panels/
   views/
     error.rs                     The error of a command, as the page gets it:
     opened.rs                    The open database of the user logged in, as every command of a panel
+    agents/
+      agent.rs                     The agents of the panel of the agents, as the page calls them: the list,
+      journal.rs                   The journal of an agent, as the page reads it: one page of its entries,
+      knowledge.rs                 The knowledge bases of the panel of the agents, as the page calls them:
     evaluation_plan/
       plans.rs                     The plans of the panel of the plan, as the page calls them: the list of
       standards.rs                 The standards of the panel of the plan, as the page calls them: their

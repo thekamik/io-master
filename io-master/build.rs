@@ -36,6 +36,21 @@ fn main() {
         "integration_activate",
         "integration_set_key",
         "integration_check",
+        "agent_list",
+        "agent_create",
+        "agent_get",
+        "agent_save",
+        "agent_knowledge_test",
+        "knowledge_base_list",
+        "knowledge_base_create",
+        "knowledge_base_save",
+        "knowledge_source_list",
+        "knowledge_source_add",
+        "knowledge_source_replace",
+        "knowledge_source_rename",
+        "knowledge_search",
+        "agent_journal_list",
+        "agent_journal_get",
     ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))

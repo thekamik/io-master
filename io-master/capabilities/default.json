@@ -30,6 +30,21 @@
     "allow-integration-save",
     "allow-integration-activate",
     "allow-integration-set-key",
-    "allow-integration-check"
+    "allow-integration-check",
+    "allow-agent-list",
+    "allow-agent-create",
+    "allow-agent-get",
+    "allow-agent-save",
+    "allow-agent-knowledge-test",
+    "allow-knowledge-base-list",
+    "allow-knowledge-base-create",
+    "allow-knowledge-base-save",
+    "allow-knowledge-source-list",
+    "allow-knowledge-source-add",
+    "allow-knowledge-source-replace",
+    "allow-knowledge-source-rename",
+    "allow-knowledge-search",
+    "allow-agent-journal-list",
+    "allow-agent-journal-get"
   ]
 }

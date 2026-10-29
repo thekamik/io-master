@@ -130,6 +130,14 @@ mod session {
 // gets the open database as a parameter and never reaches the session).
 mod panels {
     pub mod logic {
+        // panels/logic/agents/: the agents (a layer of knowledge over the
+        // model of an integration), the knowledge an agent gives with a
+        // question, the knowledge bases and their sources (txt, md, pdf).
+        pub mod agents {
+            pub mod agent;
+            pub mod error;
+            pub mod knowledge;
+        }
         // panels/logic/evaluation_plan/: the making of a plan: the standards
         // checked against the schema of NIST and read, the plans, their work
         // units, the order of the work and the cross references.
@@ -162,6 +170,13 @@ mod panels {
     pub mod views {
         pub mod error;
         pub mod opened;
+        // panels/views/agents/: the agents, the knowledge bases and their
+        // sources, the journal of an agent.
+        pub mod agents {
+            pub mod agent;
+            pub mod journal;
+            pub mod knowledge;
+        }
         // panels/views/evaluation_plan/: the standards, the plans in
         // planning, their work units.
         pub mod evaluation_plan {
@@ -273,6 +288,21 @@ fn tauri_startup() -> ExitCode {
             panels::views::settings::integrations::integration_activate,
             panels::views::settings::integrations::integration_set_key,
             panels::views::settings::integrations::integration_check,
+            panels::views::agents::agent::agent_list,
+            panels::views::agents::agent::agent_create,
+            panels::views::agents::agent::agent_get,
+            panels::views::agents::agent::agent_save,
+            panels::views::agents::agent::agent_knowledge_test,
+            panels::views::agents::knowledge::knowledge_base_list,
+            panels::views::agents::knowledge::knowledge_base_create,
+            panels::views::agents::knowledge::knowledge_base_save,
+            panels::views::agents::knowledge::knowledge_source_list,
+            panels::views::agents::knowledge::knowledge_source_add,
+            panels::views::agents::knowledge::knowledge_source_replace,
+            panels::views::agents::knowledge::knowledge_source_rename,
+            panels::views::agents::knowledge::knowledge_search,
+            panels::views::agents::journal::agent_journal_list,
+            panels::views::agents::journal::agent_journal_get,
         ])
         .build(tauri::generate_context!());
 
