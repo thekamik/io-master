@@ -120,6 +120,13 @@ mod session {
 // gets the open database as a parameter and never reaches the session).
 mod panels {
     pub mod logic {
+        // panels/logic/evaluation_plan/: the making of a plan: the standards
+        // checked against the schema of NIST and read, the plans, their work
+        // units, the order of the work and the cross references.
+        #[allow(dead_code, reason = "called by the views of the plan, which come next (2026-10-29)")]
+        pub mod evaluation_plan {
+            pub mod oscal;
+        }
         // panels/logic/program_start/: the first start, the login and the
         // recovery of a forgotten password; the password and the recovery
         // code that wrap the key of the database (moved unchanged from the
