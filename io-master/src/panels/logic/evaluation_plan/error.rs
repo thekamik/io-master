@@ -5,6 +5,7 @@
 use std::fmt;
 
 use crate::db::error::DbError;
+use crate::panels::logic::agents::error::AgentError;
 use crate::panels::logic::evaluation_plan::oscal::OscalError;
 
 /// Why a step of the making of a plan was refused or failed.
@@ -17,6 +18,8 @@ pub enum PlanError {
     Refused(String),
     /// A database failed, or refused what was given to it.
     Db(DbError),
+    /// The knowledge of the agent of the planner could not be read.
+    Knowledge(AgentError),
 }
 
 impl fmt::Display for PlanError {
@@ -25,6 +28,7 @@ impl fmt::Display for PlanError {
             PlanError::Oscal(error) => write!(formatter, "{error}"),
             PlanError::Refused(reason) => formatter.write_str(reason),
             PlanError::Db(error) => write!(formatter, "{error}"),
+            PlanError::Knowledge(error) => write!(formatter, "{error}"),
         }
     }
 }
@@ -34,6 +38,12 @@ impl std::error::Error for PlanError {}
 impl From<OscalError> for PlanError {
     fn from(error: OscalError) -> PlanError {
         PlanError::Oscal(error)
+    }
+}
+
+impl From<AgentError> for PlanError {
+    fn from(error: AgentError) -> PlanError {
+        PlanError::Knowledge(error)
     }
 }
 

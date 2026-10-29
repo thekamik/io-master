@@ -102,7 +102,7 @@ What every command shares (user, 2026-10-28), kept by Tauri: the data folder (`d
 
 ### 2.2b `panels/logic/evaluation_plan/`: the making of a plan
 
-The backend of the panel of the plan (user, 2026-10-29), without SQL: `oscal.rs` (an OSCAL catalog checked against the schema of NIST built into the program, and its controls in the order of the document, the tree walked with an explicit stack), `standards.rs` (`import_standard`), `plans.rs` (`create_plan` with the verdicts of Common Criteria, `update_plan` only in planning and never taking away a standard or a document a work unit uses, `add_document_place`), `work_units.rs` (`add_work_unit`, `add_all_work_units`, `remove_work_unit`, `update_work_unit_parameters` (the agent named must exist), `add_proof_place`), `order.rs` (Kahn's algorithm: the order of the work, the cross references, `blocked`, marked after every change of the work units), `error.rs` (`PlanError`).
+The backend of the panel of the plan (user, 2026-10-29), without SQL: `oscal.rs` (an OSCAL catalog checked against the schema of NIST built into the program, and its controls in the order of the document, the tree walked with an explicit stack), `standards.rs` (`import_standard`), `plans.rs` (`create_plan` with the verdicts of Common Criteria, `update_plan` only in planning and never taking away a standard or a document a work unit uses, `add_document_place`), `work_units.rs` (`add_work_unit`, `add_all_work_units`, `remove_work_unit`, `update_work_unit_parameters` (the agent named must exist), `add_proof_place`), `fill.rs` ("Fill with AI", user 2026-10-29: the agent of the planner proposes every parameter of each work unit, in the order of the plan, over what was there; `fill_units`, refused without an agent of the planner; `fill_question`, the instructions of the agent and the task with its knowledge, the work unit with its parameters now, the labels of the plan, the documents and the agents; `read_proposal`, the JSON object of the answer; `apply_proposal`, only the names the plan and the user hold, a dependency that would close a cycle left out (also on a work unit not filled yet), a proof of the same name kept, a note for everything left out), `order.rs` (Kahn's algorithm: the order of the work, the cross references, `blocked`, marked after every change of the work units), `error.rs` (`PlanError`).
 
 ### 2.2d `panels/logic/settings/`: the settings of the AI
 
@@ -200,6 +200,7 @@ panels/
       knowledge.rs                 The knowledge bases and their sources, as the panel of the agents makes
     evaluation_plan/
       error.rs                     The error of the making of a plan: a document that is no catalog, a
+      fill.rs                      "Fill with AI" (user, 2026-10-29): the agent of the planner of a plan
       order.rs                     The order of the work of a plan and its cross references (user,
       oscal.rs                     The OSCAL catalogs of the standards, read for the plan: a document
       plans.rs                     The plans in planning: a new plan, its data changed by the planner

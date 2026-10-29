@@ -111,7 +111,7 @@ impl ViewError {
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
-            | ViewError::Plan(PlanError::Db(_))
+            | ViewError::Plan(PlanError::Db(_) | PlanError::Knowledge(_))
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
             | ViewError::Ai(_)
