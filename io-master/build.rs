@@ -30,6 +30,16 @@ fn main() {
         "work_unit_get",
         "work_unit_save",
         "work_unit_add_proof",
+        "integration_list",
+        "integration_create",
+        "integration_save",
+        "integration_activate",
+        "integration_set_key",
+        "integration_check",
+        "instructions_get",
+        "instructions_save",
+        "journal_list",
+        "journal_get",
     ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))

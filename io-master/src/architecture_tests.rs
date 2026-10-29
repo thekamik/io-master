@@ -36,21 +36,24 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 7] = [
+const ALLOWED: [(&str, &[&str]); 8] = [
     ("model", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
     ("db", &["model", "security"]),
+    // The only way to the AI: it reads the integration and its key, and
+    // writes the journal.
+    ("ai", &["db", "model"]),
     // The work behind the panels, one folder per panel; a panel may use
     // another (in one direction: chat and evaluation use rag and
     // evaluation_plan, never the other way). It gets the open database as a
     // parameter and never reaches the session.
-    ("panels::logic", &["db", "model", "security"]),
+    ("panels::logic", &["ai", "db", "model", "security"]),
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
     // The commands of the page: they do their work with the folders below.
-    ("panels::views", &["panels::logic", "db", "model", "session"]),
+    ("panels::views", &["panels::logic", "ai", "db", "model", "session"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

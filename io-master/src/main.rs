@@ -105,6 +105,21 @@ mod db {
     }
 }
 
+// ai/: the only way to an AI service (user, 2026-10-29): a question
+// prepared from the integration and its key, sent over TLS 1.3 in the protocol
+// of the integration, its answer read while it streams and written into the
+// journal of the AI before it is given out.
+mod ai {
+    pub mod anthropic;
+    pub mod ask;
+    pub mod client;
+    pub mod conversation;
+    pub mod error;
+    pub mod openai;
+    pub mod reading;
+    pub mod sse;
+}
+
 // session/: what every command of the window shares: the data folder, and
 // the user logged in with their open database (the only global state).
 mod session {
@@ -140,6 +155,14 @@ mod panels {
             pub mod recovery;
             pub mod recovery_code;
         }
+        // panels/logic/settings/: the settings of the AI: the integrations,
+        // their keys and the question that checks them, the instructions of
+        // the tasks.
+        pub mod settings {
+            pub mod error;
+            pub mod instructions;
+            pub mod integrations;
+        }
     }
     pub mod views {
         pub mod error;
@@ -155,6 +178,13 @@ mod panels {
         pub mod program_start {
             pub mod installation;
             pub mod login;
+        }
+        // panels/views/settings/: the integrations, the instructions of the
+        // tasks, the journal of the AI.
+        pub mod settings {
+            pub mod instructions;
+            pub mod integrations;
+            pub mod journal;
         }
     }
 }
@@ -244,6 +274,16 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation_plan::work_units::work_unit_get,
             panels::views::evaluation_plan::work_units::work_unit_save,
             panels::views::evaluation_plan::work_units::work_unit_add_proof,
+            panels::views::settings::integrations::integration_list,
+            panels::views::settings::integrations::integration_create,
+            panels::views::settings::integrations::integration_save,
+            panels::views::settings::integrations::integration_activate,
+            panels::views::settings::integrations::integration_set_key,
+            panels::views::settings::integrations::integration_check,
+            panels::views::settings::instructions::instructions_get,
+            panels::views::settings::instructions::instructions_save,
+            panels::views::settings::journal::journal_list,
+            panels::views::settings::journal::journal_get,
         ])
         .build(tauri::generate_context!());
 

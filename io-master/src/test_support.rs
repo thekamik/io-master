@@ -1,6 +1,8 @@
 //! Help for the tests of the whole program: temporary directories, a new
-//! database with its data (`database.rs`), a small PDF (`pdf.rs`).
+//! database with its data (`database.rs`), a small PDF (`pdf.rs`), a fake
+//! AI service (`ai_service.rs`).
 
+pub mod ai_service;
 pub mod database;
 pub mod pdf;
 

@@ -10,9 +10,11 @@
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
+use crate::ai::error::AiError;
 use crate::db::error::DbError;
 use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::program_start::access::AccountError;
+use crate::panels::logic::settings::error::SettingsError;
 use crate::session::state::SessionBroken;
 
 /// Why a command failed.
@@ -27,6 +29,11 @@ pub enum ViewError {
     NotLoggedIn,
     /// The making of a plan refused or failed.
     Plan(PlanError),
+    /// The settings of the AI refused a change, or failed.
+    Settings(SettingsError),
+    /// The way to the AI refused a question before it was sent, or failed
+    /// to write it into the journal.
+    Ai(AiError),
     /// A database refused or failed.
     Db(DbError),
     /// What the page sent, or a file the user chose, cannot be taken;
@@ -37,6 +44,18 @@ pub enum ViewError {
 impl From<PlanError> for ViewError {
     fn from(error: PlanError) -> ViewError {
         ViewError::Plan(error)
+    }
+}
+
+impl From<SettingsError> for ViewError {
+    fn from(error: SettingsError) -> ViewError {
+        ViewError::Settings(error)
+    }
+}
+
+impl From<AiError> for ViewError {
+    fn from(error: AiError) -> ViewError {
+        ViewError::Ai(error)
     }
 }
 
@@ -73,10 +92,16 @@ impl ViewError {
             ViewError::NotLoggedIn => "not_logged_in",
             ViewError::Plan(PlanError::Oscal(_) | PlanError::Refused(_) | PlanError::Db(DbError::Inconsistent(_)))
             | ViewError::Db(DbError::Inconsistent(_))
+            | ViewError::Settings(
+                SettingsError::Refused(_) | SettingsError::Ai(_) | SettingsError::Db(DbError::Inconsistent(_)),
+            )
+            | ViewError::Ai(AiError::NoKey | AiError::Address(_) | AiError::NoQuestion | AiError::TooLong { .. })
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
             | ViewError::Plan(PlanError::Db(_))
+            | ViewError::Settings(SettingsError::Db(_))
+            | ViewError::Ai(_)
             | ViewError::Db(_) => "failed",
         }
     }
@@ -90,6 +115,8 @@ impl ViewError {
             ViewError::Session => "the session of the window failed: start the program again".to_owned(),
             ViewError::NotLoggedIn => "nobody is logged in".to_owned(),
             ViewError::Plan(error) => error.to_string(),
+            ViewError::Settings(error) => error.to_string(),
+            ViewError::Ai(error) => error.to_string(),
             ViewError::Db(error) => error.to_string(),
             ViewError::Invalid(reason) => reason.clone(),
         }

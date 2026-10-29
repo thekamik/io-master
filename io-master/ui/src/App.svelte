@@ -4,8 +4,9 @@
   src/panels/views/program_start/login.rs), which Rust keeps. It reads that state
   at the start and again whenever an element says it changed it (installed,
   logged in, logged out). The user logged in sees the frame: the panels in
-  the side bar (the evaluation plan so far; the others come back one by
-  one) and their name with "Log out".
+  the side bar (the evaluation plan and the AI settings so far; the others
+  come back one by one) and their name with "Log out". Which panel is shown
+  is presentation only: it stays in the page.
 -->
 <script lang="ts">
   import { onMount } from "svelte";
@@ -15,10 +16,12 @@
   import InstallationForm from "./views/program_start/InstallationForm.svelte";
   import EvaluationPlan from "./views/evaluation_plan/EvaluationPlan.svelte";
   import LoginForm from "./views/program_start/LoginForm.svelte";
+  import Settings from "./views/settings/Settings.svelte";
 
   /** The state of the program; null until it is read. */
   let program: ProgramView | null = $state(null);
   let problem = $state("");
+  let panel: "evaluation_plan" | "settings" = $state("evaluation_plan");
 
   async function reload() {
     problem = "";
@@ -62,7 +65,12 @@
         </div>
       </div>
 
-      <button type="button" class="nav-item active">Evaluation plan</button>
+      <button type="button" class="nav-item" class:active={panel === "evaluation_plan"} onclick={() => (panel = "evaluation_plan")}>
+        Evaluation plan
+      </button>
+      <button type="button" class="nav-item" class:active={panel === "settings"} onclick={() => (panel = "settings")}>
+        AI settings
+      </button>
 
       <div class="user">
         <span class="who">{program.loggedIn}</span>
@@ -71,7 +79,11 @@
     </nav>
 
     <main>
-      <EvaluationPlan />
+      {#if panel === "settings"}
+        <Settings />
+      {:else}
+        <EvaluationPlan />
+      {/if}
     </main>
   </div>
 {/if}
