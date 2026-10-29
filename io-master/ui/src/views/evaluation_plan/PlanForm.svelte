@@ -6,6 +6,7 @@
   always). Tells the panel after every change (onchanged).
 -->
 <script lang="ts">
+  import SaveStatus from "../../components/save_status/SaveStatus.svelte";
   import { sentence } from "../../lib/api/errors";
   import { planAddDocument, planGet, planSave, type PlanView, type VerdictName } from "../../lib/api/evaluation_plan";
 
@@ -18,6 +19,8 @@
   let inconclusive = $state(false);
   let documentName = $state("");
   let problem = $state("");
+  let busy = $state(false);
+  let savedAt: Date | null = $state(null);
 
   async function load(id: number) {
     problem = "";
@@ -42,31 +45,38 @@
     standards = on ? [...standards, id] : standards.filter((chosen) => chosen !== id);
   }
 
-  async function save(event: SubmitEvent) {
-    event.preventDefault();
+  /** Runs one write: the buttons locked while it runs, the time of the
+   * write shown when it succeeded, the panel told. */
+  async function write(work: () => Promise<unknown>) {
     problem = "";
-
-    const verdicts: VerdictName[] = inconclusive ? ["pass", "fail", "inconclusive"] : ["pass", "fail"];
+    busy = true;
 
     try {
-      await planSave({ id: plan, name, description, standards, documents: view?.documents.map((d) => d.id) ?? [], verdicts });
+      await work();
+      savedAt = new Date();
       onchanged();
     } catch (error) {
       problem = sentence(error);
+    } finally {
+      busy = false;
     }
   }
 
-  async function addDocument(event: SubmitEvent) {
+  function save(event: SubmitEvent) {
     event.preventDefault();
-    problem = "";
 
-    try {
+    const verdicts: VerdictName[] = inconclusive ? ["pass", "fail", "inconclusive"] : ["pass", "fail"];
+    const documents = view?.documents.map((document) => document.id) ?? [];
+
+    void write(() => planSave({ id: plan, name, description, standards, documents, verdicts }));
+  }
+
+  function addDocument(event: SubmitEvent) {
+    event.preventDefault();
+    void write(async () => {
       await planAddDocument(plan, documentName);
       documentName = "";
-      onchanged();
-    } catch (error) {
-      problem = sentence(error);
-    }
+    });
   }
 </script>
 
@@ -102,7 +112,8 @@
         The verdict Inconclusive too (ETSI EN 303 645); Pass and Fail always
       </label>
 
-      <button type="submit">Save the plan</button>
+      <button type="submit" disabled={busy}>Save the plan</button>
+      <SaveStatus {busy} {savedAt} />
     </form>
 
     <h3>Documents of the product</h3>
@@ -113,7 +124,7 @@
     {/each}
     <form class="inline" onsubmit={addDocument}>
       <input bind:value={documentName} placeholder="ST" required />
-      <button type="submit">Add a document</button>
+      <button type="submit" disabled={busy}>Add a document</button>
     </form>
   {/if}
 </section>

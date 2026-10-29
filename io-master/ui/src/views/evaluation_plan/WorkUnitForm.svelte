@@ -8,6 +8,7 @@
   panel after every change (onchanged).
 -->
 <script lang="ts">
+  import SaveStatus from "../../components/save_status/SaveStatus.svelte";
   import { sentence } from "../../lib/api/errors";
   import {
     workUnitAddProof,
@@ -53,6 +54,8 @@
     ),
   );
   let problem = $state("");
+  let busy = $state(false);
+  let savedAt: Date | null = $state(null);
 
   async function load(id: number) {
     problem = "";
@@ -75,12 +78,29 @@
     return on ? [...list, id] : list.filter((item) => item !== id);
   }
 
-  async function save(event: SubmitEvent) {
-    event.preventDefault();
+  /** Runs one write: the buttons locked while it runs, the work unit read
+   * again from the program and the time of the write shown when it
+   * succeeded, the panel told. */
+  async function write(work: () => Promise<unknown>) {
     problem = "";
+    busy = true;
 
     try {
-      await workUnitSave({
+      await work();
+      await load(unit);
+      savedAt = new Date();
+      onchanged();
+    } catch (error) {
+      problem = sentence(error);
+    } finally {
+      busy = false;
+    }
+  }
+
+  function save(event: SubmitEvent) {
+    event.preventDefault();
+    void write(() =>
+      workUnitSave({
         plan,
         unit,
         dependencies,
@@ -88,25 +108,16 @@
         proofs: view?.proofs.map((proof) => proof.id) ?? [],
         aiAgent: view?.aiAgent ?? null,
         guidance,
-      });
-      onchanged();
-    } catch (error) {
-      problem = sentence(error);
-    }
+      }),
+    );
   }
 
-  async function addProof(event: SubmitEvent) {
+  function addProof(event: SubmitEvent) {
     event.preventDefault();
-    problem = "";
-
-    try {
+    void write(async () => {
       await workUnitAddProof(plan, unit, proofName);
       proofName = "";
-      await load(unit);
-      onchanged();
-    } catch (error) {
-      problem = sentence(error);
-    }
+    });
   }
 </script>
 
@@ -153,7 +164,8 @@
       </fieldset>
 
       <label>Guidance <textarea rows="4" bind:value={guidance}></textarea></label>
-      <button type="submit">Save the work unit</button>
+      <button type="submit" disabled={busy}>Save the work unit</button>
+      <SaveStatus {busy} {savedAt} />
     </form>
 
     <fieldset>
@@ -163,7 +175,7 @@
       {/each}
       <form class="inline" onsubmit={addProof}>
         <input bind:value={proofName} placeholder="Results of the scan of the ports" required />
-        <button type="submit">Add a proof</button>
+        <button type="submit" disabled={busy}>Add a proof</button>
       </form>
     </fieldset>
   {:else if problem}

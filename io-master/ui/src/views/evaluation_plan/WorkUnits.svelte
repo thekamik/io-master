@@ -6,6 +6,7 @@
   once. Tells the panel after every change (onchanged).
 -->
 <script lang="ts">
+  import SaveStatus from "../../components/save_status/SaveStatus.svelte";
   import { sentence } from "../../lib/api/errors";
   import {
     planGet,
@@ -29,6 +30,7 @@
   let open: number | null = $state(null);
   let problem = $state("");
   let busy = $state(false);
+  let savedAt: Date | null = $state(null);
 
   const chosenStandards = $derived(view ? view.standards.filter((item) => item.chosen) : []);
 
@@ -60,6 +62,7 @@
 
     try {
       await work();
+      savedAt = new Date();
       onchanged();
     } catch (error) {
       problem = sentence(error);
@@ -71,6 +74,7 @@
 
 <section class="card">
   <h2>Work units</h2>
+  <SaveStatus {busy} {savedAt} />
   {#if problem}<p class="problem">{problem}</p>{/if}
 
   {#if open !== null && view}
