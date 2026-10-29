@@ -111,7 +111,7 @@
     <thead><tr><th>Work unit</th><th>Kind</th><th>Depends on</th><th></th></tr></thead>
     <tbody>
       {#each shown as unit (unit.id)}
-        <tr>
+        <tr class:cycle={unit.crossReference}>
           <td>
             <button type="button" class="link" onclick={() => onopen(unit.id)}>{unit.label}</button>
             {#if unit.crossReference}<span class="problem-text"> cross reference</span>{/if}
@@ -184,6 +184,12 @@
 </section>
 
 <style>
+  /* A work unit in a cycle of dependencies: the planner corrects it. */
+  tr.cycle td {
+    background: var(--danger-soft);
+    color: var(--danger);
+  }
+
   table.data {
     width: 100%;
     table-layout: fixed;

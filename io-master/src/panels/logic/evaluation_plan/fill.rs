@@ -1,22 +1,30 @@
 //! "Fill with AI" (user, 2026-10-29): the agent of the planner of a plan
 //! goes through every work unit of the plan, in its order, and proposes
-//! all its parameters; they are written at once, over what was there, as
-//! if the planner had written them.
+//! its parameters; they are written at once, over what was there, as if the
+//! planner had written them. Two tasks, each started by the planner on its
+//! own:
 //!
 //! ```text
 //! fill_units ──► the work units of the plan (in planning, with an agent of the planner)
-//! for each:  fill_question ──► Question: the instructions of the agent, the task, its knowledge;
-//!                               the work unit, its parameters now, the labels of the plan,
-//!                               the documents, the agents
-//!            (ai/ask.rs: prepare, send, record into the journal of the agent)
-//!            read_proposal ──► Proposal (the JSON of the answer)
-//!            apply_proposal ──► only what the plan holds; a dependency that would close a cycle
-//!                               is left out ──► update_work_unit_parameters; the notes of what was left out
+//!
+//! the parameters (every one but the dependencies, which stay as they are):
+//!   parameters_question ──► the work unit, its parameters now, the documents, the agents
+//!   read_parameters     ──► ParametersProposal
+//!   apply_parameters    ──► only the documents and agents there are ──► update_work_unit_parameters
+//!
+//! the dependencies (when the work units are filled, so each is described):
+//!   dependencies_question ──► the work unit, its dependencies now, every other work unit
+//!                             with the first sentence of its requirement and its kind of test
+//!   read_dependencies     ──► the labels
+//!   apply_dependencies    ──► only the work units of the plan ──► update_work_unit_parameters
 //! ```
 //!
-//! A dependency on a work unit not filled yet is allowed: the cycle is
-//! checked on the dependencies of the plan as they are when the answer is
-//! written, so no cross reference is ever made by the filling.
+//! Every question also carries the instructions of the agent, its task and
+//! the knowledge of the agent that fits the work unit; it is asked through
+//! `ai/ask.rs` and kept in the journal of the agent. **A dependency that
+//! closes a cycle is written as proposed** (user, 2026-10-29): the planner
+//! decides; the work units of the cycle are marked `cross_reference`, the
+//! plan `blocked`, until the planner corrects them.
 
 use std::collections::HashMap;
 
@@ -45,26 +53,34 @@ const MAX_GUIDANCE: usize = 20_000;
 /// The longest name of a proof taken from an answer, in characters.
 const MAX_PROOF_NAME: usize = 200;
 
+/// The longest description of another work unit in a question of the
+/// dependencies, in characters.
+const MAX_SUMMARY: usize = 200;
+
 /// The name of the proof of a functional test the answer names none for.
 const DEFAULT_PROOF: &str = "Results of the functional test";
 
-/// The task of the agent of the planner, given after its own instructions.
-const TASK: &str = "You plan one work unit of a security evaluation. From its requirement, its parameters now, the \
-other work units of the plan and your knowledge, propose all its parameters. Answer with one JSON object and nothing \
-else:\n\
-{\"dependencies\": [the labels of the work units of the plan that must be done before this one],\n \
-\"documents\": [the names of the documents of the product it needs],\n \
+/// The task of the parameters, given after the instructions of the agent.
+const PARAMETERS_TASK: &str = "You plan one work unit of a security evaluation. From its requirement, its parameters \
+now and your knowledge, propose its parameters. Answer with one JSON object and nothing else:\n\
+{\"documents\": [the names of the documents of the product it needs],\n \
 \"functional\": true when it needs a functional test of the laboratory, false for a test of the documentation,\n \
 \"proofs\": [the names of the proofs of the laboratory its functional test needs],\n \
 \"agent\": the name of the agent that should assess it, or null,\n \
 \"guidance\": the guidance for the evaluator, whole}\n\
-Use only the labels, documents and agents the question lists. A dependency must never lead back to this work unit.";
+Use only the documents and agents the question lists.";
 
-/// The parameters an answer proposes, as names, before they are checked
-/// against the plan.
+/// The task of the dependencies, given after the instructions of the agent.
+const DEPENDENCIES_TASK: &str = "You plan the order of the work of a security evaluation. From the requirement of one \
+work unit, the other work units of the plan and your knowledge, name the work units whose results this one needs, so \
+that they are done before it. Answer with one JSON object and nothing else:\n\
+{\"dependencies\": [the labels of those work units]}\n\
+Use only the labels the question lists; an empty list when it needs none.";
+
+/// The parameters but the dependencies an answer proposes, as names,
+/// before they are checked against the plan.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Proposal {
-    pub dependencies: Vec<String>,
+pub struct ParametersProposal {
     pub documents: Vec<String>,
     pub functional: bool,
     pub proofs: Vec<String>,
@@ -72,10 +88,19 @@ pub struct Proposal {
     pub guidance: String,
 }
 
+/// The names a work unit of a plan may name, by their ids.
+struct Names {
+    /// The documents of the product of the plan.
+    documents: HashMap<i64, String>,
+    /// Every agent of the user.
+    agents: HashMap<i64, String>,
+}
+
 /// The plan `plan`, refused unless it is in planning and names an agent of
 /// the planner; gives the plan and its agent.
 ///
-/// Called by: [`fill_units`], [`fill_question`].
+/// Called by: [`fill_units`], [`question_of`], [`apply_parameters`],
+/// [`apply_dependencies`].
 /// Calls: `read_evaluation_plan`, `plans::check_planning`.
 fn plan_to_fill(db: &Database, plan: i64) -> Result<(EvaluationPlan, i64), PlanError> {
     let stored = read_evaluation_plan(db, plan)?;
@@ -90,7 +115,8 @@ fn plan_to_fill(db: &Database, plan: i64) -> Result<(EvaluationPlan, i64), PlanE
 }
 
 /// The work units of the plan `plan` to fill, in its order; refused unless
-/// the plan is in planning and names an agent of the planner.
+/// the plan is in planning, names an agent of the planner and has work
+/// units.
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs` (the start of a filling).
 /// Calls: [`plan_to_fill`].
@@ -104,7 +130,7 @@ pub fn fill_units(db: &Database, plan: i64) -> Result<Vec<i64>, PlanError> {
 
 /// The label of each work unit of `units`, by its id.
 ///
-/// Called by: [`fill_question`], [`apply_proposal`].
+/// Called by: [`dependencies_question`], [`apply_dependencies`].
 fn labels(units: &[WorkUnit]) -> HashMap<i64, String> {
     let mut labels = HashMap::with_capacity(units.len());
 
@@ -118,7 +144,8 @@ fn labels(units: &[WorkUnit]) -> HashMap<i64, String> {
 /// The names of the things `ids` name, by `names`; an id without a name
 /// is left out.
 ///
-/// Called by: [`current_parameters`].
+/// Called by: [`current_parameters`], [`parameters_question`],
+/// [`dependencies_question`].
 fn named(ids: &[i64], names: &HashMap<i64, String>) -> Vec<String> {
     let mut found = Vec::with_capacity(ids.len());
 
@@ -131,51 +158,10 @@ fn named(ids: &[i64], names: &HashMap<i64, String>) -> Vec<String> {
     found
 }
 
-/// The parameters of the work unit `unit` now, as the question shows them
-/// (names, not ids).
-///
-/// Called by: [`fill_question`].
-/// Calls: [`named`], `read_lab_proof`.
-fn current_parameters(
-    db: &Database,
-    unit: &WorkUnit,
-    labels: &HashMap<i64, String>,
-    documents: &HashMap<i64, String>,
-    agents: &HashMap<i64, String>,
-) -> Result<Value, PlanError> {
-    let mut proofs = Vec::new();
-
-    for id in unit.input_functional.as_deref().unwrap_or_default() {
-        proofs.push(read_lab_proof(db, *id)?.name);
-    }
-
-    let agent = match unit.ai_agent {
-        Some(id) => agents.get(&id).cloned(),
-        None => None,
-    };
-
-    Ok(json!({
-        "dependencies": named(&unit.dependencies, labels),
-        "documents": named(&unit.input_product_documents, documents),
-        "functional": unit.input_functional.is_some(),
-        "proofs": proofs,
-        "agent": agent,
-        "guidance": unit.guidance,
-    }))
-}
-
-/// The names a work unit of a plan may name, by their ids.
-struct Names {
-    /// The documents of the product of the plan.
-    documents: HashMap<i64, String>,
-    /// Every agent of the user.
-    agents: HashMap<i64, String>,
-}
-
 /// The names of the documents of the plan and of every agent, by their
 /// ids.
 ///
-/// Called by: [`fill_question`], [`apply_proposal`].
+/// Called by: [`parameters_question`], [`apply_parameters`].
 /// Calls: `read_product_document`, `read_agents`.
 fn names_of(db: &Database, plan: &EvaluationPlan) -> Result<Names, PlanError> {
     let mut documents = HashMap::with_capacity(plan.product_documents.len());
@@ -193,59 +179,154 @@ fn names_of(db: &Database, plan: &EvaluationPlan) -> Result<Names, PlanError> {
 }
 
 /// The question of the agent of the planner of the plan `plan` about its
-/// work unit `unit`: the instructions of the agent and the task, with the
-/// knowledge of the agent that fits the work unit; the work unit, its
-/// parameters now and what the plan lets it name.
+/// work unit `unit`: its instructions and the task `task`, with its
+/// knowledge that fits the work unit, and the text `text` of the question.
 ///
-/// Called by: `panels/views/evaluation_plan/fill.rs` (each work unit).
-/// Calls: [`plan_to_fill`], `read_agent`, `agent_knowledge`, [`names_of`],
-/// [`current_parameters`].
-pub fn fill_question(db: &Database, plan: i64, unit: i64) -> Result<Question, PlanError> {
+/// Called by: [`parameters_question`], [`dependencies_question`].
+/// Calls: [`plan_to_fill`], `read_agent`, `agent_knowledge`.
+fn question_of(db: &Database, plan: i64, unit: &WorkUnit, task: &str, text: String) -> Result<Question, PlanError> {
     let (stored, agent_id) = plan_to_fill(db, plan)?;
 
-    ensure!(stored.work_units.contains(&unit), PlanError::Refused("the work unit is not one of the plan".to_owned()));
+    ensure!(
+        stored.work_units.contains(&unit.id),
+        PlanError::Refused("the work unit is not one of the plan".to_owned())
+    );
 
     let agent = read_agent(db, agent_id)?;
-    let units = read_work_units(db, plan)?;
-    let this = read_work_unit(db, unit)?;
-    let labels = labels(&units);
-    let Names { documents, agents } = names_of(db, &stored)?;
-    let knowledge = agent_knowledge(db, agent_id, &format!("{} {}", this.label, this.requirement))?;
-    let mut agent_names: Vec<String> = agents.values().cloned().collect();
-    let mut system = format!("{}\n\n{TASK}", agent.instructions);
-
-    agent_names.sort();
+    let knowledge = agent_knowledge(db, agent_id, &format!("{} {}", unit.label, unit.requirement))?;
+    let mut system = format!("{}\n\n{task}", agent.instructions);
 
     if !knowledge.is_empty() {
         system.push_str("\n\nYour knowledge for this work unit:\n\n");
         system.push_str(&knowledge.join("\n\n---\n\n"));
     }
 
-    let text = format!(
-        "Work unit: {}\nStandard: {}\n\nRequirement:\n{}\n\nIts parameters now:\n{}\n\nThe work units of the plan: \
-         {}\nThe documents of the product: {}\nThe agents: {}",
-        this.label,
-        read_oscal_standard_document(db, this.reference)?.title,
-        this.requirement,
-        current_parameters(db, &this, &labels, &documents, &agents)?,
-        named(&stored.work_units, &labels).join(", "),
-        named(&stored.product_documents, &documents).join(", "),
-        agent_names.join(", "),
-    );
-
     Ok(Question {
         integration: agent.integration,
         agent: Some(agent_id),
-        work_unit: Some(unit),
+        work_unit: Some(unit.id),
         system,
         messages: vec![Message { speaker: Speaker::User, text, time: 0 }],
     })
 }
 
+/// The parameters but the dependencies of the work unit `unit` now, as the
+/// question shows them (names, not ids).
+///
+/// Called by: [`parameters_question`].
+/// Calls: [`named`], `read_lab_proof`.
+fn current_parameters(db: &Database, unit: &WorkUnit, names: &Names) -> Result<Value, PlanError> {
+    let mut proofs = Vec::new();
+
+    for id in unit.input_functional.as_deref().unwrap_or_default() {
+        proofs.push(read_lab_proof(db, *id)?.name);
+    }
+
+    let agent = match unit.ai_agent {
+        Some(id) => names.agents.get(&id).cloned(),
+        None => None,
+    };
+
+    Ok(json!({
+        "documents": named(&unit.input_product_documents, &names.documents),
+        "functional": unit.input_functional.is_some(),
+        "proofs": proofs,
+        "agent": agent,
+        "guidance": unit.guidance,
+    }))
+}
+
+/// The question of the parameters of the work unit `unit` of the plan
+/// `plan`: its requirement, its parameters now, the documents of the plan
+/// and the agents.
+///
+/// Called by: `panels/views/evaluation_plan/fill.rs` (each work unit).
+/// Calls: [`plan_to_fill`], [`names_of`], [`current_parameters`],
+/// [`question_of`].
+pub fn parameters_question(db: &Database, plan: i64, unit: i64) -> Result<Question, PlanError> {
+    let (stored, _) = plan_to_fill(db, plan)?;
+    let this = read_work_unit(db, unit)?;
+    let names = names_of(db, &stored)?;
+    let mut agents: Vec<String> = names.agents.values().cloned().collect();
+
+    agents.sort();
+
+    let text = format!(
+        "Work unit: {}\nStandard: {}\n\nRequirement:\n{}\n\nIts parameters now:\n{}\n\nThe documents of the product: \
+         {}\nThe agents: {}",
+        this.label,
+        read_oscal_standard_document(db, this.reference)?.title,
+        this.requirement,
+        current_parameters(db, &this, &names)?,
+        named(&stored.product_documents, &names.documents).join(", "),
+        agents.join(", "),
+    );
+
+    question_of(db, plan, &this, PARAMETERS_TASK, text)
+}
+
+/// One line about a work unit for the question of the dependencies: its
+/// label, the first sentence of its requirement (at most [`MAX_SUMMARY`]
+/// characters) and its kind of test.
+///
+/// Called by: [`dependencies_question`].
+fn summary(unit: &WorkUnit) -> String {
+    let requirement = unit.requirement.trim();
+    let first = match requirement.split_once(". ") {
+        Some((sentence, _)) => sentence,
+        None => requirement,
+    };
+    let short: String = first.chars().take(MAX_SUMMARY).collect();
+    let kind = if unit.input_functional.is_some() { "functional" } else { "documentation" };
+
+    format!("{} ({kind}): {short}", unit.label)
+}
+
+/// The question of the dependencies of the work unit `unit` of the plan
+/// `plan`: its requirement, its dependencies now, and every other work unit
+/// of the plan in one line.
+///
+/// Called by: `panels/views/evaluation_plan/fill.rs` (each work unit).
+/// Calls: [`labels`], [`named`], [`summary`], [`question_of`].
+pub fn dependencies_question(db: &Database, plan: i64, unit: i64) -> Result<Question, PlanError> {
+    let units = read_work_units(db, plan)?;
+    let this = read_work_unit(db, unit)?;
+    let mut others = Vec::with_capacity(units.len());
+
+    for other in &units {
+        if other.id != unit {
+            others.push(summary(other));
+        }
+    }
+
+    let text = format!(
+        "Work unit: {}\n\nRequirement:\n{}\n\nIts dependencies now: {}\n\nThe other work units of the plan:\n{}",
+        this.label,
+        this.requirement,
+        named(&this.dependencies, &labels(&units)).join(", "),
+        others.join("\n"),
+    );
+
+    question_of(db, plan, &this, DEPENDENCIES_TASK, text)
+}
+
+/// The JSON object of an answer (a fence of Markdown or words around it
+/// are passed over); refused when the answer holds none.
+///
+/// Called by: [`read_parameters`], [`read_dependencies`].
+fn answer_object(answer: &str) -> Result<Value, PlanError> {
+    let (Some(start), Some(end)) = (answer.find('{'), answer.rfind('}')) else {
+        return Err(PlanError::Refused("the answer holds no JSON object".to_owned()));
+    };
+
+    serde_json::from_str(answer.get(start..=end).unwrap_or_default())
+        .map_err(|error| PlanError::Refused(format!("the answer is no JSON object: {error}")))
+}
+
 /// The strings of the list `field` of the answer, at most `max`; what is no
 /// string is left out.
 ///
-/// Called by: [`read_proposal`].
+/// Called by: [`read_parameters`], [`read_dependencies`].
 fn strings(answer: &Value, field: &str, max: usize) -> Vec<String> {
     let mut found = Vec::new();
 
@@ -260,19 +341,12 @@ fn strings(answer: &Value, field: &str, max: usize) -> Vec<String> {
     found
 }
 
-/// The proposal of an answer: the JSON object in its text (a fence of
-/// Markdown or words around it are passed over). Refused when the answer
-/// holds no JSON object.
+/// The proposal of the parameters in an answer.
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs` (each answer).
-/// Calls: [`strings`].
-pub fn read_proposal(answer: &str) -> Result<Proposal, PlanError> {
-    let (Some(start), Some(end)) = (answer.find('{'), answer.rfind('}')) else {
-        return Err(PlanError::Refused("the answer holds no JSON object".to_owned()));
-    };
-    let object = answer.get(start..=end).unwrap_or_default();
-    let value: Value = serde_json::from_str(object)
-        .map_err(|error| PlanError::Refused(format!("the answer is no JSON object: {error}")))?;
+/// Calls: [`answer_object`], [`strings`].
+pub fn read_parameters(answer: &str) -> Result<ParametersProposal, PlanError> {
+    let value = answer_object(answer)?;
     let guidance = value.get("guidance").and_then(Value::as_str).unwrap_or_default().trim();
 
     ensure!(
@@ -280,8 +354,7 @@ pub fn read_proposal(answer: &str) -> Result<Proposal, PlanError> {
         PlanError::Refused(format!("a guidance over {MAX_GUIDANCE} characters"))
     );
 
-    Ok(Proposal {
-        dependencies: strings(&value, "dependencies", MAX_DEPENDENCIES),
+    Ok(ParametersProposal {
         documents: strings(&value, "documents", MAX_DOCUMENTS),
         functional: value.get("functional").and_then(Value::as_bool).unwrap_or(false),
         proofs: strings(&value, "proofs", MAX_PROOFS),
@@ -290,10 +363,18 @@ pub fn read_proposal(answer: &str) -> Result<Proposal, PlanError> {
     })
 }
 
+/// The labels of the dependencies an answer proposes.
+///
+/// Called by: `panels/views/evaluation_plan/fill.rs` (each answer).
+/// Calls: [`answer_object`], [`strings`].
+pub fn read_dependencies(answer: &str) -> Result<Vec<String>, PlanError> {
+    Ok(strings(&answer_object(answer)?, "dependencies", MAX_DEPENDENCIES))
+}
+
 /// The id of the name `name` among `names`, its case and the spaces around
 /// it passed over.
 ///
-/// Called by: [`apply_proposal`], [`chosen_dependencies`].
+/// Called by: [`apply_parameters`], [`apply_dependencies`].
 fn id_of(names: &HashMap<i64, String>, name: &str) -> Option<i64> {
     let wanted = name.trim().to_lowercase();
 
@@ -304,64 +385,6 @@ fn id_of(names: &HashMap<i64, String>, name: &str) -> Option<i64> {
     }
 
     None
-}
-
-/// Whether the work unit `from` leads to the work unit `to` through the
-/// dependencies `graph`: a dependency of `to` on `from` would then close a
-/// cycle. An explicit stack (rule 1 of CLAUDE.md); each work unit visited
-/// once.
-///
-/// Called by: [`chosen_dependencies`].
-fn leads_to(graph: &HashMap<i64, Vec<i64>>, from: i64, to: i64) -> bool {
-    let mut stack = vec![from];
-    let mut seen: Vec<i64> = Vec::with_capacity(graph.len());
-
-    for _ in 0..=graph.len() * graph.len().max(1) {
-        let Some(current) = stack.pop() else { return false };
-
-        if current == to {
-            return true;
-        }
-
-        if seen.contains(&current) {
-            continue;
-        }
-
-        seen.push(current);
-        stack.extend(graph.get(&current).cloned().unwrap_or_default());
-    }
-
-    false
-}
-
-/// The dependencies of the work unit `unit` the proposal names that the
-/// plan holds and that close no cycle, with a note for each one left out.
-///
-/// Called by: [`apply_proposal`].
-/// Calls: [`id_of`], [`leads_to`].
-fn chosen_dependencies(units: &[WorkUnit], unit: i64, proposed: &[String], notes: &mut Vec<String>) -> Vec<i64> {
-    let names = labels(units);
-    let mut graph: HashMap<i64, Vec<i64>> = HashMap::with_capacity(units.len());
-    let mut chosen = Vec::with_capacity(proposed.len());
-
-    for other in units {
-        graph.insert(other.id, if other.id == unit { Vec::new() } else { other.dependencies.clone() });
-    }
-
-    for label in proposed {
-        match id_of(&names, label) {
-            None => notes.push(format!("no work unit {label} in the plan")),
-            Some(id) if id == unit => notes.push("a dependency on itself left out".to_owned()),
-            Some(id) if chosen.contains(&id) => {}
-            Some(id) if leads_to(&graph, id, unit) => notes.push(format!("{label} would close a cycle; left out")),
-            Some(id) => {
-                chosen.push(id);
-                graph.insert(unit, chosen.clone());
-            }
-        }
-    }
-
-    chosen
 }
 
 /// The proof of the work unit `unit` named `name` (its case passed over),
@@ -382,7 +405,7 @@ fn proof_named(db: &Database, unit: &WorkUnit, name: &str) -> Result<Option<i64>
 /// The proofs of a functional test: a proof of the work unit `unit` with
 /// the same name is kept, a new name gets a new place.
 ///
-/// Called by: [`apply_proposal`].
+/// Called by: [`apply_parameters`].
 /// Calls: [`proof_named`], `create_lab_proof`.
 fn chosen_proofs(db: &Database, unit: &WorkUnit, proposed: &[String]) -> Result<Vec<i64>, PlanError> {
     let mut names = Vec::with_capacity(proposed.len());
@@ -414,49 +437,59 @@ fn chosen_proofs(db: &Database, unit: &WorkUnit, proposed: &[String]) -> Result<
     Ok(proofs)
 }
 
-/// Writes the proposal for the work unit `unit` of the plan `plan`: only
-/// the work units, documents and agents the plan and the user hold; a
-/// dependency that would close a cycle is left out. Gives a note for every
-/// name left out.
+/// The agent the proposal names, among `agents`; `None` for none, with a
+/// note for a name that is no agent.
+///
+/// Called by: [`apply_parameters`].
+/// Calls: [`id_of`].
+fn chosen_agent(agents: &HashMap<i64, String>, proposed: Option<&String>, notes: &mut Vec<String>) -> Option<i64> {
+    let name = proposed?;
+
+    if name.is_empty() {
+        return None;
+    }
+
+    let found = id_of(agents, name);
+
+    if found.is_none() {
+        notes.push(format!("no agent {name}"));
+    }
+
+    found
+}
+
+/// Writes the proposed parameters of the work unit `unit` of the plan
+/// `plan`, its dependencies kept: only the documents and agents there are.
+/// Gives a note for every name left out.
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs` (each answer).
-/// Calls: [`plan_to_fill`], [`chosen_dependencies`], [`names_of`],
-/// [`id_of`], [`chosen_proofs`], `update_work_unit_parameters`.
-pub fn apply_proposal(db: &Database, plan: i64, unit: i64, proposal: &Proposal) -> Result<Vec<String>, PlanError> {
+/// Calls: [`plan_to_fill`], [`names_of`], [`id_of`], [`chosen_agent`],
+/// [`chosen_proofs`], `update_work_unit_parameters`.
+pub fn apply_parameters(
+    db: &Database,
+    plan: i64,
+    unit: i64,
+    proposal: &ParametersProposal,
+) -> Result<Vec<String>, PlanError> {
     let (stored, _) = plan_to_fill(db, plan)?;
-    let units = read_work_units(db, plan)?;
     let this = read_work_unit(db, unit)?;
+    let names = names_of(db, &stored)?;
     let mut notes = Vec::new();
-    let dependencies = chosen_dependencies(&units, unit, &proposal.dependencies, &mut notes);
-    let Names { documents: document_names, agents: agent_names } = names_of(db, &stored)?;
     let mut documents = Vec::with_capacity(proposal.documents.len());
 
     for name in &proposal.documents {
-        match id_of(&document_names, name) {
+        match id_of(&names.documents, name) {
             Some(id) if !documents.contains(&id) => documents.push(id),
             Some(_) => {}
             None => notes.push(format!("no document {name} in the plan")),
         }
     }
 
-    let agent = match &proposal.agent {
-        Some(name) if !name.is_empty() => {
-            let found = id_of(&agent_names, name);
-
-            if found.is_none() {
-                notes.push(format!("no agent {name}"));
-            }
-
-            found
-        }
-        _ => None,
-    };
-    let proofs = if proposal.functional { chosen_proofs(db, &this, &proposal.proofs)? } else { Vec::new() };
     let parameters = WorkUnitParameters {
-        dependencies,
+        dependencies: this.dependencies.clone(),
         input_product_documents: documents,
-        input_functional: proofs,
-        ai_agent: agent,
+        input_functional: if proposal.functional { chosen_proofs(db, &this, &proposal.proofs)? } else { Vec::new() },
+        ai_agent: chosen_agent(&names.agents, proposal.agent.as_ref(), &mut notes),
         guidance: proposal.guidance.clone(),
     };
 
@@ -465,10 +498,54 @@ pub fn apply_proposal(db: &Database, plan: i64, unit: i64, proposal: &Proposal) 
     Ok(notes)
 }
 
+/// Writes the proposed dependencies of the work unit `unit` of the plan
+/// `plan`, its other parameters kept: only the work units of the plan. A
+/// dependency that closes a cycle is written; the planner decides, and a
+/// note says that the work unit is now a cross reference. Gives a note for
+/// every label left out.
+///
+/// Called by: `panels/views/evaluation_plan/fill.rs` (each answer).
+/// Calls: [`plan_to_fill`], [`labels`], [`id_of`],
+/// `update_work_unit_parameters`.
+pub fn apply_dependencies(db: &Database, plan: i64, unit: i64, proposed: &[String]) -> Result<Vec<String>, PlanError> {
+    plan_to_fill(db, plan)?;
+
+    let units = read_work_units(db, plan)?;
+    let this = read_work_unit(db, unit)?;
+    let names = labels(&units);
+    let mut notes = Vec::new();
+    let mut dependencies = Vec::with_capacity(proposed.len());
+
+    for label in proposed {
+        match id_of(&names, label) {
+            None => notes.push(format!("no work unit {label} in the plan")),
+            Some(id) if id == unit => notes.push("a dependency on itself left out".to_owned()),
+            Some(id) if !dependencies.contains(&id) => dependencies.push(id),
+            Some(_) => {}
+        }
+    }
+
+    let parameters = WorkUnitParameters {
+        dependencies,
+        input_product_documents: this.input_product_documents.clone(),
+        input_functional: this.input_functional.clone().unwrap_or_default(),
+        ai_agent: this.ai_agent,
+        guidance: this.guidance.clone(),
+    };
+
+    update_work_unit_parameters(db, plan, unit, &parameters)?;
+
+    if read_work_unit(db, unit)?.cross_reference {
+        notes.push("closes a cycle of dependencies: correct it in the editor of the work unit".to_owned());
+    }
+
+    Ok(notes)
+}
+
 #[cfg(test)]
 mod tests {
-    //! Tests of the filling: the question, the reading of an answer, the
-    //! writing of a proposal without a cycle.
+    //! Tests of the filling: the two questions, the reading of the answers,
+    //! the writing of the proposals; a cycle left to the planner.
 
     use super::*;
 
@@ -516,35 +593,41 @@ mod tests {
     }
 
     #[test]
-    fn the_question_shows_the_work_unit_and_what_it_may_name() {
+    fn the_two_questions_show_what_their_task_needs() {
         let (_directory, db) = database();
         let (plan, units) = plan_to_test(&db);
-        let question = fill_question(&db, plan, units[0]).unwrap();
-        let text = &question.messages[0].text;
+        let parameters = parameters_question(&db, plan, units[0]).unwrap();
+        let dependencies = dependencies_question(&db, plan, units[0]).unwrap();
+        let text = &parameters.messages[0].text;
+        let others = &dependencies.messages[0].text;
 
-        assert_eq!((question.agent.is_some(), question.work_unit), (true, Some(units[0])));
-        assert!(question.system.contains("You assess work units of the CEM.") && question.system.contains("JSON"));
-        assert!(text.contains("Work unit: 1.1.1") && text.contains("1.1.2, 2.1.1, 2.1.2"));
-        assert!(text.contains("The documents of the product: ST") && text.contains("The agents: CC evaluator"));
+        assert_eq!((parameters.agent.is_some(), parameters.work_unit), (true, Some(units[0])));
+        assert!(
+            parameters.system.contains("You assess work units of the CEM.") && parameters.system.contains("guidance")
+        );
+        assert!(text.contains("Work unit: 1.1.1") && text.contains("The documents of the product: ST"));
+        assert!(text.contains("The agents: CC evaluator") && !text.contains("dependencies"));
+        assert!(dependencies.system.contains("\"dependencies\""));
+        assert!(others.contains("1.1.2 (documentation): Conflicting duties") && !others.contains("1.1.1 ("));
     }
 
     #[test]
-    fn an_answer_is_read_from_its_json_object() {
-        let answer = "Here it is:\n```json\n{\"dependencies\": [\"1.1.1\", 7], \"documents\": [\"ST\"], \
-                      \"functional\": true, \"proofs\": [\"Scan\"], \"agent\": null, \"guidance\": \" Read. \"}\n```";
-        let proposal = read_proposal(answer).unwrap();
+    fn the_answers_are_read_from_their_json_objects() {
+        let answer = "Here it is:\n```json\n{\"documents\": [\"ST\", 7], \"functional\": true, \"proofs\": [\"Scan\"], \
+                      \"agent\": null, \"guidance\": \" Read. \"}\n```";
+        let proposal = read_parameters(answer).unwrap();
 
-        assert_eq!(proposal.dependencies, vec!["1.1.1"]);
+        assert_eq!(proposal.documents, vec!["ST"]);
         assert_eq!((proposal.functional, proposal.agent, proposal.guidance.as_str()), (true, None, "Read."));
-        assert!(matches!(read_proposal("I cannot."), Err(PlanError::Refused(_))));
+        assert_eq!(read_dependencies("{\"dependencies\": [\"1.1.1\"]}").unwrap(), vec!["1.1.1"]);
+        assert!(matches!(read_parameters("I cannot."), Err(PlanError::Refused(_))));
     }
 
     #[test]
-    fn a_proposal_is_written_without_a_cycle_and_what_the_plan_lacks_is_noted() {
+    fn the_parameters_keep_the_dependencies_and_a_proof_of_the_same_name() {
         let (_directory, db) = database();
         let (plan, units) = plan_to_test(&db);
-        let proposal = |dependencies: &[&str]| Proposal {
-            dependencies: dependencies.iter().map(|label| (*label).to_owned()).collect(),
+        let proposal = ParametersProposal {
             documents: vec!["st".to_owned(), "IXIT".to_owned()],
             functional: true,
             proofs: vec!["Scan of the ports".to_owned()],
@@ -552,27 +635,41 @@ mod tests {
             guidance: "Check the roles.".to_owned(),
         };
 
-        // 1.1.1 depends on 2.1.2, which is not filled yet: allowed.
-        assert_eq!(
-            apply_proposal(&db, plan, units[0], &proposal(&["2.1.2"])).unwrap(),
-            vec!["no document IXIT in the plan"]
-        );
+        apply_dependencies(&db, plan, units[3], &["1.1.2".to_owned()]).unwrap();
 
-        // 2.1.2 on 1.1.1 would close a cycle: left out; 1.1.2 is taken.
-        let notes = apply_proposal(&db, plan, units[3], &proposal(&["1.1.1", "1.1.2", "9.9"])).unwrap();
+        assert_eq!(apply_parameters(&db, plan, units[3], &proposal).unwrap(), vec!["no document IXIT in the plan"]);
+
         let filled = read_work_unit(&db, units[3]).unwrap();
 
-        assert!(notes.iter().any(|note| note.contains("1.1.1 would close a cycle")));
-        assert!(notes.iter().any(|note| note.contains("no work unit 9.9")));
-        assert_eq!(filled.dependencies, vec![units[1]]);
-        assert_eq!(filled.guidance, "Check the roles.");
+        assert_eq!((filled.dependencies.clone(), filled.guidance.as_str()), (vec![units[1]], "Check the roles."));
         assert!(filled.ai_agent.is_some() && filled.input_functional.as_ref().map(Vec::len) == Some(1));
-        assert!(!read_evaluation_plan(&db, plan).unwrap().blocked);
 
-        // Filled again, the proof of the same name is kept.
-        let proof = filled.input_functional.clone();
+        apply_parameters(&db, plan, units[3], &proposal).unwrap();
+        assert_eq!(read_work_unit(&db, units[3]).unwrap().input_functional, filled.input_functional);
+    }
 
-        apply_proposal(&db, plan, units[3], &proposal(&["1.1.2"])).unwrap();
-        assert_eq!(read_work_unit(&db, units[3]).unwrap().input_functional, proof);
+    #[test]
+    fn a_dependency_that_closes_a_cycle_is_written_and_left_to_the_planner() {
+        let (_directory, db) = database();
+        let (plan, units) = plan_to_test(&db);
+        let proposal = ParametersProposal {
+            documents: Vec::new(),
+            functional: false,
+            proofs: Vec::new(),
+            agent: None,
+            guidance: "Kept.".to_owned(),
+        };
+
+        apply_parameters(&db, plan, units[0], &proposal).unwrap();
+
+        assert!(apply_dependencies(&db, plan, units[0], &["1.1.2".to_owned()]).unwrap().is_empty());
+
+        let notes = apply_dependencies(&db, plan, units[1], &["1.1.1".to_owned(), "9.9".to_owned()]).unwrap();
+
+        assert!(notes.iter().any(|note| note.contains("no work unit 9.9")));
+        assert!(notes.iter().any(|note| note.contains("closes a cycle")));
+        assert!(read_evaluation_plan(&db, plan).unwrap().blocked);
+        assert!(read_work_unit(&db, units[0]).unwrap().cross_reference);
+        assert_eq!(read_work_unit(&db, units[0]).unwrap().guidance, "Kept.");
     }
 }

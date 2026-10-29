@@ -197,14 +197,22 @@ export interface FillSummaryView {
   stopped: boolean;
 }
 
-/** Fills every work unit of a plan with the agent of its planner; `onstep`
- * gets each step as it ends. Called by PlanFill.svelte. */
-export function planFill(plan: number, onstep: (step: FillStepView) => void): Promise<FillSummaryView> {
+/** The two tasks of "Fill with AI", each its own command. */
+export type FillTask = "parameters" | "dependencies";
+
+/** Fills every work unit of a plan with the agent of its planner: every
+ * parameter but the dependencies, or the dependencies only; `onstep` gets
+ * each step as it ends. Called by PlanFill.svelte. */
+export function planFill(
+  task: FillTask,
+  plan: number,
+  onstep: (step: FillStepView) => void,
+): Promise<FillSummaryView> {
   const onStep = new Channel<FillStepView>();
 
   onStep.onmessage = onstep;
 
-  return invoke("plan_fill", { plan, onStep });
+  return invoke(task === "parameters" ? "plan_fill_parameters" : "plan_fill_dependencies", { plan, onStep });
 }
 
 /** Asks the filling to stop after its present work unit. Called by PlanFill.svelte. */
