@@ -6,7 +6,6 @@
 
 /// The instructions of a task of the AI (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct Instructions {
     /// The task they are for.
     pub task: AiTask,
@@ -17,7 +16,6 @@ pub struct Instructions {
 
 /// A task of the AI (user, 2026-10-28).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub enum AiTask {
     /// The assessment of a work unit: its results, its quotes and its
     /// verdict.

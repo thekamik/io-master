@@ -13,8 +13,6 @@
 //! knowledge_passages   the index (FTS5): text, source; made from the text of the sources
 //! ```
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
-
 use rusqlite::{Connection, Row, named_params};
 
 use crate::db::database::Database;

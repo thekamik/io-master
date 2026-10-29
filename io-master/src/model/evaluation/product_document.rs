@@ -8,7 +8,6 @@
 
 /// A document of the product (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct ProductDocument {
     /// The id of the document in the database, given when its place is
     /// reserved in the plan.

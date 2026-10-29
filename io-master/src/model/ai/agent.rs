@@ -4,7 +4,6 @@
 
 /// An AI agent (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct Agent {
     /// The id of the agent in the database.
     pub id: i64,
@@ -34,7 +33,6 @@ pub struct Agent {
 /// A term of the glossary of an agent and what it means ("TSF" = "TOE
 /// Security Functionality").
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct GlossaryEntry {
     pub term: String,
     pub meaning: String,

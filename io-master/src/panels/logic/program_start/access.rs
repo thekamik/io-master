@@ -23,8 +23,6 @@
 //! never changes, so that a copy moved to another user does not open, and
 //! a new name of the user keeps its key.
 
-#![allow(dead_code, reason = "the account (2026-10-28), not called by the views yet, only by its tests")]
-
 use std::fmt;
 use std::fs::{self, DirBuilder};
 use std::os::unix::fs::DirBuilderExt;

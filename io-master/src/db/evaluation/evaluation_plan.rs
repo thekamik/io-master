@@ -18,8 +18,6 @@
 //! `delete_work_unit` (user, 2026-10-29). Writing a plan only sets the
 //! order of its work units, and must name every one of them.
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
-
 use rusqlite::{Connection, Row, named_params};
 
 use crate::db::database::Database;

@@ -12,8 +12,6 @@
 //! ai_api_keys   integration (one key at most), origin, key
 //! ```
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
-
 use reqwest::Url;
 use rusqlite::named_params;
 use zeroize::Zeroizing;

@@ -8,8 +8,6 @@
 //!              (NULL in the last four: the place only reserved)
 //! ```
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
-
 use rusqlite::{Connection, named_params};
 
 use crate::db::database::Database;

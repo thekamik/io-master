@@ -10,8 +10,6 @@
 //!             recovery code: recovery_salt, recovery_nonce, recovery_ciphertext, recovery_tag
 //! ```
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not used by the program yet, only by its tests")]
-
 use rusqlite::named_params;
 
 use crate::db::error::DbError;

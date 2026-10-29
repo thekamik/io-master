@@ -6,7 +6,6 @@
 
 /// An OSCAL document of a standard (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct OscalStandardDocument {
     /// The id of the document in the database.
     pub id: i64,

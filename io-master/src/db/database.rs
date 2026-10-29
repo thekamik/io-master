@@ -12,8 +12,6 @@
 //! freely until version 1 (CLAUDE.md): a database of an older layout is
 //! removed and made anew.
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not opened by the program yet, only by the tests")]
-
 use std::fs::DirBuilder;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};

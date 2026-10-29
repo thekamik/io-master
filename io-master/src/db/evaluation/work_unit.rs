@@ -21,8 +21,6 @@
 //! are work units of the plan, its verdict is one the plan knows, and
 //! each quote is taken from one of its documents.
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
-
 use rusqlite::{Connection, Row, named_params};
 
 use crate::db::database::Database;

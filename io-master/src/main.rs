@@ -56,7 +56,6 @@ mod model {
 // security/: the building blocks of protection: random numbers from the
 // system, and the protection of the memory of the process. The encryption
 // of the databases is in db/encryption/.
-#[allow(dead_code, reason = "used again when the login is rebuilt (2026-10-28)")]
 mod security {
     pub mod process;
     pub mod random;
@@ -65,7 +64,6 @@ mod security {
 // db/: create, read and update of the models of model/, one file per file
 // of model/, no delete (user, 2026-10-28); the two databases (system.v2.db,
 // users/<id>.v2.db) and all code of encryption.
-#[allow(dead_code, reason = "used by the program again when its views are rebuilt (2026-10-28)")]
 mod db {
     pub mod database;
     pub mod error;
@@ -135,7 +133,6 @@ mod panels {
         // recovery of a forgotten password; the password and the recovery
         // code that wrap the key of the database (moved unchanged from the
         // earlier program, audited later).
-        #[allow(dead_code, reason = "the recovery and the change of the password come later (2026-10-28)")]
         pub mod program_start {
             pub mod access;
             pub mod generate_key;
@@ -165,7 +162,6 @@ mod panels {
 // pdf/: reading PDFs with the tools of Poppler (pdfinfo, pdftotext): the only
 // place where the program starts another program on a document of the
 // evaluator, kept in one folder for the audit. It uses nothing of the program.
-#[allow(dead_code, reason = "used again when the documents of the product are read (2026-10-28)")]
 mod pdf {
     pub mod poppler;
 }

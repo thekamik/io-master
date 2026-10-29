@@ -5,7 +5,6 @@
 
 /// A proof of the laboratory (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct LabProof {
     /// The id of the proof in the database, given when its place is
     /// reserved in the plan.

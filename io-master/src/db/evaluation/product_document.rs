@@ -7,8 +7,6 @@
 //! product_documents   id, name, content (the file; NULL: the place only reserved), version
 //! ```
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
-
 use rusqlite::{Connection, named_params};
 
 use crate::db::database::Database;

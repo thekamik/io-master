@@ -94,7 +94,7 @@ A separate project (Svelte 5, TypeScript strict), built into `ui/dist` and embed
 | Topic | Rule |
 |---|---|
 | Names | No file repeats the name of its folder. Functions are verbs; the functions of `db/` are `create_`, `read_`, `update_` with the name of their model. |
-| Modules | **`main.rs` is the map of the program**: every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment; there is no `mod.rs`. A folder not used by the program yet carries `#[allow(dead_code, reason = ...)]` there until it is. |
+| Modules | **`main.rs` is the map of the program**: every folder and its modules are declared there, in the order of the layers from the bottom up, each group with a comment; there is no `mod.rs`. Code not used by the program yet carries no `#[allow(dead_code)]`: its warnings remind what is still to be joined to a panel (user, 2026-10-29, the one exception to "zero warnings"). |
 | Rules of the code | CLAUDE.md, "The rules for Rust" (The Power of 10 adapted). A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error; never `assert!` outside the tests. |
 | Comments | At every function: what it does, where it is called from, which functions it calls. The head of every file says what it holds; the tables of a file of `db/` are drawn there. |
 | Tests | In the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }`. Help for the tests in `src/test_support.rs` (temporary folders) and `src/test_support/` (`database.rs`: a new database, a plan, a work unit, an integration, an agent; `pdf.rs`: a small PDF); the test of the whole program in `src/architecture_tests.rs`. |

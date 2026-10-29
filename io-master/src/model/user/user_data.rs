@@ -7,7 +7,6 @@
 
 /// The user of the installation (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct User {
     /// The id of the user in the database; it names the file of the
     /// encrypted database of the user.

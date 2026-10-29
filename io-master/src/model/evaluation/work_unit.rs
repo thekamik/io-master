@@ -7,7 +7,6 @@
 
 /// A work unit of a standard (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct WorkUnit {
     /// The id of the work unit in the database.
     pub id: i64,
@@ -91,7 +90,6 @@ pub struct WorkUnit {
 /// Criteria knows only `Pass` and `Fail`; ETSI EN 303 645 also
 /// `Inconclusive`. A plan names those it uses (`possible_verdicts`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub enum Verdict {
     Pass,
     Fail,
@@ -101,7 +99,6 @@ pub enum Verdict {
 /// Who gave the results and the verdict of a work unit (user,
 /// 2026-10-28).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub enum Author {
     /// The AI proposed them, and the user has not changed them.
     Ai,
@@ -111,7 +108,6 @@ pub enum Author {
 
 /// A quote of a document of the product (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[allow(dead_code, reason = "a new model (2026-10-28), not used by the program yet, only by db/ and its tests")]
 pub struct Quote {
     /// The document it is taken from (`ProductDocument`), one of the
     /// `input_product_documents` of the work unit.

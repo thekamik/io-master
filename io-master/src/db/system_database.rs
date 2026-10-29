@@ -11,8 +11,6 @@
 //! the database of the user will be kept beside the user when the login
 //! is rewritten on `db/`; they belong to `db/encryption/`.
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not opened by the program yet, only by the tests")]
-
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 

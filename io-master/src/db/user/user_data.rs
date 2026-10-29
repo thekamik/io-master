@@ -7,8 +7,6 @@
 //! users   id, name (unique whatever its letter case), created
 //! ```
 
-#![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
-
 use rusqlite::{Row, named_params};
 
 use crate::db::error::DbError;

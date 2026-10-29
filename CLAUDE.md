@@ -50,6 +50,8 @@ They bind **our code** (`src/`, `ui/`). The dependencies (Tauri, rusqlite, serde
 9. **References.** `#![forbid(unsafe_code)]`; no raw pointers, no `&&T`, no `dyn Trait` or `Box<dyn ...>`, no `Rc<RefCell<...>>` in our code. No function pointers and no closures as parameters of our own functions. Closures only where a library requires them (`spawn_blocking`, a sort key), short, and each such place names the reason; prefer a `for` loop to an iterator chain with closures.
 10. **Zero warnings, from now on.** Warnings of rustc denied; clippy `pedantic` and the restriction lints that carry these rules (`unwrap_used`, `expect_used`, `panic`, `indexing_slicing`, `as_conversions`, ...) denied in `Cargo.toml` (`[lints]`); `cargo clippy` clean before every commit; `cargo-audit` and `cargo-deny` before the release (user, 2026-10-25: not critical; what matters is code that is readable and free of logical errors). In the page: TypeScript strict and `svelte-check` clean (eslint dropped, user 2026-10-25).
 
+**One exception during the rebuild (user, 2026-10-29): the warnings `dead_code` stay.** The code of `db/`, `model/`, `pdf/` and the logic written before the panels that call it is not marked `#[allow(dead_code)]`: each warning reminds which part is still to be joined to a panel, and goes when the panel uses it. Every other warning is still denied.
+
 **The code does not follow them yet** (measured 2026-10-21: ~16 recursive functions, 44 `while`/`loop`, 10 functions over 60 lines, no checks of rule 5, 24 closures as parameters, 22 warnings of rustc and 125 of clippy pedantic). Every file that is rebuilt is brought to them; a new file follows them from its first line.
 
 ## Terms (user, 2026-10-21)
