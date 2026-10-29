@@ -285,6 +285,7 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation_plan::work_units::work_unit_get,
             panels::views::evaluation_plan::work_units::work_unit_save,
             panels::views::evaluation_plan::work_units::work_unit_add_proof,
+            panels::views::evaluation_plan::fill::plan_fill_preview,
             panels::views::evaluation_plan::fill::plan_fill_parameters,
             panels::views::evaluation_plan::fill::plan_fill_dependencies,
             panels::views::evaluation_plan::fill::plan_fill_stop,

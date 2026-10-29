@@ -5,7 +5,8 @@
 //! The page sees each step as it ends and may stop the filling.
 //!
 //! ```text
-//! PlanFill.svelte ──plan_fill_parameters(plan, on_step)───┐
+//! PlanFill.svelte ──plan_fill_preview(plan)──► fill_preview: the questions counted now ──► FillPreviewView
+//!                 ──plan_fill_parameters(plan, on_step)───┐
 //!                 ──plan_fill_dependencies(plan, on_step)─┴► fill: fill_units, then for each work unit:
 //!                     (the lock of the session held)  the question of the task, ask::prepare
 //!                     (released)                      answer::send_drained
@@ -28,8 +29,8 @@ use crate::db::database::Database;
 use crate::db::evaluation::work_unit::read_work_unit;
 use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::evaluation_plan::fill::{
-    apply_dependencies, apply_parameters, dependencies_question, fill_units, parameters_question, read_dependencies,
-    read_parameters,
+    apply_dependencies, apply_parameters, dependencies_question, fill_preview, fill_units, parameters_question,
+    read_dependencies, read_parameters,
 };
 use crate::panels::views::answer::send_drained;
 use crate::panels::views::error::ViewError;
@@ -49,6 +50,14 @@ pub struct FillStepView {
     filled: bool,
     /// What was left out of the answer, or why the work unit was not filled.
     notes: Vec<String>,
+}
+
+/// What a filling would ask, counted when the planner asks it.
+#[derive(Serialize)]
+pub struct FillPreviewView {
+    questions: usize,
+    agent: String,
+    integration: String,
 }
 
 /// How a filling ended.
@@ -230,6 +239,20 @@ pub async fn plan_fill_dependencies(
     on_step: Channel<FillStepView>,
 ) -> Result<FillSummaryView, ViewError> {
     fill(&session, Task::Dependencies, plan, &on_step).await
+}
+
+/// What a filling of the plan `plan` would ask, counted now: the number of
+/// questions, the agent and its integration, for the confirmation of the
+/// planner.
+///
+/// Called by: `PlanFill.svelte`, before a filling starts.
+/// Calls: `fill_preview`.
+#[tauri::command]
+pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillPreviewView, ViewError> {
+    let opened = session.lock()?;
+    let preview = fill_preview(database(&opened)?, plan)?;
+
+    Ok(FillPreviewView { questions: preview.questions, agent: preview.agent, integration: preview.integration })
 }
 
 /// Asks the filling that runs to stop after its present work unit.

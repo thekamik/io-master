@@ -32,6 +32,7 @@ use serde_json::{Value, json};
 
 use crate::ai::ask::Question;
 use crate::db::ai::agent::{read_agent, read_agents};
+use crate::db::ai::integration::read_integration;
 use crate::db::database::Database;
 use crate::db::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::evaluation::lab_proof::{create_lab_proof, read_lab_proof};
@@ -126,6 +127,35 @@ pub fn fill_units(db: &Database, plan: i64) -> Result<Vec<i64>, PlanError> {
     ensure!(!stored.work_units.is_empty(), PlanError::Refused("the plan has no work unit to fill".to_owned()));
 
     Ok(stored.work_units)
+}
+
+/// What a filling of the plan `plan` would ask, counted now: as many
+/// questions as the plan has work units, to the integration of its agent of
+/// the planner.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FillPreview {
+    pub questions: usize,
+    pub agent: String,
+    /// The name of the integration and its model.
+    pub integration: String,
+}
+
+/// What a filling of the plan `plan` would ask, counted now, before the
+/// planner starts it; refused as [`fill_units`] refuses.
+///
+/// Called by: `panels/views/evaluation_plan/fill.rs` (the confirmation).
+/// Calls: [`fill_units`], [`plan_to_fill`], `read_agent`, `read_integration`.
+pub fn fill_preview(db: &Database, plan: i64) -> Result<FillPreview, PlanError> {
+    let questions = fill_units(db, plan)?.len();
+    let (_, agent_id) = plan_to_fill(db, plan)?;
+    let agent = read_agent(db, agent_id)?;
+    let integration = read_integration(db, agent.integration)?;
+
+    Ok(FillPreview {
+        questions,
+        agent: agent.name,
+        integration: format!("{} · {}", integration.name, integration.model),
+    })
 }
 
 /// The label of each work unit of `units`, by its id.
@@ -586,10 +616,17 @@ mod tests {
         let stored = read_evaluation_plan(&db, plan).unwrap();
 
         assert_eq!(fill_units(&db, plan).unwrap().len(), 4);
+        assert_eq!(
+            fill_preview(&db, plan).unwrap(),
+            FillPreview {
+                questions: 4, agent: "CC evaluator".to_owned(), integration: "Ollama · llama3.1".to_owned()
+            }
+        );
 
         update_evaluation_plan(&db, &EvaluationPlan { planning_agent: None, ..stored }).unwrap();
 
         assert!(matches!(fill_units(&db, plan), Err(PlanError::Refused(_))));
+        assert!(matches!(fill_preview(&db, plan), Err(PlanError::Refused(_))));
     }
 
     #[test]

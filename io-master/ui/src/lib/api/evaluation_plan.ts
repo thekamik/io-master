@@ -197,6 +197,18 @@ export interface FillSummaryView {
   stopped: boolean;
 }
 
+/** What a filling would ask, counted now (fill.rs, FillPreviewView). */
+export interface FillPreviewView {
+  questions: number;
+  agent: string;
+  integration: string;
+}
+
+/** What a filling of a plan would ask, counted now. Called by PlanFill.svelte. */
+export function planFillPreview(plan: number): Promise<FillPreviewView> {
+  return invoke("plan_fill_preview", { plan });
+}
+
 /** The two tasks of "Fill with AI", each its own command. */
 export type FillTask = "parameters" | "dependencies";
 

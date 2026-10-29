@@ -30,6 +30,7 @@ fn main() {
         "work_unit_get",
         "work_unit_save",
         "work_unit_add_proof",
+        "plan_fill_preview",
         "plan_fill_parameters",
         "plan_fill_dependencies",
         "plan_fill_stop",

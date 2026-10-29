@@ -25,6 +25,7 @@
     "allow-work-unit-get",
     "allow-work-unit-save",
     "allow-work-unit-add-proof",
+    "allow-plan-fill-preview",
     "allow-plan-fill-parameters",
     "allow-plan-fill-dependencies",
     "allow-plan-fill-stop",

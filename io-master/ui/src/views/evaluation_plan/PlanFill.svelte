@@ -7,14 +7,19 @@
   the parameters, then the dependencies, when every work unit is described.
   A dependency that closes a cycle is written and its work units turn red in
   the list: the planner decides. Each step is shown as it ends; "Stop" ends
-  the filling after its present work unit. Tells the editor after the
+  the filling after its present work unit. Before a filling starts, the
+  planner confirms it: how many questions go to which integration, counted
+  by the program when the button is pressed (plan_fill_preview). Tells the
+  editor after the
   filling (onchanged), so that the list of the work units is read again.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import {
     planFill,
+    planFillPreview,
     planFillStop,
+    type FillPreviewView,
     type FillStepView,
     type FillSummaryView,
     type FillTask,
@@ -27,6 +32,8 @@
   const SHOWN = 200;
 
   let running: FillTask | null = $state(null);
+  /** The task the planner is asked to confirm, and what it would ask. */
+  let asked: { task: FillTask; preview: FillPreviewView } | null = $state(null);
   let stopping = $state(false);
   let last: FillStepView | null = $state(null);
   let steps: FillStepView[] = $state([]);
@@ -35,7 +42,20 @@
 
   let agent = $derived(view?.agents.find((one) => one.id === view?.planningAgent)?.name ?? null);
 
+  /** Counts what the task would ask, now, and asks the planner to confirm. */
+  async function confirm(task: FillTask) {
+    problem = "";
+    asked = null;
+
+    try {
+      asked = { task, preview: await planFillPreview(plan) };
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
+
   async function fill(task: FillTask) {
+    asked = null;
     problem = "";
     summary = null;
     steps = [];
@@ -81,16 +101,30 @@
       dependency that closes a cycle turns its work units red: correct them in their editor.
     </p>
     <p class="buttons">
-      <button type="button" disabled={running !== null} onclick={() => fill("parameters")}>
+      <button type="button" disabled={running !== null} onclick={() => confirm("parameters")}>
         {running === "parameters" ? "Filling the parameters…" : "Fill parameters"}
       </button>
-      <button type="button" disabled={running !== null} onclick={() => fill("dependencies")}>
+      <button type="button" disabled={running !== null} onclick={() => confirm("dependencies")}>
         {running === "dependencies" ? "Filling the dependencies…" : "Fill dependencies"}
       </button>
       {#if running !== null}
         <button type="button" class="ghost" disabled={stopping} onclick={stop}>{stopping ? "Stopping…" : "Stop"}</button>
       {/if}
     </p>
+  {/if}
+
+  {#if asked}
+    <div class="confirm">
+      <p>
+        {asked.task === "parameters" ? "Fill the parameters" : "Fill the dependencies"}: <strong>{asked.preview.questions}</strong>
+        questions of the agent <strong>{asked.preview.agent}</strong> to <strong>{asked.preview.integration}</strong>, one per
+        work unit, each answer written over what is there.
+      </p>
+      <p class="buttons">
+        <button type="button" class="primary" onclick={() => asked && fill(asked.task)}>Go on</button>
+        <button type="button" class="ghost" onclick={() => (asked = null)}>Cancel</button>
+      </p>
+    </div>
   {/if}
 
   {#if last}
@@ -115,6 +149,13 @@
 </section>
 
 <style>
+  .confirm {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    margin-bottom: 1rem;
+  }
+
   .buttons button + button {
     margin-left: 0.4rem;
   }
