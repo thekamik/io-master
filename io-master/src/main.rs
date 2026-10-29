@@ -125,7 +125,10 @@ mod panels {
         // units, the order of the work and the cross references.
         #[allow(dead_code, reason = "called by the views of the plan, which come next (2026-10-29)")]
         pub mod evaluation_plan {
+            pub mod error;
             pub mod oscal;
+            pub mod plans;
+            pub mod standards;
         }
         // panels/logic/program_start/: the first start, the login and the
         // recovery of a forgotten password; the password and the recovery
