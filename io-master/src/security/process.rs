@@ -1,4 +1,4 @@
-//! The protection of the memory of the process (step 47 of docs/history.md):
+//! The protection of the memory of the process:
 //! the decrypted data and the key of the database are only in RAM, so the
 //! process must never be written into a file by the system.
 

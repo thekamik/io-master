@@ -1,4 +1,4 @@
-# The formatting of the Rust code (step 40 of docs/todo.md): lines up to
+# The formatting of the Rust code: lines up to
 # 120 characters; short constructs kept on one line where they fit.
 # Run `cargo fmt` before every commit; `cargo fmt --check` must be clean.
 max_width = 120

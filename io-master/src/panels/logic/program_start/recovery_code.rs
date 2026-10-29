@@ -1,5 +1,5 @@
-//! The recovery code of a forgotten password (step 49 of docs/history.md,
-//! `docs/architecture.md`, section 5.4): 160 random bits, written for a
+//! The recovery code of a forgotten password (`docs/architecture.md`,
+//! section 5.4): 160 random bits, written for a
 //! person as seven groups of five characters, the last three of them a
 //! check sum against typing errors.
 //!

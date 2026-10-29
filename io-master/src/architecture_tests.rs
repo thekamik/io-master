@@ -25,7 +25,7 @@
 //! a file, `test_support.rs`) are not held to it: they set up data across
 //! the layers.
 //!
-//! The tests of a file are its last item (step 44): only the part above
+//! The tests of a file are its last item: only the part above
 //! them is held to the rule, and a test checks that nothing of the program
 //! follows them.
 
@@ -96,7 +96,7 @@ fn paths(text: &str) -> Vec<String> {
     found
 }
 
-/// The line that opens the tests of a file, its last item (step 44).
+/// The line that opens the tests of a file, its last item.
 const TESTS_START: &str = "\n#[cfg(test)]\nmod tests {\n";
 
 /// The part of a file that is the program: all of it up to its tests.
@@ -240,7 +240,7 @@ fn the_tests_of_a_file_are_its_last_item() {
 }
 
 /// The files of tests of their own: the tests of the whole program, which
-/// test no one file (step 44).
+/// test no one file.
 const FILES_OF_TESTS: [&str; 1] = ["architecture_tests.rs"];
 
 #[test]

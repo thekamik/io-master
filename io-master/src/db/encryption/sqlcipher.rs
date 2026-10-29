@@ -27,7 +27,7 @@
 //! | cache of pages | 2 MiB (`cache_size = -2048`): only the pages a query reads are decrypted, and few are kept |
 //!
 //! The memory: decrypted data is only in RAM, and only what the queries of
-//! the moment read (step 47 of docs/history.md, user 2026-10-23); the file
+//! the moment read (user, 2026-10-23); the file
 //! on the disk is always encrypted, so a cut of the power leaves nothing
 //! readable.
 //!
@@ -305,7 +305,7 @@ mod tests {
         assert_eq!(pragma(&connection, "cipher_kdf_algorithm"), "PBKDF2_HMAC_SHA512");
         assert_eq!(pragma(&connection, "kdf_iter"), "256000");
 
-        // The memory (step 47): wiped and locked, the temporary data in
+        // The memory: wiped and locked, the temporary data in
         // memory, a small cache.
         assert_eq!(pragma(&connection, "cipher_memory_security"), "1");
         assert_eq!(number(&connection, "temp_store"), 2);

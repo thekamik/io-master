@@ -10,10 +10,9 @@
 //!   stored only encrypted ([`WrappedKey`]) with an unlocking key.
 //!   The password itself is never stored: a wrong password simply
 //!   fails to decrypt (GCM detects it).
-//! - **The password is the only factor** (step 48 of docs/history.md: the
-//!   TPM factor was removed). HKDF after Argon2id stays, so that a
-//!   further factor can be added to the unlocking key later, and the
-//!   keys wrapped before step 48 open unchanged.
+//! - **The password is the only factor** (the TPM factor of the earlier
+//!   program was removed). HKDF after Argon2id stays, so that a further
+//!   factor can be added to the unlocking key later.
 //! - Changing the password encrypts the same random key again; the
 //!   database itself is not touched.
 //!

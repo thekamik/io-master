@@ -2,27 +2,33 @@
 
 **A new session starts by reading `docs/handover.md`** (the state of the work, what comes next, how to build and test).
 
-## Project state
+## The models: only with the user's consent (user, 2026-10-29)
 
-- **THE REBUILD (user, 2026-10-28): the program is being rebuilt on a new data model.** On `test_branch` the code is only the new models (`io-master/src/model/`, `docs/data_model.md`), their database (`io-master/src/db/`: create, read, update, no delete; the encryption), `security/`, `pdf/` and an empty window; the earlier program (views, AI layer, login, page) was removed and is kept in `main` as a reference (`git show main:io-master/src/<path>`), its parts rewritten on the new models one by one. **The sections of this file about the views, the components, `app/`, `ai/`, the commands and the page describe that earlier program: they are the rules for the parts as they come back**, unless a decision of 2026-10-28 says otherwise. The old databases are dropped: nothing is moved from them. Decided for the next parts: the functions of the making of a plan (the order of the work, the cross references, `blocked`) in a folder of their own above `db/`; the check of an OSCAL document against the schema of NIST in a file of its own, not in `db/`.
+**The models of `io-master/src/model/` are changed only with the user's consent and permission.** Every change of a model (a field added, removed, renamed or retyped, a model added or removed) is proposed first and implemented only after the user has accepted it. The models are the schema of the whole project (`docs/data_model.md`): the relations between them are reflected in the database and in the window, so a view processes the models whose relations it shows; when it is unclear which models a view should process, ask the user.
 
-- The new version is the Rust project in `io-master/`. It is built from scratch, not ported line by line.
-- The earlier versions (0.2 in C, commit `6cc4091`; the web interface, commit `acedc8b`) are only in the history of git; nothing of them is a reference any more (user, 2026-10-24: the catalogue of the functions of 0.2 was removed).
-- **What the program does now (2026-10-25):** the Converter makes catalogs of OSCAL from the PDFs of a standard (step 50), the Evaluation plan makes master projects with a scheme per task and exports work packages (step 51), the Evaluation lab carries a package out for one product, shows its progress and exports the report (steps 52, 59); the view Knowledge (RAG) makes knowledge bases and agents that every work of the AI may use (step 57); the journal of the AI is read in Settings (step 58). A high-level overview: `docs/presentation.md`.
-- **The aim (user, 2026-10-24, step 48 of `docs/history.md`): IO Master is a framework for the evaluation with the help of AI** (Common Criteria first, any standard in OSCAL). It works with the documentation of the client and the inputs of the evaluator (results of tests, notes, assessments) and makes the report; IO is the input and the output, the flow of the data between them done masterfully. It does not talk to devices: the serial ports, UART and Bluetooth of the first versions are out of scope and their code was removed.
-- **The agreed concept is in `docs/architecture.md`**: one program, one Linux account = one installation = one user, a desktop window (Tauri 2 + Svelte) as the only interface, the password as the only factor (Argon2id; an optional second factor perhaps later), a recovery code for a forgotten password (step 49), no backups (the export of the work is the backup, step 55 dropped 2026-10-25); no master, no TPM, no keyring, no git (step 48, 2026-10-24). Read it before designing a function.
-- **The structure of the code is in `docs/code_structure.md`** (the layers, the direction of the dependencies and its test, the conventions, the whole tree). Read it before writing code.
-- **Commits (user, 2026-10-21):** Claude commits its changes to `test_branch` as it goes and pushes them to `origin`, so that no work stays only on one machine. **Never a commit, merge or push to `main` without the user's permission**, asked each time. **The work is merged into `test_branch` by default; into `main` only after the user's manual tests** (user, 2026-10-23): ask for the merge into `main` when the user has tested the window by hand, not after each step.
-- **The data of the tests is not protected; the layout of the databases changes freely** (user, 2026-10-24): the program is experimental; the user starts the tests anew after changes, so a change may break the databases of the tests and a schema is changed as it suits the code, with no migration. **Until version 1 the data of the tests is a temporary resource** (user, 2026-10-24): when a task needs it to be sacrificed, it is, and the next test makes new data. Only when the program is approved does it go to version 1, and from then on the data is kept.
-- **The documentation reflects the current state of the code** (user, 2026-10-21): a change of the code changes its documentation in the same commit; a document that describes a plan says so.
-- **Branches (user, 2026-10-20):** `main` holds the state that is tested and approved; the work is done on `test_branch` and goes to `main` once it is approved. No other branches and **no version numbers** while the project is at an early stage (the program stays at version 0.1.0 of `Cargo.toml`); the earlier branches `v0.2` to `v0.5` were removed, their history is in `main` (the commits named in `docs/history.md`, section "Branches until 2026-10-20").
-- The program runs everywhere, also on virtual machines: it needs no TPM, no keyring and no hardware of its own (step 48).
-- **`docs/todo.md` is a heap of reminders, not a plan in order** (user, 2026-10-21): the user chooses what is done next. It keeps only the open steps; the steps built, dropped or replaced are in `docs/history.md`. **The workflow of 2026-10-25 (steps 57 to 60) is built; changes go to `test_branch`, to `main` when the user says so.** **After each stage Claude asks for the approval of the next** (user, 2026-10-24), unless the user allows a whole step at once (as for steps 51 and 52). Step numbers are names and never change. Every step: concept approved by the user, implementation with tests, check, approval, commit.
-- **Architecture, readability of the code and security come first** (user, 2026-10-17), so that the program stays maintainable and auditable: when the user finds that a part of the code escapes their overview (as the database code did), it is a critical error and is fixed at once, before further functions. **Every data flow must be traceable by the user, and every function does one thing** (user, 2026-10-21): code that works but cannot be followed cannot be corrected or audited, which is unacceptable.
+## The project
+
+- IO Master is a desktop program (Rust 2024, Tauri 2 + Svelte 5, `io-master/`) for security evaluation laboratories: the evaluation of a product against standards kept as NIST OSCAL catalogs, with AI agents that bring their knowledge (RAG) to each work unit. What it is and why: `docs/architecture.md`; the models: `docs/data_model.md`; where everything is in the code: `docs/code_structure.md`.
+- **It is being rebuilt on the models of `model/`** (user, 2026-10-28). `test_branch` holds the new code; `main` holds the earlier program as a reference (`git show main:io-master/src/<path>`), whose parts come back one by one, rewritten on the models. The earlier databases are dropped: nothing is moved from them.
+- **Branches and commits.** Work is committed to `test_branch` as it goes and pushed to `origin`. **Nothing goes to `main`** until the user revokes this (2026-10-28), not even with a question. No other branches, no version numbers (the program stays 0.1.0).
+- **The data of the tests is temporary until version 1** (user, 2026-10-24): the layout of the databases changes as the code needs, with no migration; the user starts the tests anew after a change.
+- **The documentation reflects the current state of the code** (user, 2026-10-21): a change of the code changes its documentation in the same commit. The documents describe only what is; the history is in git (user, 2026-10-29). `docs/todo.md` lists only the open work.
+- **Architecture, readability and security come first** (user, 2026-10-17): every data flow must be traceable by the user, and every function does one thing (user, 2026-10-21). Code that works but cannot be followed is a critical error, fixed before further functions.
+
+## Way of working
+
+- **Concept first, approved by the user, then code.** After each larger stage ask for the approval of the next, unless the user allowed a whole step; short mechanical phases of an approved step run without asking.
+- **Questions to the user are numbered, one short point each**, with a recommendation, so that the user answers by number (user, 2026-10-29).
+- Small steps, each tested on its own; window tests only on a private Xvfb display (`docs/handover.md`), never on the user's screen.
+- **Comments** (user, 2026-10-23): at every function, what it does, where it is called from and which functions it calls. Descriptions of the architecture are in `docs/`, as Markdown with schemes, never repeated over the code.
+- **Tests** live in the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }`. Help for the tests only in `src/test_support.rs` and `src/test_support/`; the test of the whole program in `src/architecture_tests.rs`.
+- `cargo fmt` (`rustfmt.toml`, 120 characters), `cargo clippy --all-targets` and `npm run check` before every commit.
+- Prefer few, well-known dependencies, versions pinned; explain each one when it is added.
+- Conversation with the user in Polish, addressed as Kamil, informally ("ty"); code, comments and documents in English.
 
 ## The rules of the code: "The Power of 10" (user, 2026-10-21)
 
-The user's bible; they must not be broken. The rules as the user gave them (G. J. Holzmann, NASA/JPL, written for C):
+The user's bible; they must not be broken. As the user gave them (G. J. Holzmann, NASA/JPL, written for C):
 
 1. Very simple control flow only: no goto, no setjmp/longjmp, no direct or indirect recursion.
 2. Every loop has a fixed upper bound that a checking tool can prove statically.
@@ -33,104 +39,53 @@ The user's bible; they must not be broken. The rules as the user gave them (G. J
 7. Every caller checks the return value of every non-void function; every called function checks the validity of all its parameters.
 8. The preprocessor only for including headers and simple macros: no token pasting, no variable argument lists, no recursive macros; every macro expands into a complete syntactic unit; conditional compilation kept to a minimum.
 9. Pointers restricted: at most one level of dereference, none hidden in macros or typedefs; no function pointers.
-10. All warnings enabled at the most pedantic level from the first day, the code compiles without warnings, and it is checked daily with at least one (preferably more) strong static analyzer with zero warnings.
+10. All warnings enabled at the most pedantic level from the first day, the code compiles without warnings, and it is checked daily with at least one strong static analyzer with zero warnings.
 
-### The rules for Rust (adapted by Claude with the user's leave, 2026-10-21; the user may correct each)
+### The rules for Rust (adapted with the user's leave, 2026-10-21)
 
-They bind **our code** (`src/`, `ui/`). The dependencies (Tauri, rusqlite, serde, rustls, ...) cannot follow them; they are kept few and well known, checked by `cargo-audit` and `cargo-deny` before the release (step 10), and reached through a narrow, documented boundary.
+They bind **our code** (`src/`, `ui/`). The dependencies cannot follow them; they are kept few and well known and reached through a narrow, documented boundary.
 
-1. **Control flow.** No recursion, direct or indirect. No `panic!`, `unreachable!`, `todo!`, `unimplemented!` outside the tests. `?` is a plain return and allowed. A tree (the groups and controls of OSCAL) is walked with an explicit stack bounded by a constant depth; a deeper document is refused with an error. In Svelte: no recursive snippets or components (a tree reaches the page flattened, row and level).
-2. **Bounded loops.** A `loop` or `while` is written as `for _ in 0..MAX_...` with a named constant. A `for` over a collection is bounded by the limit of that collection, checked when the data entered the program. A stream (the answer of an AI, a file) is read up to a constant number of bytes or events.
-3. **Bounded memory** (instead of "no allocation", which Rust and its libraries cannot do; leaks, use-after-free and double free are excluded by ownership). Every input that enters the program has a maximum size checked at the boundary: a file, its pages, a text, a JSON document, an answer of the AI, the number of objects. No collection grows without a limit in a long work. `Vec::with_capacity` where the size is known.
-4. **Short functions.** At most 60 lines per function (`clippy::too_many_lines` with the threshold 60), one statement per line.
-5. **Checks with recovery.** No `assert!` or `debug_assert!` outside the tests: they stop the process, which is no recovery. A condition that should never happen is checked with `ensure!(condition, error)`, a simple macro that returns the error to the caller. On average at least two per function, for what the types do not guarantee; a check the compiler or the type already proves is not written (the rule itself forbids it).
-6. **Smallest scope.** Every binding at the smallest scope; no `static mut`, no global mutable state besides the state of the window (`app/state.rs`), which says why it is there.
-7. **Every result handled, every parameter checked.** No `unwrap`, `expect`, `let _ =` on a `Result`, or `.ok()` that drops an error. What comes from the page is checked once at its entry and turned into a type of `model/` that carries its validity; a function checks what its parameter types do not guarantee.
-8. **Macros.** Own `macro_rules!` only simple (like `ensure!`): no recursion, no repetitions `$(...)*`, each expanding into a complete expression or statement. The macros of std (`format!`, `vec!`, `write!`) are allowed. Procedural macros (serde derives, `#[tauri::command]`) only at the boundary to the page. `#[cfg]` only as `#[cfg(test)]`.
-9. **References.** `#![forbid(unsafe_code)]`; no raw pointers, no `&&T`, no `dyn Trait` or `Box<dyn ...>`, no `Rc<RefCell<...>>` in our code. No function pointers and no closures as parameters of our own functions. Closures only where a library requires them (`spawn_blocking`, a sort key), short, and each such place names the reason; prefer a `for` loop to an iterator chain with closures.
-10. **Zero warnings, from now on.** Warnings of rustc denied; clippy `pedantic` and the restriction lints that carry these rules (`unwrap_used`, `expect_used`, `panic`, `indexing_slicing`, `as_conversions`, ...) denied in `Cargo.toml` (`[lints]`); `cargo clippy` clean before every commit; `cargo-audit` and `cargo-deny` before the release (user, 2026-10-25: not critical; what matters is code that is readable and free of logical errors). In the page: TypeScript strict and `svelte-check` clean (eslint dropped, user 2026-10-25).
+1. **Control flow.** No recursion. No `panic!`, `unreachable!`, `todo!`, `unimplemented!` outside the tests. `?` is allowed. A tree is walked with an explicit stack bounded by a constant. In Svelte: no recursive snippets or components.
+2. **Bounded loops.** A `loop` or `while` is written as `for _ in 0..MAX_...` with a named constant. A `for` over a collection is bounded by the limit of that collection, checked when the data entered the program. A stream is read up to a constant number of bytes or events.
+3. **Bounded memory.** Every input has a maximum size checked at the boundary: a file, a text, a JSON document, an answer of the AI, the number of objects. No collection grows without a limit. `Vec::with_capacity` where the size is known.
+4. **Short functions.** At most 60 lines per function, one statement per line.
+5. **Checks with recovery.** No `assert!` or `debug_assert!` outside the tests. A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error. On average two per function, for what the types do not guarantee.
+6. **Smallest scope.** No `static mut`, no global mutable state besides the session (`session/state.rs`).
+7. **Every result handled, every parameter checked.** No `unwrap`, `expect`, `let _ =` on a `Result`, or `.ok()` that drops an error. What comes from the page is checked once at its entry.
+8. **Macros.** Own `macro_rules!` only simple (like `ensure!`). The macros of std are allowed. Procedural macros (serde derives, `#[tauri::command]`) only at the boundary to the page. `#[cfg]` only as `#[cfg(test)]`.
+9. **References.** `#![forbid(unsafe_code)]`; no raw pointers, no `dyn Trait`, no `Rc<RefCell<...>>`. No function pointers and no closures as parameters of our own functions; closures only where a library requires them, short, the place named; prefer a `for` loop.
+10. **Zero warnings.** clippy clean before every commit; in the page TypeScript strict and `svelte-check` clean. **One exception during the rebuild (user, 2026-10-29): the warnings `dead_code` stay**, without `#[allow(dead_code)]`: each reminds which part is still to be joined to a panel.
 
-**One exception during the rebuild (user, 2026-10-29): the warnings `dead_code` stay.** The code of `db/`, `model/`, `pdf/` and the logic written before the panels that call it is not marked `#[allow(dead_code)]`: each warning reminds which part is still to be joined to a panel, and goes when the panel uses it. Every other warning is still denied.
+## The window and the layers
 
-**The code does not follow them yet** (measured 2026-10-21: ~16 recursive functions, 44 `while`/`loop`, 10 functions over 60 lines, no checks of rule 5, 24 closures as parameters, 22 warnings of rustc and 125 of clippy pedantic). Every file that is rebuilt is brought to them; a new file follows them from its first line.
+- **The desktop window is the only interface.** The program is started without parameters, opens no network port and is only a client of the AI services.
+- **The panels** (`panels/`, user 2026-10-28): `panels/views/<panel>/` holds only the commands the page calls; `panels/logic/<panel>/` holds the work behind them, gets the open database as a parameter and never reaches the session. A command is listed in three places that must agree: `tauri::generate_handler!` in `main.rs`, `build.rs` and `capabilities/default.json`; its function on the page in `ui/src/lib/api/<panel>.ts`, named as the command.
+- **The page and the Rust program are two separate projects** (the page: `io-master/ui/`). The page holds no secret and no state that matters; only presentation stays in it (a tab, a selection, an open form). The one secret that reaches it is the recovery code, shown once.
+- **Core logic is separate from presentation**: results and errors are plain Rust types; serialization only in `panels/views/` (the models carry no serde); long work reports its progress (a channel of Tauri) and can be stopped.
+- **The direction of the dependencies** is checked by `src/architecture_tests.rs`; `main.rs` is the map of every module, in the order of the layers.
 
-## Terms (user, 2026-10-21)
+## The database
 
-- **"UI"** in the words of the user was the Rust folder `io-master/src/tauri_ui/`, renamed `io-master/src/app/` in step 43 (2026-10-23); **"business"** was the Rust folder `io-master/src/business/`, replaced by the views (`io-master/src/views/`) in step 42. The page (`io-master/ui/`, Svelte and TypeScript) is called **the page** or the front end.
-- **The page and the Rust program are two separate projects that communicate** (through the commands of Tauri). Their files are never mixed in one folder.
-- **One vocabulary (user, 2026-10-23): `docs/architecture.md`, section 10.** The user prompts in Polish and the code is in English, so the names of the views (`users`, `shell`, `chat`, `converter`, `evaluation_plan`, `evaluation_lab`, `knowledge`, `settings`), of the components and of the folders are used the same way in Rust, in the page, in the navigation and in the documents. A Polish word of the user is read through that table.
-- **Views and components (user, 2026-10-23).** A **view** is a whole page of the window, the high-level display. A **component** is a small element used more than once, several times in one view or in several views (example: the window of a *requirement*, which describes a requirement of a standard, appears many times in a view and in other views, and has functions of the AI such as the analysis of the requirement and of the evidence linked to it). Components live in `components/` and are imported by the views; a component never imports a view. A part of a view used only once stays in the folder of its view. No mess: what is a view and what is a component is always clear.
+- **Create, read and update only: no delete** (user, 2026-10-28), with one exception: `delete_work_unit`, only for a plan in planning (user, 2026-10-29).
+- **The layout of `db/` mirrors `model/`**: one file per file of a model, with its tables and its functions `create_<model>`, `read_<model>`, `update_<model>`.
+- **SQL lives only in `db/`.** Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`.
+- `db/encryption/` holds the encryption of the databases, moved unchanged from the earlier program; the user audits it later.
 
-## Main design rule: the desktop window is the only interface
+## The AI
 
-Since step 14 (2026-10-16) the whole workflow is controlled from a **desktop window** (Tauri 2 + Svelte, `src/views/` and `ui/`, a thin layer over the folders below; `src/app/` holds what the whole window shares; `docs/architecture.md`, section 4). The program is started without parameters and opens no network port: it is only a client of the AI services. There is no console interface. The earlier web interface was removed (its last state: commit `acedc8b`). Every function is designed so that the interface can use it without changes to the function:
+- **`ai/` is the only way to an AI service** (user, 2026-10-29): `prepare` (under the lock of the session), `send` (without it), `record` (the journal), in `ai/ask.rs`; the answer is read only after `record`.
+- **Every question of an agent is kept in the journal of that agent**; a question without an agent (the check of an integration) is not kept.
+- An agent is a layer of knowledge over the model of an integration; integrations are only in the AI settings, agents and knowledge bases in the panel Agents.
 
-- **Core logic is separate from presentation.** Functions in the core never print, never read from the terminal, and never exit the process. They take parameters and return results; the interface presents them.
-- **Results and errors are data.** Internal functions return plain Rust types (structs, enums, `Vec`, `Result`) and are used only inside Rust. Errors are enums that the UI can tell apart, not only text.
-- **Serialization belongs to the UI.** Conversion to JSON or any other external format is done only at the boundary to the interface, in the `view.rs` of an element of `io-master/src/views/` and in `io-master/src/app/serializer/` (the error of a command). The core types carry no serialization code and no serde attributes.
-- **Long operations report progress as events** (for example a channel or a stream), not by printing. The window receives them live through a channel of Tauri.
-- **Operations can be cancelled by the caller** (a cancellation token).
-- **Questions to the user go through the interface.** When an operation needs an answer (a PIN, a confirmation), it asks through an interface the UI implements, never by reading stdin itself.
-- **State lives in the core, not in the page.** The page holds no secret and no state that matters. **The one exception: the recovery code** (step 49, user 2026-10-24): it reaches the page only as the answer of the setup, of a change of the password or of "make a new recovery code", is shown once, kept nowhere, and forgotten when the evaluator goes on; the program cannot show it again, since it keeps only the key wrapped with it.
-- **What goes to Rust and what stays in the page (user, 2026-10-21).** An element of the window calls the back end only for what matters: running the AI, processing or storing data, anything that changes the state of the evaluation. What is only presentation (hover, an open menu, a selection, a tab, the position during a drag) stays in the page. Only the final result is sent, never the steps in between: for a diagram, the last coordinates (to restore it), not every position of a drag. **The views (user, 2026-10-21; step 42 of `docs/history.md`, layout in `docs/code_structure.md`, section 2.9):** one folder per view in `src/views/`, with its **entry, the file of its name** (`views/chat/chat.rs`, step 46): every command the page calls for the view, which takes the parameters from the page, does the work with the folders below and gives the data back; the folders of its elements around it hold their data and logic; they replace `business/` and the commands of `tauri_ui/`. The views now: `users`, `shell`, `chat`, `converter` (with its editor of a catalog), `evaluation_plan`, `evaluation_lab`, `knowledge`, `settings`.
+## Security
 
-## Rules carried over from version 0.2 (the program in C)
+- Secrets (API keys, the key of the database) only in the encrypted database of the user, never shown back, never printed, never in the system database.
+- Every connection leaving the computer uses TLS 1.3 with a verified certificate; plain HTTP only to this computer.
+- The password is the only factor (Argon2id); a forgotten password is recovered with the recovery code.
 
-- Secrets (API keys, the key of the database) only in the encrypted database of the evaluator, opened by the password (`docs/architecture.md`, section 5). Never in plain files, and never in the system database, which is not encrypted.
-- Every network connection that leaves the computer uses TLS 1.3 or newer with a verified certificate (the AI providers).
-- Code comments and documentation in English, thorough. Conversation with the user in Polish; the user is Kamil: address them by name, informally ("ty"), never "Pan".
+## Code review
 
-## Code review (step 12 of docs/todo.md)
-
-- The user reviews the code by hand, file by file: reads, asks questions, edits. Claude answers precisely, points out errors it sees, and changes code only on request. Claude does not review the architecture on its own initiative and does not push for decisions while the user is still reading a file.
-- `// ok kk` above a function (or a fragment) means: approved by the user; every line added or removed in it needs the user's approval first. Reading it and suggesting changes is fine. Its tests may be changed. Claude never adds, moves or removes the marker.
-- `review.md` (repository root) records the state of the review. When the user says in the chat that a whole file is reviewed, Claude writes it there with the date; every function of such a file counts as marked `// ok kk`.
-- Decisions and rules the user gives in the chat that matter beyond the current task are written down at once (this file for working rules, `docs/` for the concept and the plan), so that they survive a reset of the context.
-
-## Database code (steps 37 and 40 of docs/history.md)
-
-- **The database code was written anew (user, 2026-10-28)** on the models of `model/`. **Create, read and update only: no delete** (user, 2026-10-28), **with one exception: `delete_work_unit`, only for a plan in the state `Plan`** (user, 2026-10-29: the planner changes a plan freely; a work unit of an evaluation or a report is never removed). **The layout of `db/` mirrors `model/`** (user, 2026-10-28): one file per file of a model, with its tables and its functions `create_<model>`, `read_<model>`, `update_<model>`; its tables in the files `users/<id>.v2.db` and `system.v2.db` (the user and the installation); the encryption in `db/encryption/`. The rules below about folders per area and files `create.rs`, `read.rs`, ... described the earlier `db/` (removed); the others (SQL only in `db/`, named columns and parameters, one transaction per operation, `DbError::Corrupt`) hold.
-- **SQL lives only in `io-master/src/db/`.** The views (`views/`) and `ai/` keep their logic and call the functions of `db/`; they never write SQL.
-- `db/` has one subfolder per area of data; each holds `schema.rs` (its tables), `rows.rs` (row ↔ type of `model/`) and the files of CRUD: `create.rs`, `read.rs`, `update.rs`, `delete.rs` (a file that an area does not need is missing, which is visible in an audit).
-- Free functions only; a caller imports an area as `db_<area>` and calls `db_<area>::<operation>::<object>`. Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`, changes of the layout are migrations by version (`db/user/migrations.rs`).
-- `db/encryption/` holds all code of encryption; the head of every area states in which database its data lives and how it is protected.
-- The mechanism of encryption is moved as it is, unchanged; the user audits it and redesigns it later.
-- **Whatever happens in the database is in `db/`, in a subfolder of its own** (user, 2026-10-17), so that nothing is mixed: for example `db/ai/connection/`, `db/ai/chats/`, `db/ai/journal/`. Rules of the stored data (a name unique, a key bound to its address) live there with their CRUD.
-
-## AI layer (steps 38 and 40 of docs/history.md)
-
-- **`ai/api/` is the only way to the AI**, its functions in the form of REST (resources and operations: `connections`, `roles`, `tasks`, `completions`, `checks`); not a server. `ai/api/provider/` (HTTP, TLS, request, answer, stream) is visible only inside `ai/api/`, so a request built elsewhere does not compile.
-- Every question is asked in a **task** with its **role** (text analysis, summary, consultation, formal analysis) and written into the journal of the AI by `ai/api/` itself (`completions::ask`); no caller can skip it.
-- **The text of every question and the reading of every answer are in `ai/tasks/`** (one file per task: `catalog_outline`, `catalog_section`, `chat`), on plain data of `model/`. The memory of the chat (`ai/tasks/chat.rs`) is controlled by parameters, and quotes of a standard are never shortened.
-
-## The pipeline of data (user, 2026-10-17)
-
-- The functions and the responsibilities of the parts of the code are separated, and the pipeline is very readable: **at every moment one can tell where the information the program works on is** (in the page, in an object in memory, in the database, on its way to the AI).
-- The session of the evaluator holds the objects in memory (`installation/session.rs`: the open database, a project open for editing with its versions for "Undo", an evaluation open for work); `db/` writes them lastingly, through at once (write-through); `ai/api/` is the only way to the AI.
-
-## The architecture (user, 2026-10-17; step 40 of docs/history.md)
-
-The user's guidelines, built in step 40 (the layout and its rules: `docs/code_structure.md`). **No approval of a review moved with the code: every file is reviewed from the start of step 40 on** (`review.md`). Guideline 2 was replaced in step 42 by the views ("Main design rule" above): the commands are named `<element>_<action>` and live in the folder of their element.
-
-1. `tauri_ui/` is a minimal intermediate layer that only joins the back end and the front end. (Renamed `app/` in step 43, 2026-10-23: what every view uses, as the session and the error handling of a web framework.)
-2. The business logic is in a folder of its own, reached by the interface in the form of a REST API: no server, but the functions are designed as resources and operations.
-3. Every operation on a database is in `db/`, ordered as CRUD.
-4. All communication with AI is in `ai/`, the intermediary between the external services and the program (one folder for the whole integration, for the audit).
-5. ~~Everything that talks to hardware is in `hardware_tests/`.~~ Removed in step 48 (user, 2026-10-24): the program no longer works with devices.
-6. The documentation is renewed, with a new README that states the aims of the project as they are now.
-
-## Standards and NIST OSCAL (user, 2026-10-18; step 41 of docs/history.md)
-
-- The work with standards is three views: the **Converter** (a catalog of OSCAL made from the PDFs of a standard, step 50), the **Evaluation plan** (master projects: tasks with a scheme each, work packages, step 51) and the **Evaluation lab** (a package carried out for one product: evidence, fragments, results, the report, step 52); the results of the functional tests the laboratory carries out are inputs of the evaluator, not functions of the program (step 48).
-- **The requirements of the standards are stored as catalogs of NIST OSCAL**; the other documents of OSCAL (mapping, profile, assessment plan, assessment results) are imported, checked, kept and exported. What the program adds (AI instructions, quotes and their checks, proposals, the master projects, the evaluations) is the **evaluation support**, our own model, kept apart and linked to OSCAL objects only by their UUIDs and ids; nothing of ours is written into an OSCAL document (`docs/oscal.md`).
-- Schemes of our own are needed (Common Criteria, ETSI EN 303 645); the tests also run on files of NIST. Concept and open questions: `docs/oscal.md`.
-
-## Way of working
-
-- Propose the concept first and get approval, then write code.
-- Small steps, each tested on its own (unit tests in Rust, end-to-end tests where a front end is involved) before the next step starts.
-- Readability first: the user has to keep an overview of the code. Clear structure, one responsibility per file.
-- **Where the comments are (user, 2026-10-23).** A comment stands at the function: **what it does, where it is called from, and which functions it calls** to do its work; that is enough to follow the code without leaving it. **Descriptions of the architecture (the flow of data, the layers, the elements of a view, schemes) are in `docs/`, as Markdown with schemes**, never in the head of a file that holds no code or in a file the reader has to open besides the function. During a review one must always know where everything comes from; scattering the same information over the project is the same fault, only spread: keep order and comment. **A plan:** the code is brought to it by steps 45 and 46 of `docs/history.md` and by every file that is rebuilt or reviewed.
-- **Unit tests live in the file whose functions they test** (user, 2026-10-23; step 44 of `docs/history.md`): its last item, `#[cfg(test)] mod tests { use super::*; ... }`, after all the code of the program; `src/architecture_tests.rs` checks that nothing of the program follows them. Files of their own only for the help of the tests (`test_support.rs`) and the tests of the whole program (`architecture_tests.rs`, `command_lists_tests.rs`). `cargo fmt` (`rustfmt.toml`, 120 characters) before every commit.
-- A command of the window is listed in four places (the entry of its view, `views/<view>/<view>.rs`, `routes.rs`, `build.rs`, `capabilities/default.json`); the tests check that they agree, and that no folder uses a folder above it (`src/architecture_tests.rs`).
-- Prefer few, well-known dependencies; explain each one when it is added.
+- The user reviews the code by hand, file by file; Claude answers precisely, points out errors, and changes code only on request.
+- `// ok kk` above a function means: approved by the user; every line added or removed in it needs the user's approval first. Claude never adds, moves or removes the marker.
+- `review.md` records the state of the review; a whole file approved in the chat is written there with the date.
+- Decisions of the user that matter beyond the current task are written down at once (this file for working rules, `docs/` for the concept).

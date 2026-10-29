@@ -1,6 +1,6 @@
 # IO Master: the data model
 
-**State (2026-10-28):** the models of `io-master/src/model/` are agreed with the user, model by model, and written as plain structures; their create, read and update are built in `db/`, with the tables named here (`users/<id>.v2.db`; `User` and `Installation` in the system database `system.v2.db`). The earlier code was removed: the program is rebuilt on these models (`code_structure.md`).
+The models of `io-master/src/model/`, agreed with the user model by model, and their tables in `db/` (`users/<id>.v2.db`; `User`, `Installation` and `UserKeys` in the system database `system.v2.db`). **A model is changed only with the user's consent** (`CLAUDE.md`).
 
 ## 1. The rules of a model (user, 2026-10-28)
 
@@ -81,7 +81,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 - **Every check is an evaluation (user, 2026-10-28).** A new version of a document of the product (a new ST) is a new copy of the plan, a new evaluation: the earlier checks stay as they were, with their documents and results.
 - **The copy of a plan** gives its work units new ids; their `dependencies` are written anew with the new ids.
 - **How an evaluation begins (user, 2026-10-28).** The plan stays in the database as it is. In the view of the evaluation the user looks through the plans and chooses one; the program makes its copy, at once in the state `Evaluation`, with `source_plan` naming the plan and the identification of the evaluation ISO/IEC 17025 asks for: `product`, `client`, `evaluator`, `started` (empty in a plan).
-- **One station, one user, both roles (user, 2026-10-28).** The same user makes the plans and carries out the evaluations on one station; nothing passes between installations (the work packages are dropped).
+- **One station, one user, both roles (user, 2026-10-28).** The same user makes the plans and carries out the evaluations on one station; nothing passes between installations.
 - **Two kinds of documents, never mixed.** The standards (`OscalStandardDocument`: the CEM, PP1, PP2) are the reference, kept as their OSCAL JSON in the database; the documents of the product (`ProductDocument`: the ST, the IXIT) come from the client, their files kept in the database, encrypted with it, so that what was assessed cannot change after the assessment. A proof of the laboratory (`LabProof`) keeps the record of its test that ISO/IEC 17025 asks for: when, by whom, with which equipment.
 - **A plan declares its standards.** The `reference` of every work unit is one of the `oscal_documents` of its plan (a plan may hold the CEM and two protection profiles; a work unit belongs to one of them), and its `input_product_documents` are among the `product_documents` of its plan. `reference` with `oscal_key` (the `id` of the control in the JSON of the catalog) is the place of the work unit in its standard; `label` is its number in the standard.
 - **A work unit of the documentation** is one whose `input_functional` is `None`: it needs no results of functional tests.
@@ -93,7 +93,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 - **The agent of the planner** (`planning_agent`, user 2026-10-29) is an agent named by a plan in planning: it fills the parameters of the work units of the plan with its knowledge ("Fill with AI"). It does not go into an evaluation: the copy has `None`, and the database refuses an agent of the planner on a plan that is no more in planning.
 - **The order of the work** comes from the same function (Kahn's algorithm, without recursion): a work unit comes after all its dependencies, otherwise in the order of the plan. What Kahn's algorithm leaves depends on a cycle; the same algorithm backward on it leaves only the work units of the cycles themselves, which are the cross references (a work unit that only depends on a cycle is not marked). The function is `panels/logic/evaluation_plan/order.rs` (user, 2026-10-29: not a part of `db/`), called after every change of the work units of a plan; the copy of a plan into an evaluation is refused while the plan is blocked or a work unit is marked.
 - **A work unit is removed** only from a plan in planning (`delete_work_unit`, user 2026-10-29), with the dependencies of the others on it.
-- **A new work unit** is made from a control of a standard of its plan: its label, its key, the text of its statement (the requirement) and of its guidance; no documents, proofs or agent yet, which the planner gives (and later an agent that reads the standard, user 2026-10-29). A work unit becomes a functional test when the planner gives it a proof of the laboratory.
+- **A new work unit** is made from a control of a standard of its plan: its label, its key, the text of its statement (the requirement) and of its guidance; no documents, proofs or agent yet, which the planner gives, by hand or through the agent of the planner ("Fill with AI"). A work unit becomes a functional test when it gets a proof of the laboratory.
 
 ### 3.2 The verdict (user, 2026-10-28, as Common Criteria asks)
 
@@ -116,8 +116,10 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 - One Linux account holds one installation with one user. `User` and `Installation` are kept in the system database, which is not encrypted and holds nothing secret; the copies of the key of the encrypted database of the user are kept beside the user but belong to `db/encryption/` (`architecture.md`, section 5).
 - **The keys of a user** (`UserKeys`, user 2026-10-28) are a model of their own, apart from `User`: the two copies of the one random key of the database of the user, wrapped with the password (Argon2id) and with the recovery code, each bound to the id of the user (`panels/logic/program_start/access.rs`). None of it is secret. The two copies keep the shape they had in the earlier program.
-- `Settings` names every setting as a field of its own: today the integration used where no agent names one.
+- `Settings` names every setting as a field of its own: today the active integration (its use is open, `todo.md`).
 
-## 6. What the program drops
+## 6. The standards in OSCAL
 
-- **The Converter** (a catalog of OSCAL made from the PDFs of a standard) is dropped (user, 2026-10-28): a chat with an agent is enough to make a catalog. Its code went with the earlier program (2026-10-28) and does not come back.
+- A standard is an **OSCAL 1.2.3 catalog** (`OscalStandardDocument::doc`, its JSON), checked against the schema of NIST built into the program (`io-master/oscal/`) when it is imported; its title and version are read from its metadata.
+- A work unit is made from one control of a catalog of its plan: `oscal_key` is the `id` of the control, `label` its label in the standard (the `prop` `label`), `requirement` and `guidance` the text of its statement and guidance parts.
+- The plan and the evaluation are the program's own model, linked to the catalogs only by these ids: nothing of ours is written into an OSCAL document.

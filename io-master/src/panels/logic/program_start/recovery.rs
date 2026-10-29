@@ -1,5 +1,5 @@
 //! The second copy of the key of a database, wrapped with the recovery
-//! code (step 49 of docs/history.md, `docs/architecture.md`, section 5.4):
+//! code (`docs/architecture.md`, section 5.4):
 //! the way back to the data after a forgotten password, as the recovery
 //! keys of BitLocker, FileVault and LUKS.
 //!

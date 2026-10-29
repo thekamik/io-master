@@ -11,7 +11,7 @@
 //! divided words). It is called as a separate program, never through
 //! a shell, and the PDF is given on its standard input (`fd://0`):
 //! no file name reaches a command line, and a PDF that comes from an
-//! imported scheme (step 22) is never written to the disk unencrypted.
+//! imported document is never written to the disk unencrypted.
 //!
 //! A standard has hundreds of pages, so the caller reads the text in
 //! parts of [`PART`] pages ([`text_of_pages`]): after every part it
