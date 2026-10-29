@@ -78,15 +78,21 @@
   {/if}
 
   <table class="data">
-    <thead><tr><th>Work unit</th><th>Standard</th><th>Kind</th><th>Depends on</th><th></th></tr></thead>
+    <colgroup>
+      <col />
+      <col style="width: 9.5rem" />
+      <col style="width: 6rem" />
+      <col style="width: 7rem" />
+    </colgroup>
+    <thead><tr><th>Work unit</th><th>Kind</th><th>Depends on</th><th></th></tr></thead>
     <tbody>
       {#each units as unit (unit.id)}
         <tr class:active={unit.id === open}>
           <td>
             <button type="button" class="link" onclick={() => (open = unit.id)}>{unit.label}</button>
             {#if unit.crossReference}<span class="problem-text"> cross reference</span>{/if}
+            <div class="standard">{unit.standard}</div>
           </td>
-          <td class="standard" title={unit.standard}>{unit.standard}</td>
           <td>{unit.functional ? "Functional" : "Documentation"}</td>
           <td>{unit.dependencies.length}</td>
           <td>
@@ -94,7 +100,7 @@
           </td>
         </tr>
       {:else}
-        <tr><td colspan="5" class="note">No work unit yet: add them from a standard of the plan.</td></tr>
+        <tr><td colspan="4" class="note">No work unit yet: add them from a standard of the plan.</td></tr>
       {/each}
     </tbody>
   </table>
@@ -146,7 +152,7 @@
   }
 
   table.data td {
-    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   .inline {
@@ -160,10 +166,13 @@
     width: 9rem;
   }
 
-  td.standard {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  /* The title of a standard is never cut: two standards may differ only at
+     its end ("... for network devices" and "... for network devices,
+     industrial"); it stands whole under the label of its work unit. */
+  .standard {
+    font-size: 0.8rem;
+    color: var(--muted, #9aa3b2);
+    white-space: normal;
   }
 
   .problem-text {
