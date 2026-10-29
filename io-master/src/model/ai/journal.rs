@@ -3,8 +3,10 @@
 //! traced to what it rests on. Kept in the table `ai_journal`, only ever
 //! added to: the database refuses to change or remove an entry.
 //!
-//! The integration, the model and the agent are kept by their names, as
-//! text: the entry stays as it was when they are renamed or removed.
+//! The integration and the model are kept by their names, as text: the
+//! entry stays as it was when they are renamed or removed. The agent is
+//! named by its id (user, 2026-10-29): agents are never removed, so the id
+//! always finds it.
 
 /// An entry of the journal of the AI (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,8 +24,10 @@ pub struct JournalEntry {
     /// The model that answered, as the service named it.
     pub model: String,
 
-    /// The name of the agent that asked; empty without an agent.
-    pub agent: String,
+    /// The agent that asked (`Agent`); `None` for a question without an
+    /// agent (a chat on the active integration, the check of an
+    /// integration).
+    pub agent: Option<i64>,
 
     /// The work unit the question was asked for; `None` for a question
     /// outside an evaluation.

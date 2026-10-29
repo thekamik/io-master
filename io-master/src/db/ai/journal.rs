@@ -4,10 +4,10 @@
 //! (two triggers), so that what a result of the AI rests on cannot be
 //! altered.
 //!
-//! The integration, the model and the agent are kept by their names, and
-//! the work unit by its id without a link the database checks: an entry
-//! stays as it was when they are renamed, or a work unit is taken out of
-//! its plan.
+//! The integration and the model are kept by their names, the work unit by
+//! its id without a link the database checks: an entry stays as it was when
+//! they are renamed, or a work unit is taken out of its plan. The agent is
+//! a link the database checks (user, 2026-10-29): agents are never removed.
 //!
 //! ```text
 //! ai_journal   id, time, integration, model, agent, work_unit, request, answer, ending,
@@ -33,7 +33,7 @@ pub const SCHEMA: &str = "
         time          INTEGER NOT NULL,
         integration   TEXT NOT NULL,
         model         TEXT NOT NULL,
-        agent         TEXT NOT NULL,
+        agent         INTEGER REFERENCES ai_agents(id),
         work_unit     INTEGER,
         request       TEXT NOT NULL,
         answer        TEXT NOT NULL,
@@ -187,7 +187,7 @@ mod tests {
             time: 1_793_000_000,
             integration: "Ollama".to_owned(),
             model: "llama3.1".to_owned(),
-            agent: String::new(),
+            agent: None,
             work_unit: Some(3),
             request: request.to_owned(),
             answer: "PASS".to_owned(),
@@ -217,5 +217,21 @@ mod tests {
         assert!(connection.execute("UPDATE ai_journal SET answer = 'FAIL' WHERE id = ?1", [id]).is_err());
         assert!(connection.execute("DELETE FROM ai_journal WHERE id = ?1", [id]).is_err());
         assert_eq!(read_journal_entry(&db, id).unwrap().answer, "PASS");
+    }
+
+    #[test]
+    fn an_entry_names_its_agent_by_its_id_and_only_an_agent_that_exists() {
+        let (_directory, db) = database();
+        let integration =
+            crate::db::ai::integration::create_integration(&db, &crate::test_support::database::integration()).unwrap();
+        let agent =
+            crate::db::ai::agent::create_agent(&db, &crate::test_support::database::agent(integration)).unwrap();
+        let id = create_journal_entry(&db, &JournalEntry { agent: Some(agent), ..entry("one") }).unwrap();
+
+        assert_eq!(read_journal_entry(&db, id).unwrap().agent, Some(agent));
+        assert!(matches!(
+            create_journal_entry(&db, &JournalEntry { agent: Some(agent + 1), ..entry("two") }),
+            Err(DbError::Sql(_))
+        ));
     }
 }

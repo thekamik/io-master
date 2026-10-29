@@ -25,7 +25,7 @@ EvaluationPlan                                      Integration ◄── ApiKey
           ├── input_product_documents ─► ProductDocument  │
           ├── input_functional ────────► LabProof          │
           └── ai_agent ────────────────────────────────────┘
-                                                    JournalEntry (work_unit ──► WorkUnit)
+                                                    JournalEntry (agent ──► Agent, work_unit ──► WorkUnit)
                                                     Chat (agent ──► Agent, work_unit ──► WorkUnit)
                                                     Instructions (one per AiTask)
 
@@ -113,7 +113,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 - **The knowledge (RAG)** is a search before the question, not a training of the model. A knowledge base is a folder of sources, shared by the agents that name it; a source is one text (an earlier evaluation, a note). Whenever a text is stored, `db/` cuts it into passages of a bounded length and indexes them (FTS5); at a question the passages of the bases of the agent that fit it best are given to the model with the question. The passages are an index, made again from the text, not a model.
 - **The instructions of a task** are the fixed part of every question of the task ("assess this work unit, answer in this form"), which the user may change; they go with the instructions of the agent.
 - **A chat** is the place where the user consults an agent, for example the agent of one work unit about that work unit.
-- **The journal of the AI** keeps every question and its answer, only ever added to, with the work unit it was asked for: every result of the AI can be traced to what it rests on. The integration, the model and the agent are kept by their names, so that an entry stays as it was.
+- **The journal of the AI** keeps every question and its answer, only ever added to, with the work unit it was asked for: every result of the AI can be traced to what it rests on. The integration and the model are kept by their names, so that an entry stays as it was; the agent by its id (user, 2026-10-29), `None` for a question without an agent.
 
 ## 5. The user and the program
 
