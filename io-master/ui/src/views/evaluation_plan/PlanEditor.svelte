@@ -1,6 +1,7 @@
 <!--
   The editor of a plan, opened from the tab Plans: "← Plans", the data of the
-  plan (PlanForm) and its work units (PlanWorkUnits), a work unit opened in
+  plan (PlanForm), "Fill with AI" (PlanFill) and its work units
+  (PlanWorkUnits), a work unit opened in
   its own editor (onopen). After a change one element counts `version` up,
   so that both read their data again. The page and the filter of the list
   belong to the panel (bindable), so that they outlive this screen.
@@ -8,6 +9,7 @@
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import { planGet, type PlanView } from "../../lib/api/evaluation_plan";
+  import PlanFill from "./PlanFill.svelte";
   import PlanForm from "./PlanForm.svelte";
   import PlanWorkUnits from "./PlanWorkUnits.svelte";
 
@@ -55,6 +57,7 @@
 {#if problem}<p class="problem">{problem}</p>{/if}
 
 <PlanForm {plan} {version} onchanged={changed} />
+<PlanFill {plan} {view} onchanged={changed} />
 <PlanWorkUnits {plan} {version} bind:page bind:filter onchanged={changed} {onopen} />
 
 <style>

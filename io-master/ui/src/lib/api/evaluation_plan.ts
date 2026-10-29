@@ -3,7 +3,7 @@
 // `plan_get`. The types mirror the views of those files; a change there
 // needs the same change here.
 
-import { invoke } from "@tauri-apps/api/core";
+import { Channel, invoke } from "@tauri-apps/api/core";
 
 /** A standard (standards.rs, StandardView). */
 export interface StandardView {
@@ -179,4 +179,35 @@ export function workUnitSave(fields: {
 /** A new place of a proof for a work unit; gives its id. Called by WorkUnitForm.svelte. */
 export function workUnitAddProof(plan: number, unit: number, name: string): Promise<number> {
   return invoke("work_unit_add_proof", { plan, unit, name });
+}
+
+/** One step of "Fill with AI" (fill.rs, FillStepView). */
+export interface FillStepView {
+  number: number;
+  total: number;
+  label: string;
+  filled: boolean;
+  notes: string[];
+}
+
+/** How "Fill with AI" ended (fill.rs, FillSummaryView). */
+export interface FillSummaryView {
+  filled: number;
+  failed: number;
+  stopped: boolean;
+}
+
+/** Fills every work unit of a plan with the agent of its planner; `onstep`
+ * gets each step as it ends. Called by PlanFill.svelte. */
+export function planFill(plan: number, onstep: (step: FillStepView) => void): Promise<FillSummaryView> {
+  const onStep = new Channel<FillStepView>();
+
+  onStep.onmessage = onstep;
+
+  return invoke("plan_fill", { plan, onStep });
+}
+
+/** Asks the filling to stop after its present work unit. Called by PlanFill.svelte. */
+export function planFillStop(): Promise<void> {
+  return invoke("plan_fill_stop");
 }
