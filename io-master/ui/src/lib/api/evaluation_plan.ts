@@ -45,6 +45,10 @@ export interface PlanView {
   documents: DocumentView[];
   verdicts: VerdictName[];
   blocked: boolean;
+  /** The agent of the planner, which fills the work units ("Fill with AI"). */
+  planningAgent: number | null;
+  /** Every agent, to choose the agent of the planner. */
+  agents: { id: number; name: string }[];
 }
 
 /** A work unit in the list of a plan (work_units.rs, WorkUnitRowView). */
@@ -119,6 +123,7 @@ export function planSave(fields: {
   standards: number[];
   documents: number[];
   verdicts: VerdictName[];
+  planningAgent: number | null;
 }): Promise<void> {
   return invoke("plan_save", fields);
 }

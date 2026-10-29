@@ -56,7 +56,8 @@ pub const SCHEMA: &str = "
         client      TEXT NOT NULL,
         evaluator   TEXT NOT NULL,
         started     INTEGER,
-        blocked     INTEGER NOT NULL
+        blocked     INTEGER NOT NULL,
+        planning_agent INTEGER REFERENCES ai_agents(id)
     );
 
     CREATE TABLE IF NOT EXISTS evaluation_plan_standards (
@@ -85,7 +86,8 @@ pub const SCHEMA: &str = "
 ";
 
 /// The columns every read of a plan selects.
-const COLUMNS: &str = "id, name, description, state, source_plan, product, client, evaluator, started, blocked";
+const COLUMNS: &str =
+    "id, name, description, state, source_plan, product, client, evaluator, started, blocked, planning_agent";
 
 /// The name of a state in the database.
 fn state_name(state: PlanState) -> &'static str {
@@ -108,7 +110,8 @@ fn state_of(name: &str) -> Result<PlanState, DbError> {
 }
 
 /// Refuses lists longer than their limits, a plan that knows no verdict,
-/// and a plan in planning that names a plan it was copied from.
+/// a plan in planning that names a plan it was copied from, and an
+/// evaluation with an agent of the planner.
 ///
 /// Called by: [`create_evaluation_plan`], [`update_evaluation_plan`].
 fn check_plan(plan: &EvaluationPlan) -> Result<(), DbError> {
@@ -121,6 +124,10 @@ fn check_plan(plan: &EvaluationPlan) -> Result<(), DbError> {
     ensure!(
         plan.state != PlanState::Plan || plan.source_plan.is_none(),
         DbError::Inconsistent("a plan in planning is copied from no plan".to_owned())
+    );
+    ensure!(
+        plan.state == PlanState::Plan || plan.planning_agent.is_none(),
+        DbError::Inconsistent("only a plan in planning has an agent of the planner".to_owned())
     );
 
     Ok(())
@@ -196,8 +203,9 @@ fn insert_plan(connection: &Connection, plan: &EvaluationPlan) -> Result<i64, Db
 
     connection.execute(
         "INSERT INTO evaluation_plans (name, description, state, source_plan, product, client, evaluator, started,
-                                       blocked)
-         VALUES (:name, :description, :state, :source_plan, :product, :client, :evaluator, :started, :blocked)",
+                                       blocked, planning_agent)
+         VALUES (:name, :description, :state, :source_plan, :product, :client, :evaluator, :started, :blocked,
+                 :planning_agent)",
         named_params! {
             ":name": plan.name,
             ":description": plan.description,
@@ -208,6 +216,7 @@ fn insert_plan(connection: &Connection, plan: &EvaluationPlan) -> Result<i64, Db
             ":evaluator": plan.evaluator,
             ":started": plan.started,
             ":blocked": plan.blocked,
+            ":planning_agent": plan.planning_agent,
         },
     )?;
 
@@ -240,6 +249,7 @@ fn plan_of(row: &Row<'_>) -> Result<EvaluationPlan, DbError> {
         possible_verdicts: Vec::new(),
         work_units: Vec::new(),
         blocked: row.get("blocked")?,
+        planning_agent: row.get("planning_agent")?,
     })
 }
 
@@ -371,7 +381,7 @@ pub fn update_evaluation_plan(db: &Database, plan: &EvaluationPlan) -> Result<()
     let changed = transaction.execute(
         "UPDATE evaluation_plans SET name = :name, description = :description, state = :state,
                 source_plan = :source_plan, product = :product, client = :client, evaluator = :evaluator,
-                started = :started, blocked = :blocked
+                started = :started, blocked = :blocked, planning_agent = :planning_agent
          WHERE id = :id",
         named_params! {
             ":id": plan.id,
@@ -384,6 +394,7 @@ pub fn update_evaluation_plan(db: &Database, plan: &EvaluationPlan) -> Result<()
             ":evaluator": plan.evaluator,
             ":started": plan.started,
             ":blocked": plan.blocked,
+            ":planning_agent": plan.planning_agent,
         },
     )?;
 
@@ -541,6 +552,7 @@ pub fn create_evaluation(
         product_documents: all_mapped(&copies.documents, &plan.product_documents)?,
         work_units: Vec::new(),
         blocked: false,
+        planning_agent: None,
         ..plan
     };
     let id = insert_plan(&transaction, &evaluation)?;
@@ -694,6 +706,17 @@ mod tests {
     fn an_evaluation_is_a_copy_of_its_plan_with_its_own_places_and_work_units() {
         let (_directory, db) = database();
         let (source, first, second) = plan_with_units(&db);
+        let integration =
+            crate::db::ai::integration::create_integration(&db, &crate::test_support::database::integration()).unwrap();
+        let planner =
+            crate::db::ai::agent::create_agent(&db, &crate::test_support::database::agent(integration)).unwrap();
+
+        update_evaluation_plan(
+            &db,
+            &EvaluationPlan { planning_agent: Some(planner), ..read_evaluation_plan(&db, source).unwrap() },
+        )
+        .unwrap();
+
         let plan_before = read_evaluation_plan(&db, source).unwrap();
         let id = create_evaluation(&db, source, "Router R7", "ACME", "K. K.", 1_793_000_000).unwrap();
         let evaluation = read_evaluation_plan(&db, id).unwrap();
@@ -702,6 +725,7 @@ mod tests {
         assert_eq!(read_evaluation_plan(&db, source).unwrap(), plan_before);
         assert_eq!(evaluation.state, PlanState::Evaluation);
         assert_eq!(evaluation.source_plan, Some(source));
+        assert_eq!((plan_before.planning_agent, evaluation.planning_agent), (Some(planner), None));
         assert_eq!(evaluation.oscal_documents, plan_before.oscal_documents);
         assert_ne!(evaluation.product_documents, plan_before.product_documents);
         assert_eq!(units.len(), 2);

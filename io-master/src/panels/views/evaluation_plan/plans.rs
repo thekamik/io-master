@@ -14,6 +14,7 @@
 use serde::Serialize;
 use tauri::State;
 
+use crate::db::ai::agent::read_agents;
 use crate::db::database::Database;
 use crate::db::evaluation::evaluation_plan::{read_evaluation_plan, read_evaluation_plans};
 use crate::db::evaluation::oscal_standard_document::read_oscal_standard_documents;
@@ -50,8 +51,16 @@ pub struct DocumentView {
     name: String,
 }
 
+/// An agent the plan may name as the agent of its planner.
+#[derive(Serialize)]
+pub struct AgentChoiceView {
+    id: i64,
+    name: String,
+}
+
 /// The data of a plan, as its form shows it.
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PlanView {
     id: i64,
     name: String,
@@ -61,6 +70,10 @@ pub struct PlanView {
     /// "pass", "fail", "inconclusive".
     verdicts: Vec<String>,
     blocked: bool,
+    /// The agent of the planner, which fills the work units ("Fill with AI").
+    planning_agent: Option<i64>,
+    /// Every agent of the user, to choose the agent of the planner.
+    agents: Vec<AgentChoiceView>,
 }
 
 /// The name of a verdict on the page.
@@ -141,6 +154,11 @@ fn plan_view(db: &Database, plan: EvaluationPlan) -> Result<PlanView, ViewError>
     }
 
     let mut verdicts = Vec::with_capacity(plan.possible_verdicts.len());
+    let mut agents = Vec::new();
+
+    for agent in read_agents(db)? {
+        agents.push(AgentChoiceView { id: agent.id, name: agent.name });
+    }
 
     for verdict in &plan.possible_verdicts {
         verdicts.push(verdict_name(*verdict).to_owned());
@@ -154,6 +172,8 @@ fn plan_view(db: &Database, plan: EvaluationPlan) -> Result<PlanView, ViewError>
         documents,
         verdicts,
         blocked: plan.blocked,
+        planning_agent: plan.planning_agent,
+        agents,
     })
 }
 
@@ -170,7 +190,8 @@ pub fn plan_get(session: State<'_, Session>, id: i64) -> Result<PlanView, ViewEr
 }
 
 /// Saves the data of the plan `id` the planner changed: its name,
-/// description, standards, places of documents and verdicts.
+/// description, standards, places of documents, verdicts and the agent of
+/// its planner.
 ///
 /// Called by: `PlanForm.svelte`, "Save".
 /// Calls: `read_evaluation_plan`, `update_plan`.
@@ -187,6 +208,7 @@ pub fn plan_save(
     standards: Vec<i64>,
     documents: Vec<i64>,
     verdicts: Vec<String>,
+    planning_agent: Option<i64>,
 ) -> Result<(), ViewError> {
     let opened = session.lock()?;
     let db = database(&opened)?;
@@ -202,6 +224,7 @@ pub fn plan_save(
         oscal_documents: standards,
         product_documents: documents,
         possible_verdicts,
+        planning_agent,
         ..read_evaluation_plan(db, id)?
     };
 

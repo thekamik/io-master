@@ -45,6 +45,7 @@ pub fn plan(db: &Database) -> EvaluationPlan {
         possible_verdicts: vec![Verdict::Pass, Verdict::Fail],
         work_units: Vec::new(),
         blocked: false,
+        planning_agent: None,
     }
 }
 

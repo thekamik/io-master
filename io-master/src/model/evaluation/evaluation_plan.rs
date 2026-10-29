@@ -69,6 +69,12 @@ pub struct EvaluationPlan {
     /// `true` when at least one work unit is a `cross_reference`: the
     /// plan cannot be carried out until the planner corrects it.
     pub blocked: bool,
+
+    /// The agent of the planner (`Agent`), which fills the parameters of
+    /// the work units of the plan with its knowledge ("Fill with AI", user
+    /// 2026-10-29). Only a plan in planning has one: it does not go into
+    /// an evaluation, whose copy has `None`.
+    pub planning_agent: Option<i64>,
 }
 
 /// Where an evaluation plan is in its life (user, 2026-10-28).

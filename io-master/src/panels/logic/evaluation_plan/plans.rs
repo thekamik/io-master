@@ -3,6 +3,7 @@
 //! product, verdicts), a new place of a document. A plan is changed here
 //! only while it is planned (state `Plan`); an evaluation is a copy of it.
 
+use crate::db::ai::agent::read_agent;
 use crate::db::database::Database;
 use crate::db::evaluation::evaluation_plan::{create_evaluation_plan, read_evaluation_plan, update_evaluation_plan};
 use crate::db::evaluation::product_document::create_product_document;
@@ -50,20 +51,22 @@ pub fn create_plan(db: &Database, name: &str, description: &str) -> Result<i64, 
         possible_verdicts: vec![Verdict::Pass, Verdict::Fail],
         work_units: Vec::new(),
         blocked: false,
+        planning_agent: None,
     };
 
     Ok(create_evaluation_plan(db, &plan)?)
 }
 
 /// Writes the data of the plan `plan.id` the planner changed: its name,
-/// description, standards, places of documents and verdicts. Its state,
-/// its work units and `blocked` stay as stored. Refused when the plan is no
-/// more in planning, or when a work unit of the plan still uses a standard
-/// or a document the plan would lose.
+/// description, standards, places of documents, verdicts and the agent of
+/// the planner. Its state, its work units and `blocked` stay as stored.
+/// Refused when the plan is no more in planning, when a work unit of the
+/// plan still uses a standard or a document the plan would lose, or when
+/// the agent does not exist.
 ///
 /// Called by: `panels/views/evaluation_plan/` (the data of a plan).
-/// Calls: `read_evaluation_plan`, [`check_planning`], `read_work_units`,
-/// `update_evaluation_plan`.
+/// Calls: `read_evaluation_plan`, [`check_planning`], `read_agent`,
+/// `read_work_units`, `update_evaluation_plan`.
 pub fn update_plan(db: &Database, plan: &EvaluationPlan) -> Result<(), PlanError> {
     let stored = read_evaluation_plan(db, plan.id)?;
 
@@ -75,10 +78,15 @@ pub fn update_plan(db: &Database, plan: &EvaluationPlan) -> Result<(), PlanError
         oscal_documents: plan.oscal_documents.clone(),
         product_documents: plan.product_documents.clone(),
         possible_verdicts: plan.possible_verdicts.clone(),
+        planning_agent: plan.planning_agent,
         ..stored
     };
 
     check_planning(&changed)?;
+
+    if let Some(agent) = changed.planning_agent {
+        read_agent(db, agent)?;
+    }
 
     for unit in read_work_units(db, plan.id)? {
         ensure!(
@@ -146,6 +154,10 @@ mod tests {
 
         assert_eq!(read.possible_verdicts.len(), 3);
         assert_eq!(read.state, PlanState::Plan);
+        assert!(matches!(
+            update_plan(&db, &EvaluationPlan { planning_agent: Some(99), ..read }),
+            Err(PlanError::Db(_))
+        ));
     }
 
     #[test]

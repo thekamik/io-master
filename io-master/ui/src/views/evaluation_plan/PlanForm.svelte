@@ -3,7 +3,9 @@
   plan_add_document in src/panels/views/evaluation_plan/plans.rs): its name,
   description, standards, places of the documents of the product, and
   whether its standards also know the verdict Inconclusive (Pass and Fail
-  always). Tells the panel after every change (onchanged).
+  always), the agent of the planner (made in the panel Agents; it fills the
+  work units with "Fill with AI"). Tells the panel after every change
+  (onchanged).
 -->
 <script lang="ts">
   import SaveStatus from "../../components/save_status/SaveStatus.svelte";
@@ -17,6 +19,7 @@
   let description = $state("");
   let standards: number[] = $state([]);
   let inconclusive = $state(false);
+  let planningAgent: number | null = $state(null);
   let documentName = $state("");
   let problem = $state("");
   let busy = $state(false);
@@ -31,6 +34,7 @@
       description = view.description;
       standards = view.standards.filter((standard) => standard.chosen).map((standard) => standard.id);
       inconclusive = view.verdicts.includes("inconclusive");
+      planningAgent = view.planningAgent;
     } catch (error) {
       problem = sentence(error);
     }
@@ -68,7 +72,7 @@
     const verdicts: VerdictName[] = inconclusive ? ["pass", "fail", "inconclusive"] : ["pass", "fail"];
     const documents = view?.documents.map((document) => document.id) ?? [];
 
-    void write(() => planSave({ id: plan, name, description, standards, documents, verdicts }));
+    void write(() => planSave({ id: plan, name, description, standards, documents, verdicts, planningAgent }));
   }
 
   function addDocument(event: SubmitEvent) {
@@ -110,6 +114,17 @@
       <label class="check">
         <input type="checkbox" bind:checked={inconclusive} />
         The verdict Inconclusive too (ETSI EN 303 645); Pass and Fail always
+      </label>
+
+      <label>
+        Agent of the planner
+        <span class="note">It fills the parameters of the work units with its knowledge ("Fill with AI").</span>
+        <select bind:value={planningAgent}>
+          <option value={null}>— none —</option>
+          {#each view.agents as agent (agent.id)}
+            <option value={agent.id}>{agent.name}</option>
+          {/each}
+        </select>
       </label>
 
       <button type="submit" disabled={busy}>Save the plan</button>
