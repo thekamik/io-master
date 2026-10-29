@@ -30,10 +30,6 @@
     "allow-integration-save",
     "allow-integration-activate",
     "allow-integration-set-key",
-    "allow-integration-check",
-    "allow-instructions-get",
-    "allow-instructions-save",
-    "allow-journal-list",
-    "allow-journal-get"
+    "allow-integration-check"
   ]
 }

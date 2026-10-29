@@ -7,7 +7,8 @@
 //! The integration and the model are kept by their names, the work unit by
 //! its id without a link the database checks: an entry stays as it was when
 //! they are renamed, or a work unit is taken out of its plan. The agent is
-//! a link the database checks (user, 2026-10-29): agents are never removed.
+//! a link the database checks, never empty (user, 2026-10-29): every entry
+//! belongs to the journal of its agent, and agents are never removed.
 //!
 //! ```text
 //! ai_journal   id, time, integration, model, agent, work_unit, request, answer, ending,
@@ -31,7 +32,7 @@ pub const SCHEMA: &str = "
         time          INTEGER NOT NULL,
         integration   TEXT NOT NULL,
         model         TEXT NOT NULL,
-        agent         INTEGER REFERENCES ai_agents(id),
+        agent         INTEGER NOT NULL REFERENCES ai_agents(id),
         work_unit     INTEGER,
         request       TEXT NOT NULL,
         answer        TEXT NOT NULL,
@@ -147,18 +148,19 @@ pub fn read_journal_entry(db: &Database, id: i64) -> Result<JournalEntry, DbErro
     entry_of(row)
 }
 
-/// Reads one page of the journal, the newest first: the entries older than
-/// `before` (all with `None`), at most [`PAGE`].
+/// Reads one page of the journal of the agent `agent`, the newest first:
+/// its entries older than `before` (all with `None`), at most [`PAGE`].
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Called by: `panels/views/agents/` (the journal of an agent).
 /// Calls: [`entry_of`].
-pub fn read_journal_entries(db: &Database, before: Option<i64>) -> Result<Vec<JournalEntry>, DbError> {
+pub fn read_journal_entries(db: &Database, agent: i64, before: Option<i64>) -> Result<Vec<JournalEntry>, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!(
-        "SELECT {COLUMNS} FROM ai_journal WHERE :before IS NULL OR id < :before ORDER BY id DESC LIMIT :page"
+        "SELECT {COLUMNS} FROM ai_journal WHERE agent = :agent AND (:before IS NULL OR id < :before)
+         ORDER BY id DESC LIMIT :page"
     ))?;
     let page = i64::try_from(PAGE).map_err(|error| DbError::Inconsistent(error.to_string()))?;
-    let mut rows = statement.query(named_params! { ":before": before, ":page": page })?;
+    let mut rows = statement.query(named_params! { ":agent": agent, ":before": before, ":page": page })?;
     let mut entries = Vec::with_capacity(PAGE);
 
     for _ in 0..PAGE {
@@ -177,15 +179,29 @@ mod tests {
 
     use super::*;
 
-    use crate::test_support::database::database;
+    use crate::db::ai::agent::create_agent;
+    use crate::db::ai::integration::create_integration;
+    use crate::model::ai::agent::Agent;
+    use crate::model::ai::integration::Integration;
+    use crate::test_support::TempDir;
+    use crate::test_support::database::{agent, database, integration};
 
-    fn entry(request: &str) -> JournalEntry {
+    /// A new database with one agent (its id), which every entry names.
+    fn database_with_agent() -> (TempDir, Database, i64) {
+        let (directory, db) = database();
+        let integration = create_integration(&db, &integration()).unwrap();
+        let agent = create_agent(&db, &agent(integration)).unwrap();
+
+        (directory, db, agent)
+    }
+
+    fn entry(agent: i64, request: &str) -> JournalEntry {
         JournalEntry {
             id: 0,
             time: 1_793_000_000,
             integration: "Ollama".to_owned(),
             model: "llama3.1".to_owned(),
-            agent: None,
+            agent,
             work_unit: Some(3),
             request: request.to_owned(),
             answer: "PASS".to_owned(),
@@ -196,20 +212,30 @@ mod tests {
     }
 
     #[test]
-    fn entries_are_written_and_read_by_pages() {
-        let (_directory, db) = database();
-        let first = create_journal_entry(&db, &entry("one")).unwrap();
-        let second = create_journal_entry(&db, &entry("two")).unwrap();
+    fn the_entries_of_an_agent_are_written_and_read_by_pages() {
+        let (_directory, db, agent) = database_with_agent();
+        let integration = create_integration(&db, &Integration { name: "Other".to_owned(), ..integration() }).unwrap();
+        let other =
+            create_agent(&db, &Agent { name: "Other".to_owned(), ..crate::test_support::database::agent(integration) })
+                .unwrap();
+        let first = create_journal_entry(&db, &entry(agent, "one")).unwrap();
+        let second = create_journal_entry(&db, &entry(agent, "two")).unwrap();
 
-        assert_eq!(read_journal_entry(&db, first).unwrap(), JournalEntry { id: first, ..entry("one") });
-        assert_eq!(read_journal_entries(&db, None).unwrap().len(), 2);
-        assert_eq!(read_journal_entries(&db, Some(second)).unwrap(), vec![JournalEntry { id: first, ..entry("one") }]);
+        create_journal_entry(&db, &entry(other, "of another agent")).unwrap();
+
+        assert_eq!(read_journal_entry(&db, first).unwrap(), JournalEntry { id: first, ..entry(agent, "one") });
+        assert_eq!(read_journal_entries(&db, agent, None).unwrap().len(), 2);
+        assert_eq!(
+            read_journal_entries(&db, agent, Some(second)).unwrap(),
+            vec![JournalEntry { id: first, ..entry(agent, "one") }]
+        );
+        assert_eq!(read_journal_entries(&db, other, None).unwrap().len(), 1);
     }
 
     #[test]
     fn the_database_refuses_to_change_or_remove_an_entry() {
-        let (_directory, db) = database();
-        let id = create_journal_entry(&db, &entry("one")).unwrap();
+        let (_directory, db, agent) = database_with_agent();
+        let id = create_journal_entry(&db, &entry(agent, "one")).unwrap();
         let connection = db.connection();
 
         assert!(connection.execute("UPDATE ai_journal SET answer = 'FAIL' WHERE id = ?1", [id]).is_err());
@@ -218,18 +244,9 @@ mod tests {
     }
 
     #[test]
-    fn an_entry_names_its_agent_by_its_id_and_only_an_agent_that_exists() {
-        let (_directory, db) = database();
-        let integration =
-            crate::db::ai::integration::create_integration(&db, &crate::test_support::database::integration()).unwrap();
-        let agent =
-            crate::db::ai::agent::create_agent(&db, &crate::test_support::database::agent(integration)).unwrap();
-        let id = create_journal_entry(&db, &JournalEntry { agent: Some(agent), ..entry("one") }).unwrap();
+    fn an_entry_names_only_an_agent_that_exists() {
+        let (_directory, db, agent) = database_with_agent();
 
-        assert_eq!(read_journal_entry(&db, id).unwrap().agent, Some(agent));
-        assert!(matches!(
-            create_journal_entry(&db, &JournalEntry { agent: Some(agent + 1), ..entry("two") }),
-            Err(DbError::Sql(_))
-        ));
+        assert!(matches!(create_journal_entry(&db, &entry(agent + 1, "two")), Err(DbError::Sql(_))));
     }
 }

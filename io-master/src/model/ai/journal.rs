@@ -1,6 +1,8 @@
-//! The journal of the AI: every question the program asked an AI service
-//! and the answer that came back, so that every result of the AI can be
-//! traced to what it rests on. Kept in the table `ai_journal`, only ever
+//! The journal of the AI: every question an agent asked an AI service and
+//! the answer that came back, so that every result of the AI can be traced
+//! to what it rests on. Each agent has its own journal: the entries that
+//! name it. A question without an agent (the check of an integration) is
+//! not kept (user, 2026-10-29): it is no part of an evaluation. Kept in the table `ai_journal`, only ever
 //! added to: the database refuses to change or remove an entry.
 //!
 //! The integration and the model are kept by their names, as text: the
@@ -23,10 +25,8 @@ pub struct JournalEntry {
     /// The model that answered, as the service named it.
     pub model: String,
 
-    /// The agent that asked (`Agent`); `None` for a question without an
-    /// agent (a chat on the active integration, the check of an
-    /// integration).
-    pub agent: Option<i64>,
+    /// The agent that asked (`Agent`); every entry has one.
+    pub agent: i64,
 
     /// The work unit the question was asked for; `None` for a question
     /// outside an evaluation.

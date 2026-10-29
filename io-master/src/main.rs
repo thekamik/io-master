@@ -24,13 +24,12 @@ mod checks;
 // structure per kind of data, fields only (docs/data_model.md).
 mod model {
     // model/ai/: the integration with an external AI service and its key,
-    // the agents, the knowledge for the AI (RAG), the instructions of the
-    // tasks, the chats, the journal of the AI.
+    // the agents, the knowledge for the AI (RAG), the chats, the journal of
+    // the AI.
     pub mod ai {
         pub mod agent;
         pub mod api_key;
         pub mod chat;
-        pub mod instructions;
         pub mod integration;
         pub mod journal;
         pub mod rag;
@@ -76,13 +75,11 @@ mod db {
         pub mod sqlcipher;
     }
     // db/ai/: the integrations and their keys, the knowledge (RAG) and its
-    // index, the agents, the instructions of the tasks, the chats, the
-    // journal of the AI.
+    // index, the agents, the chats, the journal of the AI.
     pub mod ai {
         pub mod agent;
         pub mod api_key;
         pub mod chat;
-        pub mod instructions;
         pub mod integration;
         pub mod journal;
         pub mod rag;
@@ -156,11 +153,9 @@ mod panels {
             pub mod recovery_code;
         }
         // panels/logic/settings/: the settings of the AI: the integrations,
-        // their keys and the question that checks them, the instructions of
-        // the tasks.
+        // their keys and the question that checks them.
         pub mod settings {
             pub mod error;
-            pub mod instructions;
             pub mod integrations;
         }
     }
@@ -179,12 +174,10 @@ mod panels {
             pub mod installation;
             pub mod login;
         }
-        // panels/views/settings/: the integrations, the instructions of the
-        // tasks, the journal of the AI.
+        // panels/views/settings/: the integrations, their keys and the check
+        // of the connection.
         pub mod settings {
-            pub mod instructions;
             pub mod integrations;
-            pub mod journal;
         }
     }
 }
@@ -280,10 +273,6 @@ fn tauri_startup() -> ExitCode {
             panels::views::settings::integrations::integration_activate,
             panels::views::settings::integrations::integration_set_key,
             panels::views::settings::integrations::integration_check,
-            panels::views::settings::instructions::instructions_get,
-            panels::views::settings::instructions::instructions_save,
-            panels::views::settings::journal::journal_list,
-            panels::views::settings::journal::journal_get,
         ])
         .build(tauri::generate_context!());
 

@@ -1,5 +1,5 @@
 <!--
-  The tab Integrations of the settings of the AI (its commands
+  The integrations of the settings of the AI (their commands
   integration_list and integration_activate in
   src/panels/views/settings/integrations.rs): every integration, whether it
   has a key, the active one (asked where no agent names another). An

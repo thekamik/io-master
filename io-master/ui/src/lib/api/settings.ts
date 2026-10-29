@@ -8,11 +8,8 @@ import { invoke } from "@tauri-apps/api/core";
 /** The way the program speaks with an AI service. */
 export type ProtocolName = "openai_chat" | "anthropic_messages";
 
-/** How an answer of the AI ended. */
+/** How an answer of the AI ended (also the entries of a journal). */
 export type EndingName = "complete" | "cut" | "stopped" | "refused" | "failed";
-
-/** A task of the AI. */
-export type TaskName = "assessment" | "consultation";
 
 /** An integration in the list (integrations.rs, IntegrationView). */
 export interface IntegrationView {
@@ -47,33 +44,6 @@ export interface CheckView {
   error: string | null;
   inputTokens: number;
   outputTokens: number;
-  journal: number;
-}
-
-/** The instructions of a task (instructions.rs, InstructionsView). */
-export interface InstructionsView {
-  task: TaskName;
-  text: string;
-}
-
-/** An entry of the journal in its list (journal.rs, JournalRowView). */
-export interface JournalRowView {
-  id: number;
-  time: number;
-  integration: string;
-  model: string;
-  agent: string;
-  workUnit: number | null;
-  ending: EndingName;
-  inputTokens: number;
-  outputTokens: number;
-}
-
-/** An entry of the journal whole (journal.rs, JournalEntryView). */
-export interface JournalEntryView {
-  row: JournalRowView;
-  request: string;
-  answer: string;
 }
 
 /** Every integration, the active one marked. */
@@ -104,24 +74,4 @@ export function integrationSetKey(id: number, key: string): Promise<void> {
 /** Checks an integration with one short question. */
 export function integrationCheck(id: number): Promise<CheckView> {
   return invoke("integration_check", { id });
-}
-
-/** The instructions of every task. */
-export function instructionsGet(): Promise<InstructionsView[]> {
-  return invoke("instructions_get");
-}
-
-/** Saves the instructions of a task. */
-export function instructionsSave(task: TaskName, text: string): Promise<void> {
-  return invoke("instructions_save", { task, text });
-}
-
-/** One page of the journal, older than `before` (the newest with null). */
-export function journalList(before: number | null): Promise<JournalRowView[]> {
-  return invoke("journal_list", { before });
-}
-
-/** An entry of the journal whole. */
-export function journalGet(id: number): Promise<JournalEntryView> {
-  return invoke("journal_get", { id });
 }

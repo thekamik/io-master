@@ -36,10 +36,6 @@ fn main() {
         "integration_activate",
         "integration_set_key",
         "integration_check",
-        "instructions_get",
-        "instructions_save",
-        "journal_list",
-        "journal_get",
     ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))

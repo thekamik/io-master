@@ -168,7 +168,7 @@
     </form>
 
     <h3>Connection</h3>
-    <p class="note">One short question, written into the journal as every question.</p>
+    <p class="note">One short question. It belongs to no agent, so it is not kept in a journal.</p>
     <p><button type="button" disabled={checking || busy} onclick={checkConnection}>
       {checking ? "Checking…" : "Check the connection"}
     </button></p>
@@ -185,7 +185,6 @@
         <dt>Answer</dt><dd>{check.text || "—"}</dd>
         <dt>Model</dt><dd class="mono">{check.model}</dd>
         <dt>Tokens</dt><dd>{check.inputTokens} in, {check.outputTokens} out</dd>
-        <dt>Journal</dt><dd>entry {check.journal}</dd>
       </dl>
     {/if}
   {/if}

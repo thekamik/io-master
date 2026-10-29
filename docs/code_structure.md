@@ -76,7 +76,7 @@ panels/views/<panel>   ──record(db, Prepared, Sent)► Answer     the entry 
   (the lock held)                                               answer given out (Sent cannot be read before)
 ```
 
-- `ask.rs`: `Question` (integration, agent, work unit, instructions, messages), `prepare`, `send`, `record`. A question that does not fit the context of the model beside its answer (a fourth of the context, at most 16 000 tokens; three characters a token, on the safe side) is refused before it is sent, never shortened; a conversation that does not end with a message of the user is refused.
+- `ask.rs`: `Question` (integration, agent, work unit, instructions, messages), `prepare`, `send`, `record` (the answer of an agent written into its journal first; a question without an agent, such as the check of an integration, is not kept). A question that does not fit the context of the model beside its answer (a fourth of the context, at most 16 000 tokens; three characters a token, on the safe side) is refused before it is sent, never shortened; a conversation that does not end with a message of the user is refused.
 - `client.rs`: the connection, with the rules of the earlier program: `https://`, or `http://` only on this computer (`check_address`); TLS 1.3 or newer, the certificates of the system or only the CA certificate of the integration (`check_certificate`); no redirect, no proxy of the environment; the key marked sensitive in its header and masked in every text of an answer; every input bounded (32 MiB of a stream, 1 MiB of a line, 64 KiB of an error).
 - `openai.rs` and `anthropic.rs`: the two protocols (`Protocol` of the integration): the body of a question, the header of the key, the reading of one event of the stream (its text, the model, the tokens, how it ended). Anthropic: the header `anthropic-version: 2026-10-21`, only the blocks of text read (the thinking of a model passed over), `refusal` read as `Refused`.
 - `sse.rs` (the events of a stream, pieces of any size), `conversation.rs` (the messages as alternating turns that start with the user), `reading.rs` (what an answer said so far), `error.rs` (`AiError`, its kind from the status of the answer, its explanation from its `error.message`).
@@ -90,9 +90,7 @@ Only what the page calls (user, 2026-10-28): one folder per part of the window, 
 - `evaluation_plan/standards.rs`: `standard_list`, `standard_import` (the dialog of the system opened in Rust, the file read within its limit; the page never sees a path).
 - `evaluation_plan/plans.rs`: `plan_list` (the plans in planning), `plan_create`, `plan_get`, `plan_save`, `plan_add_document`.
 - `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls` (the controls a plan does not hold yet), `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`.
-- `settings/integrations.rs`: `integration_list` (the active one, whether each has a key; never the key), `integration_create`, `integration_save` (the form as one structure), `integration_activate`, `integration_set_key` (the key goes in only), `integration_check` (one short question through `ai/`, the lock released while the answer is awaited).
-- `settings/instructions.rs`: `instructions_get` (every task, the default text when the user changed none), `instructions_save`.
-- `settings/journal.rs`: `journal_list` (pages of 50, the newest first), `journal_get` (the request and the answer); the journal is only read.
+- `settings/integrations.rs`: `integration_list` (the active one, whether each has a key; never the key), `integration_create`, `integration_save` (the form as one structure), `integration_activate`, `integration_set_key` (the key goes in only), `integration_check` (one short question through `ai/`, the lock released while the answer is awaited; not kept in a journal).
 - `opened.rs`: the open database of the session for a command, or "nobody is logged in"; the lock of the session is held for the whole command (except `integration_check`, which releases it while the AI answers).
 
 ### 2.1b `session/`: the session
@@ -105,7 +103,7 @@ The backend of the panel of the plan (user, 2026-10-29), without SQL: `oscal.rs`
 
 ### 2.2d `panels/logic/settings/`: the settings of the AI
 
-The backend of the panel "AI settings" (user, 2026-10-29), without SQL: `integrations.rs` (an integration checked before it is stored: a name, an address and a CA certificate `ai/` accepts, a model, a context of 512 tokens at least; the first one made becomes the active one; the key stored trimmed and bound to the present address, replaced by a new one, never read back but as "has a key"; `check_question`, the question that checks an integration), `instructions.rs` (the instructions of the tasks: the default texts of the program until the user changes them), `error.rs` (`SettingsError`).
+The backend of the panel "AI settings", which handles only the model `Integration` (user, 2026-10-29), without SQL: `integrations.rs` (an integration checked before it is stored: a name, an address and a CA certificate `ai/` accepts, a model, a context of 512 tokens at least; the first one made becomes the active one; the key stored trimmed and bound to the present address, replaced by a new one, never read back but as "has a key"; `check_question`, the question that checks an integration), `error.rs` (`SettingsError`).
 
 ### 2.2a `panels/logic/program_start/`: the account
 
@@ -117,7 +115,7 @@ The backend of the panel of the first start and the login (user, 2026-10-28), al
 
 ### 2.4 `ui/`: the page
 
-A separate project (Svelte 5, TypeScript strict), built into `ui/dist` and embedded in the program. `App.svelte` shows the first start, the login or the frame of the user logged in (the side bar with the panels and "Log out"), from `login_get`; `views/program_start/` (`InstallationForm.svelte`, `LoginForm.svelte`), `views/evaluation_plan/` (user, 2026-10-29: the screens follow the model, where the work units belong to their plan; which screen is shown stays in the page: `EvaluationPlan.svelte`, the tabs and the screen open, with the page and the filter of the list kept for "back"; `StandardsTab.svelte`, the standards and the import; `PlansTab.svelte`, the plans and a new plan; `PlanEditor.svelte`, "← Plans", the data of the plan, `PlanForm.svelte`, and its work units, `PlanWorkUnits.svelte`, by pages of 50 with a filter and "Add from a standard" folded; `WorkUnitEditor.svelte`, "← the plan", "Previous / Next", the requirement, the dependencies found by a filter, "Depended on by", the documents, the guidance, the proofs), `views/settings/` (`Settings.svelte`, three tabs; `IntegrationsTab.svelte`, the list, the active one, whether each has a key; `IntegrationForm.svelte`, the data of one integration, its key only written, the check of the connection with its answer, model, tokens and entry of the journal; `InstructionsTab.svelte`; `JournalTab.svelte`, pages of 50 and one entry whole), `components/recovery_code/` (the code shown once, confirmed by typing one of its groups), `components/save_status/` (what a form says of its last write: "Saving…" while it runs, the buttons locked, then "Saved at" its local time, kept nowhere; user 2026-10-29, ready for the automatic writes planned), `lib/api/` (one function per command, `errors.ts`). The styles of the earlier page are kept in `ui/src/styles/` for the views that come back. The page holds no secret: the passwords are cleared after each call.
+A separate project (Svelte 5, TypeScript strict), built into `ui/dist` and embedded in the program. `App.svelte` shows the first start, the login or the frame of the user logged in (the side bar with the panels and "Log out"), from `login_get`; `views/program_start/` (`InstallationForm.svelte`, `LoginForm.svelte`), `views/evaluation_plan/` (user, 2026-10-29: the screens follow the model, where the work units belong to their plan; which screen is shown stays in the page: `EvaluationPlan.svelte`, the tabs and the screen open, with the page and the filter of the list kept for "back"; `StandardsTab.svelte`, the standards and the import; `PlansTab.svelte`, the plans and a new plan; `PlanEditor.svelte`, "← Plans", the data of the plan, `PlanForm.svelte`, and its work units, `PlanWorkUnits.svelte`, by pages of 50 with a filter and "Add from a standard" folded; `WorkUnitEditor.svelte`, "← the plan", "Previous / Next", the requirement, the dependencies found by a filter, "Depended on by", the documents, the guidance, the proofs), `views/settings/` (only the integrations: `Settings.svelte`; `IntegrationList.svelte`, the list, the active one, whether each has a key; `IntegrationForm.svelte`, the data of one integration, its key only written, the check of the connection with its answer, model and tokens), `components/recovery_code/` (the code shown once, confirmed by typing one of its groups), `components/save_status/` (what a form says of its last write: "Saving…" while it runs, the buttons locked, then "Saved at" its local time, kept nowhere; user 2026-10-29, ready for the automatic writes planned), `lib/api/` (one function per command, `errors.ts`). The styles of the earlier page are kept in `ui/src/styles/` for the views that come back. The page holds no secret: the passwords are cleared after each call.
 
 ## 3. Conventions
 
@@ -149,9 +147,8 @@ model/
     agent.rs                     An AI agent made in the program: which model it asks, what it is told
     api_key.rs                   The API key of an integration with an AI service. It is a password to
     chat.rs                      A chat: the place where the user consults an agent, for example the
-    instructions.rs              The instructions of the program for a task of the AI: the fixed part
     integration.rs               An integration with an external AI service: where the program sends
-    journal.rs                   The journal of the AI: every question the program asked an AI service
+    journal.rs                   The journal of the AI: every question an agent asked an AI service and
     rag.rs                       The knowledge for the AI (RAG, retrieval-augmented generation): the
   evaluation/
     evaluation_plan.rs           An evaluation plan: the work units of an evaluation, with the
@@ -172,7 +169,6 @@ db/
     agent.rs                     The AI agents (`Agent`), in the table `ai_agents` of the database of the
     api_key.rs                   The API keys of the integrations (`ApiKey`), in the table
     chat.rs                      The chats (`Chat`) and their messages (`Message`), in the tables
-    instructions.rs              The instructions of the tasks of the AI (`Instructions`), in the table
     integration.rs               The integrations with AI services (`Integration`), in the table
     journal.rs                   The journal of the AI (`JournalEntry`), in the table `ai_journal` of the
     rag.rs                       The knowledge for the AI (RAG): the knowledge bases (`KnowledgeBase`)
@@ -206,7 +202,6 @@ panels/
       recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/history.md,
     settings/
       error.rs                     The error of the settings of the AI: a change refused, an integration
-      instructions.rs              The instructions of the tasks of the AI, as the settings of the AI show
       integrations.rs              The integrations with AI services, as the settings of the AI change
   views/
     error.rs                     The error of a command, as the page gets it:
@@ -219,9 +214,7 @@ panels/
       installation.rs              The first start, as the page calls it (`ui/src/views/program_start/`):
       login.rs                     The login, as the page calls it (`ui/src/views/program_start/`): what
     settings/
-      instructions.rs              The instructions of the tasks of the AI, as the page calls them: both
       integrations.rs              The integrations of the settings of the AI, as the page calls them: the
-      journal.rs                   The journal of the AI, as the page reads it: one page of entries, the
 ai/
   anthropic.rs                 The messages of Anthropic (`/v1/messages`): the body of a question, its
   ask.rs                       **The only way to an AI service** (user, 2026-10-29): every question of

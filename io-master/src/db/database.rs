@@ -19,7 +19,7 @@ use std::time::Duration;
 
 use rusqlite::Connection;
 
-use crate::db::ai::{agent, api_key, chat, instructions, integration, journal, rag};
+use crate::db::ai::{agent, api_key, chat, integration, journal, rag};
 use crate::db::encryption::database_key::DatabaseKey;
 use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
@@ -53,7 +53,6 @@ impl Database {
         connection.execute_batch(program_data::SCHEMA)?;
         connection.execute_batch(rag::SCHEMA)?;
         connection.execute_batch(agent::SCHEMA)?;
-        connection.execute_batch(instructions::SCHEMA)?;
         connection.execute_batch(oscal_standard_document::SCHEMA)?;
         connection.execute_batch(product_document::SCHEMA)?;
         connection.execute_batch(lab_proof::SCHEMA)?;

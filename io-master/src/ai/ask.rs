@@ -1,12 +1,14 @@
 //! **The only way to an AI service** (user, 2026-10-29): every question of
 //! the program goes through these three steps, and the answer is read only
-//! after it is written into the journal of the AI, so that no caller can
-//! skip the journal.
+//! after [`record`], so that no caller can skip the journal. The question of
+//! an agent is written into the journal of that agent; a question without
+//! an agent (the check of an integration) is not kept (user, 2026-10-29):
+//! it is no part of an evaluation.
 //!
 //! ```text
 //! prepare(db, Question)  ──► Prepared   the integration, its key, the body; the size checked
 //! send(&Prepared, pieces) ──► Sent       the request; the pieces of the answer into the channel
-//! record(db, Prepared, Sent) ──► Answer  the entry of the journal written; the answer given out
+//! record(db, Prepared, Sent) ──► Answer  the entry of the journal of the agent written; the answer given out
 //! ```
 //!
 //! The steps are apart because the database is not used while the answer
@@ -69,14 +71,15 @@ pub struct Prepared {
 
 /// The answer as it came, not written into the journal yet: only
 /// [`record`] gives it out.
-#[must_use = "an answer is read only after record() writes it into the journal"]
+#[must_use = "an answer is read only through record(), which writes the journal of its agent"]
 pub struct Sent(Received);
 
-/// The answer, written into the journal.
+/// The answer, written into the journal of its agent.
 #[derive(Debug)]
 pub struct Answer {
-    /// The id of its entry in the journal.
-    pub journal: i64,
+    /// The id of its entry in the journal; `None` for a question without an
+    /// agent, which is not kept.
+    pub journal: Option<i64>,
     /// The text written; may be partial (see `ending`).
     pub text: String,
     /// The model that answered.
@@ -184,25 +187,17 @@ pub async fn send(prepared: &Prepared, pieces: &mpsc::Sender<String>) -> Sent {
     Sent(client::send(&prepared.request, pieces).await)
 }
 
-/// Writes the question and its answer into the journal of the AI, and
-/// gives the answer out. On a failure the explanation is written after the
-/// text of the answer, so that the journal tells why it failed.
+/// Writes the question of the agent `agent` and its answer into the
+/// journal of the agent; gives the id of the entry. On a failure the
+/// explanation is written after the text of the answer, so that the journal
+/// tells why it failed.
 ///
-/// Called by: `panels/logic/` (every question to the AI), under the lock of
-/// the session.
+/// Called by: [`record`].
 /// Calls: `create_journal_entry`.
-pub fn record(db: &Database, prepared: Prepared, sent: Sent) -> Result<Answer, AiError> {
-    let Sent(received) = sent;
-    let reading = received.reading;
-    let ending = match (&received.error, received.stopped, reading.ending) {
-        (Some(_), _, _) => Ending::Failed,
-        (None, true, _) => Ending::Stopped,
-        (None, false, ending) => ending.unwrap_or(Ending::Complete),
-    };
-    let model = reading.model.unwrap_or_else(|| prepared.integration.model.clone());
-    let mut written = reading.text.clone();
+fn write_entry(db: &Database, prepared: Prepared, agent: i64, answer: &Answer) -> Result<i64, AiError> {
+    let mut written = answer.text.clone();
 
-    if let Some(error) = &received.error {
+    if let Some(error) = &answer.error {
         written.push_str("\n\n[the question failed: ");
         written.push_str(&error.to_string());
         written.push(']');
@@ -212,26 +207,48 @@ pub fn record(db: &Database, prepared: Prepared, sent: Sent) -> Result<Answer, A
         id: 0,
         time: prepared.time,
         integration: prepared.integration.name,
-        model: model.clone(),
-        agent: prepared.agent,
+        model: answer.model.clone(),
+        agent,
         work_unit: prepared.work_unit,
         request: prepared.request.body,
         answer: written,
-        ending,
-        input_tokens: reading.input_tokens,
-        output_tokens: reading.output_tokens,
+        ending: answer.ending,
+        input_tokens: answer.input_tokens,
+        output_tokens: answer.output_tokens,
     };
-    let journal = create_journal_entry(db, &entry)?;
 
-    Ok(Answer {
-        journal,
+    Ok(create_journal_entry(db, &entry)?)
+}
+
+/// Gives the answer out, written first into the journal of its agent; the
+/// answer to a question without an agent is not kept.
+///
+/// Called by: `panels/views/` (every question to the AI), under the lock of
+/// the session.
+/// Calls: [`write_entry`].
+pub fn record(db: &Database, prepared: Prepared, sent: Sent) -> Result<Answer, AiError> {
+    let Sent(received) = sent;
+    let reading = received.reading;
+    let ending = match (&received.error, received.stopped, reading.ending) {
+        (Some(_), _, _) => Ending::Failed,
+        (None, true, _) => Ending::Stopped,
+        (None, false, ending) => ending.unwrap_or(Ending::Complete),
+    };
+    let mut answer = Answer {
+        journal: None,
         text: reading.text,
-        model,
+        model: reading.model.unwrap_or_else(|| prepared.integration.model.clone()),
         ending,
         error: received.error,
         input_tokens: reading.input_tokens,
         output_tokens: reading.output_tokens,
-    })
+    };
+
+    if let Some(agent) = prepared.agent {
+        answer.journal = Some(write_entry(db, prepared, agent, &answer)?);
+    }
+
+    Ok(answer)
 }
 
 #[cfg(test)]
@@ -241,17 +258,20 @@ mod tests {
 
     use super::*;
 
+    use crate::db::ai::agent::create_agent;
     use crate::db::ai::api_key::{create_api_key, update_api_key};
     use crate::db::ai::integration::{create_integration, update_integration};
-    use crate::db::ai::journal::read_journal_entry;
+    use crate::db::ai::journal::{read_journal_entries, read_journal_entry};
     use crate::model::ai::api_key::ApiKey;
     use crate::test_support::ai_service::{FakeAnswer, FakeService, anthropic_events, openai_events};
-    use crate::test_support::database::{database, integration};
+    use crate::test_support::database::{agent, database, integration};
 
-    fn question(integration: i64, text: &str) -> Question {
+    /// A question of the agent `agent` (none with `None`) to the
+    /// integration `integration`.
+    fn question(integration: i64, agent: Option<i64>, text: &str) -> Question {
         Question {
             integration,
-            agent: None,
+            agent,
             work_unit: Some(7),
             system: "Be brief.".to_owned(),
             messages: vec![Message { speaker: Speaker::User, text: text.to_owned(), time: 0 }],
@@ -271,7 +291,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn every_answer_is_written_into_the_journal() {
+    async fn the_answer_of_an_agent_is_written_into_its_journal_and_one_without_an_agent_is_not() {
         let service = FakeService::start(FakeAnswer::Stream(openai_events(&["PA", "SS"]))).await;
         let (_directory, db) = database();
         let local = Integration {
@@ -280,14 +300,20 @@ mod tests {
             ..integration()
         };
         let id = create_integration(&db, &local).unwrap();
-        let answer = ask(&db, &question(id, "Is it so?")).await.unwrap();
-        let entry = read_journal_entry(&db, answer.journal).unwrap();
+        let asking = create_agent(&db, &agent(id)).unwrap();
+        let answer = ask(&db, &question(id, Some(asking), "Is it so?")).await.unwrap();
+        let entry = read_journal_entry(&db, answer.journal.unwrap()).unwrap();
 
         assert_eq!(answer.text, "PASS");
         assert_eq!(answer.ending, Ending::Complete);
         assert_eq!((entry.answer.as_str(), entry.ending, entry.work_unit), ("PASS", Ending::Complete, Some(7)));
-        assert_eq!((entry.integration.as_str(), entry.model.as_str()), ("Ollama", "local-model"));
+        assert_eq!((entry.integration.as_str(), entry.model.as_str(), entry.agent), ("Ollama", "local-model", asking));
         assert!(entry.request.contains("Is it so?") && entry.request.contains("Be brief."));
+
+        let unkept = ask(&db, &question(id, None, "A check")).await.unwrap();
+
+        assert_eq!((unkept.text.as_str(), unkept.journal), ("PASS", None));
+        assert_eq!(read_journal_entries(&db, asking, None).unwrap().len(), 1);
     }
 
     #[tokio::test]
@@ -302,13 +328,14 @@ mod tests {
             ..integration()
         };
         let id = create_integration(&db, &remote).unwrap();
+        let asking = Some(create_agent(&db, &agent(id)).unwrap());
 
-        assert!(matches!(prepare(&db, &question(id, "Hi")), Err(AiError::NoKey)));
+        assert!(matches!(prepare(&db, &question(id, asking, "Hi")), Err(AiError::NoKey)));
 
         create_api_key(&db, &ApiKey { integration: id, key: Zeroizing::new("sk-secret".to_owned()) }).unwrap();
 
-        let answer = ask(&db, &question(id, "Hi")).await.unwrap();
-        let entry = read_journal_entry(&db, answer.journal).unwrap();
+        let answer = ask(&db, &question(id, asking, "Hi")).await.unwrap();
+        let entry = read_journal_entry(&db, answer.journal.unwrap()).unwrap();
 
         assert_eq!(entry.ending, Ending::Failed);
         assert!(matches!(answer.error, Some(AiError::KeyRejected(_))));
@@ -321,10 +348,10 @@ mod tests {
 
         // A new address: the key is given anew for it.
         update_integration(&db, &Integration { id, ..remote }).unwrap();
-        assert!(matches!(prepare(&db, &question(id, "Hi")), Err(AiError::NoKey)));
+        assert!(matches!(prepare(&db, &question(id, asking, "Hi")), Err(AiError::NoKey)));
         update_api_key(&db, &ApiKey { integration: id, key: Zeroizing::new("sk-secret".to_owned()) }).unwrap();
 
-        let answer = ask(&db, &question(id, "Hi")).await.unwrap();
+        let answer = ask(&db, &question(id, asking, "Hi")).await.unwrap();
 
         assert_eq!((answer.text.as_str(), answer.model.as_str()), ("ok", "named-model"));
     }
@@ -337,10 +364,13 @@ mod tests {
 
         // 400 tokens: 100 for the answer, 300 for the question (900
         // characters at most).
-        assert!(prepare(&db, &question(id, &"x".repeat(880))).is_ok());
-        assert!(matches!(prepare(&db, &question(id, &"x".repeat(1000))), Err(AiError::TooLong { room: 300, .. })));
+        assert!(prepare(&db, &question(id, None, &"x".repeat(880))).is_ok());
+        assert!(matches!(
+            prepare(&db, &question(id, None, &"x".repeat(1000))),
+            Err(AiError::TooLong { room: 300, .. })
+        ));
 
-        let mut nothing = question(id, " ");
+        let mut nothing = question(id, None, " ");
 
         assert!(matches!(prepare(&db, &nothing), Err(AiError::NoQuestion)));
 

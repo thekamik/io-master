@@ -9,7 +9,8 @@
 //!                     ──integration_activate()──► activate_integration
 //!                     ──integration_set_key()───► set_key            (the key goes in, never out)
 //!                     ──integration_check(id)───► check_question ─► ask::send ─► ask::record ──► CheckView
-//!                                                  (the lock held)   (released)   (the lock held)
+//!                                                  (the lock held)   (released)   (the lock held; no agent,
+//!                                                                                  so nothing is written)
 //! ```
 
 use serde::{Deserialize, Serialize};
@@ -70,8 +71,6 @@ pub struct CheckView {
     error: Option<String>,
     input_tokens: u32,
     output_tokens: u32,
-    /// The id of its entry in the journal.
-    journal: i64,
 }
 
 /// The name of a protocol on the page.
@@ -244,9 +243,9 @@ async fn send_drained(prepared: &Prepared) -> Sent {
     sent
 }
 
-/// Checks the integration `id` with one short question, sent and written
-/// into the journal as every question. The lock of the session is released
-/// while the answer is awaited, so the window stays usable.
+/// Checks the integration `id` with one short question. It has no agent, so
+/// it is not kept in a journal. The lock of the session is released while
+/// the answer is awaited, so the window stays usable.
 ///
 /// Called by: `Integrations.svelte`, "Check the connection".
 /// Calls: `check_question`, [`send_drained`], `ask::record`.
@@ -268,6 +267,5 @@ pub async fn integration_check(session: State<'_, Session>, id: i64) -> Result<C
         error: answer.error.map(|error| error.to_string()),
         input_tokens: answer.input_tokens,
         output_tokens: answer.output_tokens,
-        journal: answer.journal,
     })
 }

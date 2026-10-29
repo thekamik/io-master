@@ -140,8 +140,8 @@ pub fn has_key(db: &Database, id: i64) -> Result<bool, SettingsError> {
 }
 
 /// The question that checks the integration `id`, prepared: one short
-/// message, no instructions, no agent. It is sent and written into the
-/// journal as every question (`ai/ask.rs`).
+/// message, no instructions, no agent, so it is not kept in a journal
+/// (`ai/ask.rs`).
 ///
 /// Called by: `panels/views/settings/integrations.rs` (the check).
 /// Calls: `prepare`.
