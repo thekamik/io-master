@@ -15,6 +15,21 @@ fn main() {
         "login_get",
         "login_log_in",
         "login_log_out",
+        "standard_list",
+        "standard_import",
+        "plan_list",
+        "plan_create",
+        "plan_get",
+        "plan_save",
+        "plan_add_document",
+        "work_unit_list",
+        "work_unit_controls",
+        "work_unit_add",
+        "work_unit_add_all",
+        "work_unit_remove",
+        "work_unit_get",
+        "work_unit_save",
+        "work_unit_add_proof",
     ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))

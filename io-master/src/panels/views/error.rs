@@ -10,6 +10,8 @@
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
+use crate::db::error::DbError;
+use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::program_start::access::AccountError;
 use crate::session::state::SessionBroken;
 
@@ -21,6 +23,27 @@ pub enum ViewError {
     Account(AccountError),
     /// The session could not be used; the program should be started again.
     Session,
+    /// Nobody is logged in: the page shows the login again.
+    NotLoggedIn,
+    /// The making of a plan refused or failed.
+    Plan(PlanError),
+    /// A database refused or failed.
+    Db(DbError),
+    /// What the page sent, or a file the user chose, cannot be taken;
+    /// holds the reason.
+    Invalid(String),
+}
+
+impl From<PlanError> for ViewError {
+    fn from(error: PlanError) -> ViewError {
+        ViewError::Plan(error)
+    }
+}
+
+impl From<DbError> for ViewError {
+    fn from(error: DbError) -> ViewError {
+        ViewError::Db(error)
+    }
 }
 
 impl From<AccountError> for ViewError {
@@ -47,7 +70,14 @@ impl ViewError {
             ViewError::Account(AccountError::PasswordsDiffer | AccountError::WeakPassword(_) | AccountError::Db(_)) => {
                 "invalid"
             }
-            ViewError::Account(AccountError::Key(_)) | ViewError::Session => "failed",
+            ViewError::NotLoggedIn => "not_logged_in",
+            ViewError::Plan(PlanError::Oscal(_) | PlanError::Refused(_) | PlanError::Db(DbError::Inconsistent(_)))
+            | ViewError::Db(DbError::Inconsistent(_))
+            | ViewError::Invalid(_) => "invalid",
+            ViewError::Account(AccountError::Key(_))
+            | ViewError::Session
+            | ViewError::Plan(PlanError::Db(_))
+            | ViewError::Db(_) => "failed",
         }
     }
 
@@ -58,6 +88,10 @@ impl ViewError {
         match self {
             ViewError::Account(error) => error.to_string(),
             ViewError::Session => "the session of the window failed: start the program again".to_owned(),
+            ViewError::NotLoggedIn => "nobody is logged in".to_owned(),
+            ViewError::Plan(error) => error.to_string(),
+            ViewError::Db(error) => error.to_string(),
+            ViewError::Invalid(reason) => reason.clone(),
         }
     }
 }

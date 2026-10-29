@@ -115,6 +115,26 @@ fn holds(units: &[WorkUnit], standard: i64, oscal_key: &str) -> bool {
     false
 }
 
+/// The controls of the standard `standard` of the plan `plan` that the plan
+/// does not hold yet, in the order of the standard: what the planner may
+/// add.
+///
+/// Called by: `panels/views/evaluation_plan/work_units.rs` (`work_unit_controls`).
+/// Calls: `read_evaluation_plan`, [`controls_of`], `read_work_units`, [`holds`].
+pub fn available_controls(db: &Database, plan: i64, standard: i64) -> Result<Vec<CatalogControl>, PlanError> {
+    let stored = read_evaluation_plan(db, plan)?;
+    let units = read_work_units(db, plan)?;
+    let mut available = Vec::new();
+
+    for control in controls_of(db, &stored, standard)? {
+        if !holds(&units, standard, &control.oscal_key) {
+            available.push(control);
+        }
+    }
+
+    Ok(available)
+}
+
 /// Adds to the plan `plan` the work unit of the control `oscal_key` of its
 /// standard `standard`, as its last. Refused when the plan holds it already.
 /// Gives its id.
@@ -252,6 +272,11 @@ mod tests {
 
     const NIST_SAMPLE: &str = include_str!("../../../../oscal/examples/basic-catalog.json");
 
+    /// Whether `controls` hold the control `oscal_key`.
+    fn holds_key(controls: &[CatalogControl], oscal_key: &str) -> bool {
+        controls.iter().any(|control| control.oscal_key == oscal_key)
+    }
+
     /// A plan with the sample of NIST as its standard.
     fn plan_with_standard(db: &Database) -> (i64, i64) {
         let standard = import_standard(db, NIST_SAMPLE).unwrap();
@@ -270,6 +295,7 @@ mod tests {
         let first = add_work_unit(&db, plan, standard, "s1.1.1").unwrap();
 
         assert_eq!(read_work_unit(&db, first).unwrap().label, "1.1.1");
+        assert!(!holds_key(&available_controls(&db, plan, standard).unwrap(), "s1.1.1"));
         assert!(matches!(add_work_unit(&db, plan, standard, "s1.1.1"), Err(PlanError::Refused(_))));
         assert!(matches!(add_work_unit(&db, plan, standard, "nothing"), Err(PlanError::Refused(_))));
 

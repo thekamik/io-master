@@ -172,6 +172,11 @@ panels/
       recovery_code.rs             The recovery code of a forgotten password (step 49 of docs/history.md,
   views/
     error.rs                     The error of a command, as the page gets it:
+    opened.rs                    The open database of the user logged in, as every command of a panel
+    evaluation_plan/
+      plans.rs                     The plans of the panel of the plan, as the page calls them: the list of
+      standards.rs                 The standards of the panel of the plan, as the page calls them: their
+      work_units.rs                The work units of the panel of the plan, as the page calls them: the list
     program_start/
       installation.rs              The first start, as the page calls it (`ui/src/views/program_start/`):
       login.rs                     The login, as the page calls it (`ui/src/views/program_start/`): what

@@ -123,7 +123,6 @@ mod panels {
         // panels/logic/evaluation_plan/: the making of a plan: the standards
         // checked against the schema of NIST and read, the plans, their work
         // units, the order of the work and the cross references.
-        #[allow(dead_code, reason = "called by the views of the plan, which come next (2026-10-29)")]
         pub mod evaluation_plan {
             pub mod error;
             pub mod order;
@@ -147,6 +146,14 @@ mod panels {
     }
     pub mod views {
         pub mod error;
+        pub mod opened;
+        // panels/views/evaluation_plan/: the standards, the plans in
+        // planning, their work units.
+        pub mod evaluation_plan {
+            pub mod plans;
+            pub mod standards;
+            pub mod work_units;
+        }
         // panels/views/program_start/: the first start and the login.
         pub mod program_start {
             pub mod installation;
@@ -226,6 +233,21 @@ fn tauri_startup() -> ExitCode {
             panels::views::program_start::login::login_get,
             panels::views::program_start::login::login_log_in,
             panels::views::program_start::login::login_log_out,
+            panels::views::evaluation_plan::standards::standard_list,
+            panels::views::evaluation_plan::standards::standard_import,
+            panels::views::evaluation_plan::plans::plan_list,
+            panels::views::evaluation_plan::plans::plan_create,
+            panels::views::evaluation_plan::plans::plan_get,
+            panels::views::evaluation_plan::plans::plan_save,
+            panels::views::evaluation_plan::plans::plan_add_document,
+            panels::views::evaluation_plan::work_units::work_unit_list,
+            panels::views::evaluation_plan::work_units::work_unit_controls,
+            panels::views::evaluation_plan::work_units::work_unit_add,
+            panels::views::evaluation_plan::work_units::work_unit_add_all,
+            panels::views::evaluation_plan::work_units::work_unit_remove,
+            panels::views::evaluation_plan::work_units::work_unit_get,
+            panels::views::evaluation_plan::work_units::work_unit_save,
+            panels::views::evaluation_plan::work_units::work_unit_add_proof,
         ])
         .build(tauri::generate_context!());
 

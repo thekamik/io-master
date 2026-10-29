@@ -24,7 +24,6 @@ use crate::model::user::user_data::User;
 /// The user logged in and their open database.
 pub struct Opened {
     pub user: User,
-    #[allow(dead_code, reason = "read by the views that come next (2026-10-28)")]
     pub database: Database,
 }
 
