@@ -64,6 +64,10 @@ Only what the page calls (user, 2026-10-28): one folder per part of the window, 
 
 - `program_start/installation.rs`: `installation_create` (the first start; gives the recovery code once).
 - `program_start/login.rs`: `login_get` (installed or not, who is logged in), `login_log_in`, `login_log_out`.
+- `evaluation_plan/standards.rs`: `standard_list`, `standard_import` (the dialog of the system opened in Rust, the file read within its limit; the page never sees a path).
+- `evaluation_plan/plans.rs`: `plan_list` (the plans in planning), `plan_create`, `plan_get`, `plan_save`, `plan_add_document`.
+- `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls` (the controls a plan does not hold yet), `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`.
+- `opened.rs`: the open database of the session for a command, or "nobody is logged in"; the lock of the session is held for the whole command.
 
 ### 2.1b `session/`: the session
 
@@ -83,7 +87,7 @@ The backend of the panel of the first start and the login (user, 2026-10-28), al
 
 ### 2.4 `ui/`: the page
 
-A separate project (Svelte 5, TypeScript strict), built into `ui/dist` and embedded in the program. `App.svelte` shows the first start, the login or the user logged in, from `login_get`; `panels/views/program_start/` (`InstallationForm.svelte`, `LoginForm.svelte`), `components/recovery_code/` (the code shown once, confirmed by typing one of its groups), `lib/api/` (one function per command, `errors.ts`). The styles of the earlier page are kept in `ui/src/styles/` for the views that come back. The page holds no secret: the passwords are cleared after each call.
+A separate project (Svelte 5, TypeScript strict), built into `ui/dist` and embedded in the program. `App.svelte` shows the first start, the login or the frame of the user logged in (the side bar with the panels and "Log out"), from `login_get`; `views/program_start/` (`InstallationForm.svelte`, `LoginForm.svelte`), `views/evaluation_plan/` (`EvaluationPlan.svelte`: the standards, the plans, a new plan; `PlanForm.svelte`: the data of a plan; `WorkUnits.svelte`: the work units, added one or all from a standard, removed; `WorkUnitForm.svelte`: the dependencies found by a filter of the labels, the documents, the proofs, the guidance), `components/recovery_code/` (the code shown once, confirmed by typing one of its groups), `lib/api/` (one function per command, `errors.ts`). The styles of the earlier page are kept in `ui/src/styles/` for the views that come back. The page holds no secret: the passwords are cleared after each call.
 
 ## 3. Conventions
 
