@@ -50,7 +50,7 @@ One structure per kind of data kept in the database, its fields each commented, 
 
 ### 2.2 `db/`: the databases
 
-- **Create, read and update, no delete** (user, 2026-10-28). Exceptions, each said in its file: the journal of the AI and the installation are created and read only; a work unit leaves a plan only when the plan is written without it (`evaluation/evaluation_plan.rs`), the only removal.
+- **Create, read and update, no delete** (user, 2026-10-28). Exceptions, each said in its file: the journal of the AI and the installation are created and read only; `delete_work_unit` removes a work unit only from a plan in planning (`evaluation/work_unit.rs`, user 2026-10-29: a planner changes a plan freely, and work units kept inactive would fill the database), the only deletion; writing a plan only orders its work units.
 - **The layout mirrors `model/`**: one file per file of a model, holding its tables (`SCHEMA`), the reading of its rows and its functions `create_<model>`, `read_<model>` (and `read_<model>s` for a list), `update_<model>`. A list of a model is a table of its own, one row per element with its position (`lists.rs`).
 - **Two databases**: `users/<id>.v2.db`, encrypted by SQLCipher with the key of the user (`database.rs`), and `system.v2.db`, not encrypted, holding only the installation and its user (`system_database.rs`). Their tables are made when they are missing; the layout changes freely until version 1 (CLAUDE.md).
 - **SQL lives only here**: the connection of a database is visible only inside `db/`.

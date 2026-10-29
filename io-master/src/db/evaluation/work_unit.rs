@@ -1,8 +1,10 @@
 //! The work units of the plans (`WorkUnit`), in the table `work_units` of
 //! the database of the user, with their lists in tables of their own:
-//! create, read, update; never deleted on their own (user, 2026-10-28): a
-//! work unit leaves a plan only when the plan is written without it
-//! (`update_evaluation_plan`).
+//! create, read, update, and **delete only from a plan in planning** (user,
+//! 2026-10-29): while a plan is planned, the planner changes it freely, and
+//! a work unit marked inactive instead of removed would fill the database;
+//! once the plan is an evaluation or a report, its work units stay
+//! (`delete_work_unit`, the one deletion of `db/`).
 //!
 //! ```text
 //! work_units               one row per work unit: its plan, its position in the plan, its fields;
@@ -521,6 +523,32 @@ pub fn update_work_unit(db: &Database, unit: &WorkUnit) -> Result<(), DbError> {
     Ok(())
 }
 
+/// Removes the work unit `id` from its plan, with its lists and the
+/// dependencies of the other work units on it, in one transaction; refused
+/// unless the plan is in planning (state `plan`, user 2026-10-29).
+///
+/// Called by: `panels/logic/evaluation_plan/work_units.rs` (`remove_work_unit`).
+/// Calls: [`plan_of`].
+pub fn delete_work_unit(db: &Database, id: i64) -> Result<(), DbError> {
+    let transaction = db.connection().unchecked_transaction()?;
+    let plan = plan_of(&transaction, id)?;
+    let state: String = transaction.query_row(
+        "SELECT state FROM evaluation_plans WHERE id = :plan",
+        named_params! { ":plan": plan },
+        |row| row.get(0),
+    )?;
+
+    ensure!(state == "plan", DbError::Inconsistent("a work unit is removed only from a plan in planning".to_owned()));
+
+    let removed = transaction.execute("DELETE FROM work_units WHERE id = :id", named_params! { ":id": id })?;
+
+    ensure!(removed == 1, DbError::NoRow { table: "work_units", id });
+
+    transaction.commit()?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of the work units: stored with all their lists, read, changed;
@@ -605,5 +633,39 @@ mod tests {
 
         assert!(matches!(update_work_unit(&db, &itself), Err(DbError::Inconsistent(_))));
         assert!(matches!(read_work_unit(&db, 77), Err(DbError::NoRow { .. })));
+    }
+
+    #[test]
+    fn a_work_unit_is_removed_from_a_plan_with_the_dependencies_on_it() {
+        let (_directory, db) = database();
+        let routers = plan(&db);
+        let id = create_evaluation_plan(&db, &routers).unwrap();
+        let first = create_work_unit(&db, id, &unit(&routers, "ASE_INT.1-1")).unwrap();
+        let second =
+            create_work_unit(&db, id, &WorkUnit { dependencies: vec![first], ..unit(&routers, "ASE_INT.1-2") })
+                .unwrap();
+
+        delete_work_unit(&db, first).unwrap();
+
+        assert!(matches!(read_work_unit(&db, first), Err(DbError::NoRow { .. })));
+        assert!(read_work_unit(&db, second).unwrap().dependencies.is_empty());
+        assert_eq!(read_work_units(&db, id).unwrap().len(), 1);
+        assert!(matches!(delete_work_unit(&db, first), Err(DbError::NoRow { .. })));
+    }
+
+    #[test]
+    fn a_work_unit_of_an_evaluation_is_never_removed() {
+        let (_directory, db) = database();
+        let routers = plan(&db);
+        let id = create_evaluation_plan(&db, &routers).unwrap();
+
+        create_work_unit(&db, id, &unit(&routers, "ASE_INT.1-1")).unwrap();
+
+        let evaluation =
+            crate::db::evaluation::evaluation_plan::create_evaluation(&db, id, "R7", "ACME", "K. K.", 1).unwrap();
+        let copied = read_work_units(&db, evaluation).unwrap();
+
+        assert!(matches!(delete_work_unit(&db, copied[0].id), Err(DbError::Inconsistent(_))));
+        assert_eq!(read_work_units(&db, evaluation).unwrap().len(), 1);
     }
 }

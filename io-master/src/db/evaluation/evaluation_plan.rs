@@ -14,11 +14,9 @@
 //! **The work units of a plan are not written with it** (user,
 //! 2026-10-28): a plan names them by their ids, and they are made and
 //! changed one by one (`work_unit.rs`), so that a change of one is a small
-//! transaction. Writing a plan only sets their order; **a work unit the
-//! plan is written without leaves it**: its row is removed, with its lists
-//! and the dependencies of the others on it. That is the only removal of
-//! `db/` (no delete, user 2026-10-28), and how a planner takes out a work
-//! unit added by mistake.
+//! transaction; a work unit is taken out of a plan in planning by
+//! `delete_work_unit` (user, 2026-10-29). Writing a plan only sets the
+//! order of its work units, and must name every one of them.
 
 #![allow(dead_code, reason = "the new database (2026-10-28), not used by the views yet, only by its tests")]
 
@@ -334,23 +332,21 @@ pub fn read_evaluation_plans(db: &Database) -> Result<Vec<EvaluationPlan>, DbErr
     Err(DbError::Inconsistent(format!("more than {MAX_PLANS} plans in the database")))
 }
 
-/// Gives the work units of the plan `id` the order of `units`, and removes
-/// those `units` does not name (see the head of this file). Every id of
-/// `units` must be a work unit of the plan. Run inside the transaction of
-/// its caller.
+/// Gives the work units of the plan `id` the order of `units`, which must
+/// name every work unit of the plan once and nothing else (a work unit is
+/// removed by `delete_work_unit`). Run inside the transaction of its caller.
 ///
 /// Called by: [`update_evaluation_plan`].
 fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(), DbError> {
     let stored = read_ids(connection, "SELECT id FROM work_units WHERE evaluation_plan = :owner", id, MAX_WORK_UNITS)?;
 
+    ensure!(
+        units.len() == stored.len(),
+        DbError::Inconsistent("a plan written without all its work units, or with one twice".to_owned())
+    );
+
     for unit in units {
         ensure!(stored.contains(unit), DbError::Inconsistent(format!("the work unit {unit} is not one of the plan")));
-    }
-
-    for unit in &stored {
-        if !units.contains(unit) {
-            connection.execute("DELETE FROM work_units WHERE id = :id", named_params! { ":id": unit })?;
-        }
     }
 
     for (index, unit) in units.iter().enumerate() {
@@ -364,8 +360,7 @@ fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(
 }
 
 /// Writes the plan `plan.id` anew, with its lists and the order of its
-/// work units, in one transaction; a work unit it does not name leaves
-/// it (see the head of this file).
+/// work units, in one transaction.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_plan`], [`write_lists`], [`order_work_units`].
@@ -694,24 +689,26 @@ mod tests {
     }
 
     #[test]
-    fn writing_a_plan_orders_its_work_units_and_takes_out_those_it_does_not_name() {
+    fn writing_a_plan_orders_its_work_units_and_must_name_them_all() {
         let (_directory, db) = database();
         let new = plan(&db);
         let id = create_evaluation_plan(&db, &new).unwrap();
         let first = create_work_unit(&db, id, &unit(&new, "ASE_INT.1-1")).unwrap();
         let second = create_work_unit(&db, id, &unit(&new, "ASE_INT.1-2")).unwrap();
-        let third =
-            create_work_unit(&db, id, &WorkUnit { dependencies: vec![first], ..unit(&new, "ASE_INT.1-3") }).unwrap();
+        let third = create_work_unit(&db, id, &unit(&new, "ASE_INT.1-3")).unwrap();
         let mut stored = read_evaluation_plan(&db, id).unwrap();
 
         assert_eq!(stored.work_units, vec![first, second, third]);
 
-        stored.work_units = vec![third, second];
+        stored.work_units = vec![third, first, second];
         update_evaluation_plan(&db, &stored).unwrap();
 
-        assert_eq!(read_evaluation_plan(&db, id).unwrap().work_units, vec![third, second]);
-        assert!(matches!(read_work_unit(&db, first), Err(DbError::NoRow { .. })));
-        assert!(read_work_unit(&db, third).unwrap().dependencies.is_empty());
+        assert_eq!(read_evaluation_plan(&db, id).unwrap().work_units, vec![third, first, second]);
+
+        stored.work_units = vec![third, second];
+
+        assert!(matches!(update_evaluation_plan(&db, &stored), Err(DbError::Inconsistent(_))));
+        assert!(read_work_unit(&db, first).is_ok());
     }
 
     #[test]
