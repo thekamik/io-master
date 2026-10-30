@@ -5,9 +5,9 @@
 //!
 //! **The program is being rebuilt (user, 2026-10-28)** on the new models
 //! (`model/`) and their database (`db/`). The earlier program, with its
-//! views, its AI layer and its login, is kept in the branch `main` as a
+//! views, its AI layer and its login, is kept at the commit `0797e85` as a
 //! reference; its parts come back here one by one, rewritten on the new
-//! models (`docs/handover.md`). Until then the window opens empty.
+//! models (`docs/handover.md`).
 
 // The check `ensure!` (rule 5 of CLAUDE.md), declared before the
 // folders so that every one of them knows it by its name alone.
