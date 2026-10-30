@@ -29,7 +29,7 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 | `panels::logic` | `ai`, `db`, `model`, `security`, `pdf` |
 | `panels::views` | `panels::logic`, `ai`, `db`, `model`, `session` |
 
-`panels/views/` uses `ai/` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only (`evaluation_plan` uses `agents`).
+`panels/views/` uses `ai/` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only (`evaluation_plan`, `chat` and `evaluation` use `agents`; `evaluation` uses `evaluation_plan` for the order of the work).
 
 ## 2. The folders
 
@@ -47,7 +47,7 @@ One file per file of `model/`, holding its tables (`SCHEMA`) and its functions `
 
 ### `panels/`
 
-Each panel has a folder in both layers. The logic gets the open database as a parameter and never reaches the session, so it is tested without a window. The commands take what the page sends, check its size, call the logic and give back a `...View` (serde only here); their error is `panels/views/error.rs` (`{kind, message}`). `opened.rs` gives the open database or "nobody is logged in"; `answer.rs` awaits a whole answer of the AI; `chat/chats.rs` passes each piece of an answer to the page while it comes, and stops it at once on "Stop". One long work of the AI runs at a time (a filling or a question of a chat).
+Each panel has a folder in both layers. The logic gets the open database as a parameter and never reaches the session, so it is tested without a window. The commands take what the page sends, check its size, call the logic and give back a `...View` (serde only here); their error is `panels/views/error.rs` (`{kind, message}`). `opened.rs` gives the open database or "nobody is logged in"; `answer.rs` awaits a whole answer of the AI; `chat/chats.rs` passes each piece of an answer to the page while it comes, and stops it at once on "Stop". One long work of the AI runs at a time (a filling, an assessment or a question of a chat); the evaluator saves no results while it runs.
 
 | Panel | `logic/` | `views/` commands |
 |---|---|---|
@@ -71,5 +71,5 @@ A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `c
 | Names | No file repeats the name of its folder. Functions are verbs; `db/` functions are `create_`, `read_`, `update_` with the name of their model. |
 | Comments | At every function: what it does, where it is called from, which functions it calls. The head of every file says what it holds; a file of `db/` draws its tables. |
 | Rules of the code | `CLAUDE.md`, "The Power of 10" and its rules for Rust. |
-| Tests | In the file they test, its last item. Help in `src/test_support.rs` and `src/test_support/` (`database.rs`: a database with its data; `pdf.rs`: a small PDF; `ai_service.rs`: a fake AI service on 127.0.0.1 with real TLS, either protocol). |
+| Tests | In the file they test, its last item. Help in `src/test_support.rs` and `src/test_support/` (`database.rs`: a database with its data; `pdf.rs`: a small PDF; `ai_service.rs`: a fake AI service on 127.0.0.1 with real TLS, either protocol; `evaluation.rs`: an evaluation begun on a plan, its ST given). |
 | Checks | `cargo test`, `cargo clippy --all-targets` (clean but `dead_code` during the rebuild), `npm run check`, `cargo fmt --check`. |

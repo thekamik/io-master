@@ -71,23 +71,23 @@ export function evaluationCreate(
   return invoke("evaluation_create", { plan, product, client, evaluator, agent });
 }
 
-/** One evaluation whole. Called by EvaluationEditor.svelte. */
+/** One evaluation whole. Called by EvaluationInputs.svelte. */
 export function evaluationGet(id: number): Promise<EvaluationView> {
   return invoke("evaluation_get", { id });
 }
 
-/** Gives an evaluation its agent. Called by EvaluationEditor.svelte. */
+/** Gives an evaluation its agent. Called by EvaluationInputs.svelte. */
 export function evaluationSetAgent(id: number, agent: number): Promise<void> {
   return invoke("evaluation_set_agent", { id, agent });
 }
 
 /** Gives a document its file, chosen in the dialog of the system, and its
- * version; gives whether a file was chosen. Called by EvaluationEditor.svelte. */
+ * version; gives whether a file was chosen. Called by EvaluationInputs.svelte. */
 export function evaluationDocumentGive(id: number, document: number, version: string): Promise<boolean> {
   return invoke("evaluation_document_give", { id, document, version });
 }
 
-/** Gives a proof its text and the record of its test. Called by EvaluationEditor.svelte. */
+/** Gives a proof its text and the record of its test. Called by EvaluationInputs.svelte. */
 export function evaluationProofGive(
   id: number,
   proof: number,
@@ -200,13 +200,13 @@ export interface ResultsFields {
   verdict: VerdictName | "";
 }
 
-/** What an assessment would ask, counted now. Called by EvaluationUnits.svelte. */
+/** What an assessment would ask, counted now. Called by EvaluationRun.svelte. */
 export function evaluationAssessPreview(id: number, again: boolean): Promise<AssessPreviewView> {
   return invoke("evaluation_assess_preview", { id, again });
 }
 
 /** Assesses the work units with the AI; `onstep` gets each step as it ends.
- * Called by EvaluationUnits.svelte. */
+ * Called by EvaluationRun.svelte. */
 export function evaluationAssess(
   id: number,
   again: boolean,
@@ -219,7 +219,7 @@ export function evaluationAssess(
   return invoke("evaluation_assess", { id, again, onStep });
 }
 
-/** Asks the assessment to stop after its present work unit. Called by EvaluationUnits.svelte. */
+/** Asks the assessment to stop after its present work unit. Called by EvaluationRun.svelte. */
 export function evaluationAssessStop(): Promise<void> {
   return invoke("evaluation_assess_stop");
 }
