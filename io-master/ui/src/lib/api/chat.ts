@@ -36,6 +36,8 @@ export interface ChatAnswerView {
   answer: MessageView | null;
   ending: EndingName;
   error: string | null;
+  /** The oldest messages left out of the question, which did not fit with them. */
+  leftOut: number;
 }
 
 /** Every chat, the newest first. Called by ChatList.svelte. */

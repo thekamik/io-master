@@ -1,9 +1,11 @@
 //! The error of the panel of the chat: a chat or a message refused, the
-//! knowledge of the agent that could not be read, a failure of the
-//! database. The commands of the panel tell its kinds apart for the page.
+//! knowledge of the agent that could not be read, a question the way to the
+//! AI refused, a failure of the database. The commands of the panel tell its
+//! kinds apart for the page.
 
 use std::fmt;
 
+use crate::ai::error::AiError;
 use crate::db::error::DbError;
 use crate::panels::logic::agents::error::AgentError;
 
@@ -15,6 +17,9 @@ pub enum ChatError {
     Refused(String),
     /// The knowledge of the agent could not be read.
     Knowledge(AgentError),
+    /// The way to the AI refused the question (no key, a question that does
+    /// not fit even alone).
+    Ai(AiError),
     /// A database failed, or refused what was given to it.
     Db(DbError),
 }
@@ -24,6 +29,7 @@ impl fmt::Display for ChatError {
         match self {
             ChatError::Refused(reason) => formatter.write_str(reason),
             ChatError::Knowledge(error) => write!(formatter, "the knowledge of the agent: {error}"),
+            ChatError::Ai(error) => write!(formatter, "{error}"),
             ChatError::Db(error) => write!(formatter, "{error}"),
         }
     }
@@ -34,6 +40,12 @@ impl std::error::Error for ChatError {}
 impl From<AgentError> for ChatError {
     fn from(error: AgentError) -> ChatError {
         ChatError::Knowledge(error)
+    }
+}
+
+impl From<AiError> for ChatError {
+    fn from(error: AiError) -> ChatError {
+        ChatError::Ai(error)
     }
 }
 

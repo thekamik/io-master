@@ -9,6 +9,7 @@
 //!   chat_question ──► the instructions of the agent
 //!                     + the knowledge of the agent that fits the question (RAG)
 //!                     + every message of the chat and the question ──► Question (ai/ask.rs)
+//!   prepared      ──► ask::prepare; the oldest messages left out until the question fits
 //!   add_question  ──► the question written into the chat, once ask::prepare took it
 //!   add_answer    ──► the answer written into the chat; a stopped or cut one with a mark,
 //!                     a failed one not at all (its reason is in the journal of the agent)
@@ -17,10 +18,17 @@
 //! **The knowledge** is looked for with the question and the question of the
 //! user before it, so that a short question that goes on with the earlier
 //! one ("and in the ST?") still finds what the conversation is about.
+//!
+//! **A long chat is shortened** (user, 2026-10-30: a chat is no part of an
+//! evaluation): when the question does not fit into the context of the
+//! model, its oldest messages are left out of it, never the instructions,
+//! the knowledge or the question; the page is told how many. The chat keeps
+//! them all, and the journal of the agent keeps the question as it was sent.
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::ai::ask::{Answer, Question};
+use crate::ai::ask::{Answer, Prepared, Question, prepare};
+use crate::ai::error::AiError;
 use crate::db::ai::agent::read_agent;
 use crate::db::ai::chat::{MAX_MESSAGES, create_chat, create_message, read_chat, update_chat};
 use crate::db::database::Database;
@@ -124,10 +132,10 @@ fn search_text(messages: &[Message], question: &str) -> String {
 /// of the chat and the question. Nothing is written; refused when the chat
 /// has no agent or no room for the question and its answer.
 ///
-/// Called by: `panels/views/chat/chats.rs` (`chat_ask`).
+/// Called by: [`prepared`].
 /// Calls: `read_chat`, [`checked_question`], `read_agent`, [`search_text`],
 /// `agent_knowledge`.
-pub fn chat_question(db: &Database, chat: i64, text: &str) -> Result<Question, ChatError> {
+fn chat_question(db: &Database, chat: i64, text: &str) -> Result<Question, ChatError> {
     let stored = read_chat(db, chat)?;
     let question = checked_question(text)?;
     let Some(agent_id) = stored.agent else {
@@ -153,6 +161,40 @@ pub fn chat_question(db: &Database, chat: i64, text: &str) -> Result<Question, C
     messages.push(Message { speaker: Speaker::User, text: question, time: 0 });
 
     Ok(Question { integration: agent.integration, agent: Some(agent_id), work_unit: None, system, messages })
+}
+
+/// Leaves the oldest message of the conversation of `question` out, and an
+/// answer that would then come first, so that it starts with the user.
+///
+/// Called by: [`prepared`].
+fn leave_oldest_out(question: &mut Question) {
+    question.messages.remove(0);
+
+    if matches!(question.messages.first(), Some(first) if first.speaker == Speaker::Ai) {
+        question.messages.remove(0);
+    }
+}
+
+/// The question `text` in the chat `chat`, prepared for the integration of
+/// its agent, with as many of the latest messages of the chat as fit into
+/// the context of the model; gives also how many messages were left out.
+/// Refused when the question does not fit even alone.
+///
+/// Called by: `panels/views/chat/chats.rs` (`chat_ask`).
+/// Calls: [`chat_question`], `ask::prepare`, [`leave_oldest_out`].
+pub fn prepared(db: &Database, chat: i64, text: &str) -> Result<(Prepared, usize), ChatError> {
+    let mut question = chat_question(db, chat, text)?;
+    let all = question.messages.len();
+
+    for _ in 0..=MAX_MESSAGES {
+        match prepare(db, &question) {
+            Ok(prepared) => return Ok((prepared, all - question.messages.len())),
+            Err(AiError::TooLong { .. }) if question.messages.len() > 1 => leave_oldest_out(&mut question),
+            Err(error) => return Err(ChatError::Ai(error)),
+        }
+    }
+
+    Err(ChatError::Refused(format!("more than {MAX_MESSAGES} messages left out of a question")))
 }
 
 /// Writes the question `text` of the user as the last message of the chat
@@ -216,6 +258,7 @@ mod tests {
     use crate::db::ai::agent::create_agent;
     use crate::db::ai::integration::create_integration;
     use crate::db::ai::rag::{create_knowledge_base, create_source};
+    use crate::model::ai::integration::Integration;
     use crate::model::ai::rag::{KnowledgeBase, Source};
     use crate::test_support::database::{agent, database, integration};
 
@@ -281,6 +324,28 @@ mod tests {
         assert_eq!(question.messages.len(), 3);
         assert_eq!(question.messages[2].text, "And its interfaces?");
         assert!(matches!(chat_question(&db, chat, " "), Err(ChatError::Refused(_))));
+    }
+
+    #[test]
+    fn the_oldest_messages_are_left_out_of_a_question_that_does_not_fit() {
+        let (_directory, db) = database();
+        // 400 tokens: 100 for the answer, 300 for the question (900
+        // characters at most, the instructions of the agent among them).
+        let small = create_integration(&db, &Integration { context_size: 400, ..integration() }).unwrap();
+        let chat = new_chat(&db, "x", create_agent(&db, &agent(small)).unwrap()).unwrap();
+
+        for _ in 0..3 {
+            add_question(&db, chat, &"q".repeat(200)).unwrap();
+            add_answer(&db, chat, &answer(&"a".repeat(200), Ending::Complete)).unwrap();
+        }
+
+        let (_, left_out) = prepared(&db, chat, "And now?").unwrap();
+
+        // Six messages of 200 characters, the question and the instructions
+        // (1241 characters): the oldest pair is left out, 841 stay.
+        assert_eq!(left_out, 2);
+        assert_eq!(read_chat(&db, chat).unwrap().messages.len(), 6);
+        assert!(matches!(prepared(&db, chat, &"x".repeat(1000)), Err(ChatError::Ai(AiError::TooLong { .. }))));
     }
 
     #[test]

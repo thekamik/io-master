@@ -2,7 +2,8 @@
   One chat in the panel of the chat (its commands chat_get, chat_rename,
   chat_ask and chat_stop in src/panels/views/chat/chats.rs): its messages,
   the field of the next question, and the answer shown piece by piece while
-  it is written, with "Stop". The text of a message is shown as plain text,
+  it is written, with "Stop". When the oldest messages were left out of a
+  question that did not fit with them, it says how many. The text of a message is shown as plain text,
   never as HTML (user, 2026-10-30). After every question the chat is read
   again, as the program kept it, and the list is told (onchanged).
 -->
@@ -22,6 +23,8 @@
   let stopping = $state(false);
   let renaming: string | null = $state(null);
   let problem = $state("");
+  /** How many old messages the last question left out. */
+  let leftOut = $state(0);
   /** The end of the chat, below the field of the question: brought into
    * sight when the chat is read and while the answer grows. */
   let end: HTMLElement | undefined = $state();
@@ -50,6 +53,8 @@
 
     try {
       const ended = await chatAsk(chat, asked, (piece) => (written += piece));
+
+      leftOut = ended.leftOut;
 
       if (ended.error !== null) {
         problem = sentence(ended.error);
@@ -141,6 +146,9 @@
     </div>
   {/if}
 
+  {#if leftOut > 0}
+    <p class="note">The {leftOut} oldest messages were left out of the last question: they do not fit into the model.</p>
+  {/if}
   {#if problem}<p class="problem">{problem}</p>{/if}
 
   <form class="ask" onsubmit={ask}>

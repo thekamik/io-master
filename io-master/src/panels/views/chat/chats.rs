@@ -8,7 +8,8 @@
 //! Conversation.svelte ──chat_get(id)──────────────► read_chat ──► ChatView
 //!                     ──chat_rename(id, title)────► rename_chat
 //!                     ──chat_ask(id, text, on_piece):
-//!                         (the lock of the session held)  chat_question, ask::prepare, add_question
+//!                         (the lock of the session held)  prepared (the oldest messages left out
+//!                                                         when they do not fit), add_question
 //!                         (released)                      ask::send ──pieces──► forwarded ──on_piece──► the page
 //!                         (held)                          ask::record (the journal of the agent), add_answer
 //!                         ──► ChatAnswerView
@@ -25,13 +26,13 @@ use tauri::State;
 use tauri::ipc::Channel;
 use tokio::sync::mpsc;
 
-use crate::ai::ask::{Prepared, Sent, prepare, record, send};
+use crate::ai::ask::{Prepared, Sent, record, send};
 use crate::db::ai::agent::read_agent;
 use crate::db::ai::chat::{read_chat, read_chats};
 use crate::db::database::Database;
 use crate::model::ai::chat::{Chat, Message, Speaker};
 use crate::model::ai::journal::Ending;
-use crate::panels::logic::chat::chats::{MAX_QUESTION, add_answer, add_question, chat_question, new_chat, rename_chat};
+use crate::panels::logic::chat::chats::{MAX_QUESTION, add_answer, add_question, new_chat, prepared, rename_chat};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;
@@ -81,6 +82,7 @@ pub struct ChatView {
 
 /// How a question of a chat ended.
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChatAnswerView {
     /// The answer as the chat keeps it; `None` when it failed or was empty.
     answer: Option<MessageView>,
@@ -88,6 +90,9 @@ pub struct ChatAnswerView {
     ending: &'static str,
     /// Why it failed.
     error: Option<String>,
+    /// How many of the oldest messages of the chat were left out of the
+    /// question, which did not fit with them.
+    left_out: usize,
 }
 
 /// The view of the message `message`.
@@ -200,18 +205,18 @@ pub fn chat_rename(session: State<'_, Session>, id: i64, title: String) -> Resul
 }
 
 /// The question `text` in the chat `chat`, prepared, and written into the
-/// chat once it was taken.
+/// chat once it was taken; gives also how many old messages were left out.
 ///
 /// Called by: [`chat_ask`].
-/// Calls: `chat_question`, `ask::prepare`, `add_question`.
-fn prepared_question(session: &Session, chat: i64, text: &str) -> Result<Prepared, ViewError> {
+/// Calls: `prepared`, `add_question`.
+fn prepared_question(session: &Session, chat: i64, text: &str) -> Result<(Prepared, usize), ViewError> {
     let opened = session.lock()?;
     let db = database(&opened)?;
-    let prepared = prepare(db, &chat_question(db, chat, text)?)?;
+    let taken = prepared(db, chat, text)?;
 
     add_question(db, chat, text)?;
 
-    Ok(prepared)
+    Ok(taken)
 }
 
 /// Sends the prepared question and passes each piece of its answer to the
@@ -247,11 +252,13 @@ async fn forwarded(session: &Session, prepared: &Prepared, on_piece: &Channel<St
 }
 
 /// Writes the answer into the journal of the agent, then into the chat
-/// `chat`; gives what the page shows of it.
+/// `chat.0`; gives what the page shows of it, with the number `chat.1` of
+/// the old messages left out of the question.
 ///
 /// Called by: [`chat_ask`].
 /// Calls: `ask::record`, `add_answer`, [`message_view`], [`ending_name`].
-fn written(session: &Session, chat: i64, prepared: Prepared, sent: Sent) -> Result<ChatAnswerView, ViewError> {
+fn written(session: &Session, chat: (i64, usize), prepared: Prepared, sent: Sent) -> Result<ChatAnswerView, ViewError> {
+    let (chat, left_out) = chat;
     let opened = session.lock()?;
     let db = database(&opened)?;
     let answer = record(db, prepared, sent)?;
@@ -261,6 +268,7 @@ fn written(session: &Session, chat: i64, prepared: Prepared, sent: Sent) -> Resu
         answer: kept.map(message_view),
         ending: ending_name(answer.ending),
         error: answer.error.map(|error| error.to_string()),
+        left_out,
     })
 }
 
@@ -283,10 +291,10 @@ pub async fn chat_ask(
     let Some(_work) = session.begin_work() else {
         return Err(ViewError::Invalid("another work of the AI runs: wait for it or stop it".to_owned()));
     };
-    let prepared = prepared_question(&session, chat, &text)?;
+    let (prepared, left_out) = prepared_question(&session, chat, &text)?;
     let sent = forwarded(&session, &prepared, &on_piece).await;
 
-    written(&session, chat, prepared, sent)
+    written(&session, (chat, left_out), prepared, sent)
 }
 
 /// Asks the answer that is being written to stop at once.
@@ -310,7 +318,7 @@ mod tests {
     use serde_json::json;
     use tauri::ipc::InvokeResponseBody;
 
-    use crate::ai::ask::Question;
+    use crate::ai::ask::{Question, prepare};
     use crate::db::ai::agent::create_agent;
     use crate::db::ai::integration::create_integration;
     use crate::model::ai::integration::Integration;

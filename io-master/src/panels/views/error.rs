@@ -117,14 +117,18 @@ impl ViewError {
             | ViewError::Agent(
                 AgentError::Refused(_) | AgentError::Pdf(_) | AgentError::Db(DbError::Inconsistent(_)),
             )
-            | ViewError::Chat(ChatError::Refused(_) | ChatError::Db(DbError::Inconsistent(_)))
+            | ViewError::Chat(
+                ChatError::Refused(_)
+                | ChatError::Ai(AiError::NoKey | AiError::Address(_) | AiError::NoQuestion | AiError::TooLong { .. })
+                | ChatError::Db(DbError::Inconsistent(_)),
+            )
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
             | ViewError::Plan(PlanError::Db(_) | PlanError::Knowledge(_))
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
-            | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Db(_))
+            | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))
             | ViewError::Ai(_)
             | ViewError::Db(_) => "failed",
         }
