@@ -138,6 +138,12 @@ mod panels {
             pub mod error;
             pub mod knowledge;
         }
+        // panels/logic/chat/: the chats with an agent: made and renamed, the
+        // question of the user with the knowledge of the agent, the answer kept.
+        pub mod chat {
+            pub mod chats;
+            pub mod error;
+        }
         // panels/logic/evaluation_plan/: the making of a plan: the standards
         // checked against the schema of NIST and read, the plans, their work
         // units, the order of the work and the cross references.

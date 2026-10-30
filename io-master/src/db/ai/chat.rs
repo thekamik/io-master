@@ -91,7 +91,7 @@ fn insert_message(connection: &Connection, chat: i64, message: &Message) -> Resu
 /// Stores a new chat with its first messages, in one transaction, and gives
 /// its id. A new object has no id yet (`id` 0): the database gives it.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Called by: `panels/logic/chat/chats.rs` (`new_chat`).
 /// Calls: [`insert_message`].
 pub fn create_chat(db: &Database, chat: &Chat) -> Result<i64, DbError> {
     ensure!(chat.id == 0, DbError::Inconsistent("a new chat has an id already".to_owned()));
@@ -123,7 +123,7 @@ pub fn create_chat(db: &Database, chat: &Chat) -> Result<i64, DbError> {
 
 /// Adds `message` as the last of the chat `chat`.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Called by: `panels/logic/chat/chats.rs` (`add_question`, `add_answer`).
 /// Calls: [`insert_message`].
 pub fn create_message(db: &Database, chat: i64, message: &Message) -> Result<(), DbError> {
     ensure!(!message.text.is_empty(), DbError::Inconsistent("an empty message".to_owned()));
@@ -167,7 +167,8 @@ fn chat_of(row: &Row<'_>) -> Result<Chat, DbError> {
 
 /// Reads the chat `id` with its messages.
 ///
-/// Called by: [`read_chats`]; the views rewritten on `db/`.
+/// Called by: [`read_chats`]; `panels/logic/chat/chats.rs` (`rename_chat`,
+/// `chat_question`).
 /// Calls: [`chat_of`], [`read_messages`].
 pub fn read_chat(db: &Database, id: i64) -> Result<Chat, DbError> {
     let connection = db.connection();
@@ -206,7 +207,7 @@ pub fn read_chats(db: &Database) -> Result<Vec<Chat>, DbError> {
 /// Writes the title, the agent and the work unit of the chat `chat.id`
 /// anew; its messages stay as they were (a message is never changed).
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Called by: `panels/logic/chat/chats.rs` (`rename_chat`).
 pub fn update_chat(db: &Database, chat: &Chat) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE chats SET title = :title, agent = :agent, work_unit = :work_unit WHERE id = :id",
