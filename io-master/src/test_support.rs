@@ -4,6 +4,7 @@
 
 pub mod ai_service;
 pub mod database;
+pub mod evaluation;
 pub mod pdf;
 
 use std::fs;

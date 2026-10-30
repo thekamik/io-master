@@ -172,10 +172,28 @@ pub fn read_journal_entries(db: &Database, agent: i64, before: Option<i64>) -> R
     Ok(entries)
 }
 
+/// The newest entry of the journal about the work unit `work_unit`, of any
+/// agent; `None` when the AI was never asked about it.
+///
+/// Called by: `panels/views/evaluation/` (the question and the answer of
+/// the AI shown with a work unit).
+/// Calls: [`entry_of`].
+pub fn read_latest_journal_entry(db: &Database, work_unit: i64) -> Result<Option<JournalEntry>, DbError> {
+    let connection = db.connection();
+    let mut statement = connection
+        .prepare(&format!("SELECT {COLUMNS} FROM ai_journal WHERE work_unit = :work_unit ORDER BY id DESC LIMIT 1"))?;
+    let mut rows = statement.query(named_params! { ":work_unit": work_unit })?;
+
+    Ok(match rows.next()? {
+        Some(row) => Some(entry_of(row)?),
+        None => None,
+    })
+}
+
 #[cfg(test)]
 mod tests {
-    //! Tests of the journal: written, read by pages; never changed nor
-    //! removed.
+    //! Tests of the journal: written, read by pages and by work unit; never
+    //! changed nor removed.
 
     use super::*;
 
@@ -230,6 +248,11 @@ mod tests {
             vec![JournalEntry { id: first, ..entry(agent, "one") }]
         );
         assert_eq!(read_journal_entries(&db, other, None).unwrap().len(), 1);
+
+        let latest = read_latest_journal_entry(&db, 3).unwrap().unwrap();
+
+        assert_eq!((latest.request.as_str(), latest.agent), ("of another agent", other));
+        assert_eq!(read_latest_journal_entry(&db, 4).unwrap(), None);
     }
 
     #[test]

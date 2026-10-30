@@ -110,7 +110,8 @@ fn checked(text: Option<&str>, what: &str, limit: usize) -> Result<String, Evalu
 ///
 /// Called by: `panels/views/evaluation/inputs.rs` (`evaluation_document_give`).
 /// Calls: `evaluation_in_progress`, [`checked`], [`document_text`],
-/// `read_product_document`, `update_product_document`.
+/// `read_product_document`, `update_product_document` (which indexes the
+/// text).
 pub fn give_document(
     db: &Database,
     evaluation: i64,
@@ -127,11 +128,11 @@ pub fn give_document(
 
     let version = checked(Some(version), "the version of the document", MAX_FIELD)?;
 
-    document_text(&content)?;
-
+    let text = document_text(&content)?;
     let place = read_product_document(db, document)?;
+    let given = ProductDocument { content: Some(content), version: Some(version), ..place };
 
-    Ok(update_product_document(db, &ProductDocument { content: Some(content), version: Some(version), ..place })?)
+    Ok(update_product_document(db, &given, Some(&text))?)
 }
 
 /// The proofs the work units `units` need, each once, in the order of the

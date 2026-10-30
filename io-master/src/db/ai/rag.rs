@@ -158,9 +158,10 @@ pub fn update_knowledge_base(db: &Database, base: &KnowledgeBase) -> Result<(), 
 /// paragraph cut between words, a word longer than a passage cut where it
 /// reaches the limit. The spaces between the words become one.
 ///
-/// Called by: [`write_passages`].
+/// Called by: [`write_passages`]; `db/evaluation/product_document.rs` (the
+/// index of a document of the product).
 /// Calls: [`push_passage`].
-fn passages(text: &str) -> Vec<String> {
+pub(in crate::db) fn passages(text: &str) -> Vec<String> {
     let mut passages = Vec::new();
     let mut current = String::new();
 
@@ -360,8 +361,9 @@ pub fn update_source(db: &Database, source: &Source) -> Result<(), DbError> {
 /// quoted (so that no word is read as an operator of FTS5), any of them;
 /// `None` for a question without such words.
 ///
-/// Called by: [`read_passages`].
-fn query_of(question: &str) -> Option<String> {
+/// Called by: [`read_passages`]; `db/evaluation/product_document.rs` (the
+/// search in the documents of the product).
+pub(in crate::db) fn query_of(question: &str) -> Option<String> {
     let mut words = Vec::new();
 
     // The closure tells `split` where a word ends: at every sign that is no

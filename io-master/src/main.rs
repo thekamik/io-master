@@ -145,11 +145,17 @@ mod panels {
             pub mod error;
         }
         // panels/logic/evaluation/: the evaluations: a plan copied for one
-        // product with its agent, the documents and proofs given.
+        // product with its agent, the documents and proofs given, the
+        // question of a work unit and its answer, the run of the assessment,
+        // the results of the evaluator.
         pub mod evaluation {
+            pub mod answer;
             pub mod error;
             pub mod evaluations;
             pub mod inputs;
+            pub mod question;
+            pub mod results;
+            pub mod run;
         }
         // panels/logic/evaluation_plan/: the making of a plan: the standards
         // checked against the schema of NIST and read, the plans, their work
@@ -198,10 +204,13 @@ mod panels {
             pub mod chats;
         }
         // panels/views/evaluation/: the evaluations, their agent, the
-        // documents and proofs given.
+        // documents and proofs given, the assessment by the AI, the work
+        // units and the results of the evaluator.
         pub mod evaluation {
             pub mod evaluations;
             pub mod inputs;
+            pub mod run;
+            pub mod work_units;
         }
         // panels/views/evaluation_plan/: the standards, the plans in
         // planning, their work units.
@@ -319,6 +328,12 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation::evaluations::evaluation_set_agent,
             panels::views::evaluation::inputs::evaluation_document_give,
             panels::views::evaluation::inputs::evaluation_proof_give,
+            panels::views::evaluation::run::evaluation_assess_preview,
+            panels::views::evaluation::run::evaluation_assess,
+            panels::views::evaluation::run::evaluation_assess_stop,
+            panels::views::evaluation::work_units::evaluation_unit_list,
+            panels::views::evaluation::work_units::evaluation_unit_get,
+            panels::views::evaluation::work_units::evaluation_unit_save,
             panels::views::settings::integrations::integration_list,
             panels::views::settings::integrations::integration_create,
             panels::views::settings::integrations::integration_save,

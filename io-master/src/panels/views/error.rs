@@ -132,7 +132,12 @@ impl ViewError {
                 | ChatError::Db(DbError::Inconsistent(_)),
             )
             | ViewError::Evaluation(
-                EvaluationError::Refused(_) | EvaluationError::Pdf(_) | EvaluationError::Db(DbError::Inconsistent(_)),
+                EvaluationError::Refused(_)
+                | EvaluationError::Pdf(_)
+                | EvaluationError::Ai(
+                    AiError::NoKey | AiError::Address(_) | AiError::NoQuestion | AiError::TooLong { .. },
+                )
+                | EvaluationError::Db(DbError::Inconsistent(_)),
             )
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
@@ -141,7 +146,7 @@ impl ViewError {
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
             | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))
-            | ViewError::Evaluation(EvaluationError::Db(_))
+            | ViewError::Evaluation(EvaluationError::Ai(_) | EvaluationError::Db(_))
             | ViewError::Ai(_)
             | ViewError::Db(_) => "failed",
         }
