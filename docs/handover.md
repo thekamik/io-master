@@ -4,7 +4,7 @@ Read this file, `CLAUDE.md`, `docs/data_model.md`, `docs/code_structure.md` and 
 
 ## Where the project is (2026-10-29)
 
-- Branches: **`main`** holds the earlier program (the reference), **`test_branch`** the rebuild. Nothing goes to `main` until the user revokes it.
+- Branches: **`main`** holds the earlier program (the reference), **`test_branch`** the rebuild, **`V0.1`** a snapshot of the rebuild before the chat (nothing committed to it). Nothing goes to `main` until the user revokes it.
 - **Built on the models of `model/`:** the first start and the login; the panel **Evaluation plan** (standards imported as OSCAL catalogs, plans, work units and their parameters, the order and the cross references, the agent of the planner, "Fill with AI" in two tasks with a preview); the panel **Agents** (agents, shared knowledge bases with `.txt`/`.md`/`.pdf` sources, the test of the knowledge, the journal of each agent); the panel **AI settings** (integrations, keys, the check of a connection); the way to the AI (`ai/`). Each tried on a private display.
 - The data of the tests is temporary: after a change of a table, remove `~/.local/share/io-master` and start anew.
 
