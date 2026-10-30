@@ -4,10 +4,9 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 ## The rebuild: the parts to come back
 
-- **The chat** with an agent: the answer streamed into the page, "Stop" (the receiver of the pieces dropped).
-- **The evaluation**: a plan copied for one product (`create_evaluation` exists), the documents and proofs given, each work unit assessed by its agent in the order of the work, the quotes checked, the verdict, the report.
+- **The evaluation**: a plan copied for one product (`create_evaluation` exists), the documents and proofs given, each work unit assessed by its agent in the order of the work, without the evaluator (user, 2026-10-30), the quotes checked, the verdict, the report. The question of a work unit carries the work unit whole as JSON, but `id`, `author`, `ai_agent` and `cross_reference` (user, 2026-10-30), the ids written as names.
 - **The login with the recovery code**, the change of the password and a new recovery code.
-- **`Settings::active_integration`**: has no use since every agent names its integration; to be decided with the user (removed, or used by a chat without an agent).
+- **`Settings::active_integration`**: has no use since every agent names its integration; to be decided with the user (removed, or kept for something else: a chat is always held with an agent, user 2026-10-30).
 
 ## Before the release
 

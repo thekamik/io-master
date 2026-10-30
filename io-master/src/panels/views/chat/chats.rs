@@ -3,16 +3,16 @@
 //! streamed into the page, and "Stop".
 //!
 //! ```text
-//! ChatList.svelte ──chat_list()───────────────► read_chats ──► [ChatSummaryView]
-//!                 ──chat_create(title, agent)─► new_chat ──► id
-//! Chat.svelte     ──chat_get(id)──────────────► read_chat ──► ChatView
-//!                 ──chat_rename(id, title)────► rename_chat
-//!                 ──chat_ask(id, text, on_piece):
-//!                     (the lock of the session held)  chat_question, ask::prepare, add_question
-//!                     (released)                      ask::send ──pieces──► forwarded ──on_piece──► the page
-//!                     (held)                          ask::record (the journal of the agent), add_answer
-//!                     ──► ChatAnswerView
-//!                 ──chat_stop()───────────────► the session asked to stop: the answer ends at once
+//! ChatList.svelte     ──chat_list()───────────────► read_chats ──► [ChatSummaryView]
+//!                     ──chat_create(title, agent)─► new_chat ──► id
+//! Conversation.svelte ──chat_get(id)──────────────► read_chat ──► ChatView
+//!                     ──chat_rename(id, title)────► rename_chat
+//!                     ──chat_ask(id, text, on_piece):
+//!                         (the lock of the session held)  chat_question, ask::prepare, add_question
+//!                         (released)                      ask::send ──pieces──► forwarded ──on_piece──► the page
+//!                         (held)                          ask::record (the journal of the agent), add_answer
+//!                         ──► ChatAnswerView
+//!                     ──chat_stop()───────────────► the session asked to stop: the answer ends at once
 //! ```
 //!
 //! A question is a long work of the AI: only one runs at a time, a chat or
@@ -176,7 +176,7 @@ pub fn chat_create(session: State<'_, Session>, title: String, agent: i64) -> Re
 
 /// The chat `id` whole.
 ///
-/// Called by: `Chat.svelte`, when a chat is opened.
+/// Called by: `Conversation.svelte`, when a chat is opened.
 /// Calls: `read_chat`, [`chat_view`].
 #[tauri::command]
 pub fn chat_get(session: State<'_, Session>, id: i64) -> Result<ChatView, ViewError> {
@@ -188,7 +188,7 @@ pub fn chat_get(session: State<'_, Session>, id: i64) -> Result<ChatView, ViewEr
 
 /// Gives the chat `id` the title `title`.
 ///
-/// Called by: `Chat.svelte`, "Rename".
+/// Called by: `Conversation.svelte`, "Rename".
 /// Calls: `rename_chat`.
 #[tauri::command]
 pub fn chat_rename(session: State<'_, Session>, id: i64, title: String) -> Result<(), ViewError> {
@@ -268,7 +268,7 @@ fn written(session: &Session, chat: i64, prepared: Prepared, sent: Sent) -> Resu
 /// page piece by piece through `on_piece`, and kept in the chat and in the
 /// journal of its agent. Refused while another work of the AI runs.
 ///
-/// Called by: `Chat.svelte`, "Send".
+/// Called by: `Conversation.svelte`, "Send".
 /// Calls: `Session::begin_work`, [`prepared_question`], [`forwarded`],
 /// [`written`].
 #[tauri::command]
@@ -291,7 +291,7 @@ pub async fn chat_ask(
 
 /// Asks the answer that is being written to stop at once.
 ///
-/// Called by: `Chat.svelte`, "Stop".
+/// Called by: `Conversation.svelte`, "Stop".
 /// Calls: `Session::request_stop`.
 #[tauri::command]
 pub fn chat_stop(session: State<'_, Session>) {

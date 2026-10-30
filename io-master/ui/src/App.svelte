@@ -4,8 +4,8 @@
   src/panels/views/program_start/login.rs), which Rust keeps. It reads that state
   at the start and again whenever an element says it changed it (installed,
   logged in, logged out). The user logged in sees the frame: the panels in
-  the side bar (the evaluation plan, the agents and the AI settings so far; the others
-  come back one by one) and their name with "Log out". Which panel is shown
+  the side bar (the evaluation plan, the agents, the chat and the AI settings so far;
+  the others come back one by one) and their name with "Log out". Which panel is shown
   is presentation only: it stays in the page.
 -->
 <script lang="ts">
@@ -14,6 +14,7 @@
   import { sentence } from "./lib/api/errors";
   import { loginGet, loginLogOut, type ProgramView } from "./lib/api/program_start";
   import Agents from "./views/agents/Agents.svelte";
+  import Chats from "./views/chat/Chats.svelte";
   import InstallationForm from "./views/program_start/InstallationForm.svelte";
   import EvaluationPlan from "./views/evaluation_plan/EvaluationPlan.svelte";
   import LoginForm from "./views/program_start/LoginForm.svelte";
@@ -22,7 +23,7 @@
   /** The state of the program; null until it is read. */
   let program: ProgramView | null = $state(null);
   let problem = $state("");
-  let panel: "evaluation_plan" | "agents" | "settings" = $state("evaluation_plan");
+  let panel: "evaluation_plan" | "agents" | "chat" | "settings" = $state("evaluation_plan");
 
   async function reload() {
     problem = "";
@@ -72,6 +73,9 @@
       <button type="button" class="nav-item" class:active={panel === "agents"} onclick={() => (panel = "agents")}>
         Agents
       </button>
+      <button type="button" class="nav-item" class:active={panel === "chat"} onclick={() => (panel = "chat")}>
+        Chat
+      </button>
       <button type="button" class="nav-item" class:active={panel === "settings"} onclick={() => (panel = "settings")}>
         AI settings
       </button>
@@ -87,6 +91,8 @@
         <Settings />
       {:else if panel === "agents"}
         <Agents />
+      {:else if panel === "chat"}
+        <Chats />
       {:else}
         <EvaluationPlan />
       {/if}
