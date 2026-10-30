@@ -47,14 +47,14 @@ One file per file of `model/`, holding its tables (`SCHEMA`) and its functions `
 
 ### `panels/`
 
-Each panel has a folder in both layers. The logic gets the open database as a parameter and never reaches the session, so it is tested without a window. The commands take what the page sends, check its size, call the logic and give back a `...View` (serde only here); their error is `panels/views/error.rs` (`{kind, message}`). `opened.rs` gives the open database or "nobody is logged in"; `answer.rs` awaits a whole answer of the AI.
+Each panel has a folder in both layers. The logic gets the open database as a parameter and never reaches the session, so it is tested without a window. The commands take what the page sends, check its size, call the logic and give back a `...View` (serde only here); their error is `panels/views/error.rs` (`{kind, message}`). `opened.rs` gives the open database or "nobody is logged in"; `answer.rs` awaits a whole answer of the AI; `chat/chats.rs` passes each piece of an answer to the page while it comes, and stops it at once on "Stop". One long work of the AI runs at a time (a filling or a question of a chat).
 
 | Panel | `logic/` | `views/` commands |
 |---|---|---|
 | `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
 | `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs`, `order.rs` (Kahn: the order, the cross references, `blocked`), `fill.rs` ("Fill with AI": parameters, dependencies, the preview) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_stop` |
 | `agents` | `agent.rs` (an agent checked; the knowledge it gives with a question), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
-| `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | (none yet) |
+| `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |
 
 A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `capabilities/default.json`; its function on the page is in `ui/src/lib/api/<panel>.ts`, named as the command.

@@ -1,6 +1,6 @@
 //! The answer of the AI as a command awaits it whole: the prepared question
-//! is sent (`ai/ask.rs`) and the pieces of its answer, which a chat would
-//! show as they come, are drained. Used where the page wants the whole
+//! is sent (`ai/ask.rs`) and the pieces of its answer, which a chat shows
+//! as they come (`chat/chats.rs`), are drained. Used where the page wants the whole
 //! answer at once: the check of an integration, "Fill with AI".
 
 use tokio::sync::mpsc;

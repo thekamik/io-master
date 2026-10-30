@@ -55,6 +55,12 @@ fn main() {
         "knowledge_search",
         "agent_journal_list",
         "agent_journal_get",
+        "chat_list",
+        "chat_create",
+        "chat_get",
+        "chat_rename",
+        "chat_ask",
+        "chat_stop",
     ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))

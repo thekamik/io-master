@@ -16,7 +16,8 @@
 //! database. The lock makes two commands use it one after the other.
 //!
 //! Besides, the session knows whether a long work of the AI runs ("Fill
-//! with AI", user 2026-10-29), so that only one runs at a time, and whether
+//! with AI", user 2026-10-29; a question of a chat, 2026-10-30), so that
+//! only one runs at a time, and whether
 //! the user asked it to stop: the work holds the lock only for its short
 //! steps, and "Stop" is another command.
 
@@ -97,7 +98,8 @@ impl Session {
     /// Begins a long work of the AI: `None` when one runs already. The
     /// request to stop of an earlier work is forgotten.
     ///
-    /// Called by: `panels/views/evaluation_plan/fill.rs` (`plan_fill`).
+    /// Called by: `panels/views/evaluation_plan/fill.rs` (`plan_fill`),
+    /// `panels/views/chat/chats.rs` (`chat_ask`).
     pub fn begin_work(&self) -> Option<Work<'_>> {
         if self.working.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
             return None;
@@ -110,14 +112,16 @@ impl Session {
 
     /// Asks the long work that runs to stop after its present step.
     ///
-    /// Called by: `panels/views/evaluation_plan/fill.rs` (`plan_fill_stop`).
+    /// Called by: `panels/views/evaluation_plan/fill.rs` (`plan_fill_stop`),
+    /// `panels/views/chat/chats.rs` (`chat_stop`).
     pub fn request_stop(&self) {
         self.stop.store(true, Ordering::SeqCst);
     }
 
     /// Whether the user asked the long work to stop.
     ///
-    /// Called by: `panels/views/evaluation_plan/fill.rs` (before each step).
+    /// Called by: `panels/views/evaluation_plan/fill.rs` (before each step),
+    /// `panels/views/chat/chats.rs` (while an answer streams).
     pub fn stop_requested(&self) -> bool {
         self.stop.load(Ordering::SeqCst)
     }

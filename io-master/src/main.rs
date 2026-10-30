@@ -185,6 +185,11 @@ mod panels {
             pub mod journal;
             pub mod knowledge;
         }
+        // panels/views/chat/: the chats with an agent, the answer streamed
+        // into the page, its stop.
+        pub mod chat {
+            pub mod chats;
+        }
         // panels/views/evaluation_plan/: the standards, the plans in
         // planning, their work units.
         pub mod evaluation_plan {
@@ -316,6 +321,12 @@ fn tauri_startup() -> ExitCode {
             panels::views::agents::knowledge::knowledge_search,
             panels::views::agents::journal::agent_journal_list,
             panels::views::agents::journal::agent_journal_get,
+            panels::views::chat::chats::chat_list,
+            panels::views::chat::chats::chat_create,
+            panels::views::chat::chats::chat_get,
+            panels::views::chat::chats::chat_rename,
+            panels::views::chat::chats::chat_ask,
+            panels::views::chat::chats::chat_stop,
         ])
         .build(tauri::generate_context!());
 

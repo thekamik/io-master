@@ -13,6 +13,7 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use crate::ai::error::AiError;
 use crate::db::error::DbError;
 use crate::panels::logic::agents::error::AgentError;
+use crate::panels::logic::chat::error::ChatError;
 use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::program_start::access::AccountError;
 use crate::panels::logic::settings::error::SettingsError;
@@ -34,6 +35,8 @@ pub enum ViewError {
     Agent(AgentError),
     /// The settings of the AI refused a change, or failed.
     Settings(SettingsError),
+    /// The panel of the chat refused a chat or a question, or failed.
+    Chat(ChatError),
     /// The way to the AI refused a question before it was sent, or failed
     /// to write it into the journal.
     Ai(AiError),
@@ -53,6 +56,12 @@ impl From<PlanError> for ViewError {
 impl From<AgentError> for ViewError {
     fn from(error: AgentError) -> ViewError {
         ViewError::Agent(error)
+    }
+}
+
+impl From<ChatError> for ViewError {
+    fn from(error: ChatError) -> ViewError {
+        ViewError::Chat(error)
     }
 }
 
@@ -108,12 +117,14 @@ impl ViewError {
             | ViewError::Agent(
                 AgentError::Refused(_) | AgentError::Pdf(_) | AgentError::Db(DbError::Inconsistent(_)),
             )
+            | ViewError::Chat(ChatError::Refused(_) | ChatError::Db(DbError::Inconsistent(_)))
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
             | ViewError::Plan(PlanError::Db(_) | PlanError::Knowledge(_))
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
+            | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Db(_))
             | ViewError::Ai(_)
             | ViewError::Db(_) => "failed",
         }
@@ -130,6 +141,7 @@ impl ViewError {
             ViewError::Plan(error) => error.to_string(),
             ViewError::Settings(error) => error.to_string(),
             ViewError::Agent(error) => error.to_string(),
+            ViewError::Chat(error) => error.to_string(),
             ViewError::Ai(error) => error.to_string(),
             ViewError::Db(error) => error.to_string(),
             ViewError::Invalid(reason) => reason.clone(),

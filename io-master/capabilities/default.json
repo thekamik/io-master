@@ -49,6 +49,12 @@
     "allow-knowledge-source-rename",
     "allow-knowledge-search",
     "allow-agent-journal-list",
-    "allow-agent-journal-get"
+    "allow-agent-journal-get",
+    "allow-chat-list",
+    "allow-chat-create",
+    "allow-chat-get",
+    "allow-chat-rename",
+    "allow-chat-ask",
+    "allow-chat-stop"
   ]
 }

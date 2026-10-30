@@ -26,9 +26,10 @@ serde_json = { version = "1.0.154", features = ["preserve_order"] }
 # to the AI services: the long works wait for the model without a
 # thread each, and blocking work goes to its own threads
 # (spawn_blocking). "sync" gives the channels that carry a reply while
-# it is written and the stop signals; "net" serves the fake AI
+# it is written and the stop signals; "time" lets the chat look for a
+# "Stop" of the user while the answer streams; "net" serves the fake AI
 # service of the tests.
-tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "net", "signal", "sync"] }
+tokio = { version = "1.53.3", features = ["rt-multi-thread", "macros", "net", "signal", "sync", "time"] }
 
 # The views and forms of the page as JSON, at the boundary to the
 # window only (src/app/serializer/).
