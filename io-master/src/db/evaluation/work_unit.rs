@@ -773,7 +773,7 @@ mod tests {
         create_work_unit(&db, id, &unit(&routers, "ASE_INT.1-1")).unwrap();
 
         let evaluation =
-            crate::db::evaluation::evaluation_plan::create_evaluation(&db, id, "R7", "ACME", "K. K.", 1).unwrap();
+            crate::db::evaluation::evaluation_plan::create_evaluation(&db, id, "R7", "ACME", "K. K.", 1, None).unwrap();
         let copied = read_work_units(&db, evaluation).unwrap();
 
         assert!(matches!(delete_work_unit(&db, copied[0].id), Err(DbError::Inconsistent(_))));

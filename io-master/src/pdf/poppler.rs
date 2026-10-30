@@ -162,6 +162,36 @@ pub fn text_of_pages(pdf: &[u8], first: u32, last: u32) -> Result<Vec<String>, P
     Ok(pages)
 }
 
+/// The whole text of the PDF `pdf`, read by parts of [`PART`] pages, the
+/// pages parted by an empty line.
+///
+/// Called by: `panels/logic/agents/knowledge.rs` (a source),
+/// `panels/logic/evaluation/inputs.rs` (a document of the product).
+/// Calls: [`info`], [`text_of_pages`].
+pub fn text(pdf: &[u8]) -> Result<String, PdfError> {
+    let pages = info(pdf)?.pages;
+    let mut text = String::new();
+    let mut first = 1;
+
+    // Each turn reads one part; MAX_PAGES / PART parts at most.
+    for _ in 0..=pages / PART {
+        if first > pages {
+            break;
+        }
+
+        let last = (first + PART - 1).min(pages);
+
+        for page in text_of_pages(pdf, first, last)? {
+            text.push_str(&page);
+            text.push_str("\n\n");
+        }
+
+        first = last + 1;
+    }
+
+    Ok(text)
+}
+
 #[cfg(test)]
 mod tests {
     //! Unit tests of `poppler.rs`, with small PDFs made by

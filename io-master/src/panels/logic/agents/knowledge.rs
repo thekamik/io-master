@@ -19,7 +19,7 @@ use crate::db::ai::rag::{
 use crate::db::database::Database;
 use crate::model::ai::rag::{KnowledgeBase, Source};
 use crate::panels::logic::agents::error::AgentError;
-use crate::pdf::poppler::{MAX_FILE, PART, info, text_of_pages};
+use crate::pdf::poppler::{self, MAX_FILE};
 
 /// The longest name of a base or a source, in characters.
 const MAX_NAME: usize = 200;
@@ -79,42 +79,13 @@ pub fn change_base(db: &Database, base: &KnowledgeBase) -> Result<(), AgentError
     )?)
 }
 
-/// The text of the PDF `pdf`, read by parts of [`PART`] pages, the pages
-/// parted by an empty line.
-///
-/// Called by: [`source_text`].
-/// Calls: `poppler::info`, `poppler::text_of_pages`.
-fn pdf_text(pdf: &[u8]) -> Result<String, AgentError> {
-    let pages = info(pdf)?.pages;
-    let mut text = String::new();
-    let mut first = 1;
-
-    // Each turn reads one part; MAX_PAGES / PART parts at most.
-    for _ in 0..=pages / PART {
-        if first > pages {
-            break;
-        }
-
-        let last = (first + PART - 1).min(pages);
-
-        for page in text_of_pages(pdf, first, last)? {
-            text.push_str(&page);
-            text.push_str("\n\n");
-        }
-
-        first = last + 1;
-    }
-
-    Ok(text)
-}
-
 /// The text of the file `path` for a source: a `.txt` or `.md` file as
 /// UTF-8, a `.pdf` through Poppler; refused for another kind, a file over
 /// its limit, a text that is no UTF-8 or that holds nothing.
 ///
 /// Called by: `panels/views/agents/knowledge.rs` (a file chosen in the
 /// dialog).
-/// Calls: [`pdf_text`].
+/// Calls: `poppler::text`.
 pub fn source_text(path: &Path) -> Result<String, AgentError> {
     let read = |error: std::io::Error| AgentError::Refused(format!("{}: {error}", path.display()));
     let extension = path.extension().and_then(|extension| extension.to_str()).unwrap_or_default().to_lowercase();
@@ -127,7 +98,7 @@ pub fn source_text(path: &Path) -> Result<String, AgentError> {
         }
         "pdf" => {
             ensure!(size <= MAX_FILE, AgentError::Refused(format!("a PDF over {MAX_FILE} bytes")));
-            pdf_text(&fs::read(path).map_err(read)?)?
+            poppler::text(&fs::read(path).map_err(read)?)?
         }
         _ => return Err(AgentError::Refused("only .txt, .md and .pdf files are sources".to_owned())),
     };

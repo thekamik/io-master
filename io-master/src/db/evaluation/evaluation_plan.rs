@@ -503,13 +503,14 @@ fn copied_places(
 /// Begins an evaluation: copies the plan `source` (in planning, neither
 /// blocked nor with a cross reference, as `panels/logic/evaluation_plan/order.rs`
 /// marks them) in one transaction, as the evaluation of `product` for
-/// `client` by `evaluator`, begun at `started`. The copy has its own places
+/// `client` by `evaluator`, begun at `started`, with the agent `agent` for the
+/// work units without one of their own. The copy has its own places
 /// of the documents and proofs and its own work units, in the order of the
 /// plan: first written without their dependencies, then given them by their
 /// new ids, so that the order of the writing does not matter. The plan
 /// stays as it was. Gives the id of the evaluation.
 ///
-/// Called by: nothing yet (the view of the evaluation, user 2026-10-28).
+/// Called by: `panels/logic/evaluation/evaluations.rs` (`new_evaluation`).
 /// Calls: [`read_evaluation_plan`], `read_work_units`, [`copied_places`],
 /// [`insert_plan`], [`copied_unit`], `insert_work_unit`,
 /// `write_dependencies`.
@@ -520,6 +521,7 @@ pub fn create_evaluation(
     client: &str,
     evaluator: &str,
     started: i64,
+    agent: Option<i64>,
 ) -> Result<i64, DbError> {
     let plan = read_evaluation_plan(db, source)?;
     let units = read_work_units(db, source)?;
@@ -547,7 +549,7 @@ pub fn create_evaluation(
         product_documents: all_mapped(&copies.documents, &plan.product_documents)?,
         work_units: Vec::new(),
         blocked: false,
-        ai_agent: None,
+        ai_agent: agent,
         ..plan
     };
     let id = insert_plan(&transaction, &evaluation)?;
@@ -713,14 +715,15 @@ mod tests {
         .unwrap();
 
         let plan_before = read_evaluation_plan(&db, source).unwrap();
-        let id = create_evaluation(&db, source, "Router R7", "ACME", "K. K.", 1_793_000_000).unwrap();
+        let id = create_evaluation(&db, source, "Router R7", "ACME", "K. K.", 1_793_000_000, Some(planner)).unwrap();
         let evaluation = read_evaluation_plan(&db, id).unwrap();
         let units = read_work_units(&db, id).unwrap();
 
         assert_eq!(read_evaluation_plan(&db, source).unwrap(), plan_before);
         assert_eq!(evaluation.state, PlanState::Evaluation);
         assert_eq!(evaluation.source_plan, Some(source));
-        assert_eq!((plan_before.ai_agent, evaluation.ai_agent), (Some(planner), None));
+        // The evaluation has the agent given when it begins.
+        assert_eq!((plan_before.ai_agent, evaluation.ai_agent), (Some(planner), Some(planner)));
         assert_eq!(evaluation.oscal_documents, plan_before.oscal_documents);
         assert_ne!(evaluation.product_documents, plan_before.product_documents);
         assert_eq!(units.len(), 2);
@@ -736,7 +739,7 @@ mod tests {
     fn a_dependency_on_a_later_work_unit_is_copied_and_a_marked_plan_is_not() {
         let (_directory, db) = database();
         let (source, first, _second) = plan_with_units(&db);
-        let evaluation = create_evaluation(&db, source, "R7", "ACME", "K. K.", 0).unwrap();
+        let evaluation = create_evaluation(&db, source, "R7", "ACME", "K. K.", 0, None).unwrap();
 
         assert_eq!(read_work_units(&db, evaluation).unwrap().len(), 2);
 
@@ -745,7 +748,10 @@ mod tests {
         crossed.cross_reference = true;
         update_work_unit(&db, &crossed).unwrap();
 
-        assert!(matches!(create_evaluation(&db, source, "R7", "ACME", "K. K.", 0), Err(DbError::Inconsistent(_))));
+        assert!(matches!(
+            create_evaluation(&db, source, "R7", "ACME", "K. K.", 0, None),
+            Err(DbError::Inconsistent(_))
+        ));
 
         crossed.cross_reference = false;
         update_work_unit(&db, &crossed).unwrap();
@@ -754,7 +760,13 @@ mod tests {
 
         update_evaluation_plan(&db, &blocked).unwrap();
 
-        assert!(matches!(create_evaluation(&db, source, "R7", "ACME", "K. K.", 0), Err(DbError::Inconsistent(_))));
-        assert!(matches!(create_evaluation(&db, evaluation, "R8", "ACME", "K. K.", 0), Err(DbError::Inconsistent(_))));
+        assert!(matches!(
+            create_evaluation(&db, source, "R7", "ACME", "K. K.", 0, None),
+            Err(DbError::Inconsistent(_))
+        ));
+        assert!(matches!(
+            create_evaluation(&db, evaluation, "R8", "ACME", "K. K.", 0, None),
+            Err(DbError::Inconsistent(_))
+        ));
     }
 }

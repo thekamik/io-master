@@ -14,6 +14,7 @@ use crate::ai::error::AiError;
 use crate::db::error::DbError;
 use crate::panels::logic::agents::error::AgentError;
 use crate::panels::logic::chat::error::ChatError;
+use crate::panels::logic::evaluation::error::EvaluationError;
 use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::program_start::access::AccountError;
 use crate::panels::logic::settings::error::SettingsError;
@@ -37,6 +38,8 @@ pub enum ViewError {
     Settings(SettingsError),
     /// The panel of the chat refused a chat or a question, or failed.
     Chat(ChatError),
+    /// The panel of the evaluation refused a change, or failed.
+    Evaluation(EvaluationError),
     /// The way to the AI refused a question before it was sent, or failed
     /// to write it into the journal.
     Ai(AiError),
@@ -62,6 +65,12 @@ impl From<AgentError> for ViewError {
 impl From<ChatError> for ViewError {
     fn from(error: ChatError) -> ViewError {
         ViewError::Chat(error)
+    }
+}
+
+impl From<EvaluationError> for ViewError {
+    fn from(error: EvaluationError) -> ViewError {
+        ViewError::Evaluation(error)
     }
 }
 
@@ -122,6 +131,9 @@ impl ViewError {
                 | ChatError::Ai(AiError::NoKey | AiError::Address(_) | AiError::NoQuestion | AiError::TooLong { .. })
                 | ChatError::Db(DbError::Inconsistent(_)),
             )
+            | ViewError::Evaluation(
+                EvaluationError::Refused(_) | EvaluationError::Pdf(_) | EvaluationError::Db(DbError::Inconsistent(_)),
+            )
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
@@ -129,6 +141,7 @@ impl ViewError {
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
             | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))
+            | ViewError::Evaluation(EvaluationError::Db(_))
             | ViewError::Ai(_)
             | ViewError::Db(_) => "failed",
         }
@@ -146,6 +159,7 @@ impl ViewError {
             ViewError::Settings(error) => error.to_string(),
             ViewError::Agent(error) => error.to_string(),
             ViewError::Chat(error) => error.to_string(),
+            ViewError::Evaluation(error) => error.to_string(),
             ViewError::Ai(error) => error.to_string(),
             ViewError::Db(error) => error.to_string(),
             ViewError::Invalid(reason) => reason.clone(),

@@ -144,6 +144,13 @@ mod panels {
             pub mod chats;
             pub mod error;
         }
+        // panels/logic/evaluation/: the evaluations: a plan copied for one
+        // product with its agent, the documents and proofs given.
+        pub mod evaluation {
+            pub mod error;
+            pub mod evaluations;
+            pub mod inputs;
+        }
         // panels/logic/evaluation_plan/: the making of a plan: the standards
         // checked against the schema of NIST and read, the plans, their work
         // units, the order of the work and the cross references.
@@ -189,6 +196,12 @@ mod panels {
         // into the page, its stop.
         pub mod chat {
             pub mod chats;
+        }
+        // panels/views/evaluation/: the evaluations, their agent, the
+        // documents and proofs given.
+        pub mod evaluation {
+            pub mod evaluations;
+            pub mod inputs;
         }
         // panels/views/evaluation_plan/: the standards, the plans in
         // planning, their work units.
@@ -300,6 +313,12 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation_plan::fill::plan_fill_parameters,
             panels::views::evaluation_plan::fill::plan_fill_dependencies,
             panels::views::evaluation_plan::fill::plan_fill_stop,
+            panels::views::evaluation::evaluations::evaluation_list,
+            panels::views::evaluation::evaluations::evaluation_create,
+            panels::views::evaluation::evaluations::evaluation_get,
+            panels::views::evaluation::evaluations::evaluation_set_agent,
+            panels::views::evaluation::inputs::evaluation_document_give,
+            panels::views::evaluation::inputs::evaluation_proof_give,
             panels::views::settings::integrations::integration_list,
             panels::views::settings::integrations::integration_create,
             panels::views::settings::integrations::integration_save,

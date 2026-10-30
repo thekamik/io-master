@@ -32,7 +32,7 @@ standards (OSCAL catalogs) ──► plan (work units, their parameters, agents)
 ## 4. The window
 
 - **A desktop window** (Tauri 2, a page in Svelte 5) is the only interface. The page is built into the program and calls a fixed list of commands; **no network port is opened**. The program is started without parameters.
-- One dark theme; the panels in a side bar: **Evaluation plan**, **Agents**, **Chat**, **AI settings** (the evaluation comes back next).
+- One dark theme; the panels in a side bar: **Evaluation plan**, **Evaluation**, **Agents**, **Chat**, **AI settings**.
 
 ## 5. Secrets and encryption
 
