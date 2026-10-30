@@ -1,7 +1,10 @@
 //! The documents of the product (`ProductDocument`: the ST, the IXIT), in
 //! the table `product_documents` of the database of the user, never with
 //! the standards: create, read, update; never deleted (user, 2026-10-28).
-//! The file itself is kept in the database, encrypted with it.
+//! The file itself is kept in the database, encrypted with it. **A document
+//! is frozen once its file is given** (user, 2026-10-30): what the work
+//! units were assessed against, and what their quotes are checked in, never
+//! changes; a wrong file is mended by a new evaluation.
 //!
 //! ```text
 //! product_documents   id, name, content (the file; NULL: the place only reserved), version
@@ -71,12 +74,21 @@ pub fn read_product_document(db: &Database, id: i64) -> Result<ProductDocument, 
     })
 }
 
-/// Writes the document `document.id` anew: the file given in its
-/// reserved place, or a correction of its name or version.
+/// Writes the document `document.id` anew: the file given in its reserved
+/// place, or a correction of the place while it has no file. Refused once
+/// the file is given: the document is then frozen.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
+/// Calls: [`read_product_document`].
 pub fn update_product_document(db: &Database, document: &ProductDocument) -> Result<(), DbError> {
     ensure!(!document.name.is_empty(), DbError::Inconsistent("a document without a name".to_owned()));
+
+    let stored = read_product_document(db, document.id)?;
+
+    ensure!(
+        stored.content.is_none(),
+        DbError::Inconsistent(format!("the document {} is given already: it is never changed", stored.name))
+    );
 
     let changed = db.connection().execute(
         "UPDATE product_documents SET name = :name, content = :content, version = :version WHERE id = :id",
@@ -96,7 +108,7 @@ pub fn update_product_document(db: &Database, document: &ProductDocument) -> Res
 #[cfg(test)]
 mod tests {
     //! Tests of the documents of the product: the place reserved, the file
-    //! given, read back as it was.
+    //! given, read back as it was and never changed again.
 
     use super::*;
 
@@ -122,6 +134,11 @@ mod tests {
 
         update_product_document(&db, &given).unwrap();
 
+        assert_eq!(read_product_document(&db, id).unwrap(), given);
+        assert!(matches!(
+            update_product_document(&db, &ProductDocument { version: Some("1.4".to_owned()), ..given.clone() }),
+            Err(DbError::Inconsistent(_))
+        ));
         assert_eq!(read_product_document(&db, id).unwrap(), given);
     }
 

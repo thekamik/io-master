@@ -11,7 +11,7 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
   - The answer: findings, analysis, vulnerability notes, notes, quotes, verdict (one of the plan). A quote is only a fragment of a document, word for word; one the program does not find in its document is not kept as a quote but written into `notes`. The verdict is the worst of its own and those of the dependencies; a work unit is assessed even when a dependency failed.
   - A work unit with a verdict is passed over; "Assess again" assesses anew those of `author = Ai`; a work unit of `author = User` is never written by the AI.
   - A work unit without its own agent is assessed by the agent of the evaluation (`EvaluationPlan::ai_agent`), chosen by the evaluator when the evaluation begins. Every document and proof the work units need is checked before the start: the assessment does not start while one is missing, so that it runs through the night without the evaluator.
-  - Documents are never removed. A quote is only of a document of the product (user, 2026-10-30: the standard is always at hand, the contribution of the manufacturer is assessed). Open: whether `db/` refuses a change of a document or a proof once it is given.
+  - Documents are never removed. A quote is only of a document of the product (user, 2026-10-30: the standard is always at hand, the contribution of the manufacturer is assessed). 
 - **The login with the recovery code**, the change of the password and a new recovery code.
 - **`Settings::active_integration`**: has no use since every agent names its integration; to be decided with the user (removed, or kept for something else: a chat is always held with an agent, user 2026-10-30).
 

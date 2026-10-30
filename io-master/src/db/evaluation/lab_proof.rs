@@ -1,7 +1,9 @@
 //! The proofs of the laboratory (`LabProof`: the results of the functional
 //! tests, as text, with the record of the test), in the table `lab_proofs`
 //! of the database of the user: create, read, update; never deleted (user,
-//! 2026-10-28).
+//! 2026-10-28). **A proof is frozen once its text is given** (user,
+//! 2026-10-30), with the record of its test: what the work units were
+//! assessed against never changes.
 //!
 //! ```text
 //! lab_proofs   id, name, proof, performed, tester, equipment
@@ -81,11 +83,20 @@ pub fn read_lab_proof(db: &Database, id: i64) -> Result<LabProof, DbError> {
 }
 
 /// Writes the proof `proof.id` anew: the text and the record of the test
-/// given in its reserved place, or a correction.
+/// given in its reserved place, or a correction of the place while it has
+/// no text. Refused once the text is given: the proof is then frozen.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
+/// Calls: [`read_lab_proof`].
 pub fn update_lab_proof(db: &Database, proof: &LabProof) -> Result<(), DbError> {
     ensure!(!proof.name.is_empty(), DbError::Inconsistent("a proof without a name".to_owned()));
+
+    let stored = read_lab_proof(db, proof.id)?;
+
+    ensure!(
+        stored.proof.is_none(),
+        DbError::Inconsistent(format!("the proof {} is given already: it is never changed", stored.name))
+    );
 
     let changed = db.connection().execute(
         "UPDATE lab_proofs SET name = :name, proof = :proof, performed = :performed, tester = :tester,
@@ -109,7 +120,7 @@ pub fn update_lab_proof(db: &Database, proof: &LabProof) -> Result<(), DbError> 
 #[cfg(test)]
 mod tests {
     //! Tests of the proofs of the laboratory: the place reserved, the proof
-    //! given with the record of its test.
+    //! given with the record of its test and never changed again.
 
     use super::*;
 
@@ -144,6 +155,11 @@ mod tests {
 
         update_lab_proof(&db, &given).unwrap();
 
+        assert_eq!(read_lab_proof(&db, id).unwrap(), given);
+        assert!(matches!(
+            update_lab_proof(&db, &LabProof { tester: Some("someone else".to_owned()), ..given.clone() }),
+            Err(DbError::Inconsistent(_))
+        ));
         assert_eq!(read_lab_proof(&db, id).unwrap(), given);
     }
 

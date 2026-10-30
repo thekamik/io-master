@@ -35,7 +35,7 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 
 ### `db/`
 
-One file per file of `model/`, holding its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; a list of a model is a table of its own, one row per element with its position (`lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change). The tables are made when missing (`database.rs`, `system_database.rs`); `encryption/` opens the files with SQLCipher. The knowledge: `ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words.
+One file per file of `model/`, holding its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; a list of a model is a table of its own, one row per element with its position (`lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). The tables are made when missing (`database.rs`, `system_database.rs`); `encryption/` opens the files with SQLCipher. The knowledge: `ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words.
 
 ### `ai/`
 
