@@ -40,7 +40,7 @@
   let summary: FillSummaryView | null = $state(null);
   let problem = $state("");
 
-  let agent = $derived(view?.agents.find((one) => one.id === view?.planningAgent)?.name ?? null);
+  let agent = $derived(view?.agents.find((one) => one.id === view?.aiAgent)?.name ?? null);
 
   /** Counts what the task would ask, now, and asks the planner to confirm. */
   async function confirm(task: FillTask) {

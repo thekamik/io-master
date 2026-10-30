@@ -70,11 +70,13 @@ pub struct EvaluationPlan {
     /// plan cannot be carried out until the planner corrects it.
     pub blocked: bool,
 
-    /// The agent of the planner (`Agent`), which fills the parameters of
-    /// the work units of the plan with its knowledge ("Fill with AI", user
-    /// 2026-10-29). Only a plan in planning has one: it does not go into
-    /// an evaluation, whose copy has `None`.
-    pub planning_agent: Option<i64>,
+    /// The agent of the plan (`Agent`; user, 2026-10-30: one field, its
+    /// work told by the state). In a plan in planning, the agent of the
+    /// planner, which fills the parameters of the work units with its
+    /// knowledge ("Fill with AI"); in an evaluation, the agent that
+    /// assesses every work unit without an agent of its own. The copy of a
+    /// plan does not take it over: the evaluator chooses it.
+    pub ai_agent: Option<i64>,
 }
 
 /// Where an evaluation plan is in its life (user, 2026-10-28).

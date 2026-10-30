@@ -51,7 +51,7 @@ pub fn create_plan(db: &Database, name: &str, description: &str) -> Result<i64, 
         possible_verdicts: vec![Verdict::Pass, Verdict::Fail],
         work_units: Vec::new(),
         blocked: false,
-        planning_agent: None,
+        ai_agent: None,
     };
 
     Ok(create_evaluation_plan(db, &plan)?)
@@ -78,13 +78,13 @@ pub fn update_plan(db: &Database, plan: &EvaluationPlan) -> Result<(), PlanError
         oscal_documents: plan.oscal_documents.clone(),
         product_documents: plan.product_documents.clone(),
         possible_verdicts: plan.possible_verdicts.clone(),
-        planning_agent: plan.planning_agent,
+        ai_agent: plan.ai_agent,
         ..stored
     };
 
     check_planning(&changed)?;
 
-    if let Some(agent) = changed.planning_agent {
+    if let Some(agent) = changed.ai_agent {
         read_agent(db, agent)?;
     }
 
@@ -154,10 +154,7 @@ mod tests {
 
         assert_eq!(read.possible_verdicts.len(), 3);
         assert_eq!(read.state, PlanState::Plan);
-        assert!(matches!(
-            update_plan(&db, &EvaluationPlan { planning_agent: Some(99), ..read }),
-            Err(PlanError::Db(_))
-        ));
+        assert!(matches!(update_plan(&db, &EvaluationPlan { ai_agent: Some(99), ..read }), Err(PlanError::Db(_))));
     }
 
     #[test]

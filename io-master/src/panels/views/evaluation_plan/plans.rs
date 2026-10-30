@@ -71,7 +71,7 @@ pub struct PlanView {
     verdicts: Vec<String>,
     blocked: bool,
     /// The agent of the planner, which fills the work units ("Fill with AI").
-    planning_agent: Option<i64>,
+    ai_agent: Option<i64>,
     /// Every agent of the user, to choose the agent of the planner.
     agents: Vec<AgentChoiceView>,
 }
@@ -172,7 +172,7 @@ fn plan_view(db: &Database, plan: EvaluationPlan) -> Result<PlanView, ViewError>
         documents,
         verdicts,
         blocked: plan.blocked,
-        planning_agent: plan.planning_agent,
+        ai_agent: plan.ai_agent,
         agents,
     })
 }
@@ -208,7 +208,7 @@ pub fn plan_save(
     standards: Vec<i64>,
     documents: Vec<i64>,
     verdicts: Vec<String>,
-    planning_agent: Option<i64>,
+    ai_agent: Option<i64>,
 ) -> Result<(), ViewError> {
     let opened = session.lock()?;
     let db = database(&opened)?;
@@ -224,7 +224,7 @@ pub fn plan_save(
         oscal_documents: standards,
         product_documents: documents,
         possible_verdicts,
-        planning_agent,
+        ai_agent,
         ..read_evaluation_plan(db, id)?
     };
 

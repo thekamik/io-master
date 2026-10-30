@@ -19,7 +19,7 @@
   let description = $state("");
   let standards: number[] = $state([]);
   let inconclusive = $state(false);
-  let planningAgent: number | null = $state(null);
+  let aiAgent: number | null = $state(null);
   let documentName = $state("");
   let problem = $state("");
   let busy = $state(false);
@@ -34,7 +34,7 @@
       description = view.description;
       standards = view.standards.filter((standard) => standard.chosen).map((standard) => standard.id);
       inconclusive = view.verdicts.includes("inconclusive");
-      planningAgent = view.planningAgent;
+      aiAgent = view.aiAgent;
     } catch (error) {
       problem = sentence(error);
     }
@@ -72,7 +72,7 @@
     const verdicts: VerdictName[] = inconclusive ? ["pass", "fail", "inconclusive"] : ["pass", "fail"];
     const documents = view?.documents.map((document) => document.id) ?? [];
 
-    void write(() => planSave({ id: plan, name, description, standards, documents, verdicts, planningAgent }));
+    void write(() => planSave({ id: plan, name, description, standards, documents, verdicts, aiAgent }));
   }
 
   function addDocument(event: SubmitEvent) {
@@ -119,7 +119,7 @@
       <label>
         Agent of the planner
         <span class="note">It fills the parameters of the work units with its knowledge ("Fill with AI").</span>
-        <select bind:value={planningAgent}>
+        <select bind:value={aiAgent}>
           <option value={null}>— none —</option>
           {#each view.agents as agent (agent.id)}
             <option value={agent.id}>{agent.name}</option>

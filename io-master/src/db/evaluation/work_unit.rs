@@ -19,7 +19,9 @@
 //! every write, [`check_links`]): its standard is one of the standards of
 //! the plan, its documents are documents of the plan, its dependencies
 //! are work units of the plan, its verdict is one the plan knows, and
-//! each quote is taken from one of its documents.
+//! each quote is taken from one of its documents. **The planning of a work
+//! unit of an evaluation is never changed** (user, 2026-10-30): once its plan
+//! is no more in planning, only its results are written ([`check_frozen`]).
 
 use rusqlite::{Connection, Row, named_params};
 
@@ -485,7 +487,7 @@ pub fn read_work_units(db: &Database, plan: i64) -> Result<Vec<WorkUnit>, DbErro
 
 /// The plan of the work unit `id`.
 ///
-/// Called by: [`update_work_unit`].
+/// Called by: [`update_work_unit`], [`delete_work_unit`].
 fn plan_of(connection: &Connection, id: i64) -> Result<i64, DbError> {
     let mut statement = connection.prepare("SELECT evaluation_plan FROM work_units WHERE id = :id")?;
     let mut rows = statement.query(named_params! { ":id": id })?;
@@ -496,17 +498,72 @@ fn plan_of(connection: &Connection, id: i64) -> Result<i64, DbError> {
     Ok(row.get("evaluation_plan")?)
 }
 
+/// The state of the plan `plan`, as its column holds it ("plan",
+/// "evaluation", "report").
+///
+/// Called by: [`check_frozen`], [`delete_work_unit`].
+fn plan_state(connection: &Connection, plan: i64) -> Result<String, DbError> {
+    Ok(connection.query_row(
+        "SELECT state FROM evaluation_plans WHERE id = :plan",
+        named_params! { ":plan": plan },
+        |row| row.get(0),
+    )?)
+}
+
+/// Whether the work units `stored` and `unit` have the same planning: every
+/// field but the results (findings, analysis, vulnerability notes, notes,
+/// quotes, verdict, author).
+///
+/// Called by: [`check_frozen`].
+fn same_planning(stored: &WorkUnit, unit: &WorkUnit) -> bool {
+    stored.reference == unit.reference
+        && stored.label == unit.label
+        && stored.oscal_key == unit.oscal_key
+        && stored.requirement == unit.requirement
+        && stored.guidance == unit.guidance
+        && stored.dependencies == unit.dependencies
+        && stored.cross_reference == unit.cross_reference
+        && stored.input_product_documents == unit.input_product_documents
+        && stored.input_functional == unit.input_functional
+        && stored.ai_agent == unit.ai_agent
+}
+
+/// Refuses a change of the planning of the work unit `unit.id` once its
+/// plan `plan` is no more in planning (user, 2026-10-30): in an evaluation
+/// only its results are written, so that what it was assessed against
+/// stays as it was planned.
+///
+/// Called by: [`update_work_unit`].
+/// Calls: [`plan_state`], [`read_work_unit`], [`same_planning`].
+fn check_frozen(db: &Database, plan: i64, unit: &WorkUnit) -> Result<(), DbError> {
+    if plan_state(db.connection(), plan)? == "plan" {
+        return Ok(());
+    }
+
+    let stored = read_work_unit(db, unit.id)?;
+
+    ensure!(
+        same_planning(&stored, unit),
+        DbError::Inconsistent(format!("the planning of {} is not changed in an evaluation", stored.label))
+    );
+
+    Ok(())
+}
+
 /// Writes the work unit `unit.id` anew, with its lists, in one
-/// transaction; it stays in its plan, at its place.
+/// transaction; it stays in its plan, at its place. In an evaluation only
+/// its results may differ from what is stored.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-/// Calls: [`check_lists`], [`plan_of`], [`check_links`], [`write_lists`].
+/// Calls: [`check_lists`], [`plan_of`], [`check_frozen`], [`check_links`],
+/// [`write_lists`].
 pub fn update_work_unit(db: &Database, unit: &WorkUnit) -> Result<(), DbError> {
     check_lists(unit)?;
 
     let transaction = db.connection().unchecked_transaction()?;
     let plan = plan_of(&transaction, unit.id)?;
 
+    check_frozen(db, plan, unit)?;
     check_links(&transaction, plan, unit)?;
 
     transaction.execute(
@@ -545,17 +602,15 @@ pub fn update_work_unit(db: &Database, unit: &WorkUnit) -> Result<(), DbError> {
 /// unless the plan is in planning (state `plan`, user 2026-10-29).
 ///
 /// Called by: `panels/logic/evaluation_plan/work_units.rs` (`remove_work_unit`).
-/// Calls: [`plan_of`].
+/// Calls: [`plan_of`], [`plan_state`].
 pub fn delete_work_unit(db: &Database, id: i64) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
     let plan = plan_of(&transaction, id)?;
-    let state: String = transaction.query_row(
-        "SELECT state FROM evaluation_plans WHERE id = :plan",
-        named_params! { ":plan": plan },
-        |row| row.get(0),
-    )?;
 
-    ensure!(state == "plan", DbError::Inconsistent("a work unit is removed only from a plan in planning".to_owned()));
+    ensure!(
+        plan_state(&transaction, plan)? == "plan",
+        DbError::Inconsistent("a work unit is removed only from a plan in planning".to_owned())
+    );
 
     let removed = transaction.execute("DELETE FROM work_units WHERE id = :id", named_params! { ":id": id })?;
 
@@ -575,6 +630,7 @@ mod tests {
 
     use crate::db::evaluation::evaluation_plan::create_evaluation_plan;
     use crate::db::evaluation::lab_proof::create_lab_proof;
+    use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
     use crate::model::evaluation::lab_proof::LabProof;
     use crate::test_support::database::{database, plan, unit};
 
@@ -584,6 +640,44 @@ mod tests {
             LabProof { id: 0, name: "Scan".to_owned(), proof: None, performed: None, tester: None, equipment: None };
 
         create_lab_proof(db, &proof).unwrap()
+    }
+
+    #[test]
+    fn in_an_evaluation_only_the_results_of_a_work_unit_are_written() {
+        let (_directory, db) = database();
+        let routers = plan(&db);
+        let id = create_evaluation_plan(&db, &routers).unwrap();
+        let first = create_work_unit(&db, id, &unit(&routers, "ASE_INT.1-1")).unwrap();
+        let stored = read_work_unit(&db, first).unwrap();
+
+        // In planning, the planning changes freely.
+        update_work_unit(&db, &WorkUnit { guidance: "Look at the TOE.".to_owned(), ..stored.clone() }).unwrap();
+
+        let evaluation = EvaluationPlan {
+            state: PlanState::Evaluation,
+            ..crate::db::evaluation::evaluation_plan::read_evaluation_plan(&db, id).unwrap()
+        };
+
+        crate::db::evaluation::evaluation_plan::update_evaluation_plan(&db, &evaluation).unwrap();
+
+        let planned = read_work_unit(&db, first).unwrap();
+        let assessed = WorkUnit {
+            findings: "The ST names no TOE.".to_owned(),
+            verdict: Some(Verdict::Fail),
+            author: Some(Author::Ai),
+            ..planned.clone()
+        };
+
+        update_work_unit(&db, &assessed).unwrap();
+        assert_eq!(read_work_unit(&db, first).unwrap(), assessed);
+        assert!(matches!(
+            update_work_unit(&db, &WorkUnit { guidance: String::new(), ..assessed.clone() }),
+            Err(DbError::Inconsistent(_))
+        ));
+        assert!(matches!(
+            update_work_unit(&db, &WorkUnit { input_product_documents: Vec::new(), ..assessed }),
+            Err(DbError::Inconsistent(_))
+        ));
     }
 
     #[test]

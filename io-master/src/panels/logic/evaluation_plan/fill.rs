@@ -108,7 +108,7 @@ fn plan_to_fill(db: &Database, plan: i64) -> Result<(EvaluationPlan, i64), PlanE
 
     check_planning(&stored)?;
 
-    let Some(agent) = stored.planning_agent else {
+    let Some(agent) = stored.ai_agent else {
         return Err(PlanError::Refused("the plan has no agent of the planner: choose one in its data".to_owned()));
     };
 
@@ -604,7 +604,7 @@ mod tests {
         let planner = create_agent(db, &agent(integration)).unwrap();
         let stored = read_evaluation_plan(db, plan).unwrap();
 
-        update_evaluation_plan(db, &EvaluationPlan { planning_agent: Some(planner), ..stored.clone() }).unwrap();
+        update_evaluation_plan(db, &EvaluationPlan { ai_agent: Some(planner), ..stored.clone() }).unwrap();
 
         (plan, stored.work_units)
     }
@@ -623,7 +623,7 @@ mod tests {
             }
         );
 
-        update_evaluation_plan(&db, &EvaluationPlan { planning_agent: None, ..stored }).unwrap();
+        update_evaluation_plan(&db, &EvaluationPlan { ai_agent: None, ..stored }).unwrap();
 
         assert!(matches!(fill_units(&db, plan), Err(PlanError::Refused(_))));
         assert!(matches!(fill_preview(&db, plan), Err(PlanError::Refused(_))));
