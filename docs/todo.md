@@ -4,7 +4,14 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 ## The rebuild: the parts to come back
 
-- **The evaluation**: a plan copied for one product (`create_evaluation` exists), the documents and proofs given, each work unit assessed by its agent in the order of the work, without the evaluator (user, 2026-10-30), the quotes checked, the verdict, the report. The question of a work unit carries the work unit whole as JSON, but `id`, `author`, `ai_agent` and `cross_reference` (user, 2026-10-30), the ids written as names.
+- **The evaluation** (concept agreed with the user, 2026-10-30; built in steps: a new evaluation and its inputs; the question of one work unit and its answer; the loop; the page; the corrections of the evaluator and the state Report):
+  - A plan copied for one product (`create_evaluation` exists); the documents of the product (`.pdf`, `.txt`, `.md`) and the proofs of the laboratory given.
+  - The work units assessed by the AI in the order of the work (Kahn: first those without dependencies, then those whose dependencies are assessed), without the evaluator; the progress shown, "Stop" after the present work unit; before the start, how many questions go to which integrations.
+  - The question of a work unit: the instructions of its agent, the work unit whole as JSON but `id`, `author`, `ai_agent` and `cross_reference` (the ids written as names), the label, verdict and findings of each dependency, the text of its documents and proofs (whole when they fit, otherwise the passages that fit the work unit best, indexed when the document is given), the knowledge of the agent.
+  - The answer: findings, analysis, vulnerability notes, notes, quotes, verdict (one of the plan). A quote is only a fragment of a document, word for word; one the program does not find in its document is not kept as a quote but written into `notes`. The verdict is the worst of its own and those of the dependencies; a work unit is assessed even when a dependency failed.
+  - A work unit with a verdict is passed over; "Assess again" assesses anew those of `author = Ai`; a work unit of `author = User` is never written by the AI.
+  - A work unit without its own agent is assessed by a default agent of the evaluation, with general knowledge (the model: to be agreed). A document or a proof a work unit needs and that is not given stops the evaluation.
+  - Documents are never removed; the references of a work unit of an evaluation to its documents are not changed: refused by `db/` (the data guards itself, not a local check).
 - **The login with the recovery code**, the change of the password and a new recovery code.
 - **`Settings::active_integration`**: has no use since every agent names its integration; to be decided with the user (removed, or kept for something else: a chat is always held with an agent, user 2026-10-30).
 
