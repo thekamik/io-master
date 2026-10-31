@@ -37,10 +37,18 @@ pub const SCHEMA: &str = "
     );
 ";
 
-/// Stores the installation at the first start; refused when it is stored
-/// already (the one row of its table).
+/// Stores the installation at the first start: its random id and the time
+/// it is made.
 ///
-/// Called by: nothing yet (the setup rewritten on `db/`).
+/// Input:
+/// - `system`: the open system database.
+/// - `installation`: its 16 random bytes (never all zero) and its time
+///   (seconds since 1970).
+///
+/// Output: nothing; an error when the id or the time is missing, or when
+/// the installation is stored already (the one row of its table).
+///
+/// Called by: `panels/logic/program_start/access.rs`: `install`.
 pub fn create_installation(system: &SystemDatabase, installation: &Installation) -> Result<(), DbError> {
     ensure!(installation.id != [0; 16], DbError::Inconsistent("an installation without its random id".to_owned()));
     ensure!(installation.created > 0, DbError::Inconsistent("an installation without its time".to_owned()));
@@ -53,9 +61,14 @@ pub fn create_installation(system: &SystemDatabase, installation: &Installation)
     Ok(())
 }
 
-/// Reads the installation; `None` before the first start has stored it.
+/// Reads the installation.
 ///
-/// Called by: nothing yet (the start rewritten on `db/`).
+/// Input: `system`, the open system database.
+///
+/// Output: the installation; `None` before the first start has stored it.
+/// `DbError::Corrupt` when its id is not 16 bytes.
+///
+/// Called by: nothing yet (no view shows the installation).
 pub fn read_installation(system: &SystemDatabase) -> Result<Option<Installation>, DbError> {
     let connection = system.connection();
     let mut statement = connection.prepare("SELECT id, created FROM installation WHERE one = 1")?;
@@ -73,10 +86,16 @@ pub fn read_installation(system: &SystemDatabase) -> Result<Option<Installation>
     Ok(Some(Installation { id, created: row.get("created")? }))
 }
 
-/// Stores the settings of a new database of the user; refused when they are
-/// stored already (the one row of its table).
+/// Stores the settings of a new database of the user at the first start
+/// (no default integration yet).
 ///
-/// Called by: nothing yet (the setup rewritten on `db/`).
+/// Input: `db`, the open database of the user; `settings`, the settings
+/// (`Settings { active_integration: None }`).
+///
+/// Output: nothing; an error when they are stored already (the one row of
+/// its table).
+///
+/// Called by: `panels/logic/program_start/access.rs`: `keys_and_database`.
 pub fn create_settings(db: &UserDatabase, settings: &Settings) -> Result<(), DbError> {
     db.connection().execute(
         "INSERT INTO settings (one, active_integration) VALUES (1, :active_integration)",
@@ -86,9 +105,15 @@ pub fn create_settings(db: &UserDatabase, settings: &Settings) -> Result<(), DbE
     Ok(())
 }
 
-/// Reads the settings of the user.
+/// Reads the settings of the user, for the default integration.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user.
+///
+/// Output: the settings (`Settings { active_integration: Some(2) }`);
+/// `DbError::NoRow` when they were never stored.
+///
+/// Called by: `panels/logic/settings/integrations.rs`: `add_integration`;
+/// `panels/views/settings/integrations.rs`: `integration_list`.
 pub fn read_settings(db: &UserDatabase) -> Result<Settings, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare("SELECT active_integration FROM settings WHERE one = 1")?;
@@ -100,9 +125,16 @@ pub fn read_settings(db: &UserDatabase) -> Result<Settings, DbError> {
     Ok(Settings { active_integration: row.get("active_integration")? })
 }
 
-/// Writes the settings of the user anew.
+/// Writes the settings of the user anew: another default integration.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `settings`, the settings as
+/// they are to be kept.
+///
+/// Output: nothing; an error when the integration is not stored (foreign
+/// key), or `DbError::NoRow` when the settings were never stored.
+///
+/// Called by: `panels/logic/settings/integrations.rs`: `add_integration` (the
+/// first integration becomes the default one), `activate_integration`.
 pub fn update_settings(db: &UserDatabase, settings: &Settings) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE settings SET active_integration = :active_integration WHERE one = 1",

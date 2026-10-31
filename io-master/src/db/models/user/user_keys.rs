@@ -33,7 +33,14 @@ pub const SCHEMA: &str = "
     );
 ";
 
-/// Refuses a copy of a key with an empty part: the program never makes one.
+/// Refuses keys of a user with an empty part (a salt, a nonce or a
+/// ciphertext): the program never makes one, so it would be a mistake of the
+/// caller.
+///
+/// Input: `keys`, the two wrapped copies of the key of the database.
+///
+/// Output: nothing when every part is there; otherwise
+/// `DbError::Inconsistent`.
 ///
 /// Called by: [`create_user_keys`], [`update_user_keys`].
 fn check_keys(keys: &UserKeys) -> Result<(), DbError> {
@@ -52,9 +59,18 @@ fn check_keys(keys: &UserKeys) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Stores the keys of a user that has none.
+/// Stores the keys of the user at the first start: the key of their
+/// database wrapped once with the password and once with the recovery code.
 ///
-/// Called by: `panels/logic/program_start/access.rs` (`create_account`).
+/// Input:
+/// - `system`: the open system database.
+/// - `keys`: the two copies, `keys.user` the id of a stored user who has no
+///   keys yet.
+///
+/// Output: nothing; an error when a part is empty ([`check_keys`]), when the
+/// user has keys already (`PRIMARY KEY`) or is not stored (foreign key).
+///
+/// Called by: `panels/logic/program_start/access.rs`: `keys_and_database`.
 /// Calls: [`check_keys`].
 pub fn create_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), DbError> {
     check_keys(keys)?;
@@ -82,9 +98,14 @@ pub fn create_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), 
     Ok(())
 }
 
-/// Reads the keys of the user `user`.
+/// Reads the keys of the user `user` at the login, so that the password
+/// unwraps the key of their database.
 ///
-/// Called by: `panels/logic/program_start/access.rs` (`log_in`).
+/// Input: `system`, the open system database; `user`, the id of the user (1).
+///
+/// Output: the two copies; `DbError::NoRow` when the user has none.
+///
+/// Called by: `panels/logic/program_start/access.rs`: `log_in`.
 pub fn read_user_keys(system: &SystemDatabase, user: i64) -> Result<UserKeys, DbError> {
     let connection = system.connection();
     let mut statement = connection.prepare(
@@ -116,11 +137,19 @@ pub fn read_user_keys(system: &SystemDatabase, user: i64) -> Result<UserKeys, Db
     })
 }
 
-/// Writes both copies of the key of a user anew, in one statement: after a
-/// change of the password or a new recovery code, the old ones stop working
-/// together.
+/// Writes both copies of the key of a user anew, in one statement, so that
+/// after a change of the password or a new recovery code the old copies
+/// stop working together.
 ///
-/// Called by: nothing yet (the change of the password, the recovery).
+/// Input:
+/// - `system`: the open system database.
+/// - `keys`: the two new copies, `keys.user` a user with keys.
+///
+/// Output: nothing; an error when a part is empty ([`check_keys`]), or
+/// `DbError::NoRow` when the user has no keys.
+///
+/// Called by: nothing yet (the change of the password and a new recovery
+/// code, `docs/todo.md`).
 /// Calls: [`check_keys`].
 pub fn update_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), DbError> {
     check_keys(keys)?;

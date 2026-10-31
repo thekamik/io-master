@@ -30,8 +30,13 @@ pub const SCHEMA: &str = "
     );
 ";
 
-/// Refuses a name that is empty, over its limit, or holds a sign that is no
-/// letter, digit, space, dot, dash or underscore.
+/// Refuses a name of a user that is empty, longer than [`MAX_NAME`], or holds
+/// a sign that is no letter, digit, space, dot, dash or underscore.
+///
+/// Input: `name`, the name as given ("Anna Kowalska").
+///
+/// Output: nothing when the name is good; otherwise
+/// `DbError::Inconsistent` naming what is wrong ("the sign '/' in a name").
 ///
 /// Called by: [`create_user`], [`update_user`].
 fn check_name(name: &str) -> Result<(), DbError> {
@@ -48,11 +53,19 @@ fn check_name(name: &str) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Stores the user of the installation and gives its id; refused when the
-/// installation has its user already. A new object has no id yet (`id`
-/// 0): the database gives it.
+/// Stores the one user of the installation at the first start and gives its
+/// id.
 ///
-/// Called by: nothing yet (the setup rewritten on `db/`).
+/// Input:
+/// - `system`: the open system database.
+/// - `user`: the new user, its `id` 0 (the database gives it), its name and
+///   the time it is made.
+///
+/// Output: the id of the user (1). An error when the name is refused
+/// ([`check_name`]), when the installation has its user already, or when
+/// the name is taken whatever its letter case (`UNIQUE COLLATE NOCASE`).
+///
+/// Called by: `panels/logic/program_start/access.rs`: `install`.
 /// Calls: [`check_name`].
 pub fn create_user(system: &SystemDatabase, user: &User) -> Result<i64, DbError> {
     ensure!(user.id == 0, DbError::Inconsistent("a new user has an id already".to_owned()));
@@ -74,7 +87,7 @@ pub fn create_user(system: &SystemDatabase, user: &User) -> Result<i64, DbError>
     Ok(connection.last_insert_rowid())
 }
 
-/// The model of a row of `users`.
+/// The model of one row of `users`.
 ///
 /// Called by: [`read_user`], [`read_users`].
 fn user_of(row: &Row<'_>) -> Result<User, DbError> {
@@ -83,7 +96,11 @@ fn user_of(row: &Row<'_>) -> Result<User, DbError> {
 
 /// Reads the user `id`.
 ///
-/// Called by: nothing yet (the login rewritten on `db/`).
+/// Input: `system`, the open system database; `id`, the id of the user (1).
+///
+/// Output: the user; `DbError::NoRow` when there is none.
+///
+/// Called by: nothing yet (no view reads one user by its id).
 /// Calls: [`user_of`].
 pub fn read_user(system: &SystemDatabase, id: i64) -> Result<User, DbError> {
     let connection = system.connection();
@@ -96,9 +113,17 @@ pub fn read_user(system: &SystemDatabase, id: i64) -> Result<User, DbError> {
     user_of(row)
 }
 
-/// Reads the users of the installation: none before the setup, one after.
+/// Reads the users of the installation, to tell the first start from the
+/// login and to find the user who logs in.
 ///
-/// Called by: nothing yet (the login rewritten on `db/`).
+/// Input: `system`, the open system database.
+///
+/// Output: none before the first start, one after (`[User { id: 1, .. }]`);
+/// an error when the table holds more than [`MAX_USERS`] (a database the
+/// program did not write).
+///
+/// Called by: `panels/logic/program_start/access.rs`: `installed_user`,
+/// `log_in`.
 /// Calls: [`user_of`].
 pub fn read_users(system: &SystemDatabase) -> Result<Vec<User>, DbError> {
     let mut statement = system.connection().prepare("SELECT id, name, created FROM users ORDER BY id")?;
@@ -116,9 +141,16 @@ pub fn read_users(system: &SystemDatabase) -> Result<Vec<User>, DbError> {
     Err(DbError::Inconsistent(format!("more than {MAX_USERS} users in the database")))
 }
 
-/// Writes the user `user.id` anew: a new name.
+/// Writes the user `user.id` anew: its name and the time it was made.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input:
+/// - `system`: the open system database.
+/// - `user`: the user as it is to be kept, its `id` that of a stored user.
+///
+/// Output: nothing; an error when the name is refused ([`check_name`]) or
+/// taken, or `DbError::NoRow` when there is no user `user.id`.
+///
+/// Called by: nothing yet (no view changes the user).
 /// Calls: [`check_name`].
 pub fn update_user(system: &SystemDatabase, user: &User) -> Result<(), DbError> {
     check_name(&user.name)?;
