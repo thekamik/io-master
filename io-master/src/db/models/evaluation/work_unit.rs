@@ -39,8 +39,7 @@ pub const MAX_DOCUMENTS: usize = 50;
 pub const MAX_PROOFS: usize = 50;
 pub const MAX_QUOTES: usize = 100;
 
-/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`), after the
-/// tables they name (the agents among them, `db/models/ai/agent.rs`).
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS work_units (
         id                  INTEGER PRIMARY KEY,

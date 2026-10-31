@@ -32,8 +32,8 @@ pub struct UserDatabase {
 }
 
 impl UserDatabase {
-    /// Prepares an open connection: the tables that are missing, in the
-    /// order of `USER_TABLES`.
+    /// Prepares an open connection: the tables of `USER_TABLES` that are
+    /// missing.
     ///
     /// Called by: [`create`], [`open`].
     fn from(connection: Connection) -> Result<UserDatabase, DbError> {

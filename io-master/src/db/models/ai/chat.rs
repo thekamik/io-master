@@ -19,8 +19,8 @@ use crate::model::ai::chat::{Chat, Message, Speaker};
 pub const MAX_CHATS: usize = 500;
 pub const MAX_MESSAGES: usize = 500;
 
-/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`), after the
-/// agents and the work units. A work unit taken out of its plan leaves
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`).
+/// A work unit taken out of its plan leaves
 /// its chats about nothing in particular.
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS chats (

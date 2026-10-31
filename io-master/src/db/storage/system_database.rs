@@ -31,8 +31,8 @@ pub struct SystemDatabase {
 }
 
 impl SystemDatabase {
-    /// Prepares an open connection: the tables that are missing, in the
-    /// order of `SYSTEM_TABLES`.
+    /// Prepares an open connection: the tables of `SYSTEM_TABLES` that are
+    /// missing.
     ///
     /// Called by: [`create`], [`open`].
     fn from(connection: Connection) -> Result<SystemDatabase, DbError> {

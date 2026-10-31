@@ -25,8 +25,7 @@ use crate::model::ai::api_key::ApiKey;
 /// the limit stops a pasted document.
 pub const MAX_KEY: usize = 512;
 
-/// The table, made when it is missing (`schema.rs`, `USER_TABLES`), after the
-/// integrations.
+/// The table, made when it is missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_api_keys (
         integration INTEGER PRIMARY KEY REFERENCES ai_integrations(id),

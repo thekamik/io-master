@@ -23,8 +23,7 @@ pub const MAX_TERMS: usize = 500;
 /// The most characters of knowledge an agent gives with one question.
 pub const MAX_CHARACTERS: u32 = 40_000;
 
-/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`), after the
-/// integrations and the knowledge bases.
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_agents (
         id             INTEGER PRIMARY KEY,

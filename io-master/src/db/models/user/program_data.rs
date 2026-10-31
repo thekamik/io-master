@@ -29,8 +29,7 @@ pub const SYSTEM_SCHEMA: &str = "
     );
 ";
 
-/// The table of the settings, made when it is missing (`schema.rs`, `USER_TABLES`),
-/// after the integrations.
+/// The table of the settings, made when it is missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS settings (
         one                INTEGER PRIMARY KEY CHECK (one = 1),

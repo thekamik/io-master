@@ -16,8 +16,7 @@ use crate::db::error::DbError;
 use crate::db::storage::system_database::SystemDatabase;
 use crate::model::user::user_keys::{RecoveryWrappedKey, UserKeys, WrappedKey};
 
-/// The table, made when it is missing (`schema.rs`, `SYSTEM_TABLES`), after the
-/// users.
+/// The table, made when it is missing (`schema.rs`, `SYSTEM_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS user_keys (
         user                INTEGER PRIMARY KEY REFERENCES users(id),

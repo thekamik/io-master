@@ -43,8 +43,7 @@ pub const MAX_DOCUMENTS: usize = 50;
 /// The most verdicts a plan knows: every verdict there is.
 const MAX_VERDICTS: usize = 3;
 
-/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`), after the
-/// tables they name.
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS evaluation_plans (
         id          INTEGER PRIMARY KEY,
