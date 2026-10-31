@@ -199,6 +199,7 @@ pub(in crate::db) fn passages(text: &str) -> Vec<String> {
     let mut current = String::new();
 
     for paragraph in text.split("\n\n") {
+        // A new paragraph starts on a new line of the passage being made.
         if !current.is_empty() && !current.ends_with('\n') {
             current.push('\n');
         }
@@ -211,6 +212,8 @@ pub(in crate::db) fn passages(text: &str) -> Vec<String> {
             for _ in 0..=rest.len() {
                 let room = PASSAGE_CHARS.saturating_sub(current.chars().count() + 1);
 
+                // The word fits the passage being made (or starts an empty
+                // one): it is added, after a space.
                 if rest.len() <= room || (current.is_empty() && rest.len() <= PASSAGE_CHARS) {
                     if !current.is_empty() && !current.ends_with('\n') {
                         current.push(' ');
@@ -220,17 +223,22 @@ pub(in crate::db) fn passages(text: &str) -> Vec<String> {
                     break;
                 }
 
+                // It does not fit: the passage is closed, and the word tried
+                // again in an empty one.
                 if !current.is_empty() {
                     push_passage(&mut passages, &mut current);
                     continue;
                 }
 
+                // A word longer than a whole passage: its first part is a
+                // passage of its own, the rest tried again.
                 current.extend(rest.drain(..PASSAGE_CHARS));
                 push_passage(&mut passages, &mut current);
             }
         }
     }
 
+    // The last passage, still open when the text ends.
     push_passage(&mut passages, &mut current);
 
     passages
@@ -482,6 +490,9 @@ pub fn read_passages(db: &UserDatabase, bases: &[i64], question: &str, count: us
         return Ok(Vec::new());
     };
     let wanted = count.min(MAX_FOUND);
+
+    // The bases are given to SQL as one JSON array ("[2,5]"), read by
+    // json_each: a list of any length in one named parameter.
     let mut ids = Vec::with_capacity(bases.len());
 
     for base in bases {
