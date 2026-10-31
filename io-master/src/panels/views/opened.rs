@@ -7,7 +7,7 @@
 //! let db = database(&opened)?;       the database, or "nobody is logged in"
 //! ```
 
-use crate::db::database::Database;
+use crate::db::storage::user_database::UserDatabase;
 use crate::panels::views::error::ViewError;
 use crate::session::state::Opened;
 
@@ -15,7 +15,7 @@ use crate::session::state::Opened;
 /// logged in.
 ///
 /// Called by: the commands of `panels/views/` that use the database.
-pub fn database(opened: &Option<Opened>) -> Result<&Database, ViewError> {
+pub fn database(opened: &Option<Opened>) -> Result<&UserDatabase, ViewError> {
     match opened {
         Some(opened) => Ok(&opened.database),
         None => Err(ViewError::NotLoggedIn),

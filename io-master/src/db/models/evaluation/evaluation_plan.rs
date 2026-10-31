@@ -20,14 +20,14 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
-use crate::db::evaluation::lab_proof::{insert_lab_proof, read_lab_proof};
-use crate::db::evaluation::product_document::{insert_product_document, read_product_document};
-use crate::db::evaluation::work_unit::{
+use crate::db::models::evaluation::lab_proof::{insert_lab_proof, read_lab_proof};
+use crate::db::models::evaluation::product_document::{insert_product_document, read_product_document};
+use crate::db::models::evaluation::work_unit::{
     MAX_WORK_UNITS, insert_work_unit, read_work_units, verdict_name, verdict_of, write_dependencies,
 };
-use crate::db::lists::{check_length, position, read_ids, write_ids};
+use crate::db::models::lists::{check_length, position, read_ids, write_ids};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::product_document::ProductDocument;
@@ -43,7 +43,7 @@ pub const MAX_DOCUMENTS: usize = 50;
 /// The most verdicts a plan knows: every verdict there is.
 const MAX_VERDICTS: usize = 3;
 
-/// The tables, made when they are missing (`database.rs`), after the
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`), after the
 /// tables they name.
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS evaluation_plans (
@@ -170,7 +170,7 @@ fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Resul
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`insert_plan`].
-pub fn create_evaluation_plan(db: &Database, plan: &EvaluationPlan) -> Result<i64, DbError> {
+pub fn create_evaluation_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<i64, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
     let id = insert_plan(&transaction, plan)?;
 
@@ -303,7 +303,7 @@ fn read_lists(connection: &Connection, plan: &mut EvaluationPlan) -> Result<(), 
 ///
 /// Called by: [`read_evaluation_plans`]; the views rewritten on `db/`.
 /// Calls: [`plan_of`], [`read_lists`].
-pub fn read_evaluation_plan(db: &Database, id: i64) -> Result<EvaluationPlan, DbError> {
+pub fn read_evaluation_plan(db: &UserDatabase, id: i64) -> Result<EvaluationPlan, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM evaluation_plans WHERE id = :id"))?;
     let mut rows = statement.query(named_params! { ":id": id })?;
@@ -321,7 +321,7 @@ pub fn read_evaluation_plan(db: &Database, id: i64) -> Result<EvaluationPlan, Db
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`read_evaluation_plan`].
-pub fn read_evaluation_plans(db: &Database) -> Result<Vec<EvaluationPlan>, DbError> {
+pub fn read_evaluation_plans(db: &UserDatabase) -> Result<Vec<EvaluationPlan>, DbError> {
     let mut statement = db.connection().prepare("SELECT id FROM evaluation_plans ORDER BY id DESC")?;
     let mut rows = statement.query([])?;
     let mut plans = Vec::new();
@@ -369,7 +369,7 @@ fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_plan`], [`write_lists`], [`order_work_units`].
-pub fn update_evaluation_plan(db: &Database, plan: &EvaluationPlan) -> Result<(), DbError> {
+pub fn update_evaluation_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), DbError> {
     check_plan(plan)?;
 
     let transaction = db.connection().unchecked_transaction()?;
@@ -470,7 +470,7 @@ fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
 ///
 /// Called by: [`create_evaluation`].
 fn copied_places(
-    db: &Database,
+    db: &UserDatabase,
     connection: &Connection,
     plan: &EvaluationPlan,
     units: &[WorkUnit],
@@ -515,7 +515,7 @@ fn copied_places(
 /// [`insert_plan`], [`copied_unit`], `insert_work_unit`,
 /// `write_dependencies`.
 pub fn create_evaluation(
-    db: &Database,
+    db: &UserDatabase,
     source: i64,
     product: &str,
     client: &str,
@@ -580,8 +580,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::lab_proof::create_lab_proof;
-    use crate::db::evaluation::work_unit::{create_work_unit, read_work_unit, update_work_unit};
+    use crate::db::models::evaluation::lab_proof::create_lab_proof;
+    use crate::db::models::evaluation::work_unit::{create_work_unit, read_work_unit, update_work_unit};
     use crate::model::evaluation::work_unit::WorkUnit;
     use crate::test_support::database::{database, plan, unit};
 
@@ -679,7 +679,7 @@ mod tests {
     /// A plan with two work units, the first depending on the second (a
     /// dependency set after both were made), the second with a proof and a
     /// quote of the document of the plan.
-    fn plan_with_units(db: &Database) -> (i64, i64, i64) {
+    fn plan_with_units(db: &UserDatabase) -> (i64, i64, i64) {
         let routers = plan(db);
         let id = create_evaluation_plan(db, &routers).unwrap();
         let proof =
@@ -704,9 +704,11 @@ mod tests {
         let (_directory, db) = database();
         let (source, first, second) = plan_with_units(&db);
         let integration =
-            crate::db::ai::integration::create_integration(&db, &crate::test_support::database::integration()).unwrap();
+            crate::db::models::ai::integration::create_integration(&db, &crate::test_support::database::integration())
+                .unwrap();
         let planner =
-            crate::db::ai::agent::create_agent(&db, &crate::test_support::database::agent(integration)).unwrap();
+            crate::db::models::ai::agent::create_agent(&db, &crate::test_support::database::agent(integration))
+                .unwrap();
 
         update_evaluation_plan(
             &db,

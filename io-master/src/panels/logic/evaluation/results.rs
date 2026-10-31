@@ -8,9 +8,9 @@
 //!                  each quote found in its document ──► update_work_unit, author User
 //! ```
 
-use crate::db::database::Database;
-use crate::db::evaluation::product_document::read_product_document;
-use crate::db::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
+use crate::db::models::evaluation::product_document::read_product_document;
+use crate::db::models::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
 use crate::panels::logic::evaluation::answer::check_quote;
 use crate::panels::logic::evaluation::error::EvaluationError;
@@ -47,7 +47,7 @@ fn check_length(text: &str, what: &str) -> Result<(), EvaluationError> {
 ///
 /// Called by: [`save_results`].
 /// Calls: `read_product_document`, `check_quote`.
-fn check_quotes(db: &Database, unit: &WorkUnit, quotes: &[Quote]) -> Result<(), EvaluationError> {
+fn check_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[Quote]) -> Result<(), EvaluationError> {
     ensure!(quotes.len() <= MAX_QUOTES, EvaluationError::Refused(format!("more than {MAX_QUOTES} quotes")));
 
     for quote in quotes {
@@ -75,7 +75,7 @@ fn check_quotes(db: &Database, unit: &WorkUnit, quotes: &[Quote]) -> Result<(), 
 /// Called by: `panels/views/evaluation/work_units.rs` (`evaluation_unit_save`).
 /// Calls: `evaluation_in_progress`, `read_work_unit`, [`check_length`],
 /// [`check_quotes`], `update_work_unit`.
-pub fn save_results(db: &Database, evaluation: i64, unit: i64, results: &Results) -> Result<(), EvaluationError> {
+pub fn save_results(db: &UserDatabase, evaluation: i64, unit: i64, results: &Results) -> Result<(), EvaluationError> {
     let stored = evaluation_in_progress(db, evaluation)?;
     let this = read_work_unit(db, unit)?;
 
@@ -114,7 +114,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::evaluation_plan::read_evaluation_plan;
+    use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
     use crate::test_support::database::database;
     use crate::test_support::evaluation::evaluation;
 

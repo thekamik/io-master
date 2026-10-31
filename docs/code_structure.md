@@ -10,7 +10,7 @@ io-master/src/
   model/          the data as kept in the databases: structures, fields only (data_model.md)
   security/       random bytes from the kernel; no memory dumps of the process
   pdf/            pdfinfo and pdftotext of Poppler, the PDF on their standard input
-  db/             create, read, update of the models; the two databases; their encryption
+  db/             storage/: the two database files and their encryption; models/: create, read, update of the models
   ai/             the only way to an AI service
   session/        the data folder; the user logged in with their open database; a long work and its stop
   panels/logic/   the work behind each panel, given the open database
@@ -23,7 +23,7 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 | Folder | May use |
 |---|---|
 | `model`, `security`, `pdf` | nothing of the program |
-| `db` | `model`, `security` |
+| `db` | `model`, `security` (inside: `models/` uses `storage/`; `storage/` uses only `models/schema.rs`) |
 | `ai` | `db`, `model` |
 | `session` | `db`, `model` |
 | `panels::logic` | `ai`, `db`, `model`, `security`, `pdf` |
@@ -35,7 +35,20 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 
 ### `db/`
 
-One file per file of `model/`, holding its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; a list of a model is a table of its own, one row per element with its position (`lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). The tables are made when missing (`database.rs`, `system_database.rs`); `encryption/` opens the files with SQLCipher. The knowledge: `ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
+Two parts (user, 2026-10-31), and `error.rs` (`DbError`), the error of both:
+
+```text
+db/
+  error.rs       DbError
+  storage/       the database files: user_database.rs (users/<id>.v2.db, SQLCipher), system_database.rs
+                 (system.v2.db, not encrypted): where each is, made, opened, its tables made; encryption/
+  models/        the models in them: ai/, evaluation/, user/ (the mirror of model/), schema.rs, lists.rs
+
+models/<area>/<model>.rs ──SCHEMA──► models/schema.rs ──USER_TABLES / SYSTEM_TABLES──► storage/
+storage/ ──UserDatabase / SystemDatabase (the connection, seen only in db/)──► models/<area>/<model>.rs
+```
+
+`models/` holds one file per file of `model/`, with its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; `schema.rs` lists the tables of each database in the order they are made; a list of a model is a table of its own, one row per element with its position (`lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). `storage/` makes the missing tables whenever it opens a database; `storage/encryption/` opens the files with SQLCipher. The knowledge: `models/ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`models/evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
 
 ### `ai/`
 
@@ -69,7 +82,7 @@ A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `c
 | Topic | Rule |
 |---|---|
 | Names | No file repeats the name of its folder. Functions are verbs; `db/` functions are `create_`, `read_`, `update_` with the name of their model. |
-| Comments | At every function: what it does, where it is called from, which functions it calls. The head of every file says what it holds; a file of `db/` draws its tables. |
+| Comments | At every function: what it does, where it is called from, which functions it calls. The head of every file says what it holds; a file of `db/models/` draws its tables. |
 | Rules of the code | `CLAUDE.md`, "The Power of 10" and its rules for Rust. |
 | Tests | In the file they test, its last item. Help in `src/test_support.rs` and `src/test_support/` (`database.rs`: a database with its data; `pdf.rs`: a small PDF; `ai_service.rs`: a fake AI service on 127.0.0.1 with real TLS, either protocol; `evaluation.rs`: an evaluation begun on a plan, its ST given). |
 | Checks | `cargo test`, `cargo clippy --all-targets` (clean but `dead_code` during the rebuild), `npm run check`, `cargo fmt --check`. |

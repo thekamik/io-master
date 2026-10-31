@@ -12,14 +12,14 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::db::ai::agent::read_agent;
-use crate::db::ai::journal::read_latest_journal_entry;
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::read_evaluation_plan;
-use crate::db::evaluation::lab_proof::read_lab_proof;
-use crate::db::evaluation::oscal_standard_document::read_oscal_standard_document;
-use crate::db::evaluation::product_document::read_product_document;
-use crate::db::evaluation::work_unit::read_work_unit;
+use crate::db::models::ai::agent::read_agent;
+use crate::db::models::ai::journal::read_latest_journal_entry;
+use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
+use crate::db::models::evaluation::lab_proof::read_lab_proof;
+use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
+use crate::db::models::evaluation::product_document::read_product_document;
+use crate::db::models::evaluation::work_unit::read_work_unit;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::journal::Ending;
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
@@ -139,7 +139,7 @@ fn author_name(author: Author) -> &'static str {
 ///
 /// Called by: [`evaluation_unit_list`].
 /// Calls: `assessing_agent`, `read_agent`, [`author_name`].
-fn row_of(db: &Database, evaluation: &EvaluationPlan, unit: WorkUnit) -> Result<UnitRowView, ViewError> {
+fn row_of(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> Result<UnitRowView, ViewError> {
     let agent = read_agent(db, assessing_agent(evaluation, &unit)?)?.name;
 
     Ok(UnitRowView {
@@ -178,7 +178,7 @@ pub fn evaluation_unit_list(session: State<'_, Session>, id: i64) -> Result<Vec<
 ///
 /// Called by: [`unit_view`].
 /// Calls: `read_work_unit`, `read_product_document`, `read_lab_proof`.
-fn needs_of(db: &Database, unit: &WorkUnit) -> Result<Needs, ViewError> {
+fn needs_of(db: &UserDatabase, unit: &WorkUnit) -> Result<Needs, ViewError> {
     let mut dependencies = Vec::with_capacity(unit.dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
 
@@ -217,7 +217,7 @@ fn needs_of(db: &Database, unit: &WorkUnit) -> Result<Needs, ViewError> {
 /// Calls: [`needs_of`], `assessing_agent`, `read_agent`,
 /// `read_oscal_standard_document`, `read_latest_journal_entry`,
 /// [`ending_name`], [`author_name`].
-fn unit_view(db: &Database, evaluation: &EvaluationPlan, unit: WorkUnit) -> Result<UnitView, ViewError> {
+fn unit_view(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> Result<UnitView, ViewError> {
     let Needs { dependencies, documents, proofs } = needs_of(db, &unit)?;
     let agent = read_agent(db, assessing_agent(evaluation, &unit)?)?.name;
     let journal = read_latest_journal_entry(db, unit.id)?.map(|entry| JournalView {

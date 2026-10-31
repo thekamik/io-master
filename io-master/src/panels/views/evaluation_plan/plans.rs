@@ -14,11 +14,11 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::ai::agent::read_agents;
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::{read_evaluation_plan, read_evaluation_plans};
-use crate::db::evaluation::oscal_standard_document::read_oscal_standard_documents;
-use crate::db::evaluation::product_document::read_product_document;
+use crate::db::models::ai::agent::read_agents;
+use crate::db::models::evaluation::evaluation_plan::{read_evaluation_plan, read_evaluation_plans};
+use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_documents;
+use crate::db::models::evaluation::product_document::read_product_document;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::work_unit::Verdict;
 use crate::panels::logic::evaluation_plan::plans::{add_document_place, create_plan, update_plan};
@@ -138,7 +138,7 @@ pub fn plan_create(session: State<'_, Session>, name: String, description: Strin
 /// whether the plan has it, the names of its places of documents.
 ///
 /// Called by: [`plan_get`].
-fn plan_view(db: &Database, plan: EvaluationPlan) -> Result<PlanView, ViewError> {
+fn plan_view(db: &UserDatabase, plan: EvaluationPlan) -> Result<PlanView, ViewError> {
     let mut standards = Vec::new();
 
     for standard in read_oscal_standard_documents(db)? {

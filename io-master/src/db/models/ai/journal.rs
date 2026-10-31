@@ -17,15 +17,15 @@
 
 use rusqlite::{Row, named_params};
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::journal::{Ending, JournalEntry};
 
 /// The most entries read at once: one page of the journal.
 pub const PAGE: usize = 50;
 
 /// The table and its two triggers, made when they are missing
-/// (`database.rs`).
+/// (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_journal (
         id            INTEGER PRIMARY KEY,
@@ -84,7 +84,7 @@ fn ending_of(name: &str) -> Result<Ending, DbError> {
 /// 0): the database gives it.
 ///
 /// Called by: nothing yet (the AI layer rewritten on `db/`: every question).
-pub fn create_journal_entry(db: &Database, entry: &JournalEntry) -> Result<i64, DbError> {
+pub fn create_journal_entry(db: &UserDatabase, entry: &JournalEntry) -> Result<i64, DbError> {
     ensure!(entry.id == 0, DbError::Inconsistent("a new entry has an id already".to_owned()));
     ensure!(!entry.request.is_empty(), DbError::Inconsistent("an entry without its request".to_owned()));
 
@@ -137,7 +137,7 @@ fn entry_of(row: &Row<'_>) -> Result<JournalEntry, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`entry_of`].
-pub fn read_journal_entry(db: &Database, id: i64) -> Result<JournalEntry, DbError> {
+pub fn read_journal_entry(db: &UserDatabase, id: i64) -> Result<JournalEntry, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_journal WHERE id = :id"))?;
     let mut rows = statement.query(named_params! { ":id": id })?;
@@ -153,7 +153,7 @@ pub fn read_journal_entry(db: &Database, id: i64) -> Result<JournalEntry, DbErro
 ///
 /// Called by: `panels/views/agents/` (the journal of an agent).
 /// Calls: [`entry_of`].
-pub fn read_journal_entries(db: &Database, agent: i64, before: Option<i64>) -> Result<Vec<JournalEntry>, DbError> {
+pub fn read_journal_entries(db: &UserDatabase, agent: i64, before: Option<i64>) -> Result<Vec<JournalEntry>, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!(
         "SELECT {COLUMNS} FROM ai_journal WHERE agent = :agent AND (:before IS NULL OR id < :before)
@@ -178,7 +178,7 @@ pub fn read_journal_entries(db: &Database, agent: i64, before: Option<i64>) -> R
 /// Called by: `panels/views/evaluation/` (the question and the answer of
 /// the AI shown with a work unit).
 /// Calls: [`entry_of`].
-pub fn read_latest_journal_entry(db: &Database, work_unit: i64) -> Result<Option<JournalEntry>, DbError> {
+pub fn read_latest_journal_entry(db: &UserDatabase, work_unit: i64) -> Result<Option<JournalEntry>, DbError> {
     let connection = db.connection();
     let mut statement = connection
         .prepare(&format!("SELECT {COLUMNS} FROM ai_journal WHERE work_unit = :work_unit ORDER BY id DESC LIMIT 1"))?;
@@ -197,15 +197,15 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::agent::create_agent;
-    use crate::db::ai::integration::create_integration;
+    use crate::db::models::ai::agent::create_agent;
+    use crate::db::models::ai::integration::create_integration;
     use crate::model::ai::agent::Agent;
     use crate::model::ai::integration::Integration;
     use crate::test_support::TempDir;
     use crate::test_support::database::{agent, database, integration};
 
     /// A new database with one agent (its id), which every entry names.
-    fn database_with_agent() -> (TempDir, Database, i64) {
+    fn database_with_agent() -> (TempDir, UserDatabase, i64) {
         let (directory, db) = database();
         let integration = create_integration(&db, &integration()).unwrap();
         let agent = create_agent(&db, &agent(integration)).unwrap();

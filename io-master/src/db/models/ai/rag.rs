@@ -15,8 +15,8 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::rag::{KnowledgeBase, Source};
 
 /// The most knowledge bases, and sources of one base.
@@ -46,7 +46,7 @@ const STOP_WORDS: [&str; 64] = [
     "with",
 ];
 
-/// The tables, made when they are missing (`database.rs`). The tokenizer
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`). The tokenizer
 /// `porter` finds an English word by its stem ("keys" finds "key"),
 /// `unicode61` folds the case and the diacritics.
 pub const SCHEMA: &str = "
@@ -74,7 +74,7 @@ pub const SCHEMA: &str = "
 /// yet (`id` 0): the database gives it.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-pub fn create_knowledge_base(db: &Database, base: &KnowledgeBase) -> Result<i64, DbError> {
+pub fn create_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<i64, DbError> {
     ensure!(base.id == 0, DbError::Inconsistent("a new knowledge base has an id already".to_owned()));
     ensure!(!base.name.is_empty(), DbError::Inconsistent("a knowledge base without a name".to_owned()));
 
@@ -105,7 +105,7 @@ fn base_of(row: &Row<'_>) -> Result<KnowledgeBase, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`base_of`].
-pub fn read_knowledge_base(db: &Database, id: i64) -> Result<KnowledgeBase, DbError> {
+pub fn read_knowledge_base(db: &UserDatabase, id: i64) -> Result<KnowledgeBase, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare("SELECT id, name, description FROM knowledge_bases WHERE id = :id")?;
     let mut rows = statement.query(named_params! { ":id": id })?;
@@ -120,7 +120,7 @@ pub fn read_knowledge_base(db: &Database, id: i64) -> Result<KnowledgeBase, DbEr
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`base_of`].
-pub fn read_knowledge_bases(db: &Database) -> Result<Vec<KnowledgeBase>, DbError> {
+pub fn read_knowledge_bases(db: &UserDatabase) -> Result<Vec<KnowledgeBase>, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare("SELECT id, name, description FROM knowledge_bases ORDER BY name")?;
     let mut rows = statement.query([])?;
@@ -140,7 +140,7 @@ pub fn read_knowledge_bases(db: &Database) -> Result<Vec<KnowledgeBase>, DbError
 /// Writes the knowledge base `base.id` anew.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-pub fn update_knowledge_base(db: &Database, base: &KnowledgeBase) -> Result<(), DbError> {
+pub fn update_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), DbError> {
     ensure!(!base.name.is_empty(), DbError::Inconsistent("a knowledge base without a name".to_owned()));
 
     let changed = db.connection().execute(
@@ -158,7 +158,7 @@ pub fn update_knowledge_base(db: &Database, base: &KnowledgeBase) -> Result<(), 
 /// paragraph cut between words, a word longer than a passage cut where it
 /// reaches the limit. The spaces between the words become one.
 ///
-/// Called by: [`write_passages`]; `db/evaluation/product_document.rs` (the
+/// Called by: [`write_passages`]; `db/models/evaluation/product_document.rs` (the
 /// index of a document of the product).
 /// Calls: [`push_passage`].
 pub(in crate::db) fn passages(text: &str) -> Vec<String> {
@@ -255,7 +255,7 @@ fn check_source(source: &Source) -> Result<(), DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_source`], [`write_passages`].
-pub fn create_source(db: &Database, source: &Source) -> Result<i64, DbError> {
+pub fn create_source(db: &UserDatabase, source: &Source) -> Result<i64, DbError> {
     ensure!(source.id == 0, DbError::Inconsistent("a new source has an id already".to_owned()));
     check_source(source)?;
 
@@ -300,7 +300,7 @@ fn source_of(row: &Row<'_>) -> Result<Source, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`source_of`].
-pub fn read_source(db: &Database, id: i64) -> Result<Source, DbError> {
+pub fn read_source(db: &UserDatabase, id: i64) -> Result<Source, DbError> {
     let connection = db.connection();
     let mut statement =
         connection.prepare("SELECT id, knowledge_base, name, text FROM knowledge_sources WHERE id = :id")?;
@@ -316,7 +316,7 @@ pub fn read_source(db: &Database, id: i64) -> Result<Source, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`source_of`].
-pub fn read_sources(db: &Database, base: i64) -> Result<Vec<Source>, DbError> {
+pub fn read_sources(db: &UserDatabase, base: i64) -> Result<Vec<Source>, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(
         "SELECT id, knowledge_base, name, text FROM knowledge_sources WHERE knowledge_base = :base ORDER BY name",
@@ -340,7 +340,7 @@ pub fn read_sources(db: &Database, base: i64) -> Result<Vec<Source>, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_source`], [`write_passages`].
-pub fn update_source(db: &Database, source: &Source) -> Result<(), DbError> {
+pub fn update_source(db: &UserDatabase, source: &Source) -> Result<(), DbError> {
     check_source(source)?;
 
     let transaction = db.connection().unchecked_transaction()?;
@@ -361,7 +361,7 @@ pub fn update_source(db: &Database, source: &Source) -> Result<(), DbError> {
 /// quoted (so that no word is read as an operator of FTS5), any of them;
 /// `None` for a question without such words.
 ///
-/// Called by: [`read_passages`]; `db/evaluation/product_document.rs` (the
+/// Called by: [`read_passages`]; `db/models/evaluation/product_document.rs` (the
 /// search in the documents of the product).
 pub(in crate::db) fn query_of(question: &str) -> Option<String> {
     let mut words = Vec::new();
@@ -383,7 +383,7 @@ pub(in crate::db) fn query_of(question: &str) -> Option<String> {
 ///
 /// Called by: nothing yet (the AI layer rewritten on `db/`).
 /// Calls: [`query_of`].
-pub fn read_passages(db: &Database, bases: &[i64], question: &str, count: usize) -> Result<Vec<String>, DbError> {
+pub fn read_passages(db: &UserDatabase, bases: &[i64], question: &str, count: usize) -> Result<Vec<String>, DbError> {
     ensure!(bases.len() <= MAX_BASES, DbError::Inconsistent(format!("more than {MAX_BASES} knowledge bases")));
 
     let Some(query) = query_of(question) else {

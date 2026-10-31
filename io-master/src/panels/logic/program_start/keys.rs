@@ -32,7 +32,7 @@ use zeroize::Zeroizing;
 use crate::model::user::user_keys::WrappedKey;
 use crate::security::random::fill_random;
 
-use crate::db::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
+use crate::db::storage::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 
 /// The fewest characters of a password.
 pub const PASSWORD_MIN: usize = 12;

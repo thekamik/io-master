@@ -18,10 +18,10 @@
 
 use serde_json::Value;
 
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::read_evaluation_plan;
-use crate::db::evaluation::product_document::{read_document_text, read_product_document};
-use crate::db::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
+use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
+use crate::db::models::evaluation::product_document::{read_document_text, read_product_document};
+use crate::db::models::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
 use crate::panels::logic::evaluation::error::EvaluationError;
 use crate::panels::logic::evaluation::question::verdict_name;
@@ -115,7 +115,7 @@ fn spaced(text: &str) -> String {
 /// Called by: [`apply_assessment`], [`check_quote`].
 /// Calls: `read_product_document`, `read_document_text`, [`spaced`].
 fn checked_quotes(
-    db: &Database,
+    db: &UserDatabase,
     unit: &WorkUnit,
     proposed: &[(String, String)],
 ) -> Result<(Vec<Quote>, Vec<String>), EvaluationError> {
@@ -179,7 +179,11 @@ fn badness(verdict: Verdict) -> u8 {
 ///
 /// Called by: [`apply_assessment`].
 /// Calls: `read_work_unit`, [`badness`].
-fn with_dependencies(db: &Database, unit: &WorkUnit, own: Verdict) -> Result<(Verdict, Vec<String>), EvaluationError> {
+fn with_dependencies(
+    db: &UserDatabase,
+    unit: &WorkUnit,
+    own: Verdict,
+) -> Result<(Verdict, Vec<String>), EvaluationError> {
     let mut verdict = own;
     let mut lines = Vec::new();
 
@@ -236,7 +240,7 @@ fn joined(first: &str, more: &[String]) -> String {
 /// Calls: `read_evaluation_plan`, `read_work_unit`, [`verdict_of`],
 /// [`checked_quotes`], [`with_dependencies`], [`joined`], `update_work_unit`.
 pub fn apply_assessment(
-    db: &Database,
+    db: &UserDatabase,
     evaluation: i64,
     unit: i64,
     assessment: &Assessment,
@@ -276,7 +280,7 @@ pub fn apply_assessment(
 ///
 /// Called by: `results.rs` (the results saved by the evaluator).
 /// Calls: [`checked_quotes`].
-pub fn check_quote(db: &Database, unit: &WorkUnit, document: &str, text: &str) -> Result<bool, EvaluationError> {
+pub fn check_quote(db: &UserDatabase, unit: &WorkUnit, document: &str, text: &str) -> Result<bool, EvaluationError> {
     let (quotes, _) = checked_quotes(db, unit, &[(document.to_owned(), text.to_owned())])?;
 
     Ok(!quotes.is_empty())
@@ -289,7 +293,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::work_unit::read_work_unit;
+    use crate::db::models::evaluation::work_unit::read_work_unit;
     use crate::test_support::database::database;
     use crate::test_support::evaluation::evaluation;
 

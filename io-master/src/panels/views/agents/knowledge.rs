@@ -18,7 +18,7 @@ use serde::Serialize;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::db::ai::rag::{read_knowledge_bases, read_sources};
+use crate::db::models::ai::rag::{read_knowledge_bases, read_sources};
 use crate::model::ai::rag::KnowledgeBase;
 use crate::panels::logic::agents::knowledge::{
     add_base, add_source, change_base, rename_source, replace_source_text, search_base, source_text,

@@ -13,9 +13,9 @@
 //! Without recursion: each pass takes every work unit at most once, and each
 //! taking looks once at every work unit of the plan (rule 1 and 2).
 
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::{read_evaluation_plan, update_evaluation_plan};
-use crate::db::evaluation::work_unit::{read_work_units, update_work_unit};
+use crate::db::models::evaluation::evaluation_plan::{read_evaluation_plan, update_evaluation_plan};
+use crate::db::models::evaluation::work_unit::{read_work_units, update_work_unit};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::WorkUnit;
 use crate::panels::logic::evaluation_plan::error::PlanError;
@@ -151,7 +151,7 @@ pub fn work_order(units: &[WorkUnit]) -> Order {
 /// plan in planning (a dependency set, a work unit removed).
 /// Calls: `read_work_units`, [`work_order`], `update_work_unit`,
 /// `read_evaluation_plan`, `update_evaluation_plan`.
-pub fn check_order(db: &Database, plan: i64) -> Result<bool, PlanError> {
+pub fn check_order(db: &UserDatabase, plan: i64) -> Result<bool, PlanError> {
     let units = read_work_units(db, plan)?;
     let crossed = work_order(&units).crossed;
 
@@ -180,8 +180,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::evaluation_plan::create_evaluation_plan;
-    use crate::db::evaluation::work_unit::{create_work_unit, read_work_unit};
+    use crate::db::models::evaluation::evaluation_plan::create_evaluation_plan;
+    use crate::db::models::evaluation::work_unit::{create_work_unit, read_work_unit};
     use crate::test_support::database::{database, node, plan, unit};
 
     #[test]

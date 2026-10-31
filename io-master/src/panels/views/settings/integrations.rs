@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::ai::ask::record;
-use crate::db::ai::integration::read_integrations;
-use crate::db::user::program_data::read_settings;
+use crate::db::models::ai::integration::read_integrations;
+use crate::db::models::user::program_data::read_settings;
 use crate::model::ai::integration::{Integration, Protocol};
 use crate::model::ai::journal::Ending;
 use crate::panels::logic::settings::integrations::{

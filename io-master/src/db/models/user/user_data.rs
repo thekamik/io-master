@@ -10,7 +10,7 @@
 use rusqlite::{Row, named_params};
 
 use crate::db::error::DbError;
-use crate::db::system_database::SystemDatabase;
+use crate::db::storage::system_database::SystemDatabase;
 use crate::model::user::user_data::User;
 
 /// The most users of an installation: one (`docs/architecture.md`, section 3).
@@ -19,7 +19,7 @@ pub const MAX_USERS: usize = 1;
 /// The longest name of a user, in characters.
 pub const MAX_NAME: usize = 64;
 
-/// The table, made when it is missing (`system_database.rs`). Names that
+/// The table, made when it is missing (`schema.rs`, `SYSTEM_TABLES`). Names that
 /// differ only in their letter case are one name: 'Anna' and 'anna' would
 /// be too easy to mix up.
 pub const SCHEMA: &str = "
@@ -140,7 +140,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::system_database::create;
+    use crate::db::storage::system_database::create;
     use crate::test_support::TempDir;
 
     fn user(name: &str) -> User {

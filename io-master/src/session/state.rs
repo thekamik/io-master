@@ -25,13 +25,13 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, MutexGuard};
 
-use crate::db::database::Database;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::user::user_data::User;
 
 /// The user logged in and their open database.
 pub struct Opened {
     pub user: User,
-    pub database: Database,
+    pub database: UserDatabase,
 }
 
 /// The session of the window.
@@ -89,7 +89,7 @@ impl Session {
     ///
     /// Called by: `panels/views/program_start/installation.rs`, `login.rs`.
     /// Calls: [`Session::lock`].
-    pub fn log_in(&self, user: User, database: Database) -> Result<(), SessionBroken> {
+    pub fn log_in(&self, user: User, database: UserDatabase) -> Result<(), SessionBroken> {
         *self.lock()? = Some(Opened { user, database });
 
         Ok(())

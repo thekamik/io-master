@@ -54,51 +54,62 @@ mod model {
 
 // security/: the building blocks of protection: random numbers from the
 // system, and the protection of the memory of the process. The encryption
-// of the databases is in db/encryption/.
+// of the databases is in db/storage/encryption/.
 mod security {
     pub mod process;
     pub mod random;
 }
 
-// db/: create, read and update of the models of model/, one file per file
-// of model/, no delete (user, 2026-10-28); the two databases (system.v2.db,
-// users/<id>.v2.db) and all code of encryption.
+// db/: the databases of the program in two parts (user, 2026-10-31):
+// storage/ (the database files) and models/ (the models of model/ in them);
+// error.rs is the error of both.
 mod db {
-    pub mod database;
     pub mod error;
-    pub mod lists;
-    pub mod system_database;
-    // db/encryption/: the encryption of the database files: their key and
-    // SQLCipher; moved unchanged from the earlier program, audited later.
-    pub mod encryption {
-        pub mod database_key;
-        pub mod sqlcipher;
+    // db/storage/: the two database files (system.v2.db, users/<id>.v2.db):
+    // where they are, made, opened, their tables made; their encryption.
+    // It knows no model, only the list of the tables (models/schema.rs).
+    pub mod storage {
+        pub mod system_database;
+        pub mod user_database;
+        // db/storage/encryption/: the key of the database files and
+        // SQLCipher; moved unchanged from the earlier program, audited later.
+        pub mod encryption {
+            pub mod database_key;
+            pub mod sqlcipher;
+        }
     }
-    // db/ai/: the integrations and their keys, the knowledge (RAG) and its
-    // index, the agents, the chats, the journal of the AI.
-    pub mod ai {
-        pub mod agent;
-        pub mod api_key;
-        pub mod chat;
-        pub mod integration;
-        pub mod journal;
-        pub mod rag;
-    }
-    // db/user/: the user and the installation (the system database), the
-    // settings of the user.
-    pub mod user {
-        pub mod program_data;
-        pub mod user_data;
-        pub mod user_keys;
-    }
-    // db/evaluation/: the plans, their work units, the standards, the
-    // documents of the product, the proofs of the laboratory.
-    pub mod evaluation {
-        pub mod evaluation_plan;
-        pub mod lab_proof;
-        pub mod oscal_standard_document;
-        pub mod product_document;
-        pub mod work_unit;
+    // db/models/: create, read and update of the models of model/, one file
+    // per file of model/, no delete (user, 2026-10-28); the tables of each
+    // database in their order, and the help for the lists of a model.
+    pub mod models {
+        pub mod lists;
+        pub mod schema;
+        // db/models/ai/: the integrations and their keys, the knowledge
+        // (RAG) and its index, the agents, the chats, the journal of the AI.
+        pub mod ai {
+            pub mod agent;
+            pub mod api_key;
+            pub mod chat;
+            pub mod integration;
+            pub mod journal;
+            pub mod rag;
+        }
+        // db/models/user/: the user and the installation (the system
+        // database), the settings of the user.
+        pub mod user {
+            pub mod program_data;
+            pub mod user_data;
+            pub mod user_keys;
+        }
+        // db/models/evaluation/: the plans, their work units, the standards,
+        // the documents of the product, the proofs of the laboratory.
+        pub mod evaluation {
+            pub mod evaluation_plan;
+            pub mod lab_proof;
+            pub mod oscal_standard_document;
+            pub mod product_document;
+            pub mod work_unit;
+        }
     }
 }
 

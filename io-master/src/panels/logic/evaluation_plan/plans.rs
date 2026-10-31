@@ -3,11 +3,13 @@
 //! product, verdicts), a new place of a document. A plan is changed here
 //! only while it is planned (state `Plan`); an evaluation is a copy of it.
 
-use crate::db::ai::agent::read_agent;
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::{create_evaluation_plan, read_evaluation_plan, update_evaluation_plan};
-use crate::db::evaluation::product_document::create_product_document;
-use crate::db::evaluation::work_unit::read_work_units;
+use crate::db::models::ai::agent::read_agent;
+use crate::db::models::evaluation::evaluation_plan::{
+    create_evaluation_plan, read_evaluation_plan, update_evaluation_plan,
+};
+use crate::db::models::evaluation::product_document::create_product_document;
+use crate::db::models::evaluation::work_unit::read_work_units;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::product_document::ProductDocument;
 use crate::model::evaluation::work_unit::Verdict;
@@ -31,7 +33,7 @@ pub(in crate::panels::logic::evaluation_plan) fn check_planning(plan: &Evaluatio
 ///
 /// Called by: `panels/views/evaluation_plan/` (a new plan).
 /// Calls: `create_evaluation_plan`.
-pub fn create_plan(db: &Database, name: &str, description: &str) -> Result<i64, PlanError> {
+pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i64, PlanError> {
     let name = name.trim();
 
     ensure!(!name.is_empty(), PlanError::Refused("a plan without a name".to_owned()));
@@ -67,7 +69,7 @@ pub fn create_plan(db: &Database, name: &str, description: &str) -> Result<i64, 
 /// Called by: `panels/views/evaluation_plan/` (the data of a plan).
 /// Calls: `read_evaluation_plan`, [`check_planning`], `read_agent`,
 /// `read_work_units`, `update_evaluation_plan`.
-pub fn update_plan(db: &Database, plan: &EvaluationPlan) -> Result<(), PlanError> {
+pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), PlanError> {
     let stored = read_evaluation_plan(db, plan.id)?;
 
     check_planning(&stored)?;
@@ -111,7 +113,7 @@ pub fn update_plan(db: &Database, plan: &EvaluationPlan) -> Result<(), PlanError
 /// Called by: `panels/views/evaluation_plan/` (a new document of a plan).
 /// Calls: `read_evaluation_plan`, [`check_planning`],
 /// `create_product_document`, `update_evaluation_plan`.
-pub fn add_document_place(db: &Database, plan: i64, name: &str) -> Result<i64, PlanError> {
+pub fn add_document_place(db: &UserDatabase, plan: i64, name: &str) -> Result<i64, PlanError> {
     let mut stored = read_evaluation_plan(db, plan)?;
 
     check_planning(&stored)?;
@@ -132,7 +134,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::work_unit::create_work_unit;
+    use crate::db::models::evaluation::work_unit::create_work_unit;
     use crate::test_support::database::{database, plan, unit};
 
     #[test]

@@ -27,9 +27,9 @@ use tauri::ipc::Channel;
 use tokio::sync::mpsc;
 
 use crate::ai::ask::{Prepared, Sent, record, send};
-use crate::db::ai::agent::read_agent;
-use crate::db::ai::chat::{read_chat, read_chats};
-use crate::db::database::Database;
+use crate::db::models::ai::agent::read_agent;
+use crate::db::models::ai::chat::{read_chat, read_chats};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
 use crate::model::ai::journal::Ending;
 use crate::panels::logic::chat::chats::{MAX_QUESTION, add_answer, add_question, new_chat, prepared, rename_chat};
@@ -111,7 +111,7 @@ fn message_view(message: Message) -> MessageView {
 ///
 /// Called by: [`chat_list`], [`chat_view`].
 /// Calls: `read_agent`.
-fn agent_name(db: &Database, agent: Option<i64>) -> Result<String, ViewError> {
+fn agent_name(db: &UserDatabase, agent: Option<i64>) -> Result<String, ViewError> {
     Ok(match agent {
         Some(id) => read_agent(db, id)?.name,
         None => "(no agent)".to_owned(),
@@ -122,7 +122,7 @@ fn agent_name(db: &Database, agent: Option<i64>) -> Result<String, ViewError> {
 ///
 /// Called by: [`chat_get`].
 /// Calls: [`agent_name`], [`message_view`].
-fn chat_view(db: &Database, chat: Chat) -> Result<ChatView, ViewError> {
+fn chat_view(db: &UserDatabase, chat: Chat) -> Result<ChatView, ViewError> {
     let agent = agent_name(db, chat.agent)?;
     let mut messages = Vec::with_capacity(chat.messages.len());
 
@@ -319,15 +319,15 @@ mod tests {
     use tauri::ipc::InvokeResponseBody;
 
     use crate::ai::ask::{Question, prepare};
-    use crate::db::ai::agent::create_agent;
-    use crate::db::ai::integration::create_integration;
+    use crate::db::models::ai::agent::create_agent;
+    use crate::db::models::ai::integration::create_integration;
     use crate::model::ai::integration::Integration;
     use crate::test_support::TempDir;
     use crate::test_support::ai_service::{FakeAnswer, FakeService, openai_events, sse};
     use crate::test_support::database::{agent, database, integration};
 
     /// The question "Hi" of an agent to the fake service `service`.
-    fn prepared(db: &Database, service: &FakeService) -> Prepared {
+    fn prepared(db: &UserDatabase, service: &FakeService) -> Prepared {
         let local = Integration {
             url: format!("{}/v1/chat/completions", service.url),
             ca_certificate: service.ca_pem.clone(),

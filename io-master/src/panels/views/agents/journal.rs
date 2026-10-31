@@ -10,7 +10,7 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::ai::journal::{read_journal_entries, read_journal_entry};
+use crate::db::models::ai::journal::{read_journal_entries, read_journal_entry};
 use crate::model::ai::journal::{Ending, JournalEntry};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;

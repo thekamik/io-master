@@ -2,10 +2,10 @@
 //! folder, removed with it; a plan, a work unit, an integration and an
 //! agent to store in it.
 
-use crate::db::database::{self, Database};
-use crate::db::encryption::database_key::DatabaseKey;
-use crate::db::evaluation::oscal_standard_document::create_oscal_standard_document;
-use crate::db::evaluation::product_document::create_product_document;
+use crate::db::models::evaluation::oscal_standard_document::create_oscal_standard_document;
+use crate::db::models::evaluation::product_document::create_product_document;
+use crate::db::storage::encryption::database_key::DatabaseKey;
+use crate::db::storage::user_database::{self, UserDatabase};
 use crate::model::ai::agent::Agent;
 use crate::model::ai::integration::{Integration, Protocol};
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
@@ -16,16 +16,16 @@ use crate::security::random::fill_random;
 use crate::test_support::TempDir;
 
 /// A new, empty database; the folder is kept as long as it is.
-pub fn database() -> (TempDir, Database) {
+pub fn database() -> (TempDir, UserDatabase) {
     let directory = TempDir::new();
     let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
-    let database = database::create(directory.path(), 1, &key).unwrap();
+    let database = user_database::create(directory.path(), 1, &key).unwrap();
 
     (directory, database)
 }
 
 /// A plan of routers in planning, with one standard and one document.
-pub fn plan(db: &Database) -> EvaluationPlan {
+pub fn plan(db: &UserDatabase) -> EvaluationPlan {
     let standard =
         OscalStandardDocument { id: 0, title: "CEM".to_owned(), doc: "{}".to_owned(), version: "1".to_owned() };
     let document = ProductDocument { id: 0, name: "ST".to_owned(), content: None, version: None };

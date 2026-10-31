@@ -13,7 +13,7 @@ use serde::Serialize;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::db::evaluation::oscal_standard_document::read_oscal_standard_documents;
+use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_documents;
 use crate::panels::logic::evaluation_plan::oscal::MAX_DOCUMENT;
 use crate::panels::logic::evaluation_plan::standards::import_standard;
 use crate::panels::views::error::ViewError;

@@ -29,9 +29,9 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::ai::ask::{Answer, Prepared, Question, prepare};
 use crate::ai::error::AiError;
-use crate::db::ai::agent::read_agent;
-use crate::db::ai::chat::{MAX_MESSAGES, create_chat, create_message, read_chat, update_chat};
-use crate::db::database::Database;
+use crate::db::models::ai::agent::read_agent;
+use crate::db::models::ai::chat::{MAX_MESSAGES, create_chat, create_message, read_chat, update_chat};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
 use crate::model::ai::journal::Ending;
 use crate::panels::logic::agents::agent::agent_knowledge;
@@ -76,7 +76,7 @@ fn checked_title(title: &str) -> Result<String, ChatError> {
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_create`).
 /// Calls: [`checked_title`], `read_agent`, `create_chat`.
-pub fn new_chat(db: &Database, title: &str, agent: i64) -> Result<i64, ChatError> {
+pub fn new_chat(db: &UserDatabase, title: &str, agent: i64) -> Result<i64, ChatError> {
     let title = checked_title(title)?;
 
     read_agent(db, agent)?;
@@ -89,7 +89,7 @@ pub fn new_chat(db: &Database, title: &str, agent: i64) -> Result<i64, ChatError
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_rename`).
 /// Calls: `read_chat`, [`checked_title`], `update_chat`.
-pub fn rename_chat(db: &Database, chat: i64, title: &str) -> Result<(), ChatError> {
+pub fn rename_chat(db: &UserDatabase, chat: i64, title: &str) -> Result<(), ChatError> {
     let mut stored = read_chat(db, chat)?;
 
     stored.title = checked_title(title)?;
@@ -135,7 +135,7 @@ fn search_text(messages: &[Message], question: &str) -> String {
 /// Called by: [`prepared`].
 /// Calls: `read_chat`, [`checked_question`], `read_agent`, [`search_text`],
 /// `agent_knowledge`.
-fn chat_question(db: &Database, chat: i64, text: &str) -> Result<Question, ChatError> {
+fn chat_question(db: &UserDatabase, chat: i64, text: &str) -> Result<Question, ChatError> {
     let stored = read_chat(db, chat)?;
     let question = checked_question(text)?;
     let Some(agent_id) = stored.agent else {
@@ -182,7 +182,7 @@ fn leave_oldest_out(question: &mut Question) {
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_ask`).
 /// Calls: [`chat_question`], `ask::prepare`, [`leave_oldest_out`].
-pub fn prepared(db: &Database, chat: i64, text: &str) -> Result<(Prepared, usize), ChatError> {
+pub fn prepared(db: &UserDatabase, chat: i64, text: &str) -> Result<(Prepared, usize), ChatError> {
     let mut question = chat_question(db, chat, text)?;
     let all = question.messages.len();
 
@@ -203,7 +203,7 @@ pub fn prepared(db: &Database, chat: i64, text: &str) -> Result<(Prepared, usize
 /// Called by: `panels/views/chat/chats.rs` (`chat_ask`, once the question is
 /// prepared).
 /// Calls: [`checked_question`], [`now`], `create_message`.
-pub fn add_question(db: &Database, chat: i64, text: &str) -> Result<(), ChatError> {
+pub fn add_question(db: &UserDatabase, chat: i64, text: &str) -> Result<(), ChatError> {
     let message = Message { speaker: Speaker::User, text: checked_question(text)?, time: now()? };
 
     Ok(create_message(db, chat, &message)?)
@@ -237,7 +237,7 @@ fn kept_text(answer: &Answer) -> Option<String> {
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_ask`, after `ask::record`).
 /// Calls: [`kept_text`], [`now`], `create_message`.
-pub fn add_answer(db: &Database, chat: i64, answer: &Answer) -> Result<Option<Message>, ChatError> {
+pub fn add_answer(db: &UserDatabase, chat: i64, answer: &Answer) -> Result<Option<Message>, ChatError> {
     let Some(text) = kept_text(answer) else {
         return Ok(None);
     };
@@ -255,9 +255,9 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::agent::create_agent;
-    use crate::db::ai::integration::create_integration;
-    use crate::db::ai::rag::{create_knowledge_base, create_source};
+    use crate::db::models::ai::agent::create_agent;
+    use crate::db::models::ai::integration::create_integration;
+    use crate::db::models::ai::rag::{create_knowledge_base, create_source};
     use crate::model::ai::integration::Integration;
     use crate::model::ai::rag::{KnowledgeBase, Source};
     use crate::test_support::database::{agent, database, integration};

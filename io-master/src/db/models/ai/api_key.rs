@@ -16,16 +16,16 @@ use reqwest::Url;
 use rusqlite::named_params;
 use zeroize::Zeroizing;
 
-use crate::db::ai::integration::read_integration;
-use crate::db::database::Database;
 use crate::db::error::DbError;
+use crate::db::models::ai::integration::read_integration;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::api_key::ApiKey;
 
 /// The longest key accepted, in characters: keys are 30 to 120 characters,
 /// the limit stops a pasted document.
 pub const MAX_KEY: usize = 512;
 
-/// The table, made when it is missing (`database.rs`), after the
+/// The table, made when it is missing (`schema.rs`, `USER_TABLES`), after the
 /// integrations.
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_api_keys (
@@ -40,7 +40,7 @@ pub const SCHEMA: &str = "
 ///
 /// Called by: [`write_api_key`], [`read_api_key`].
 /// Calls: `integration::read_integration`.
-fn origin_of(db: &Database, integration: i64) -> Result<String, DbError> {
+fn origin_of(db: &UserDatabase, integration: i64) -> Result<String, DbError> {
     let url = read_integration(db, integration)?.url;
     let parsed = Url::parse(&url).map_err(|error| DbError::Inconsistent(format!("the address {url}: {error}")))?;
     let origin = parsed.origin().ascii_serialization();
@@ -55,7 +55,7 @@ fn origin_of(db: &Database, integration: i64) -> Result<String, DbError> {
 ///
 /// Called by: [`create_api_key`], [`update_api_key`].
 /// Calls: [`origin_of`].
-fn write_api_key(db: &Database, key: &ApiKey) -> Result<(), DbError> {
+fn write_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     let text: &str = key.key.as_str();
 
     ensure!(!text.is_empty(), DbError::Inconsistent("an empty API key".to_owned()));
@@ -77,7 +77,7 @@ fn write_api_key(db: &Database, key: &ApiKey) -> Result<(), DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`write_api_key`].
-pub fn create_api_key(db: &Database, key: &ApiKey) -> Result<(), DbError> {
+pub fn create_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     let count: i64 = db.connection().query_row(
         "SELECT COUNT(*) FROM ai_api_keys WHERE integration = :integration",
         named_params! { ":integration": key.integration },
@@ -95,7 +95,7 @@ pub fn create_api_key(db: &Database, key: &ApiKey) -> Result<(), DbError> {
 ///
 /// Called by: nothing yet (the AI layer rewritten on `db/`).
 /// Calls: [`origin_of`].
-pub fn read_api_key(db: &Database, integration: i64) -> Result<Option<ApiKey>, DbError> {
+pub fn read_api_key(db: &UserDatabase, integration: i64) -> Result<Option<ApiKey>, DbError> {
     let origin = origin_of(db, integration)?;
     let connection = db.connection();
     let mut statement = connection.prepare("SELECT origin, key FROM ai_api_keys WHERE integration = :integration")?;
@@ -116,7 +116,7 @@ pub fn read_api_key(db: &Database, integration: i64) -> Result<Option<ApiKey>, D
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`write_api_key`].
-pub fn update_api_key(db: &Database, key: &ApiKey) -> Result<(), DbError> {
+pub fn update_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     write_api_key(db, key)
 }
 
@@ -126,7 +126,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::integration::{create_integration, update_integration};
+    use crate::db::models::ai::integration::{create_integration, update_integration};
     use crate::test_support::database::{database, integration};
 
     fn key(integration: i64, text: &str) -> ApiKey {

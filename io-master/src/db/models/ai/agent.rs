@@ -10,10 +10,10 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::ai::rag::{MAX_BASES, MAX_FOUND};
-use crate::db::database::Database;
 use crate::db::error::DbError;
-use crate::db::lists::{check_length, position, read_ids, write_ids};
+use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND};
+use crate::db::models::lists::{check_length, position, read_ids, write_ids};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::agent::{Agent, GlossaryEntry};
 
 /// The most agents of the user, and terms of the glossary of one agent.
@@ -23,7 +23,7 @@ pub const MAX_TERMS: usize = 500;
 /// The most characters of knowledge an agent gives with one question.
 pub const MAX_CHARACTERS: u32 = 40_000;
 
-/// The tables, made when they are missing (`database.rs`), after the
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`), after the
 /// integrations and the knowledge bases.
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_agents (
@@ -114,7 +114,7 @@ fn write_lists(connection: &Connection, id: i64, agent: &Agent) -> Result<(), Db
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_agent`], [`write_lists`].
-pub fn create_agent(db: &Database, agent: &Agent) -> Result<i64, DbError> {
+pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
     ensure!(agent.id == 0, DbError::Inconsistent("a new agent has an id already".to_owned()));
     check_agent(agent)?;
 
@@ -186,7 +186,7 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 ///
 /// Called by: [`read_agents`]; the views rewritten on `db/`.
 /// Calls: [`agent_of`], `lists::read_ids`, [`read_glossary`].
-pub fn read_agent(db: &Database, id: i64) -> Result<Agent, DbError> {
+pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_agents WHERE id = :id"))?;
     let mut rows = statement.query(named_params! { ":id": id })?;
@@ -210,7 +210,7 @@ pub fn read_agent(db: &Database, id: i64) -> Result<Agent, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`read_agent`].
-pub fn read_agents(db: &Database) -> Result<Vec<Agent>, DbError> {
+pub fn read_agents(db: &UserDatabase) -> Result<Vec<Agent>, DbError> {
     let mut statement = db.connection().prepare("SELECT id FROM ai_agents ORDER BY name")?;
     let mut rows = statement.query([])?;
     let mut agents = Vec::new();
@@ -230,7 +230,7 @@ pub fn read_agents(db: &Database) -> Result<Vec<Agent>, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_agent`], [`write_lists`].
-pub fn update_agent(db: &Database, agent: &Agent) -> Result<(), DbError> {
+pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
     check_agent(agent)?;
 
     let transaction = db.connection().unchecked_transaction()?;
@@ -262,8 +262,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::integration::create_integration;
-    use crate::db::ai::rag::create_knowledge_base;
+    use crate::db::models::ai::integration::create_integration;
+    use crate::db::models::ai::rag::create_knowledge_base;
     use crate::model::ai::rag::KnowledgeBase;
     use crate::test_support::database::{agent, database, integration};
 

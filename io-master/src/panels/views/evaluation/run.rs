@@ -23,7 +23,7 @@ use tauri::State;
 use tauri::ipc::Channel;
 
 use crate::ai::ask::{Prepared, Sent, record};
-use crate::db::evaluation::work_unit::read_work_unit;
+use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::panels::logic::evaluation::question::verdict_name;
 use crate::panels::logic::evaluation::run::{Preview, assessed, prepared_assessment, preview};
 use crate::panels::views::answer::send_drained;

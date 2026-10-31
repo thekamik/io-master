@@ -14,11 +14,11 @@
 
 use crate::ai::ask::{Prepared, prepare};
 use crate::ai::error::AiError;
-use crate::db::ai::agent::read_agent;
-use crate::db::database::Database;
-use crate::db::evaluation::lab_proof::read_lab_proof;
-use crate::db::evaluation::product_document::read_product_document;
-use crate::db::evaluation::work_unit::read_work_units;
+use crate::db::models::ai::agent::read_agent;
+use crate::db::models::evaluation::lab_proof::read_lab_proof;
+use crate::db::models::evaluation::product_document::read_product_document;
+use crate::db::models::evaluation::work_unit::read_work_units;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, WorkUnit};
 use crate::panels::logic::evaluation::answer::{apply_assessment, read_assessment};
 use crate::panels::logic::evaluation::error::EvaluationError;
@@ -43,7 +43,7 @@ pub struct Preview {
 /// Called by: [`units_to_assess`]; `panels/views/evaluation/work_units.rs`
 /// (the list of the work units).
 /// Calls: `read_work_units`, `work_order`.
-pub fn units_in_order(db: &Database, evaluation: i64) -> Result<Vec<WorkUnit>, EvaluationError> {
+pub fn units_in_order(db: &UserDatabase, evaluation: i64) -> Result<Vec<WorkUnit>, EvaluationError> {
     let units = read_work_units(db, evaluation)?;
     let order = work_order(&units);
 
@@ -66,7 +66,7 @@ pub fn units_in_order(db: &Database, evaluation: i64) -> Result<Vec<WorkUnit>, E
 ///
 /// Called by: [`preview`].
 /// Calls: `evaluation_in_progress`, [`units_in_order`].
-fn units_to_assess(db: &Database, evaluation: i64, again: bool) -> Result<Vec<WorkUnit>, EvaluationError> {
+fn units_to_assess(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Vec<WorkUnit>, EvaluationError> {
     evaluation_in_progress(db, evaluation)?;
 
     let mut chosen = Vec::new();
@@ -99,7 +99,7 @@ fn count(counted: &mut Vec<(String, usize)>, name: String) {
 ///
 /// Called by: [`preview`].
 /// Calls: `read_product_document`, `read_lab_proof`.
-fn missing_inputs(db: &Database, unit: &WorkUnit) -> Result<Vec<String>, EvaluationError> {
+fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, EvaluationError> {
     let mut missing = Vec::new();
 
     for id in &unit.input_product_documents {
@@ -127,7 +127,7 @@ fn missing_inputs(db: &Database, unit: &WorkUnit) -> Result<Vec<String>, Evaluat
 /// Called by: `panels/views/evaluation/run.rs` (the preview, the start).
 /// Calls: [`units_to_assess`], `evaluation_in_progress`, `assessing_agent`,
 /// `read_agent`, [`missing_inputs`], [`count`].
-pub fn preview(db: &Database, evaluation: i64, again: bool) -> Result<Preview, EvaluationError> {
+pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Preview, EvaluationError> {
     let units = units_to_assess(db, evaluation, again)?;
     let stored = evaluation_in_progress(db, evaluation)?;
     let mut found = Preview { units: Vec::with_capacity(units.len()), agents: Vec::new(), missing: Vec::new() };
@@ -149,7 +149,7 @@ pub fn preview(db: &Database, evaluation: i64, again: bool) -> Result<Preview, E
 ///
 /// Called by: `panels/views/evaluation/run.rs` (each work unit).
 /// Calls: `assessment_question`, `ask::prepare`.
-pub fn prepared_assessment(db: &Database, evaluation: i64, unit: i64) -> Result<Prepared, EvaluationError> {
+pub fn prepared_assessment(db: &UserDatabase, evaluation: i64, unit: i64) -> Result<Prepared, EvaluationError> {
     match prepare(db, &assessment_question(db, evaluation, unit, true)?) {
         Ok(prepared) => Ok(prepared),
         Err(AiError::TooLong { .. }) => Ok(prepare(db, &assessment_question(db, evaluation, unit, false)?)?),
@@ -163,7 +163,7 @@ pub fn prepared_assessment(db: &Database, evaluation: i64, unit: i64) -> Result<
 /// Called by: `panels/views/evaluation/run.rs` (each answer, after
 /// `ask::record`).
 /// Calls: `read_assessment`, `apply_assessment`.
-pub fn assessed(db: &Database, evaluation: i64, unit: i64, answer: &str) -> Result<Vec<String>, EvaluationError> {
+pub fn assessed(db: &UserDatabase, evaluation: i64, unit: i64, answer: &str) -> Result<Vec<String>, EvaluationError> {
     apply_assessment(db, evaluation, unit, &read_assessment(answer)?)
 }
 
@@ -174,8 +174,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::evaluation_plan::{create_evaluation, read_evaluation_plan};
-    use crate::db::evaluation::work_unit::read_work_unit;
+    use crate::db::models::evaluation::evaluation_plan::{create_evaluation, read_evaluation_plan};
+    use crate::db::models::evaluation::work_unit::read_work_unit;
     use crate::model::evaluation::work_unit::Verdict;
     use crate::test_support::database::database;
     use crate::test_support::evaluation::{evaluation, write};

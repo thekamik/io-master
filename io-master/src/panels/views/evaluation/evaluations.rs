@@ -12,9 +12,9 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::ai::agent::read_agents;
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::{read_evaluation_plan, read_evaluation_plans};
+use crate::db::models::ai::agent::read_agents;
+use crate::db::models::evaluation::evaluation_plan::{read_evaluation_plan, read_evaluation_plans};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::panels::logic::evaluation::evaluations::{change_agent, new_evaluation};
 use crate::panels::logic::evaluation::inputs::inputs;
@@ -163,7 +163,7 @@ pub fn evaluation_create(
 ///
 /// Called by: [`evaluation_get`].
 /// Calls: `inputs`.
-fn input_views(db: &Database, id: i64) -> Result<(Vec<DocumentInputView>, Vec<ProofInputView>), ViewError> {
+fn input_views(db: &UserDatabase, id: i64) -> Result<(Vec<DocumentInputView>, Vec<ProofInputView>), ViewError> {
     let found = inputs(db, id)?;
     let mut documents = Vec::with_capacity(found.documents.len());
     let mut proofs = Vec::with_capacity(found.proofs.len());

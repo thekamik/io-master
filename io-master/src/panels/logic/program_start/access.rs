@@ -29,12 +29,12 @@ use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::db::database::{self, Database};
 use crate::db::error::DbError;
-use crate::db::system_database::{self, SystemDatabase};
-use crate::db::user::program_data::{create_installation, create_settings};
-use crate::db::user::user_data::{create_user, read_users};
-use crate::db::user::user_keys::{create_user_keys, read_user_keys};
+use crate::db::models::user::program_data::{create_installation, create_settings};
+use crate::db::models::user::user_data::{create_user, read_users};
+use crate::db::models::user::user_keys::{create_user_keys, read_user_keys};
+use crate::db::storage::system_database::{self, SystemDatabase};
+use crate::db::storage::user_database::{self, UserDatabase};
 use crate::model::user::program_data::{Installation, Settings};
 use crate::model::user::user_data::User;
 use crate::model::user::user_keys::UserKeys;
@@ -48,7 +48,7 @@ use crate::security::random::fill_random;
 /// recovery code, which the window shows once.
 pub struct NewAccount {
     pub user: User,
-    pub database: Database,
+    pub database: UserDatabase,
     pub code: RecoveryCode,
 }
 
@@ -194,7 +194,7 @@ fn keys_and_database(
 
     create_user_keys(system, &keys)?;
 
-    let database = database::create(data_dir, user.id, &key)?;
+    let database = user_database::create(data_dir, user.id, &key)?;
 
     create_settings(&database, &Settings { active_integration: None })?;
 
@@ -248,7 +248,7 @@ pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &st
         Ok(created) => Ok(created),
         Err(failure) => {
             let failure = match user {
-                Some(user) => removed(&database::path(data_dir, user), failure),
+                Some(user) => removed(&user_database::path(data_dir, user), failure),
                 None => failure,
             };
 
@@ -281,7 +281,7 @@ pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
 /// Called by: `panels/views/program_start/login.rs`.
 /// Calls: `system_database::open`, `read_users`, `read_user_keys`,
 /// `keys::unwrap`, `database::open`.
-pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, Database), AccountError> {
+pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, UserDatabase), AccountError> {
     let system = match system_database::open(data_dir) {
         Ok(system) => system,
         Err(DbError::NotFound(_)) => return Err(AccountError::NotInstalled),
@@ -301,7 +301,7 @@ pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, Data
     };
     let keys = read_user_keys(&system, user.id)?;
     let key = keys::unwrap(&keys.password, password, &binding(user.id))?;
-    let database = database::open(data_dir, user.id, &key)?;
+    let database = user_database::open(data_dir, user.id, &key)?;
 
     Ok((user, database))
 }

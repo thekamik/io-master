@@ -19,13 +19,15 @@
 use serde_json::{Value, json};
 
 use crate::ai::ask::Question;
-use crate::db::ai::agent::read_agent;
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::read_evaluation_plan;
-use crate::db::evaluation::lab_proof::read_lab_proof;
-use crate::db::evaluation::oscal_standard_document::read_oscal_standard_document;
-use crate::db::evaluation::product_document::{read_document_passages, read_document_text, read_product_document};
-use crate::db::evaluation::work_unit::{read_work_unit, read_work_units};
+use crate::db::models::ai::agent::read_agent;
+use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
+use crate::db::models::evaluation::lab_proof::read_lab_proof;
+use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
+use crate::db::models::evaluation::product_document::{
+    read_document_passages, read_document_text, read_product_document,
+};
+use crate::db::models::evaluation::work_unit::{read_work_unit, read_work_units};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
@@ -96,7 +98,7 @@ fn label_of(units: &[WorkUnit], id: i64) -> String {
 /// Called by: [`question_of`].
 /// Calls: `read_oscal_standard_document`, [`label_of`],
 /// `read_product_document`, `read_lab_proof`, [`verdict_name`].
-fn unit_json(db: &Database, unit: &WorkUnit, units: &[WorkUnit]) -> Result<Value, EvaluationError> {
+fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<Value, EvaluationError> {
     let mut dependencies = Vec::with_capacity(unit.dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
     let mut quotes = Vec::with_capacity(unit.quotes.len());
@@ -174,7 +176,7 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit]) -> String {
 /// Called by: [`question_of`].
 /// Calls: `read_product_document`, `read_document_text`,
 /// `read_document_passages`.
-fn documents_text(db: &Database, unit: &WorkUnit, whole: bool) -> Result<String, EvaluationError> {
+fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<String, EvaluationError> {
     let mut text = String::new();
 
     if whole {
@@ -221,7 +223,7 @@ fn day_of(seconds: i64) -> String {
 ///
 /// Called by: [`question_of`].
 /// Calls: `read_lab_proof`, [`day_of`].
-fn proofs_text(db: &Database, unit: &WorkUnit) -> Result<String, EvaluationError> {
+fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, EvaluationError> {
     let mut text = String::new();
 
     for id in unit.input_functional.as_deref().unwrap_or_default() {
@@ -247,7 +249,7 @@ fn proofs_text(db: &Database, unit: &WorkUnit) -> Result<String, EvaluationError
 /// Calls: `read_agent`, `agent_knowledge`, [`unit_json`],
 /// [`dependencies_text`], [`documents_text`], [`proofs_text`].
 fn question_of(
-    db: &Database,
+    db: &UserDatabase,
     evaluation: &EvaluationPlan,
     unit: &WorkUnit,
     agent: i64,
@@ -297,7 +299,7 @@ fn question_of(
 /// Calls: `read_evaluation_plan`, `read_work_unit`, [`assessing_agent`],
 /// [`question_of`].
 pub fn assessment_question(
-    db: &Database,
+    db: &UserDatabase,
     evaluation: i64,
     unit: i64,
     whole: bool,

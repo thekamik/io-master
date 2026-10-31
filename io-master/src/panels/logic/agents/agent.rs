@@ -13,10 +13,10 @@
 //!            ──► the passages that fit in max_characters, the best first ──► the knowledge of the agent
 //! ```
 
-use crate::db::ai::agent::{MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent};
-use crate::db::ai::integration::read_integration;
-use crate::db::ai::rag::{MAX_BASES, MAX_FOUND, read_knowledge_base, read_passages};
-use crate::db::database::Database;
+use crate::db::models::ai::agent::{MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent};
+use crate::db::models::ai::integration::read_integration;
+use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND, read_knowledge_base, read_passages};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::agent::{Agent, GlossaryEntry};
 use crate::panels::logic::agents::error::AgentError;
 
@@ -47,7 +47,7 @@ knowledge is not enough, say what is missing.";
 ///
 /// Called by: `panels/views/agents/agent.rs` (a new agent).
 /// Calls: `read_integration`, [`checked`], `create_agent`.
-pub fn new_agent(db: &Database, name: &str, integration: i64) -> Result<i64, AgentError> {
+pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64, AgentError> {
     read_integration(db, integration)?;
 
     let agent = Agent {
@@ -69,7 +69,7 @@ pub fn new_agent(db: &Database, name: &str, integration: i64) -> Result<i64, Age
 ///
 /// Called by: `panels/views/agents/agent.rs` (an agent saved).
 /// Calls: `read_agent`, [`checked`], `update_agent`.
-pub fn change_agent(db: &Database, agent: &Agent) -> Result<(), AgentError> {
+pub fn change_agent(db: &UserDatabase, agent: &Agent) -> Result<(), AgentError> {
     read_agent(db, agent.id)?;
 
     Ok(update_agent(db, &checked(db, agent)?)?)
@@ -111,7 +111,7 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Ag
 ///
 /// Called by: [`new_agent`], [`change_agent`].
 /// Calls: `read_integration`, `read_knowledge_base`, [`checked_glossary`].
-fn checked(db: &Database, agent: &Agent) -> Result<Agent, AgentError> {
+fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, AgentError> {
     let name = agent.name.trim();
     let passages = usize::try_from(agent.max_passages).unwrap_or(usize::MAX);
 
@@ -221,7 +221,7 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 /// Called by: `panels/views/agents/agent.rs` (the test of the knowledge of
 /// an agent); the questions of an agent in an evaluation.
 /// Calls: `read_agent`, [`widened`], `read_passages`.
-pub fn agent_knowledge(db: &Database, agent: i64, question: &str) -> Result<Vec<String>, AgentError> {
+pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<Vec<String>, AgentError> {
     let agent = read_agent(db, agent)?;
     let count = usize::try_from(agent.max_passages).unwrap_or(MAX_FOUND);
     let limit = usize::try_from(agent.max_characters).unwrap_or(0);
@@ -248,8 +248,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::integration::create_integration;
-    use crate::db::ai::rag::{create_knowledge_base, create_source};
+    use crate::db::models::ai::integration::create_integration;
+    use crate::db::models::ai::rag::{create_knowledge_base, create_source};
     use crate::model::ai::rag::{KnowledgeBase, Source};
     use crate::test_support::database::{database, integration};
 

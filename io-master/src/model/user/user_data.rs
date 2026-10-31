@@ -3,7 +3,7 @@
 //! database, which is not encrypted, so it holds nothing secret. The
 //! keys that open the encrypted database of the user (its copies
 //! wrapped with the password and with the recovery code) are kept with
-//! it, but belong to `db/encryption/` and are no part of this model.
+//! it, but belong to `db/storage/encryption/` and are no part of this model.
 
 /// The user of the installation (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]

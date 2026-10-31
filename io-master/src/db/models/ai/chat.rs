@@ -11,15 +11,15 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
 
 /// The most chats of the user, and messages of one chat.
 pub const MAX_CHATS: usize = 500;
 pub const MAX_MESSAGES: usize = 500;
 
-/// The tables, made when they are missing (`database.rs`), after the
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`), after the
 /// agents and the work units. A work unit taken out of its plan leaves
 /// its chats about nothing in particular.
 pub const SCHEMA: &str = "
@@ -93,7 +93,7 @@ fn insert_message(connection: &Connection, chat: i64, message: &Message) -> Resu
 ///
 /// Called by: `panels/logic/chat/chats.rs` (`new_chat`).
 /// Calls: [`insert_message`].
-pub fn create_chat(db: &Database, chat: &Chat) -> Result<i64, DbError> {
+pub fn create_chat(db: &UserDatabase, chat: &Chat) -> Result<i64, DbError> {
     ensure!(chat.id == 0, DbError::Inconsistent("a new chat has an id already".to_owned()));
     ensure!(chat.messages.len() <= MAX_MESSAGES, DbError::Inconsistent(format!("more than {MAX_MESSAGES} messages")));
 
@@ -125,7 +125,7 @@ pub fn create_chat(db: &Database, chat: &Chat) -> Result<i64, DbError> {
 ///
 /// Called by: `panels/logic/chat/chats.rs` (`add_question`, `add_answer`).
 /// Calls: [`insert_message`].
-pub fn create_message(db: &Database, chat: i64, message: &Message) -> Result<(), DbError> {
+pub fn create_message(db: &UserDatabase, chat: i64, message: &Message) -> Result<(), DbError> {
     ensure!(!message.text.is_empty(), DbError::Inconsistent("an empty message".to_owned()));
 
     insert_message(db.connection(), chat, message)
@@ -170,7 +170,7 @@ fn chat_of(row: &Row<'_>) -> Result<Chat, DbError> {
 /// Called by: [`read_chats`]; `panels/logic/chat/chats.rs` (`rename_chat`,
 /// `chat_question`).
 /// Calls: [`chat_of`], [`read_messages`].
-pub fn read_chat(db: &Database, id: i64) -> Result<Chat, DbError> {
+pub fn read_chat(db: &UserDatabase, id: i64) -> Result<Chat, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare("SELECT id, title, agent, work_unit FROM chats WHERE id = :id")?;
     let mut rows = statement.query(named_params! { ":id": id })?;
@@ -188,7 +188,7 @@ pub fn read_chat(db: &Database, id: i64) -> Result<Chat, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`read_chat`].
-pub fn read_chats(db: &Database) -> Result<Vec<Chat>, DbError> {
+pub fn read_chats(db: &UserDatabase) -> Result<Vec<Chat>, DbError> {
     let mut statement = db.connection().prepare("SELECT id FROM chats ORDER BY id DESC")?;
     let mut rows = statement.query([])?;
     let mut chats = Vec::new();
@@ -208,7 +208,7 @@ pub fn read_chats(db: &Database) -> Result<Vec<Chat>, DbError> {
 /// anew; its messages stay as they were (a message is never changed).
 ///
 /// Called by: `panels/logic/chat/chats.rs` (`rename_chat`).
-pub fn update_chat(db: &Database, chat: &Chat) -> Result<(), DbError> {
+pub fn update_chat(db: &UserDatabase, chat: &Chat) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE chats SET title = :title, agent = :agent, work_unit = :work_unit WHERE id = :id",
         named_params! { ":id": chat.id, ":title": chat.title, ":agent": chat.agent, ":work_unit": chat.work_unit },

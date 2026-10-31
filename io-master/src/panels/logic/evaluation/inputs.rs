@@ -17,11 +17,11 @@
 use std::fs;
 use std::path::Path;
 
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::read_evaluation_plan;
-use crate::db::evaluation::lab_proof::{read_lab_proof, update_lab_proof};
-use crate::db::evaluation::product_document::{read_product_document, update_product_document};
-use crate::db::evaluation::work_unit::read_work_units;
+use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
+use crate::db::models::evaluation::lab_proof::{read_lab_proof, update_lab_proof};
+use crate::db::models::evaluation::product_document::{read_product_document, update_product_document};
+use crate::db::models::evaluation::work_unit::read_work_units;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::product_document::ProductDocument;
 use crate::model::evaluation::work_unit::WorkUnit;
@@ -113,7 +113,7 @@ fn checked(text: Option<&str>, what: &str, limit: usize) -> Result<String, Evalu
 /// `read_product_document`, `update_product_document` (which indexes the
 /// text).
 pub fn give_document(
-    db: &Database,
+    db: &UserDatabase,
     evaluation: i64,
     document: i64,
     content: Vec<u8>,
@@ -162,7 +162,7 @@ fn needed_proofs(units: &[WorkUnit]) -> Vec<i64> {
 /// Called by: `panels/views/evaluation/inputs.rs` (`evaluation_proof_give`).
 /// Calls: `evaluation_in_progress`, `read_work_units`, [`needed_proofs`],
 /// [`checked`], `read_lab_proof`, `update_lab_proof`.
-pub fn give_proof(db: &Database, evaluation: i64, proof: &LabProof) -> Result<(), EvaluationError> {
+pub fn give_proof(db: &UserDatabase, evaluation: i64, proof: &LabProof) -> Result<(), EvaluationError> {
     evaluation_in_progress(db, evaluation)?;
 
     ensure!(
@@ -216,7 +216,7 @@ fn needing(units: &[WorkUnit], id: i64, document: bool) -> usize {
 /// Called by: `panels/views/evaluation/evaluations.rs` (`evaluation_get`).
 /// Calls: `read_evaluation_plan`, `read_work_units`, `read_product_document`,
 /// [`needed_proofs`], `read_lab_proof`, [`needing`].
-pub fn inputs(db: &Database, evaluation: i64) -> Result<Inputs, EvaluationError> {
+pub fn inputs(db: &UserDatabase, evaluation: i64) -> Result<Inputs, EvaluationError> {
     let stored = read_evaluation_plan(db, evaluation)?;
     let units = read_work_units(db, evaluation)?;
     let proofs = needed_proofs(&units);
@@ -245,18 +245,18 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::agent::create_agent;
-    use crate::db::ai::integration::create_integration;
-    use crate::db::evaluation::evaluation_plan::create_evaluation_plan;
-    use crate::db::evaluation::lab_proof::create_lab_proof;
-    use crate::db::evaluation::work_unit::create_work_unit;
+    use crate::db::models::ai::agent::create_agent;
+    use crate::db::models::ai::integration::create_integration;
+    use crate::db::models::evaluation::evaluation_plan::create_evaluation_plan;
+    use crate::db::models::evaluation::lab_proof::create_lab_proof;
+    use crate::db::models::evaluation::work_unit::create_work_unit;
     use crate::panels::logic::evaluation::evaluations::new_evaluation;
     use crate::test_support::database::{agent, database, integration, plan, unit};
     use crate::test_support::pdf::pdf;
 
     /// An evaluation of a plan with one work unit that needs its document
     /// and one proof; gives the evaluation.
-    fn evaluation(db: &Database) -> i64 {
+    fn evaluation(db: &UserDatabase) -> i64 {
         let routers = plan(db);
         let source = create_evaluation_plan(db, &routers).unwrap();
         let scan =

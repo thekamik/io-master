@@ -25,8 +25,8 @@ use tauri::State;
 use tauri::ipc::Channel;
 
 use crate::ai::ask::{Prepared, Sent, prepare, record};
-use crate::db::database::Database;
-use crate::db::evaluation::work_unit::read_work_unit;
+use crate::db::models::evaluation::work_unit::read_work_unit;
+use crate::db::storage::user_database::UserDatabase;
 use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::evaluation_plan::fill::{
     apply_dependencies, apply_parameters, dependencies_question, fill_preview, fill_units, parameters_question,
@@ -119,7 +119,7 @@ fn prepared_question(
 /// Called by: [`written`].
 /// Calls: `read_parameters`, `apply_parameters`, `read_dependencies`,
 /// `apply_dependencies`.
-fn applied(db: &Database, task: Task, plan: i64, unit: i64, answer: &str) -> Result<Vec<String>, PlanError> {
+fn applied(db: &UserDatabase, task: Task, plan: i64, unit: i64, answer: &str) -> Result<Vec<String>, PlanError> {
     match task {
         Task::Parameters => apply_parameters(db, plan, unit, &read_parameters(answer)?),
         Task::Dependencies => apply_dependencies(db, plan, unit, &read_dependencies(answer)?),

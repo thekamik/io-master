@@ -8,14 +8,14 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::oscal_standard_document::OscalStandardDocument;
 
 /// The most standards the user keeps.
 pub const MAX_OSCAL_STANDARD_DOCUMENTS: usize = 500;
 
-/// The table, made when it is missing (`database.rs`).
+/// The table, made when it is missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS oscal_standard_documents (
         id      INTEGER PRIMARY KEY,
@@ -32,7 +32,7 @@ const COLUMNS: &str = "id, title, doc, version";
 /// (`id` 0): the database gives it.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-pub fn create_oscal_standard_document(db: &Database, document: &OscalStandardDocument) -> Result<i64, DbError> {
+pub fn create_oscal_standard_document(db: &UserDatabase, document: &OscalStandardDocument) -> Result<i64, DbError> {
     ensure!(document.id == 0, DbError::Inconsistent("a new standard has an id already".to_owned()));
 
     let connection = db.connection();
@@ -68,7 +68,7 @@ fn document_of(row: &Row<'_>) -> Result<OscalStandardDocument, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`document_of`].
-pub fn read_oscal_standard_document(db: &Database, id: i64) -> Result<OscalStandardDocument, DbError> {
+pub fn read_oscal_standard_document(db: &UserDatabase, id: i64) -> Result<OscalStandardDocument, DbError> {
     let connection: &Connection = db.connection();
     let mut statement =
         connection.prepare(&format!("SELECT {COLUMNS} FROM oscal_standard_documents WHERE id = :id"))?;
@@ -84,7 +84,7 @@ pub fn read_oscal_standard_document(db: &Database, id: i64) -> Result<OscalStand
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`document_of`].
-pub fn read_oscal_standard_documents(db: &Database) -> Result<Vec<OscalStandardDocument>, DbError> {
+pub fn read_oscal_standard_documents(db: &UserDatabase) -> Result<Vec<OscalStandardDocument>, DbError> {
     let connection = db.connection();
     let mut statement =
         connection.prepare(&format!("SELECT {COLUMNS} FROM oscal_standard_documents ORDER BY title"))?;
@@ -105,7 +105,7 @@ pub fn read_oscal_standard_documents(db: &Database) -> Result<Vec<OscalStandardD
 /// Writes the standard `document.id` anew.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-pub fn update_oscal_standard_document(db: &Database, document: &OscalStandardDocument) -> Result<(), DbError> {
+pub fn update_oscal_standard_document(db: &UserDatabase, document: &OscalStandardDocument) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE oscal_standard_documents SET title = :title, doc = :doc, version = :version WHERE id = :id",
         named_params! {

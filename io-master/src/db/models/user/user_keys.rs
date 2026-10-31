@@ -13,10 +13,10 @@
 use rusqlite::named_params;
 
 use crate::db::error::DbError;
-use crate::db::system_database::SystemDatabase;
+use crate::db::storage::system_database::SystemDatabase;
 use crate::model::user::user_keys::{RecoveryWrappedKey, UserKeys, WrappedKey};
 
-/// The table, made when it is missing (`system_database.rs`), after the
+/// The table, made when it is missing (`schema.rs`, `SYSTEM_TABLES`), after the
 /// users.
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS user_keys (
@@ -158,8 +158,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::system_database::create;
-    use crate::db::user::user_data::create_user;
+    use crate::db::models::user::user_data::create_user;
+    use crate::db::storage::system_database::create;
     use crate::model::user::user_data::User;
     use crate::test_support::TempDir;
 

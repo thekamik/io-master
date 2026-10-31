@@ -1,24 +1,22 @@
-//! The system database, made anew for the models of `model/` (2026-10-28):
-//! the file `system.v2.db` of the data folder, beside the earlier
-//! `system.db` of `db_old/`, which the login keeps using until it is
-//! rewritten. It holds the installation and its one user
-//! (`db/user/`).
+//! The system database: the file `system.v2.db` of the data folder, where
+//! it is, made and opened; its tables made when they are missing
+//! (`models/schema.rs`, `SYSTEM_TABLES`). It holds the installation, its
+//! one user and the two wrapped copies of the key of the database of the
+//! user (`models/user/`).
 //!
 //! **Protection: NOT encrypted.** The program opens it at every start,
 //! before anyone has given a password, so no key could open it; it holds
 //! nothing secret. The file is readable only by the user of the computer
-//! (`encryption/sqlcipher.rs`, `create_plain`). The copies of the key of
-//! the database of the user will be kept beside the user when the login
-//! is rewritten on `db/`; they belong to `db/encryption/`.
+//! (`encryption/sqlcipher.rs`, `create_plain`).
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use rusqlite::Connection;
 
-use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
-use crate::db::user::{program_data, user_data, user_keys};
+use crate::db::models::schema::SYSTEM_TABLES;
+use crate::db::storage::encryption::sqlcipher;
 
 /// How long an operation waits for another that holds the database.
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
@@ -33,14 +31,16 @@ pub struct SystemDatabase {
 }
 
 impl SystemDatabase {
-    /// Prepares an open connection: the tables that are missing.
+    /// Prepares an open connection: the tables that are missing, in the
+    /// order of `SYSTEM_TABLES`.
     ///
     /// Called by: [`create`], [`open`].
     fn from(connection: Connection) -> Result<SystemDatabase, DbError> {
         connection.busy_timeout(BUSY_TIMEOUT)?;
-        connection.execute_batch(program_data::SYSTEM_SCHEMA)?;
-        connection.execute_batch(user_data::SCHEMA)?;
-        connection.execute_batch(user_keys::SCHEMA)?;
+
+        for table in SYSTEM_TABLES {
+            connection.execute_batch(table)?;
+        }
 
         Ok(SystemDatabase { connection })
     }

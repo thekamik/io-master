@@ -7,7 +7,7 @@
 
 use std::io;
 
-use crate::db::encryption::database_key::DatabaseKey;
+use crate::db::storage::encryption::database_key::DatabaseKey;
 use crate::security::random::fill_random;
 
 /// Generates a new key for the database.
@@ -27,7 +27,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::encryption::database_key::DATABASE_KEY_LENGTH;
+    use crate::db::storage::encryption::database_key::DATABASE_KEY_LENGTH;
 
     #[test]
     fn a_key_is_generated() {

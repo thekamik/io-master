@@ -12,9 +12,9 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::db::ai::agent::read_agent;
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::{create_evaluation, read_evaluation_plan, update_evaluation_plan};
+use crate::db::models::ai::agent::read_agent;
+use crate::db::models::evaluation::evaluation_plan::{create_evaluation, read_evaluation_plan, update_evaluation_plan};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::panels::logic::evaluation::error::EvaluationError;
 
@@ -50,7 +50,7 @@ fn checked_field(text: &str, what: &str) -> Result<String, EvaluationError> {
 ///
 /// Called by: [`change_agent`]; `inputs.rs` (a document or a proof given).
 /// Calls: `read_evaluation_plan`.
-pub fn evaluation_in_progress(db: &Database, id: i64) -> Result<EvaluationPlan, EvaluationError> {
+pub fn evaluation_in_progress(db: &UserDatabase, id: i64) -> Result<EvaluationPlan, EvaluationError> {
     let evaluation = read_evaluation_plan(db, id)?;
 
     ensure!(
@@ -67,7 +67,12 @@ pub fn evaluation_in_progress(db: &Database, id: i64) -> Result<EvaluationPlan, 
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs` (`evaluation_create`).
 /// Calls: [`checked_field`], `read_agent`, [`now`], `create_evaluation`.
-pub fn new_evaluation(db: &Database, plan: i64, identification: [&str; 3], agent: i64) -> Result<i64, EvaluationError> {
+pub fn new_evaluation(
+    db: &UserDatabase,
+    plan: i64,
+    identification: [&str; 3],
+    agent: i64,
+) -> Result<i64, EvaluationError> {
     let [product, client, evaluator] = identification;
     let product = checked_field(product, "a product")?;
     let client = checked_field(client, "a client")?;
@@ -83,7 +88,7 @@ pub fn new_evaluation(db: &Database, plan: i64, identification: [&str; 3], agent
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs` (`evaluation_set_agent`).
 /// Calls: [`evaluation_in_progress`], `read_agent`, `update_evaluation_plan`.
-pub fn change_agent(db: &Database, evaluation: i64, agent: i64) -> Result<(), EvaluationError> {
+pub fn change_agent(db: &UserDatabase, evaluation: i64, agent: i64) -> Result<(), EvaluationError> {
     let stored = evaluation_in_progress(db, evaluation)?;
 
     read_agent(db, agent)?;
@@ -98,9 +103,9 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::agent::create_agent;
-    use crate::db::ai::integration::create_integration;
-    use crate::db::evaluation::evaluation_plan::create_evaluation_plan;
+    use crate::db::models::ai::agent::create_agent;
+    use crate::db::models::ai::integration::create_integration;
+    use crate::db::models::evaluation::evaluation_plan::create_evaluation_plan;
     use crate::model::ai::agent::Agent;
     use crate::test_support::database::{agent, database, integration, plan};
 

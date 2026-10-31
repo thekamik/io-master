@@ -12,7 +12,7 @@
 
   let { agent }: { agent: number } = $props();
 
-  /** As many entries as one page of the journal (db/ai/journal.rs, PAGE). */
+  /** As many entries as one page of the journal (db/models/ai/journal.rs, PAGE). */
   const PAGE = 50;
 
   let rows: JournalRowView[] = $state([]);

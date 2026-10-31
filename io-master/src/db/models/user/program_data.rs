@@ -14,13 +14,13 @@
 
 use rusqlite::named_params;
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
-use crate::db::system_database::SystemDatabase;
+use crate::db::storage::system_database::SystemDatabase;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::user::program_data::{Installation, Settings};
 
 /// The table of the installation, made when it is missing
-/// (`system_database.rs`).
+/// (`schema.rs`, `SYSTEM_TABLES`).
 pub const SYSTEM_SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS installation (
         one     INTEGER PRIMARY KEY CHECK (one = 1),
@@ -29,7 +29,7 @@ pub const SYSTEM_SCHEMA: &str = "
     );
 ";
 
-/// The table of the settings, made when it is missing (`database.rs`),
+/// The table of the settings, made when it is missing (`schema.rs`, `USER_TABLES`),
 /// after the integrations.
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS settings (
@@ -78,7 +78,7 @@ pub fn read_installation(system: &SystemDatabase) -> Result<Option<Installation>
 /// stored already (the one row of its table).
 ///
 /// Called by: nothing yet (the setup rewritten on `db/`).
-pub fn create_settings(db: &Database, settings: &Settings) -> Result<(), DbError> {
+pub fn create_settings(db: &UserDatabase, settings: &Settings) -> Result<(), DbError> {
     db.connection().execute(
         "INSERT INTO settings (one, active_integration) VALUES (1, :active_integration)",
         named_params! { ":active_integration": settings.active_integration },
@@ -90,7 +90,7 @@ pub fn create_settings(db: &Database, settings: &Settings) -> Result<(), DbError
 /// Reads the settings of the user.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-pub fn read_settings(db: &Database) -> Result<Settings, DbError> {
+pub fn read_settings(db: &UserDatabase) -> Result<Settings, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare("SELECT active_integration FROM settings WHERE one = 1")?;
     let mut rows = statement.query([])?;
@@ -104,7 +104,7 @@ pub fn read_settings(db: &Database) -> Result<Settings, DbError> {
 /// Writes the settings of the user anew.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-pub fn update_settings(db: &Database, settings: &Settings) -> Result<(), DbError> {
+pub fn update_settings(db: &UserDatabase, settings: &Settings) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE settings SET active_integration = :active_integration WHERE one = 1",
         named_params! { ":active_integration": settings.active_integration },
@@ -122,8 +122,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::integration::create_integration;
-    use crate::db::system_database::create;
+    use crate::db::models::ai::integration::create_integration;
+    use crate::db::storage::system_database::create;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};
 

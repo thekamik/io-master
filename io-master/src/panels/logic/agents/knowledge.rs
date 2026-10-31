@@ -12,11 +12,11 @@
 use std::fs;
 use std::path::Path;
 
-use crate::db::ai::rag::{
+use crate::db::models::ai::rag::{
     MAX_BASES, MAX_FOUND, MAX_SOURCE_CHARS, MAX_SOURCES, create_knowledge_base, create_source, read_knowledge_base,
     read_knowledge_bases, read_passages, read_source, read_sources, update_knowledge_base, update_source,
 };
-use crate::db::database::Database;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::rag::{KnowledgeBase, Source};
 use crate::panels::logic::agents::error::AgentError;
 use crate::pdf::poppler::{self, MAX_FILE};
@@ -48,7 +48,7 @@ fn checked_name(name: &str, what: &str) -> Result<String, AgentError> {
 ///
 /// Called by: `panels/views/agents/knowledge.rs` (a new base).
 /// Calls: [`checked_name`], `read_knowledge_bases`, `create_knowledge_base`.
-pub fn add_base(db: &Database, name: &str, description: &str) -> Result<i64, AgentError> {
+pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64, AgentError> {
     let name = checked_name(name, "a knowledge base")?;
 
     ensure!(read_knowledge_bases(db)?.len() < MAX_BASES, AgentError::Refused(format!("{MAX_BASES} bases already")));
@@ -64,7 +64,7 @@ pub fn add_base(db: &Database, name: &str, description: &str) -> Result<i64, Age
 ///
 /// Called by: `panels/views/agents/knowledge.rs` (a base saved).
 /// Calls: [`checked_name`], `read_knowledge_base`, `update_knowledge_base`.
-pub fn change_base(db: &Database, base: &KnowledgeBase) -> Result<(), AgentError> {
+pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), AgentError> {
     let name = checked_name(&base.name, "a knowledge base")?;
 
     read_knowledge_base(db, base.id)?;
@@ -117,7 +117,7 @@ pub fn source_text(path: &Path) -> Result<String, AgentError> {
 ///
 /// Called by: `panels/views/agents/knowledge.rs` (a file added).
 /// Calls: [`checked_name`], `read_sources`, `create_source`.
-pub fn add_source(db: &Database, base: i64, name: &str, text: String) -> Result<i64, AgentError> {
+pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Result<i64, AgentError> {
     let name = checked_name(name, "a source")?;
 
     read_knowledge_base(db, base)?;
@@ -134,7 +134,7 @@ pub fn add_source(db: &Database, base: i64, name: &str, text: String) -> Result<
 ///
 /// Called by: `panels/views/agents/knowledge.rs` (a file chosen anew).
 /// Calls: `read_source`, `update_source`.
-pub fn replace_source_text(db: &Database, id: i64, text: String) -> Result<(), AgentError> {
+pub fn replace_source_text(db: &UserDatabase, id: i64, text: String) -> Result<(), AgentError> {
     let source = read_source(db, id)?;
 
     Ok(update_source(db, &Source { text, ..source })?)
@@ -144,7 +144,7 @@ pub fn replace_source_text(db: &Database, id: i64, text: String) -> Result<(), A
 ///
 /// Called by: `panels/views/agents/knowledge.rs` (a source renamed).
 /// Calls: [`checked_name`], `read_source`, `update_source`.
-pub fn rename_source(db: &Database, id: i64, name: &str) -> Result<(), AgentError> {
+pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), AgentError> {
     let name = checked_name(name, "a source")?;
     let source = read_source(db, id)?;
 
@@ -156,7 +156,7 @@ pub fn rename_source(db: &Database, id: i64, name: &str) -> Result<(), AgentErro
 ///
 /// Called by: `panels/views/agents/knowledge.rs` (the search in a base).
 /// Calls: `read_knowledge_base`, `read_passages`.
-pub fn search_base(db: &Database, base: i64, question: &str) -> Result<Vec<String>, AgentError> {
+pub fn search_base(db: &UserDatabase, base: i64, question: &str) -> Result<Vec<String>, AgentError> {
     read_knowledge_base(db, base)?;
 
     Ok(read_passages(db, &[base], question, MAX_FOUND)?)

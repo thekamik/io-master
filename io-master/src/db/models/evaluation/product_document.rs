@@ -8,7 +8,7 @@
 //!
 //! With them the index of their text, which is no model: when the file is
 //! given, its text (read by the caller: a PDF through Poppler) is cut into
-//! passages, as the knowledge is (`db/ai/rag.rs`), and indexed by FTS5 with
+//! passages, as the knowledge is (`db/models/ai/rag.rs`), and indexed by FTS5 with
 //! their places, in the same transaction. The passages give the text whole
 //! again ([`read_document_text`]: for the question of a work unit and the
 //! check of its quotes, without reading the PDF again), and those that fit
@@ -22,15 +22,15 @@
 
 use rusqlite::{Connection, named_params};
 
-use crate::db::ai::rag::{MAX_FOUND, passages, query_of};
-use crate::db::database::Database;
 use crate::db::error::DbError;
+use crate::db::models::ai::rag::{MAX_FOUND, passages, query_of};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::product_document::ProductDocument;
 
 /// The most passages of one document (a text of 20 million characters).
 const MAX_PASSAGES: usize = 20_000;
 
-/// The table and its index, made when they are missing (`database.rs`).
+/// The table and its index, made when they are missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS product_documents (
         id      INTEGER PRIMARY KEY,
@@ -52,7 +52,7 @@ pub const SCHEMA: &str = "
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`insert_product_document`].
-pub fn create_product_document(db: &Database, document: &ProductDocument) -> Result<i64, DbError> {
+pub fn create_product_document(db: &UserDatabase, document: &ProductDocument) -> Result<i64, DbError> {
     insert_product_document(db.connection(), document)
 }
 
@@ -78,7 +78,7 @@ pub(in crate::db) fn insert_product_document(
 /// Reads the document `id`, with its file.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-pub fn read_product_document(db: &Database, id: i64) -> Result<ProductDocument, DbError> {
+pub fn read_product_document(db: &UserDatabase, id: i64) -> Result<ProductDocument, DbError> {
     let connection = db.connection();
     let mut statement =
         connection.prepare("SELECT id, name, content, version FROM product_documents WHERE id = :id")?;
@@ -128,7 +128,11 @@ fn write_passages(connection: &Connection, id: i64, text: &str) -> Result<(), Db
 ///
 /// Called by: `panels/logic/evaluation/inputs.rs` (`give_document`).
 /// Calls: [`read_product_document`], [`write_passages`].
-pub fn update_product_document(db: &Database, document: &ProductDocument, text: Option<&str>) -> Result<(), DbError> {
+pub fn update_product_document(
+    db: &UserDatabase,
+    document: &ProductDocument,
+    text: Option<&str>,
+) -> Result<(), DbError> {
     ensure!(!document.name.is_empty(), DbError::Inconsistent("a document without a name".to_owned()));
     ensure!(
         document.content.is_some() == text.is_some(),
@@ -170,7 +174,7 @@ pub fn update_product_document(db: &Database, document: &ProductDocument, text: 
 ///
 /// Called by: `panels/logic/evaluation/` (the question of a work unit, the
 /// check of its quotes).
-pub fn read_document_text(db: &Database, id: i64) -> Result<String, DbError> {
+pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError> {
     let mut statement = db.connection().prepare(
         "SELECT text FROM product_document_passages WHERE document = :id ORDER BY CAST(position AS INTEGER)",
     )?;
@@ -196,7 +200,7 @@ pub fn read_document_text(db: &Database, id: i64) -> Result<String, DbError> {
 /// documents do not fit whole).
 /// Calls: `rag::query_of`.
 pub fn read_document_passages(
-    db: &Database,
+    db: &UserDatabase,
     documents: &[i64],
     question: &str,
     count: usize,

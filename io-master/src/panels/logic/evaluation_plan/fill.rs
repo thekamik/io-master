@@ -31,14 +31,16 @@ use std::collections::HashMap;
 use serde_json::{Value, json};
 
 use crate::ai::ask::Question;
-use crate::db::ai::agent::{read_agent, read_agents};
-use crate::db::ai::integration::read_integration;
-use crate::db::database::Database;
-use crate::db::evaluation::evaluation_plan::read_evaluation_plan;
-use crate::db::evaluation::lab_proof::{create_lab_proof, read_lab_proof};
-use crate::db::evaluation::oscal_standard_document::read_oscal_standard_document;
-use crate::db::evaluation::product_document::read_product_document;
-use crate::db::evaluation::work_unit::{MAX_DEPENDENCIES, MAX_DOCUMENTS, MAX_PROOFS, read_work_unit, read_work_units};
+use crate::db::models::ai::agent::{read_agent, read_agents};
+use crate::db::models::ai::integration::read_integration;
+use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
+use crate::db::models::evaluation::lab_proof::{create_lab_proof, read_lab_proof};
+use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
+use crate::db::models::evaluation::product_document::read_product_document;
+use crate::db::models::evaluation::work_unit::{
+    MAX_DEPENDENCIES, MAX_DOCUMENTS, MAX_PROOFS, read_work_unit, read_work_units,
+};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;
@@ -103,7 +105,7 @@ struct Names {
 /// Called by: [`fill_units`], [`question_of`], [`apply_parameters`],
 /// [`apply_dependencies`].
 /// Calls: `read_evaluation_plan`, `plans::check_planning`.
-fn plan_to_fill(db: &Database, plan: i64) -> Result<(EvaluationPlan, i64), PlanError> {
+fn plan_to_fill(db: &UserDatabase, plan: i64) -> Result<(EvaluationPlan, i64), PlanError> {
     let stored = read_evaluation_plan(db, plan)?;
 
     check_planning(&stored)?;
@@ -121,7 +123,7 @@ fn plan_to_fill(db: &Database, plan: i64) -> Result<(EvaluationPlan, i64), PlanE
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs` (the start of a filling).
 /// Calls: [`plan_to_fill`].
-pub fn fill_units(db: &Database, plan: i64) -> Result<Vec<i64>, PlanError> {
+pub fn fill_units(db: &UserDatabase, plan: i64) -> Result<Vec<i64>, PlanError> {
     let (stored, _) = plan_to_fill(db, plan)?;
 
     ensure!(!stored.work_units.is_empty(), PlanError::Refused("the plan has no work unit to fill".to_owned()));
@@ -145,7 +147,7 @@ pub struct FillPreview {
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs` (the confirmation).
 /// Calls: [`fill_units`], [`plan_to_fill`], `read_agent`, `read_integration`.
-pub fn fill_preview(db: &Database, plan: i64) -> Result<FillPreview, PlanError> {
+pub fn fill_preview(db: &UserDatabase, plan: i64) -> Result<FillPreview, PlanError> {
     let questions = fill_units(db, plan)?.len();
     let (_, agent_id) = plan_to_fill(db, plan)?;
     let agent = read_agent(db, agent_id)?;
@@ -193,7 +195,7 @@ fn named(ids: &[i64], names: &HashMap<i64, String>) -> Vec<String> {
 ///
 /// Called by: [`parameters_question`], [`apply_parameters`].
 /// Calls: `read_product_document`, `read_agents`.
-fn names_of(db: &Database, plan: &EvaluationPlan) -> Result<Names, PlanError> {
+fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, PlanError> {
     let mut documents = HashMap::with_capacity(plan.product_documents.len());
     let mut agents = HashMap::new();
 
@@ -214,7 +216,7 @@ fn names_of(db: &Database, plan: &EvaluationPlan) -> Result<Names, PlanError> {
 ///
 /// Called by: [`parameters_question`], [`dependencies_question`].
 /// Calls: [`plan_to_fill`], `read_agent`, `agent_knowledge`.
-fn question_of(db: &Database, plan: i64, unit: &WorkUnit, task: &str, text: String) -> Result<Question, PlanError> {
+fn question_of(db: &UserDatabase, plan: i64, unit: &WorkUnit, task: &str, text: String) -> Result<Question, PlanError> {
     let (stored, agent_id) = plan_to_fill(db, plan)?;
 
     ensure!(
@@ -245,7 +247,7 @@ fn question_of(db: &Database, plan: i64, unit: &WorkUnit, task: &str, text: Stri
 ///
 /// Called by: [`parameters_question`].
 /// Calls: [`named`], `read_lab_proof`.
-fn current_parameters(db: &Database, unit: &WorkUnit, names: &Names) -> Result<Value, PlanError> {
+fn current_parameters(db: &UserDatabase, unit: &WorkUnit, names: &Names) -> Result<Value, PlanError> {
     let mut proofs = Vec::new();
 
     for id in unit.input_functional.as_deref().unwrap_or_default() {
@@ -273,7 +275,7 @@ fn current_parameters(db: &Database, unit: &WorkUnit, names: &Names) -> Result<V
 /// Called by: `panels/views/evaluation_plan/fill.rs` (each work unit).
 /// Calls: [`plan_to_fill`], [`names_of`], [`current_parameters`],
 /// [`question_of`].
-pub fn parameters_question(db: &Database, plan: i64, unit: i64) -> Result<Question, PlanError> {
+pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, PlanError> {
     let (stored, _) = plan_to_fill(db, plan)?;
     let this = read_work_unit(db, unit)?;
     let names = names_of(db, &stored)?;
@@ -318,7 +320,7 @@ fn summary(unit: &WorkUnit) -> String {
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs` (each work unit).
 /// Calls: [`labels`], [`named`], [`summary`], [`question_of`].
-pub fn dependencies_question(db: &Database, plan: i64, unit: i64) -> Result<Question, PlanError> {
+pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, PlanError> {
     let units = read_work_units(db, plan)?;
     let this = read_work_unit(db, unit)?;
     let mut others = Vec::with_capacity(units.len());
@@ -422,7 +424,7 @@ fn id_of(names: &HashMap<i64, String>, name: &str) -> Option<i64> {
 ///
 /// Called by: [`chosen_proofs`].
 /// Calls: `read_lab_proof`.
-fn proof_named(db: &Database, unit: &WorkUnit, name: &str) -> Result<Option<i64>, PlanError> {
+fn proof_named(db: &UserDatabase, unit: &WorkUnit, name: &str) -> Result<Option<i64>, PlanError> {
     for id in unit.input_functional.as_deref().unwrap_or_default() {
         if read_lab_proof(db, *id)?.name.eq_ignore_ascii_case(name) {
             return Ok(Some(*id));
@@ -437,7 +439,7 @@ fn proof_named(db: &Database, unit: &WorkUnit, name: &str) -> Result<Option<i64>
 ///
 /// Called by: [`apply_parameters`].
 /// Calls: [`proof_named`], `create_lab_proof`.
-fn chosen_proofs(db: &Database, unit: &WorkUnit, proposed: &[String]) -> Result<Vec<i64>, PlanError> {
+fn chosen_proofs(db: &UserDatabase, unit: &WorkUnit, proposed: &[String]) -> Result<Vec<i64>, PlanError> {
     let mut names = Vec::with_capacity(proposed.len());
 
     for name in proposed {
@@ -496,7 +498,7 @@ fn chosen_agent(agents: &HashMap<i64, String>, proposed: Option<&String>, notes:
 /// Calls: [`plan_to_fill`], [`names_of`], [`id_of`], [`chosen_agent`],
 /// [`chosen_proofs`], `update_work_unit_parameters`.
 pub fn apply_parameters(
-    db: &Database,
+    db: &UserDatabase,
     plan: i64,
     unit: i64,
     proposal: &ParametersProposal,
@@ -537,7 +539,12 @@ pub fn apply_parameters(
 /// Called by: `panels/views/evaluation_plan/fill.rs` (each answer).
 /// Calls: [`plan_to_fill`], [`labels`], [`id_of`],
 /// `update_work_unit_parameters`.
-pub fn apply_dependencies(db: &Database, plan: i64, unit: i64, proposed: &[String]) -> Result<Vec<String>, PlanError> {
+pub fn apply_dependencies(
+    db: &UserDatabase,
+    plan: i64,
+    unit: i64,
+    proposed: &[String],
+) -> Result<Vec<String>, PlanError> {
     plan_to_fill(db, plan)?;
 
     let units = read_work_units(db, plan)?;
@@ -579,9 +586,9 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::agent::create_agent;
-    use crate::db::ai::integration::create_integration;
-    use crate::db::evaluation::evaluation_plan::update_evaluation_plan;
+    use crate::db::models::ai::agent::create_agent;
+    use crate::db::models::ai::integration::create_integration;
+    use crate::db::models::evaluation::evaluation_plan::update_evaluation_plan;
     use crate::panels::logic::evaluation_plan::plans::{add_document_place, create_plan, update_plan};
     use crate::panels::logic::evaluation_plan::standards::import_standard;
     use crate::panels::logic::evaluation_plan::work_units::add_all_work_units;
@@ -591,7 +598,7 @@ mod tests {
 
     /// A plan of the sample of NIST with its four work units, a document
     /// "ST" and an agent of the planner; gives the plan and its work units.
-    fn plan_to_test(db: &Database) -> (i64, Vec<i64>) {
+    fn plan_to_test(db: &UserDatabase) -> (i64, Vec<i64>) {
         let standard = import_standard(db, NIST_SAMPLE).unwrap();
         let plan = create_plan(db, "Sample", "").unwrap();
         let stored = read_evaluation_plan(db, plan).unwrap();

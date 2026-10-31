@@ -25,9 +25,9 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
-use crate::db::lists::{check_length, position, read_ids, write_ids};
+use crate::db::models::lists::{check_length, position, read_ids, write_ids};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
 
 /// The most work units of one plan (the CEM has 813).
@@ -39,8 +39,8 @@ pub const MAX_DOCUMENTS: usize = 50;
 pub const MAX_PROOFS: usize = 50;
 pub const MAX_QUOTES: usize = 100;
 
-/// The tables, made when they are missing (`database.rs`), after the
-/// tables they name (the agents among them, `db/ai/agent.rs`).
+/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`), after the
+/// tables they name (the agents among them, `db/models/ai/agent.rs`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS work_units (
         id                  INTEGER PRIMARY KEY,
@@ -179,13 +179,13 @@ fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<()
         connection,
         "SELECT oscal_standard_document AS id FROM evaluation_plan_standards WHERE evaluation_plan = :owner",
         plan,
-        crate::db::evaluation::evaluation_plan::MAX_STANDARDS,
+        crate::db::models::evaluation::evaluation_plan::MAX_STANDARDS,
     )?;
     let documents = read_ids(
         connection,
         "SELECT product_document AS id FROM evaluation_plan_documents WHERE evaluation_plan = :owner",
         plan,
-        crate::db::evaluation::evaluation_plan::MAX_DOCUMENTS,
+        crate::db::models::evaluation::evaluation_plan::MAX_DOCUMENTS,
     )?;
     let units = read_ids(connection, "SELECT id FROM work_units WHERE evaluation_plan = :owner", plan, MAX_WORK_UNITS)?;
 
@@ -293,7 +293,7 @@ pub(in crate::db) fn write_dependencies(connection: &Connection, id: i64, depend
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`insert_work_unit`].
-pub fn create_work_unit(db: &Database, plan: i64, unit: &WorkUnit) -> Result<i64, DbError> {
+pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<i64, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
     let id = insert_work_unit(&transaction, plan, unit)?;
 
@@ -451,7 +451,7 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
 ///
 /// Called by: [`read_work_units`]; the views rewritten on `db/`.
 /// Calls: [`unit_of`], [`read_lists`].
-pub fn read_work_unit(db: &Database, id: i64) -> Result<WorkUnit, DbError> {
+pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM work_units WHERE id = :id"))?;
     let mut rows = statement.query(named_params! { ":id": id })?;
@@ -469,7 +469,7 @@ pub fn read_work_unit(db: &Database, id: i64) -> Result<WorkUnit, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: `lists::read_ids`, [`read_work_unit`].
-pub fn read_work_units(db: &Database, plan: i64) -> Result<Vec<WorkUnit>, DbError> {
+pub fn read_work_units(db: &UserDatabase, plan: i64) -> Result<Vec<WorkUnit>, DbError> {
     let ids = read_ids(
         db.connection(),
         "SELECT id FROM work_units WHERE evaluation_plan = :owner ORDER BY position",
@@ -535,7 +535,7 @@ fn same_planning(stored: &WorkUnit, unit: &WorkUnit) -> bool {
 ///
 /// Called by: [`update_work_unit`].
 /// Calls: [`plan_state`], [`read_work_unit`], [`same_planning`].
-fn check_frozen(db: &Database, plan: i64, unit: &WorkUnit) -> Result<(), DbError> {
+fn check_frozen(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<(), DbError> {
     if plan_state(db.connection(), plan)? == "plan" {
         return Ok(());
     }
@@ -557,7 +557,7 @@ fn check_frozen(db: &Database, plan: i64, unit: &WorkUnit) -> Result<(), DbError
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_lists`], [`plan_of`], [`check_frozen`], [`check_links`],
 /// [`write_lists`].
-pub fn update_work_unit(db: &Database, unit: &WorkUnit) -> Result<(), DbError> {
+pub fn update_work_unit(db: &UserDatabase, unit: &WorkUnit) -> Result<(), DbError> {
     check_lists(unit)?;
 
     let transaction = db.connection().unchecked_transaction()?;
@@ -603,7 +603,7 @@ pub fn update_work_unit(db: &Database, unit: &WorkUnit) -> Result<(), DbError> {
 ///
 /// Called by: `panels/logic/evaluation_plan/work_units.rs` (`remove_work_unit`).
 /// Calls: [`plan_of`], [`plan_state`].
-pub fn delete_work_unit(db: &Database, id: i64) -> Result<(), DbError> {
+pub fn delete_work_unit(db: &UserDatabase, id: i64) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
     let plan = plan_of(&transaction, id)?;
 
@@ -628,14 +628,14 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::evaluation_plan::create_evaluation_plan;
-    use crate::db::evaluation::lab_proof::create_lab_proof;
+    use crate::db::models::evaluation::evaluation_plan::create_evaluation_plan;
+    use crate::db::models::evaluation::lab_proof::create_lab_proof;
     use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
     use crate::model::evaluation::lab_proof::LabProof;
     use crate::test_support::database::{database, plan, unit};
 
     /// A proof of the laboratory, its place only reserved.
-    fn proof(db: &Database) -> i64 {
+    fn proof(db: &UserDatabase) -> i64 {
         let proof =
             LabProof { id: 0, name: "Scan".to_owned(), proof: None, performed: None, tester: None, equipment: None };
 
@@ -655,10 +655,10 @@ mod tests {
 
         let evaluation = EvaluationPlan {
             state: PlanState::Evaluation,
-            ..crate::db::evaluation::evaluation_plan::read_evaluation_plan(&db, id).unwrap()
+            ..crate::db::models::evaluation::evaluation_plan::read_evaluation_plan(&db, id).unwrap()
         };
 
-        crate::db::evaluation::evaluation_plan::update_evaluation_plan(&db, &evaluation).unwrap();
+        crate::db::models::evaluation::evaluation_plan::update_evaluation_plan(&db, &evaluation).unwrap();
 
         let planned = read_work_unit(&db, first).unwrap();
         let assessed = WorkUnit {
@@ -773,7 +773,8 @@ mod tests {
         create_work_unit(&db, id, &unit(&routers, "ASE_INT.1-1")).unwrap();
 
         let evaluation =
-            crate::db::evaluation::evaluation_plan::create_evaluation(&db, id, "R7", "ACME", "K. K.", 1, None).unwrap();
+            crate::db::models::evaluation::evaluation_plan::create_evaluation(&db, id, "R7", "ACME", "K. K.", 1, None)
+                .unwrap();
         let copied = read_work_units(&db, evaluation).unwrap();
 
         assert!(matches!(delete_work_unit(&db, copied[0].id), Err(DbError::Inconsistent(_))));

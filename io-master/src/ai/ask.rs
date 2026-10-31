@@ -25,10 +25,10 @@ use crate::ai::client::{self, Received, Request};
 use crate::ai::conversation::{Turn, turns};
 use crate::ai::error::AiError;
 use crate::ai::{anthropic, openai};
-use crate::db::ai::api_key::read_api_key;
-use crate::db::ai::integration::read_integration;
-use crate::db::ai::journal::create_journal_entry;
-use crate::db::database::Database;
+use crate::db::models::ai::api_key::read_api_key;
+use crate::db::models::ai::integration::read_integration;
+use crate::db::models::ai::journal::create_journal_entry;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::ai::integration::{Integration, Protocol};
 use crate::model::ai::journal::{Ending, JournalEntry};
@@ -143,7 +143,7 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// Calls: `read_integration`, `read_api_key`, `client::check_address`,
 /// `conversation::turns`, [`check_size`], `openai::body`,
 /// `anthropic::body`.
-pub fn prepare(db: &Database, question: &Question) -> Result<Prepared, AiError> {
+pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
     ensure!(question.messages.len() <= MAX_MESSAGES, AiError::TooLong { estimated: u64::MAX, room: 0 });
 
     let turns = turns(&question.messages);
@@ -194,7 +194,7 @@ pub async fn send(prepared: &Prepared, pieces: &mpsc::Sender<String>) -> Sent {
 ///
 /// Called by: [`record`].
 /// Calls: `create_journal_entry`.
-fn write_entry(db: &Database, prepared: Prepared, agent: i64, answer: &Answer) -> Result<i64, AiError> {
+fn write_entry(db: &UserDatabase, prepared: Prepared, agent: i64, answer: &Answer) -> Result<i64, AiError> {
     let mut written = answer.text.clone();
 
     if let Some(error) = &answer.error {
@@ -226,7 +226,7 @@ fn write_entry(db: &Database, prepared: Prepared, agent: i64, answer: &Answer) -
 /// Called by: `panels/views/` (every question to the AI), under the lock of
 /// the session.
 /// Calls: [`write_entry`].
-pub fn record(db: &Database, prepared: Prepared, sent: Sent) -> Result<Answer, AiError> {
+pub fn record(db: &UserDatabase, prepared: Prepared, sent: Sent) -> Result<Answer, AiError> {
     let Sent(received) = sent;
     let reading = received.reading;
     let ending = match (&received.error, received.stopped, reading.ending) {
@@ -258,10 +258,10 @@ mod tests {
 
     use super::*;
 
-    use crate::db::ai::agent::create_agent;
-    use crate::db::ai::api_key::{create_api_key, update_api_key};
-    use crate::db::ai::integration::{create_integration, update_integration};
-    use crate::db::ai::journal::{read_journal_entries, read_journal_entry};
+    use crate::db::models::ai::agent::create_agent;
+    use crate::db::models::ai::api_key::{create_api_key, update_api_key};
+    use crate::db::models::ai::integration::{create_integration, update_integration};
+    use crate::db::models::ai::journal::{read_journal_entries, read_journal_entry};
     use crate::model::ai::api_key::ApiKey;
     use crate::test_support::ai_service::{FakeAnswer, FakeService, anthropic_events, openai_events};
     use crate::test_support::database::{agent, database, integration};
@@ -279,7 +279,7 @@ mod tests {
     }
 
     /// Asks through the three steps, the pieces drained.
-    async fn ask(db: &Database, question: &Question) -> Result<Answer, AiError> {
+    async fn ask(db: &UserDatabase, question: &Question) -> Result<Answer, AiError> {
         let prepared = prepare(db, question)?;
         let (sender, mut receiver) = mpsc::channel(16);
         let draining = tokio::spawn(async move { while receiver.recv().await.is_some() {} });

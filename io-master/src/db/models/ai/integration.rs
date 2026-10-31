@@ -9,14 +9,14 @@
 
 use rusqlite::{Row, named_params};
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::integration::{Integration, Protocol};
 
 /// The most integrations of the user.
 pub const MAX_INTEGRATIONS: usize = 50;
 
-/// The table, made when it is missing (`database.rs`).
+/// The table, made when it is missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_integrations (
         id             INTEGER PRIMARY KEY,
@@ -67,7 +67,7 @@ fn check_integration(integration: &Integration) -> Result<(), DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_integration`].
-pub fn create_integration(db: &Database, integration: &Integration) -> Result<i64, DbError> {
+pub fn create_integration(db: &UserDatabase, integration: &Integration) -> Result<i64, DbError> {
     ensure!(integration.id == 0, DbError::Inconsistent("a new integration has an id already".to_owned()));
     check_integration(integration)?;
 
@@ -117,7 +117,7 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
 /// Called by: `api_key.rs` (the address a key is bound to); the views
 /// rewritten on `db/`.
 /// Calls: [`integration_of`].
-pub fn read_integration(db: &Database, id: i64) -> Result<Integration, DbError> {
+pub fn read_integration(db: &UserDatabase, id: i64) -> Result<Integration, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_integrations WHERE id = :id"))?;
     let mut rows = statement.query(named_params! { ":id": id })?;
@@ -132,7 +132,7 @@ pub fn read_integration(db: &Database, id: i64) -> Result<Integration, DbError> 
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`integration_of`].
-pub fn read_integrations(db: &Database) -> Result<Vec<Integration>, DbError> {
+pub fn read_integrations(db: &UserDatabase) -> Result<Vec<Integration>, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_integrations ORDER BY name"))?;
     let mut rows = statement.query([])?;
@@ -155,7 +155,7 @@ pub fn read_integrations(db: &Database) -> Result<Vec<Integration>, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`check_integration`].
-pub fn update_integration(db: &Database, integration: &Integration) -> Result<(), DbError> {
+pub fn update_integration(db: &UserDatabase, integration: &Integration) -> Result<(), DbError> {
     check_integration(integration)?;
 
     let changed = db.connection().execute(

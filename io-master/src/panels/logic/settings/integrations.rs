@@ -11,10 +11,10 @@ use zeroize::Zeroizing;
 
 use crate::ai::ask::{Prepared, Question, prepare};
 use crate::ai::client::{check_address, check_certificate};
-use crate::db::ai::api_key::{MAX_KEY, read_api_key, update_api_key};
-use crate::db::ai::integration::{create_integration, read_integration, update_integration};
-use crate::db::database::Database;
-use crate::db::user::program_data::{read_settings, update_settings};
+use crate::db::models::ai::api_key::{MAX_KEY, read_api_key, update_api_key};
+use crate::db::models::ai::integration::{create_integration, read_integration, update_integration};
+use crate::db::models::user::program_data::{read_settings, update_settings};
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::api_key::ApiKey;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::ai::integration::Integration;
@@ -71,7 +71,7 @@ fn checked(integration: &Integration) -> Result<Integration, SettingsError> {
 /// Called by: `panels/views/settings/integrations.rs` (a new integration).
 /// Calls: [`checked`], `create_integration`, `read_settings`,
 /// `update_settings`.
-pub fn add_integration(db: &Database, integration: &Integration) -> Result<i64, SettingsError> {
+pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i64, SettingsError> {
     ensure!(integration.id == 0, SettingsError::Refused("a new integration has an id already".to_owned()));
 
     let id = create_integration(db, &checked(integration)?)?;
@@ -89,7 +89,7 @@ pub fn add_integration(db: &Database, integration: &Integration) -> Result<i64, 
 /// Called by: `panels/views/settings/integrations.rs` (an integration
 /// saved).
 /// Calls: `read_integration`, [`checked`], `update_integration`.
-pub fn change_integration(db: &Database, integration: &Integration) -> Result<(), SettingsError> {
+pub fn change_integration(db: &UserDatabase, integration: &Integration) -> Result<(), SettingsError> {
     read_integration(db, integration.id)?;
 
     Ok(update_integration(db, &checked(integration)?)?)
@@ -100,7 +100,7 @@ pub fn change_integration(db: &Database, integration: &Integration) -> Result<()
 ///
 /// Called by: `panels/views/settings/integrations.rs`.
 /// Calls: `read_integration`, `update_settings`.
-pub fn activate_integration(db: &Database, id: i64) -> Result<(), SettingsError> {
+pub fn activate_integration(db: &UserDatabase, id: i64) -> Result<(), SettingsError> {
     read_integration(db, id)?;
 
     Ok(update_settings(db, &Settings { active_integration: Some(id) })?)
@@ -112,7 +112,7 @@ pub fn activate_integration(db: &Database, id: i64) -> Result<(), SettingsError>
 ///
 /// Called by: `panels/views/settings/integrations.rs` (a key entered).
 /// Calls: `read_integration`, `update_api_key`.
-pub fn set_key(db: &Database, id: i64, key: &str) -> Result<(), SettingsError> {
+pub fn set_key(db: &UserDatabase, id: i64, key: &str) -> Result<(), SettingsError> {
     let key = key.trim();
 
     ensure!(!key.is_empty(), SettingsError::Refused("an empty API key".to_owned()));
@@ -135,7 +135,7 @@ pub fn set_key(db: &Database, id: i64, key: &str) -> Result<(), SettingsError> {
 ///
 /// Called by: `panels/views/settings/integrations.rs` (the list).
 /// Calls: `read_api_key`.
-pub fn has_key(db: &Database, id: i64) -> Result<bool, SettingsError> {
+pub fn has_key(db: &UserDatabase, id: i64) -> Result<bool, SettingsError> {
     Ok(read_api_key(db, id)?.is_some())
 }
 
@@ -145,7 +145,7 @@ pub fn has_key(db: &Database, id: i64) -> Result<bool, SettingsError> {
 ///
 /// Called by: `panels/views/settings/integrations.rs` (the check).
 /// Calls: `prepare`.
-pub fn check_question(db: &Database, id: i64) -> Result<Prepared, SettingsError> {
+pub fn check_question(db: &UserDatabase, id: i64) -> Result<Prepared, SettingsError> {
     let question = Question {
         integration: id,
         agent: None,
@@ -165,15 +165,15 @@ mod tests {
     use super::*;
 
     use crate::ai::error::AiError;
-    use crate::db::database::Database;
-    use crate::db::user::program_data::create_settings;
+    use crate::db::models::user::program_data::create_settings;
+    use crate::db::storage::user_database::UserDatabase;
     use crate::model::ai::integration::Protocol;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};
 
     /// A new database with the settings of a new account (no active
     /// integration), as `create_account` makes it.
-    fn database_with_settings() -> (TempDir, Database) {
+    fn database_with_settings() -> (TempDir, UserDatabase) {
         let (directory, db) = database();
 
         create_settings(&db, &Settings { active_integration: None }).unwrap();

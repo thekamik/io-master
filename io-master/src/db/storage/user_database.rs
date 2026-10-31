@@ -1,16 +1,11 @@
-//! The database of the user, made anew for the models of `model/`
-//! (2026-10-28): the file `users/<id>.v2.db` of the data folder, beside
-//! the earlier `users/<id>.db` of `db_old/`, which the views not yet
-//! rewritten keep using. When they are all rewritten, the earlier file is
-//! removed with `db_old/`.
+//! The database of the user: the file `users/<id>.v2.db` of the data
+//! folder, where it is, made and opened; its tables made when they are
+//! missing (`models/schema.rs`, `USER_TABLES`). The layout changes freely
+//! until version 1 (CLAUDE.md): a database of an older layout is removed
+//! and made anew.
 //!
 //! **Protection: encrypted by SQLCipher** (`encryption/sqlcipher.rs`) with
-//! the same key as the earlier file, the key of the user.
-//!
-//! Every file of `db/` keeps its tables here; they are made, when they
-//! are missing, whenever the database is opened. The layout changes
-//! freely until version 1 (CLAUDE.md): a database of an older layout is
-//! removed and made anew.
+//! the key of the user.
 
 use std::fs::DirBuilder;
 use std::os::unix::fs::DirBuilderExt;
@@ -19,12 +14,10 @@ use std::time::Duration;
 
 use rusqlite::Connection;
 
-use crate::db::ai::{agent, api_key, chat, integration, journal, rag};
-use crate::db::encryption::database_key::DatabaseKey;
-use crate::db::encryption::sqlcipher;
 use crate::db::error::DbError;
-use crate::db::evaluation::{evaluation_plan, lab_proof, oscal_standard_document, product_document, work_unit};
-use crate::db::user::program_data;
+use crate::db::models::schema::USER_TABLES;
+use crate::db::storage::encryption::database_key::DatabaseKey;
+use crate::db::storage::encryption::sqlcipher;
 
 /// How long an operation waits for another that holds the database.
 const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
@@ -34,39 +27,30 @@ const DIRECTORY: &str = "users";
 
 /// The open database of the user.
 #[derive(Debug)]
-pub struct Database {
+pub struct UserDatabase {
     connection: Connection,
 }
 
-impl Database {
-    /// Prepares an open connection: the tables that are missing. The
-    /// order matters: a table is made after the tables it names.
+impl UserDatabase {
+    /// Prepares an open connection: the tables that are missing, in the
+    /// order of `USER_TABLES`.
     ///
     /// Called by: [`create`], [`open`].
-    fn from(connection: Connection) -> Result<Database, DbError> {
+    fn from(connection: Connection) -> Result<UserDatabase, DbError> {
         // Two operations may use the database at the same time; the second
         // waits for the first instead of failing at once.
         connection.busy_timeout(BUSY_TIMEOUT)?;
 
-        connection.execute_batch(integration::SCHEMA)?;
-        connection.execute_batch(api_key::SCHEMA)?;
-        connection.execute_batch(program_data::SCHEMA)?;
-        connection.execute_batch(rag::SCHEMA)?;
-        connection.execute_batch(agent::SCHEMA)?;
-        connection.execute_batch(oscal_standard_document::SCHEMA)?;
-        connection.execute_batch(product_document::SCHEMA)?;
-        connection.execute_batch(lab_proof::SCHEMA)?;
-        connection.execute_batch(evaluation_plan::SCHEMA)?;
-        connection.execute_batch(work_unit::SCHEMA)?;
-        connection.execute_batch(chat::SCHEMA)?;
-        connection.execute_batch(journal::SCHEMA)?;
+        for table in USER_TABLES {
+            connection.execute_batch(table)?;
+        }
 
-        Ok(Database { connection })
+        Ok(UserDatabase { connection })
     }
 
     /// The connection, for the files of `db/`. **Only `db/` reaches it**:
-    /// SQL written anywhere else does not compile (CLAUDE.md, "Database
-    /// code").
+    /// SQL written anywhere else does not compile (CLAUDE.md, "The
+    /// database").
     pub(in crate::db) fn connection(&self) -> &Connection {
         &self.connection
     }
@@ -82,8 +66,8 @@ pub fn path(data_dir: &Path, user_id: i64) -> PathBuf {
 /// Makes the empty database of the user `user_id`, its folder private
 /// to the user of the computer; an existing file is never overwritten.
 ///
-/// Calls: `sqlcipher::create`, [`Database::from`].
-pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<Database, DbError> {
+/// Calls: `sqlcipher::create`, [`UserDatabase::from`].
+pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<UserDatabase, DbError> {
     let directory = data_dir.join(DIRECTORY);
 
     DirBuilder::new()
@@ -92,14 +76,14 @@ pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<Databa
         .create(&directory)
         .map_err(|source| DbError::Io { path: directory.clone(), source })?;
 
-    Database::from(sqlcipher::create(&path(data_dir, user_id), key)?)
+    UserDatabase::from(sqlcipher::create(&path(data_dir, user_id), key)?)
 }
 
 /// Opens the database of the user `user_id` with its key.
 ///
-/// Calls: `sqlcipher::open`, [`Database::from`].
-pub fn open(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<Database, DbError> {
-    Database::from(sqlcipher::open(&path(data_dir, user_id), key)?)
+/// Calls: `sqlcipher::open`, [`UserDatabase::from`].
+pub fn open(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<UserDatabase, DbError> {
+    UserDatabase::from(sqlcipher::open(&path(data_dir, user_id), key)?)
 }
 
 #[cfg(test)]

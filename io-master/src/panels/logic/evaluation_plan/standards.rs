@@ -5,8 +5,8 @@
 //! the page ──the text of a file──► import_standard ──check_catalog (oscal.rs)──► create_oscal_standard_document
 //! ```
 
-use crate::db::database::Database;
-use crate::db::evaluation::oscal_standard_document::create_oscal_standard_document;
+use crate::db::models::evaluation::oscal_standard_document::create_oscal_standard_document;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::oscal_standard_document::OscalStandardDocument;
 use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::evaluation_plan::oscal::check_catalog;
@@ -17,7 +17,7 @@ use crate::panels::logic::evaluation_plan::oscal::check_catalog;
 ///
 /// Called by: `panels/views/evaluation_plan/` (the import of a standard).
 /// Calls: `oscal::check_catalog`, `create_oscal_standard_document`.
-pub fn import_standard(db: &Database, text: &str) -> Result<i64, PlanError> {
+pub fn import_standard(db: &UserDatabase, text: &str) -> Result<i64, PlanError> {
     let (_document, checked) = check_catalog(text)?;
 
     ensure!(!checked.title.is_empty(), PlanError::Refused("the catalog has no title".to_owned()));
@@ -34,7 +34,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::evaluation::oscal_standard_document::read_oscal_standard_document;
+    use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
     use crate::test_support::database::database;
 
     const NIST_SAMPLE: &str = include_str!("../../../../oscal/examples/basic-catalog.json");

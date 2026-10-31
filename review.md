@@ -16,7 +16,7 @@ A file that changes after its approval goes back to "to review", with a note of 
 
 | File | Why |
 |---|---|
-| `io-master/src/db/encryption/` | Moved unchanged from the earlier program; audited and redesigned by the user later. |
+| `io-master/src/db/storage/encryption/` | Moved unchanged from the earlier program; audited and redesigned by the user later. |
 
 ## To review
 

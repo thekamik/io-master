@@ -12,11 +12,11 @@
 
 use rusqlite::{Connection, named_params};
 
-use crate::db::database::Database;
 use crate::db::error::DbError;
+use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::lab_proof::LabProof;
 
-/// The table, made when it is missing (`database.rs`).
+/// The table, made when it is missing (`schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS lab_proofs (
         id        INTEGER PRIMARY KEY,
@@ -33,7 +33,7 @@ pub const SCHEMA: &str = "
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`insert_lab_proof`].
-pub fn create_lab_proof(db: &Database, proof: &LabProof) -> Result<i64, DbError> {
+pub fn create_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<i64, DbError> {
     insert_lab_proof(db.connection(), proof)
 }
 
@@ -63,7 +63,7 @@ pub(in crate::db) fn insert_lab_proof(connection: &Connection, proof: &LabProof)
 /// Reads the proof `id`.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-pub fn read_lab_proof(db: &Database, id: i64) -> Result<LabProof, DbError> {
+pub fn read_lab_proof(db: &UserDatabase, id: i64) -> Result<LabProof, DbError> {
     let connection = db.connection();
     let mut statement =
         connection.prepare("SELECT id, name, proof, performed, tester, equipment FROM lab_proofs WHERE id = :id")?;
@@ -88,7 +88,7 @@ pub fn read_lab_proof(db: &Database, id: i64) -> Result<LabProof, DbError> {
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
 /// Calls: [`read_lab_proof`].
-pub fn update_lab_proof(db: &Database, proof: &LabProof) -> Result<(), DbError> {
+pub fn update_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<(), DbError> {
     ensure!(!proof.name.is_empty(), DbError::Inconsistent("a proof without a name".to_owned()));
 
     let stored = read_lab_proof(db, proof.id)?;
