@@ -143,7 +143,7 @@ fn now() -> Result<i64, AccountError> {
 /// Called by: [`create_account`].
 /// Calls: `create_installation`, `create_user`, `generate_database_key`,
 /// `keys::wrap`, `recovery::new_code`, `recovery::wrap`, `create_user_keys`,
-/// `database::create`, `create_settings`.
+/// `user_database::create`, `create_settings`.
 fn install(
     system: &SystemDatabase,
     data_dir: &Path,
@@ -280,7 +280,7 @@ pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
 ///
 /// Called by: `panels/views/program_start/login.rs`.
 /// Calls: `system_database::open`, `read_users`, `read_user_keys`,
-/// `keys::unwrap`, `database::open`.
+/// `keys::unwrap`, `user_database::open`.
 pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, UserDatabase), AccountError> {
     let system = match system_database::open(data_dir) {
         Ok(system) => system,

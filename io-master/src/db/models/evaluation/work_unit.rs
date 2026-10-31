@@ -100,9 +100,10 @@ pub const SCHEMA: &str = "
 const COLUMNS: &str = "id, reference, label, oscal_key, requirement, guidance, cross_reference, functional, ai_agent,
                        findings, analysis, vulnerability_notes, notes, verdict, author";
 
-/// The name of a verdict in the database.
+/// The name of a verdict in the database (`Verdict::Fail` → "fail").
 ///
-/// Called by: this file, `evaluation_plan.rs` (the verdicts of a plan).
+/// Called by: [`check_links`], [`insert_work_unit`], [`update_work_unit`];
+/// `evaluation_plan.rs`: `write_lists` (the verdicts of a plan).
 pub(in crate::db) fn verdict_name(verdict: Verdict) -> &'static str {
     match verdict {
         Verdict::Pass => "pass",
@@ -111,10 +112,11 @@ pub(in crate::db) fn verdict_name(verdict: Verdict) -> &'static str {
     }
 }
 
-/// The verdict of its name in the column `column` of `table`; a name the
-/// program never writes is `DbError::Corrupt`.
+/// The verdict of its name ("fail" → `Verdict::Fail`); a name the program
+/// never writes is `DbError::Corrupt`, naming the table and the column it
+/// was read from.
 ///
-/// Called by: this file, `evaluation_plan.rs` (the verdicts of a plan).
+/// Called by: [`unit_of`]; `evaluation_plan.rs`: `read_verdicts`.
 pub(in crate::db) fn verdict_of(table: &'static str, column: &'static str, name: &str) -> Result<Verdict, DbError> {
     match name {
         "pass" => Ok(Verdict::Pass),
@@ -124,7 +126,9 @@ pub(in crate::db) fn verdict_of(table: &'static str, column: &'static str, name:
     }
 }
 
-/// The name of an author in the database.
+/// The name of an author in the column `author` (`Author::User` → "user").
+///
+/// Called by: [`insert_work_unit`], [`update_work_unit`].
 fn author_name(author: Author) -> &'static str {
     match author {
         Author::Ai => "ai",
@@ -132,8 +136,10 @@ fn author_name(author: Author) -> &'static str {
     }
 }
 
-/// The author of its name; a name the program never writes is
-/// `DbError::Corrupt`.
+/// The author of its name in the column `author` ("user" → `Author::User`); a
+/// name the program never writes is `DbError::Corrupt`.
+///
+/// Called by: [`unit_of`].
 fn author_of(name: &str) -> Result<Author, DbError> {
     match name {
         "ai" => Ok(Author::Ai),
@@ -142,10 +148,17 @@ fn author_of(name: &str) -> Result<Author, DbError> {
     }
 }
 
-/// Refuses lists longer than their limits, a dependency on the work unit
-/// itself, and a quote of a document the work unit does not use.
+/// Refuses a work unit whose lists do not hold together: longer than their
+/// limits, a dependency on itself, or a quote of a document it does not
+/// use.
 ///
-/// Called by: [`create_work_unit`], [`update_work_unit`].
+/// Input: `unit`, the work unit to be stored.
+///
+/// Output: nothing when it is good; otherwise `DbError::Inconsistent` naming
+/// the work unit ("the work unit ADV_ARC.1-1 depends on itself").
+///
+/// Called by: [`insert_work_unit`], [`update_work_unit`].
+/// Calls: `lists.rs`: `check_length`.
 fn check_lists(unit: &WorkUnit) -> Result<(), DbError> {
     check_length(unit.dependencies.len(), MAX_DEPENDENCIES, "dependencies of a work unit")?;
     check_length(unit.input_product_documents.len(), MAX_DOCUMENTS, "documents of a work unit")?;
@@ -167,12 +180,19 @@ fn check_lists(unit: &WorkUnit) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Refuses what does not hold together with the plan `plan`: a standard
-/// that is not one of the plan, a document that is not one of the plan,
-/// a dependency that is no work unit of the plan, a verdict the plan does
-/// not know.
+/// Refuses a work unit that does not hold together with its plan: its
+/// standard, its documents, its dependencies and its verdict must be the
+/// plan's.
 ///
-/// Called by: [`create_work_unit`], [`update_work_unit`].
+/// Input: `connection`, the open database; `plan`, the id of its plan;
+/// `unit`, the work unit to be stored.
+///
+/// Output: nothing when it is good; otherwise `DbError::Inconsistent` naming
+/// what is not of the plan ("a document of ADV_ARC.1-1 is not one of its
+/// plan").
+///
+/// Called by: [`insert_work_unit`], [`update_work_unit`].
+/// Calls: `lists.rs`: `read_id_list`; [`verdict_name`].
 fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<(), DbError> {
     let standards = read_id_list(
         connection,
@@ -222,11 +242,18 @@ fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<()
 }
 
 /// Writes the lists of the work unit `id` anew: its dependencies, its
-/// documents, its proofs and its quotes. Run inside the transaction of
-/// its caller.
+/// documents and its proofs (lists of ids) and its quotes (a list of
+/// values). Run inside the transaction of its caller.
 ///
-/// Called by: [`create_work_unit`], [`update_work_unit`].
-/// Calls: `lists::write_id_list`.
+/// Input: `connection`, the open database inside a transaction; `id`, the id
+/// of the work unit; `unit`, its lists, checked by [`check_lists`] and
+/// [`check_links`].
+///
+/// Output: nothing; an error of SQLite when what a list names is not stored
+/// (foreign key) or comes twice (`UNIQUE`).
+///
+/// Called by: [`insert_work_unit`], [`update_work_unit`].
+/// Calls: `lists.rs`: `write_id_list`, `position`.
 fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), DbError> {
     write_id_list(
         connection,
@@ -272,8 +299,14 @@ fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), 
 /// transaction of its caller: the copy of a plan gives its work units their
 /// dependencies once every copy has its id.
 ///
-/// Called by: `evaluation_plan.rs` (`create_evaluation`).
-/// Calls: `lists::write_id_list`.
+/// Input: `connection`, the open database inside a transaction; `id`, the id
+/// of the work unit (41); `dependencies`, the ids it depends on (`[40]`).
+///
+/// Output: nothing; an error when there are more than [`MAX_DEPENDENCIES`],
+/// when it depends on itself, or when a dependency is not stored.
+///
+/// Called by: `evaluation_plan.rs`: `create_evaluation`.
+/// Calls: `lists.rs`: `check_length`, `write_id_list`.
 pub(in crate::db) fn write_dependencies(connection: &Connection, id: i64, dependencies: &[i64]) -> Result<(), DbError> {
     check_length(dependencies.len(), MAX_DEPENDENCIES, "dependencies of a work unit")?;
     ensure!(!dependencies.contains(&id), DbError::Inconsistent("a work unit that depends on itself".to_owned()));
@@ -287,11 +320,17 @@ pub(in crate::db) fn write_dependencies(connection: &Connection, id: i64, depend
     )
 }
 
-/// Stores a new work unit as the last of the plan `plan` and gives its id,
-/// in one transaction with its lists. A new object has no id yet (`id`
-/// 0): the database gives it.
+/// Stores a new work unit as the last of its plan, with its lists, and
+/// gives its id, in one transaction.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `plan`, the id of its plan;
+/// `unit`, the new work unit, its `id` 0 (the database gives it).
+///
+/// Output: the id of the work unit (12); an error as [`insert_work_unit`],
+/// and nothing is then written.
+///
+/// Called by: `panels/logic/evaluation_plan/work_units.rs`:
+/// `add_all_work_units`, `add_work_unit`.
 /// Calls: [`insert_work_unit`].
 pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<i64, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
@@ -302,17 +341,28 @@ pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result
     Ok(id)
 }
 
-/// Writes a new work unit as the last of the plan `plan`, with its lists,
-/// and gives its id, inside the transaction of its caller (the copy of a
-/// plan writes its work units in its own).
+/// Writes a new work unit as the last of its plan, with its lists, and
+/// gives its id, inside the transaction of its caller, so that the copy of
+/// a plan writes its work units in its own.
 ///
-/// Called by: [`create_work_unit`], `evaluation_plan::create_evaluation`.
-/// Calls: [`check_lists`], [`check_links`], [`write_lists`].
+/// Input: `connection`, the open database inside a transaction; `plan`, the
+/// id of its plan; `unit`, the new work unit, its `id` 0.
+///
+/// Output: the id of the work unit. An error when it has an id, when it is
+/// refused ([`check_lists`], [`check_links`]), when the plan has
+/// [`MAX_WORK_UNITS`] already, or when its control is in the plan already
+/// (`UNIQUE`).
+///
+/// Called by: [`create_work_unit`]; `evaluation_plan.rs`: `create_evaluation`.
+/// Calls: [`check_lists`], [`check_links`], [`verdict_name`], [`author_name`],
+/// [`write_lists`].
 pub(in crate::db) fn insert_work_unit(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<i64, DbError> {
     ensure!(unit.id == 0, DbError::Inconsistent("a new work unit has an id already".to_owned()));
     check_lists(unit)?;
     check_links(connection, plan, unit)?;
 
+    // The new work unit is the last of its plan: its position is the
+    // number of the work units before it.
     let count: i64 = connection.query_row(
         "SELECT COUNT(*) FROM work_units WHERE evaluation_plan = :plan",
         named_params! { ":plan": plan },
@@ -357,11 +407,13 @@ pub(in crate::db) fn insert_work_unit(connection: &Connection, plan: i64, unit: 
     Ok(id)
 }
 
-/// The model of a row of `work_units`, its lists still empty (`read_lists`
-/// fills them); `functional` gives `input_functional` an empty list or
-/// `None`.
+/// The model of one row of `work_units`, its lists still empty
+/// ([`read_lists`] fills them). The column `functional` tells a work unit of
+/// the documentation (`input_functional` `None`) from a functional test
+/// (an empty list, filled by [`read_lists`]).
 ///
 /// Called by: [`read_work_unit`].
+/// Calls: [`verdict_of`], [`author_of`].
 fn unit_of(row: &Row<'_>) -> Result<WorkUnit, DbError> {
     let verdict: Option<String> = row.get("verdict")?;
     let author: Option<String> = row.get("author")?;
@@ -397,6 +449,12 @@ fn unit_of(row: &Row<'_>) -> Result<WorkUnit, DbError> {
 
 /// Reads the quotes of the work unit `id`, in their order.
 ///
+/// Input: `connection`, the open database; `id`, the id of the work unit.
+///
+/// Output: the quotes, each with its document (`[Quote { product_document:
+/// 3, text: "The TOE ..." }]`); an error when there are more than
+/// [`MAX_QUOTES`] (a database the program did not write).
+///
 /// Called by: [`read_lists`].
 fn read_quotes(connection: &Connection, id: i64) -> Result<Vec<Quote>, DbError> {
     let mut statement = connection
@@ -415,10 +473,17 @@ fn read_quotes(connection: &Connection, id: i64) -> Result<Vec<Quote>, DbError> 
     Err(DbError::Inconsistent(format!("more than {MAX_QUOTES} quotes of a work unit in the database")))
 }
 
-/// Fills the lists of `unit` from their tables.
+/// Fills the lists of a work unit from their tables: its dependencies, its
+/// documents, its proofs (only for a functional test) and its quotes.
+///
+/// Input: `connection`, the open database; `unit`, the work unit read from
+/// its row, its lists empty.
+///
+/// Output: nothing; the lists of `unit` are filled. An error when a list is
+/// longer than its limit (a database the program did not write).
 ///
 /// Called by: [`read_work_unit`].
-/// Calls: `lists::read_id_list`, [`read_quotes`].
+/// Calls: `lists.rs`: `read_id_list`; [`read_quotes`].
 fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbError> {
     unit.dependencies = read_id_list(
         connection,
@@ -449,7 +514,23 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
 
 /// Reads the work unit `id` with its lists.
 ///
-/// Called by: [`read_work_units`]; the views rewritten on `db/`.
+/// Input: `db`, the open database of the user; `id`, the id of the work unit
+/// (12).
+///
+/// Output: the work unit; `DbError::NoRow` when there is none.
+///
+/// Called by: [`read_work_units`], [`check_frozen`];
+/// `panels/logic/evaluation/answer.rs`: `apply_assessment`,
+/// `with_dependencies`; `panels/logic/evaluation/question.rs`:
+/// `assessment_question`; `panels/logic/evaluation/results.rs`:
+/// `save_results`; `panels/logic/evaluation_plan/fill.rs`:
+/// `apply_dependencies`, `apply_parameters`, `dependencies_question`,
+/// `parameters_question`; `panels/logic/evaluation_plan/work_units.rs`:
+/// `add_proof_place`, `update_work_unit_parameters`;
+/// `panels/views/evaluation/run.rs`: `prepared_question`, `written`;
+/// `panels/views/evaluation/work_units.rs`: `evaluation_unit_get`,
+/// `needs_of`; `panels/views/evaluation_plan/fill.rs`: `prepared_question`;
+/// `panels/views/evaluation_plan/work_units.rs`: `work_unit_get`.
 /// Calls: [`unit_of`], [`read_lists`].
 pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
     let connection = db.connection();
@@ -465,10 +546,25 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
     Ok(unit)
 }
 
-/// Reads every work unit of the plan `plan`, in the order of the plan.
+/// Reads every work unit of a plan with its lists, in the order of the
+/// plan, one by one (five queries each).
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
-/// Calls: `lists::read_id_list`, [`read_work_unit`].
+/// Input: `db`, the open database of the user; `plan`, the id of the plan.
+///
+/// Output: the work units; an error when the plan has more than
+/// [`MAX_WORK_UNITS`] (a database the program did not write).
+///
+/// Called by: `evaluation_plan.rs`: `create_evaluation`;
+/// `panels/logic/evaluation/inputs.rs`: `give_proof`, `inputs`;
+/// `panels/logic/evaluation/question.rs`: `question_of`;
+/// `panels/logic/evaluation/run.rs`: `units_in_order`;
+/// `panels/logic/evaluation_plan/fill.rs`: `apply_dependencies`,
+/// `dependencies_question`; `panels/logic/evaluation_plan/order.rs`:
+/// `check_order`; `panels/logic/evaluation_plan/plans.rs`: `update_plan`;
+/// `panels/logic/evaluation_plan/work_units.rs`: `add_all_work_units`,
+/// `add_work_unit`, `available_controls`;
+/// `panels/views/evaluation_plan/work_units.rs`: `work_unit_list`.
+/// Calls: `lists.rs`: `read_id_list`; [`read_work_unit`].
 pub fn read_work_units(db: &UserDatabase, plan: i64) -> Result<Vec<WorkUnit>, DbError> {
     let ids = read_id_list(
         db.connection(),
@@ -487,6 +583,11 @@ pub fn read_work_units(db: &UserDatabase, plan: i64) -> Result<Vec<WorkUnit>, Db
 
 /// The plan of the work unit `id`.
 ///
+/// Input: `connection`, the open database; `id`, the id of the work unit.
+///
+/// Output: the id of its plan; `DbError::NoRow` when there is no work unit
+/// `id`.
+///
 /// Called by: [`update_work_unit`], [`delete_work_unit`].
 fn plan_of(connection: &Connection, id: i64) -> Result<i64, DbError> {
     let mut statement = connection.prepare("SELECT evaluation_plan FROM work_units WHERE id = :id")?;
@@ -501,6 +602,10 @@ fn plan_of(connection: &Connection, id: i64) -> Result<i64, DbError> {
 /// The state of the plan `plan`, as its column holds it ("plan",
 /// "evaluation", "report").
 ///
+/// Input: `connection`, the open database; `plan`, the id of the plan.
+///
+/// Output: the state; an error of SQLite when there is no plan `plan`.
+///
 /// Called by: [`check_frozen`], [`delete_work_unit`].
 fn plan_state(connection: &Connection, plan: i64) -> Result<String, DbError> {
     Ok(connection.query_row(
@@ -510,9 +615,14 @@ fn plan_state(connection: &Connection, plan: i64) -> Result<String, DbError> {
     )?)
 }
 
-/// Whether the work units `stored` and `unit` have the same planning: every
-/// field but the results (findings, analysis, vulnerability notes, notes,
-/// quotes, verdict, author).
+/// Whether two versions of a work unit have the same planning: every field
+/// but its results (findings, analysis, vulnerability notes, notes, quotes,
+/// verdict, author).
+///
+/// Input: `stored`, the work unit as stored; `unit`, the work unit to be
+/// written.
+///
+/// Output: `true` when only the results differ.
 ///
 /// Called by: [`check_frozen`].
 fn same_planning(stored: &WorkUnit, unit: &WorkUnit) -> bool {
@@ -528,10 +638,16 @@ fn same_planning(stored: &WorkUnit, unit: &WorkUnit) -> bool {
         && stored.ai_agent == unit.ai_agent
 }
 
-/// Refuses a change of the planning of the work unit `unit.id` once its
-/// plan `plan` is no more in planning (user, 2026-10-30): in an evaluation
-/// only its results are written, so that what it was assessed against
-/// stays as it was planned.
+/// Refuses a change of the planning of a work unit once its plan is no more
+/// in planning (user, 2026-10-30): in an evaluation only its results are
+/// written, so that what it was assessed against stays as it was planned.
+///
+/// Input: `db`, the open database of the user; `plan`, the id of its plan;
+/// `unit`, the work unit to be written.
+///
+/// Output: nothing when its plan is in planning or only its results change;
+/// otherwise `DbError::Inconsistent` ("the planning of ADV_ARC.1-1 is not
+/// changed in an evaluation").
 ///
 /// Called by: [`update_work_unit`].
 /// Calls: [`plan_state`], [`read_work_unit`], [`same_planning`].
@@ -550,16 +666,29 @@ fn check_frozen(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<(), DbE
     Ok(())
 }
 
-/// Writes the work unit `unit.id` anew, with its lists, in one
-/// transaction; it stays in its plan, at its place. In an evaluation only
-/// its results may differ from what is stored.
+/// Writes the work unit `unit.id` anew with its lists, in one transaction;
+/// it stays in its plan, at its place. In an evaluation only its results
+/// may differ from what is stored.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `unit`, the work unit as it
+/// is to be kept, its `id` that of a stored one.
+///
+/// Output: nothing; an error as [`check_lists`], [`check_frozen`] and
+/// [`check_links`], or `DbError::NoRow` when there is no work unit
+/// `unit.id`; nothing is then written.
+///
+/// Called by: `panels/logic/evaluation/answer.rs`: `apply_assessment`;
+/// `panels/logic/evaluation/results.rs`: `save_results`;
+/// `panels/logic/evaluation_plan/order.rs`: `check_order`;
+/// `panels/logic/evaluation_plan/work_units.rs`: `add_proof_place`,
+/// `update_work_unit_parameters`.
 /// Calls: [`check_lists`], [`plan_of`], [`check_frozen`], [`check_links`],
-/// [`write_lists`].
+/// [`verdict_name`], [`author_name`], [`write_lists`].
 pub fn update_work_unit(db: &UserDatabase, unit: &WorkUnit) -> Result<(), DbError> {
     check_lists(unit)?;
 
+    // The work unit stays in its plan: the plan is read from the database,
+    // never taken from the caller.
     let transaction = db.connection().unchecked_transaction()?;
     let plan = plan_of(&transaction, unit.id)?;
 
@@ -597,11 +726,18 @@ pub fn update_work_unit(db: &UserDatabase, unit: &WorkUnit) -> Result<(), DbErro
     Ok(())
 }
 
-/// Removes the work unit `id` from its plan, with its lists and the
-/// dependencies of the other work units on it, in one transaction; refused
-/// unless the plan is in planning (state `plan`, user 2026-10-29).
+/// Removes a work unit from its plan, with its lists and the dependencies
+/// of the other work units on it (`ON DELETE CASCADE`), in one transaction:
+/// the one deletion of the program, only from a plan in planning (user,
+/// 2026-10-29).
 ///
-/// Called by: `panels/logic/evaluation_plan/work_units.rs` (`remove_work_unit`).
+/// Input: `db`, the open database of the user; `id`, the id of the work unit.
+///
+/// Output: nothing; an error when its plan is not in planning, or
+/// `DbError::NoRow` when there is no work unit `id`.
+///
+/// Called by: `panels/logic/evaluation_plan/work_units.rs`:
+/// `remove_work_unit`.
 /// Calls: [`plan_of`], [`plan_state`].
 pub fn delete_work_unit(db: &UserDatabase, id: i64) -> Result<(), DbError> {
     let transaction = db.connection().unchecked_transaction()?;
