@@ -11,6 +11,7 @@ A file that changes after its approval goes back to "to review", with a note of 
 
 | File | Approved | Notes |
 |---|---|---|
+| `io-master/src/db/models/lists.rs` | 2026-10-31 | The pilot of the pattern of the comments (`CLAUDE.md`, "Comments"). |
 
 ## Reviewed later by decision
 
