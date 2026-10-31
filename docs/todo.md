@@ -16,6 +16,9 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 ## Reminders
 
+- **The reading of a whole plan, measured** (2026-10-31): `read_work_units` reads each work unit apart, five queries each (about 4000 for the CEM), every query parsed anew (`prepare`). To measure first; then `prepare_cached`, or each list read once for the whole plan.
+- **`IdList`** (2026-10-31): a constant per list of ids (its table, its columns, its limit) instead of three statements of SQL at its callers (`db/models/lists.rs`); put off while the comments read well.
+
 - An optional second factor of the login.
 - An export of a plan and of the results as OSCAL documents (profile, assessment plan, assessment results), when a laboratory asks for it.
 - The program measured on a virtual machine of 8 GB RAM with the CEM (813 work units) and a large PDF.
