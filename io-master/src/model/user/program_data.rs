@@ -19,7 +19,8 @@ pub struct Installation {
 /// `settings` of the encrypted database of the user.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settings {
-    /// The integration used where no agent names one (the chat, the
-    /// check of an integration); `None` before one is made.
+    /// The default integration of the laboratory, which works with many:
+    /// proposed for a new agent (no question to the AI reads it: each
+    /// takes its integration from its agent); `None` before one is made.
     pub active_integration: Option<i64>,
 }

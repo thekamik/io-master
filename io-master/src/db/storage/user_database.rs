@@ -1,75 +1,96 @@
 //! The database of the user: the file `users/<id>.v2.db` of the data
-//! folder, where it is, made and opened; its tables made when they are
-//! missing (`models/schema.rs`, `USER_TABLES`). The layout changes freely
-//! until version 1 (CLAUDE.md): a database of an older layout is removed
-//! and made anew.
+//! folder, where it is, made and opened, its tables made when they are
+//! missing (`connection.rs`, `models/schema.rs`: `USER_TABLES`). It holds
+//! everything but the login: the plans, the agents, the API keys, the
+//! journal. The layout changes freely until version 1 (CLAUDE.md): a
+//! database of an older layout is removed and made anew.
 //!
 //! **Protection: encrypted by SQLCipher** (`encryption/sqlcipher.rs`) with
-//! the key of the user.
+//! the key of the user, unwrapped by the password at the login.
+//!
+//! ```text
+//! access.rs: keys_and_database ──create(data_dir, id, key)─► sqlcipher::create ─┐
+//! access.rs: log_in            ──open(data_dir, id, key)───► sqlcipher::open ───┴─► from ─► UserDatabase
+//! ```
 
 use std::fs::DirBuilder;
 use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use rusqlite::Connection;
 
 use crate::db::error::DbError;
 use crate::db::models::schema::USER_TABLES;
+use crate::db::storage::connection::prepare;
 use crate::db::storage::encryption::database_key::DatabaseKey;
 use crate::db::storage::encryption::sqlcipher;
-
-/// How long an operation waits for another that holds the database.
-const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 
 /// The folder of the databases of the users, in the data folder.
 const DIRECTORY: &str = "users";
 
-/// The open database of the user.
+/// The open database of the user: the connection, unlocked with the key.
+/// Held by the session while the user is logged in; every function of
+/// `db/models/` on the data of the user takes it.
 #[derive(Debug)]
 pub struct UserDatabase {
     connection: Connection,
 }
 
 impl UserDatabase {
-    /// Prepares an open connection: the tables of `USER_TABLES` that are
-    /// missing.
+    /// Makes the database of the user from a connection just opened.
+    ///
+    /// Input: `connection`, the file of the database of the user, unlocked
+    /// with its key.
+    ///
+    /// Output: the database, every table of `USER_TABLES` made; an error of
+    /// SQLite when a table cannot be made.
     ///
     /// Called by: [`create`], [`open`].
+    /// Calls: `connection.rs`: `prepare`.
     fn from(connection: Connection) -> Result<UserDatabase, DbError> {
-        // Two operations may use the database at the same time; the second
-        // waits for the first instead of failing at once.
-        connection.busy_timeout(BUSY_TIMEOUT)?;
-
-        for table in USER_TABLES {
-            connection.execute_batch(table)?;
-        }
+        prepare(&connection, &USER_TABLES)?;
 
         Ok(UserDatabase { connection })
     }
 
-    /// The connection, for the files of `db/`. **Only `db/` reaches it**:
-    /// SQL written anywhere else does not compile (CLAUDE.md, "The
-    /// database").
+    /// The connection, for SQL. **Only `db/` reaches it**
+    /// (`pub(in crate::db)`): SQL written anywhere else does not compile
+    /// (CLAUDE.md, "The database").
+    ///
+    /// Called by: every function of `models/ai/`, `models/evaluation/` and
+    /// `models/user/program_data.rs` (the settings) that runs SQL.
     pub(in crate::db) fn connection(&self) -> &Connection {
         &self.connection
     }
 }
 
-/// The path of the database of the user `user_id`.
+/// The path of the database of the user `user_id`: `<data>/users/7.v2.db`.
 ///
-/// Called by: [`create`], [`open`].
+/// Called by: [`create`], [`open`]; `panels/logic/program_start/access.rs`:
+/// `create_account` (the file removed when the first start fails half way).
 pub fn path(data_dir: &Path, user_id: i64) -> PathBuf {
     data_dir.join(DIRECTORY).join(format!("{user_id}.v2.db"))
 }
 
-/// Makes the empty database of the user `user_id`, its folder private
-/// to the user of the computer; an existing file is never overwritten.
+/// Makes the empty database of the user at the first start.
 ///
-/// Calls: `sqlcipher::create`, [`UserDatabase::from`].
+/// Input:
+/// - `data_dir`: the data folder of the program (`~/.local/share/io-master`).
+/// - `user_id`: the id of the user in the system database (1).
+/// - `key`: the new random key of the database (`panels/logic/program_start/generate_key.rs`).
+///
+/// Output: the database, open, with its tables. An error when the file
+/// exists already (never overwritten: `DbError::Exists`) or when the folder
+/// or the file cannot be made.
+///
+/// Called by: `panels/logic/program_start/access.rs`: `keys_and_database`;
+/// the tests: `test_support/database.rs`.
+/// Calls: [`path`], `sqlcipher::create`, [`UserDatabase::from`].
 pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<UserDatabase, DbError> {
     let directory = data_dir.join(DIRECTORY);
 
+    // The folder of the databases readable only by the user of the
+    // computer (0700); an existing one is kept.
     DirBuilder::new()
         .recursive(true)
         .mode(0o700)
@@ -79,9 +100,20 @@ pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<UserDa
     UserDatabase::from(sqlcipher::create(&path(data_dir, user_id), key)?)
 }
 
-/// Opens the database of the user `user_id` with its key.
+/// Opens the database of the user at the login.
 ///
-/// Calls: `sqlcipher::open`, [`UserDatabase::from`].
+/// Input:
+/// - `data_dir`: the data folder of the program.
+/// - `user_id`: the id of the user in the system database (1).
+/// - `key`: the key of the database, unwrapped by the password
+///   (`panels/logic/program_start/keys.rs`: `unwrap`).
+///
+/// Output: the database, open, with its tables. An error when the file is
+/// missing (`DbError::NotFound`) or the key does not open it
+/// (`DbError::WrongKey`).
+///
+/// Called by: `panels/logic/program_start/access.rs`: `log_in`.
+/// Calls: [`path`], `sqlcipher::open`, [`UserDatabase::from`].
 pub fn open(data_dir: &Path, user_id: i64, key: &DatabaseKey) -> Result<UserDatabase, DbError> {
     UserDatabase::from(sqlcipher::open(&path(data_dir, user_id), key)?)
 }
@@ -96,7 +128,7 @@ mod tests {
     use crate::test_support::TempDir;
 
     #[test]
-    fn a_database_is_made_beside_the_earlier_one_and_opened_again() {
+    fn a_database_is_made_once_and_opened_again() {
         let directory = TempDir::new();
         let key = DatabaseKey::fill_with(|bytes| fill_random(bytes)).unwrap();
 

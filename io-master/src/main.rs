@@ -69,6 +69,7 @@ mod db {
     // where they are, made, opened, their tables made; their encryption.
     // It knows no model, only the list of the tables (models/schema.rs).
     pub mod storage {
+        pub mod connection;
         pub mod system_database;
         pub mod user_database;
         // db/storage/encryption/: the key of the database files and

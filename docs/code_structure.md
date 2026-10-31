@@ -41,7 +41,8 @@ Two parts (user, 2026-10-31), and `error.rs` (`DbError`), the error of both:
 db/
   error.rs       DbError
   storage/       the database files: user_database.rs (users/<id>.v2.db, SQLCipher), system_database.rs
-                 (system.v2.db, not encrypted): where each is, made, opened, its tables made; encryption/
+                 (system.v2.db, not encrypted): where each is, made, opened; connection.rs: what both do
+                 with a connection just opened (the wait for a busy database, the tables); encryption/
   models/        the models in them: ai/, evaluation/, user/ (the mirror of model/), schema.rs, lists.rs
 
 models/<area>/<model>.rs ──SCHEMA──► models/schema.rs ──USER_TABLES / SYSTEM_TABLES──► storage/
