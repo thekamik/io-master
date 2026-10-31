@@ -6,7 +6,6 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 - **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then); the report itself; an assessment that keeps running when the evaluator leaves the evaluation on the page (today the page loses its progress, the work goes on).
 - **The login with the recovery code**, the change of the password and a new recovery code.
-- **`Settings::active_integration`**: has no use since every agent names its integration; to be decided with the user (removed, or kept for something else: a chat is always held with an agent, user 2026-10-30).
 
 ## Before the release
 

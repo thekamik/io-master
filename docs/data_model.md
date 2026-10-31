@@ -119,7 +119,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 - One Linux account holds one installation with one user. `User` and `Installation` are kept in the system database, which is not encrypted and holds nothing secret; the copies of the key of the encrypted database of the user are kept beside the user but belong to `db/storage/encryption/` (`architecture.md`, section 5).
 - **The keys of a user** (`UserKeys`, user 2026-10-28) are a model of their own, apart from `User`: the two copies of the one random key of the database of the user, wrapped with the password (Argon2id) and with the recovery code, each bound to the id of the user (`panels/logic/program_start/access.rs`). None of it is secret. The two copies keep the shape they had in the earlier program.
-- `Settings` names every setting as a field of its own: today the active integration (its use is open, `todo.md`).
+- `Settings` names every setting as a field of its own. **It stays** (user, 2026-10-31): the laboratory works with many integrations, and `active_integration` is the place of the default one. No question to the AI reads it (each takes its integration from its agent, or the check from the integration checked); today it only proposes the integration of a new agent.
 
 ## 6. The standards in OSCAL
 
