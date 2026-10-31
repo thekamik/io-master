@@ -88,7 +88,10 @@ pub const SCHEMA: &str = "
 const COLUMNS: &str =
     "id, name, description, state, source_plan, product, client, evaluator, started, blocked, ai_agent";
 
-/// The name of a state in the database.
+/// The name of a state in the column `state` (`PlanState::Evaluation` →
+/// "evaluation").
+///
+/// Called by: [`insert_plan`], [`update_evaluation_plan`].
 fn state_name(state: PlanState) -> &'static str {
     match state {
         PlanState::Plan => "plan",
@@ -97,8 +100,11 @@ fn state_name(state: PlanState) -> &'static str {
     }
 }
 
-/// The state of its name; a name the program never writes is
+/// The state of its name in the column `state` ("evaluation" →
+/// `PlanState::Evaluation`); a name the program never writes is
 /// `DbError::Corrupt`.
+///
+/// Called by: [`plan_of`].
 fn state_of(name: &str) -> Result<PlanState, DbError> {
     match name {
         "plan" => Ok(PlanState::Plan),
@@ -108,10 +114,17 @@ fn state_of(name: &str) -> Result<PlanState, DbError> {
     }
 }
 
-/// Refuses lists longer than their limits, a plan that knows no verdict,
-/// and a plan in planning that names a plan it was copied from.
+/// Refuses a plan that does not hold together: lists over their limits, no
+/// verdict it knows, or a plan in planning that names a plan it was copied
+/// from.
 ///
-/// Called by: [`create_evaluation_plan`], [`update_evaluation_plan`].
+/// Input: `plan`, the plan to be stored.
+///
+/// Output: nothing when it is good; otherwise `DbError::Inconsistent` naming
+/// what is wrong.
+///
+/// Called by: [`insert_plan`], [`update_evaluation_plan`].
+/// Calls: `lists.rs`: `check_length`.
 fn check_plan(plan: &EvaluationPlan) -> Result<(), DbError> {
     check_length(plan.oscal_documents.len(), MAX_STANDARDS, "standards of a plan")?;
     check_length(plan.product_documents.len(), MAX_DOCUMENTS, "documents of a plan")?;
@@ -127,11 +140,20 @@ fn check_plan(plan: &EvaluationPlan) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Writes the lists of the plan `id` anew: its standards, its documents
-/// and its verdicts. Run inside the transaction of its caller.
+/// Writes the lists of the plan `id` anew: its standards and its documents
+/// (lists of ids) and its verdicts (a list of values). Run inside the
+/// transaction of its caller. The ids of its work units are no list of this
+/// plan: each work unit names its plan ([`order_work_units`]).
 ///
-/// Called by: [`create_evaluation_plan`], [`update_evaluation_plan`].
-/// Calls: `lists::write_id_list`.
+/// Input: `connection`, the open database inside a transaction; `id`, the id
+/// of the plan; `plan`, its lists, checked by [`check_plan`].
+///
+/// Output: nothing; an error of SQLite when a standard or a document is not
+/// stored (foreign key) or comes twice (`UNIQUE`).
+///
+/// Called by: [`insert_plan`], [`update_evaluation_plan`].
+/// Calls: `lists.rs`: `write_id_list`, `position`; `work_unit.rs`:
+/// `verdict_name`.
 fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Result<(), DbError> {
     write_id_list(
         connection,
@@ -163,11 +185,17 @@ fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Resul
     Ok(())
 }
 
-/// Stores a new plan and gives its id, in one transaction with its lists.
-/// A new object has no id yet (`id` 0): the database gives it; a new plan
-/// has no work units yet: they are added one by one (`create_work_unit`).
+/// Stores a new plan in planning with its lists and gives its id, in one
+/// transaction. It has no work units yet: they are added one by one
+/// (`work_unit.rs`: `create_work_unit`).
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `plan`, the new plan, its `id`
+/// 0 (the database gives it) and no work units.
+///
+/// Output: the id of the plan (8); an error as [`insert_plan`], and nothing
+/// is then written.
+///
+/// Called by: `panels/logic/evaluation_plan/plans.rs`: `create_plan`.
 /// Calls: [`insert_plan`].
 pub fn create_evaluation_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<i64, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
@@ -179,10 +207,18 @@ pub fn create_evaluation_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Resul
 }
 
 /// Writes a new plan with its lists and gives its id, inside the
-/// transaction of its caller.
+/// transaction of its caller, so that the copy of a plan into an evaluation
+/// writes it in its own.
+///
+/// Input: `connection`, the open database inside a transaction; `plan`, the
+/// new plan, its `id` 0 and no work units.
+///
+/// Output: the id of the plan. An error when it has an id or work units,
+/// when it is refused ([`check_plan`]), when the user has [`MAX_PLANS`]
+/// already, or when what it names is not stored (foreign key).
 ///
 /// Called by: [`create_evaluation_plan`], [`create_evaluation`].
-/// Calls: [`check_plan`], [`write_lists`].
+/// Calls: [`check_plan`], [`state_name`], [`write_lists`].
 fn insert_plan(connection: &Connection, plan: &EvaluationPlan) -> Result<i64, DbError> {
     ensure!(plan.id == 0, DbError::Inconsistent("a new plan has an id already".to_owned()));
     ensure!(plan.work_units.is_empty(), DbError::Inconsistent("a new plan has work units already".to_owned()));
@@ -221,10 +257,11 @@ fn insert_plan(connection: &Connection, plan: &EvaluationPlan) -> Result<i64, Db
     Ok(id)
 }
 
-/// The model of a row of `evaluation_plans`, its lists still empty
-/// (`read_lists` fills them).
+/// The model of one row of `evaluation_plans`, its lists still empty
+/// ([`read_lists`] fills them).
 ///
 /// Called by: [`read_evaluation_plan`].
+/// Calls: [`state_of`].
 fn plan_of(row: &Row<'_>) -> Result<EvaluationPlan, DbError> {
     let state: String = row.get("state")?;
 
@@ -249,7 +286,13 @@ fn plan_of(row: &Row<'_>) -> Result<EvaluationPlan, DbError> {
 
 /// Reads the verdicts the plan `id` knows, in their order.
 ///
+/// Input: `connection`, the open database; `id`, the id of the plan.
+///
+/// Output: the verdicts (`[Pass, Fail]`); an error when there are more than
+/// `MAX_VERDICTS` (a database the program did not write).
+///
 /// Called by: [`read_lists`].
+/// Calls: `work_unit.rs`: `verdict_of`.
 fn read_verdicts(connection: &Connection, id: i64) -> Result<Vec<Verdict>, DbError> {
     let mut statement = connection
         .prepare("SELECT verdict FROM evaluation_plan_verdicts WHERE evaluation_plan = :id ORDER BY position")?;
@@ -268,11 +311,18 @@ fn read_verdicts(connection: &Connection, id: i64) -> Result<Vec<Verdict>, DbErr
     Err(DbError::Inconsistent(format!("more than {MAX_VERDICTS} verdicts of a plan in the database")))
 }
 
-/// Fills the lists of `plan` from their tables: its standards, its
-/// documents, its verdicts and the ids of its work units.
+/// Fills the lists of a plan from their tables: its standards, its
+/// documents, its verdicts, and the ids of its work units in their order
+/// (read from `work_units`, where each names its plan and its position).
+///
+/// Input: `connection`, the open database; `plan`, the plan read from its
+/// row, its lists empty.
+///
+/// Output: nothing; the lists of `plan` are filled. An error when a list is
+/// longer than its limit (a database the program did not write).
 ///
 /// Called by: [`read_evaluation_plan`].
-/// Calls: `lists::read_id_list`, [`read_verdicts`].
+/// Calls: `lists.rs`: `read_id_list`; [`read_verdicts`].
 fn read_lists(connection: &Connection, plan: &mut EvaluationPlan) -> Result<(), DbError> {
     plan.oscal_documents = read_id_list(
         connection,
@@ -298,9 +348,27 @@ fn read_lists(connection: &Connection, plan: &mut EvaluationPlan) -> Result<(), 
     Ok(())
 }
 
-/// Reads the plan `id` with its lists (its work units by their ids).
+/// Reads the plan `id` with its lists, its work units by their ids only
+/// (`work_unit.rs`: `read_work_units` reads them whole).
 ///
-/// Called by: [`read_evaluation_plans`]; the views rewritten on `db/`.
+/// Input: `db`, the open database of the user; `id`, the id of the plan (8).
+///
+/// Output: the plan; `DbError::NoRow` when there is none.
+///
+/// Called by: [`read_evaluation_plans`], [`create_evaluation`];
+/// `panels/logic/evaluation/answer.rs`: `apply_assessment`;
+/// `panels/logic/evaluation/evaluations.rs`: `evaluation_in_progress`;
+/// `panels/logic/evaluation/inputs.rs`: `inputs`;
+/// `panels/logic/evaluation/question.rs`: `assessment_question`;
+/// `panels/logic/evaluation_plan/fill.rs`: `plan_to_fill`;
+/// `panels/logic/evaluation_plan/order.rs`: `check_order`;
+/// `panels/logic/evaluation_plan/plans.rs`: `add_document_place`,
+/// `update_plan`; `panels/logic/evaluation_plan/work_units.rs`:
+/// `available_controls`, `plan_in_planning`;
+/// `panels/views/evaluation/evaluations.rs`: `evaluation_get`;
+/// `panels/views/evaluation/work_units.rs`: `evaluation_unit_get`,
+/// `evaluation_unit_list`; `panels/views/evaluation_plan/plans.rs`:
+/// `plan_get`, `plan_save`.
 /// Calls: [`plan_of`], [`read_lists`].
 pub fn read_evaluation_plan(db: &UserDatabase, id: i64) -> Result<EvaluationPlan, DbError> {
     let connection = db.connection();
@@ -316,9 +384,16 @@ pub fn read_evaluation_plan(db: &UserDatabase, id: i64) -> Result<EvaluationPlan
     Ok(plan)
 }
 
-/// Reads every plan, evaluation and report, the newest first.
+/// Reads every plan, evaluation and report with its lists, the newest
+/// first.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user.
+///
+/// Output: the plans; an error when the table holds more than [`MAX_PLANS`]
+/// (a database the program did not write).
+///
+/// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_list`;
+/// `panels/views/evaluation_plan/plans.rs`: `plan_list`.
 /// Calls: [`read_evaluation_plan`].
 pub fn read_evaluation_plans(db: &UserDatabase) -> Result<Vec<EvaluationPlan>, DbError> {
     let mut statement = db.connection().prepare("SELECT id FROM evaluation_plans ORDER BY id DESC")?;
@@ -336,11 +411,21 @@ pub fn read_evaluation_plans(db: &UserDatabase) -> Result<Vec<EvaluationPlan>, D
     Err(DbError::Inconsistent(format!("more than {MAX_PLANS} plans in the database")))
 }
 
-/// Gives the work units of the plan `id` the order of `units`, which must
-/// name every work unit of the plan once and nothing else (a work unit is
-/// removed by `delete_work_unit`). Run inside the transaction of its caller.
+/// Gives the work units of a plan a new order. Run inside the transaction
+/// of its caller.
+///
+/// Input:
+/// - `connection`: the open database inside a transaction.
+/// - `id`: the id of the plan.
+/// - `units`: the ids of its work units in their new order (`[14, 12, 13]`),
+///   every one of them once and nothing else (a work unit is taken out of a
+///   plan only by `work_unit.rs`: `delete_work_unit`).
+///
+/// Output: nothing; each work unit holds its new position. An error when
+/// `units` misses one, names one twice or one of another plan.
 ///
 /// Called by: [`update_evaluation_plan`].
+/// Calls: `lists.rs`: `read_id_list`, `position`.
 fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(), DbError> {
     let stored =
         read_id_list(connection, "SELECT id FROM work_units WHERE evaluation_plan = :owner", id, MAX_WORK_UNITS)?;
@@ -364,11 +449,23 @@ fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(
     Ok(())
 }
 
-/// Writes the plan `plan.id` anew, with its lists and the order of its
-/// work units, in one transaction.
+/// Writes the plan `plan.id` anew with its lists and the order of its work
+/// units, in one transaction.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
-/// Calls: [`check_plan`], [`write_lists`], [`order_work_units`].
+/// Input: `db`, the open database of the user; `plan`, the plan as it is to
+/// be kept, its `id` that of a stored one, `work_units` every work unit of
+/// the plan in their order.
+///
+/// Output: nothing; an error as [`check_plan`] and [`order_work_units`], or
+/// `DbError::NoRow` when there is no plan `plan.id`; nothing is then
+/// written.
+///
+/// Called by: `panels/logic/evaluation/evaluations.rs`: `change_agent`;
+/// `panels/logic/evaluation_plan/order.rs`: `check_order`;
+/// `panels/logic/evaluation_plan/plans.rs`: `add_document_place`,
+/// `update_plan`.
+/// Calls: [`check_plan`], [`state_name`], [`write_lists`],
+/// [`order_work_units`].
 pub fn update_evaluation_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), DbError> {
     check_plan(plan)?;
 
@@ -402,9 +499,15 @@ pub fn update_evaluation_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Resul
     Ok(())
 }
 
-/// The new id of `old` in the pairs (old id, new id) of a copy.
+/// The new id of an object copied with its plan.
 ///
-/// Called by: [`copied_unit`], [`create_evaluation`].
+/// Input: `pairs`, the pairs (old id, new id) of a copy (`[(12, 40), (13,
+/// 41)]`); `old`, the old id (13).
+///
+/// Output: the new id (41); an error when `old` was not copied.
+///
+/// Called by: [`all_mapped`], [`copied_unit`], [`copied_places`],
+/// [`create_evaluation`].
 fn mapped(pairs: &[(i64, i64)], old: i64) -> Result<i64, DbError> {
     for (from, to) in pairs {
         if *from == old {
@@ -415,9 +518,15 @@ fn mapped(pairs: &[(i64, i64)], old: i64) -> Result<i64, DbError> {
     Err(DbError::Inconsistent(format!("{old} is not copied with its plan")))
 }
 
-/// The new ids of `old`, in their order.
+/// The new ids of a list of objects copied with their plan, in their order.
 ///
-/// Called by: [`copied_unit`].
+/// Input: `pairs`, the pairs (old id, new id) of a copy; `old`, the old ids
+/// (`[13, 12]`).
+///
+/// Output: the new ids (`[41, 40]`); an error when one was not copied.
+///
+/// Called by: [`copied_unit`], [`create_evaluation`].
+/// Calls: [`mapped`].
 fn all_mapped(pairs: &[(i64, i64)], old: &[i64]) -> Result<Vec<i64>, DbError> {
     let mut ids = Vec::with_capacity(old.len());
 
@@ -437,11 +546,18 @@ struct Copies {
     proofs: Vec<(i64, i64)>,
 }
 
-/// The work unit `unit` of a plan as it is copied into an evaluation: no
-/// id yet, its documents, proofs and quotes named by their copies (its
-/// dependencies are given by the caller, once every copy has its id).
+/// A work unit of a plan as it is copied into an evaluation.
+///
+/// Input: `unit`, the work unit of the plan; `copies`, the pairs (old id,
+/// new id) of the places of the documents and proofs copied already.
+///
+/// Output: the work unit with no id yet, its documents, proofs and quotes
+/// named by their copies; its dependencies still the old ids
+/// ([`create_evaluation`] writes them once every work unit has its new id).
+/// An error when something it names was not copied.
 ///
 /// Called by: [`create_evaluation`].
+/// Calls: [`mapped`], [`all_mapped`].
 fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
     let mut quotes = Vec::with_capacity(unit.quotes.len());
 
@@ -466,9 +582,22 @@ fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
 
 /// Reserves anew, for the copy of a plan, the places of its documents and
 /// of the proofs of its work units: their names, without files or texts.
-/// Gives their pairs (old id, new id); the work units are copied later.
+/// Run inside the transaction of its caller.
+///
+/// Input:
+/// - `db`: the open database of the user, to read the names.
+/// - `connection`: the same database inside the transaction of the copy.
+/// - `plan`: the plan copied.
+/// - `units`: its work units, for their proofs.
+///
+/// Output: the pairs (old id, new id) of the documents and of the proofs (a
+/// proof named by several work units is copied once); the pairs of the work
+/// units still empty. An error when a document or a proof is not stored.
 ///
 /// Called by: [`create_evaluation`].
+/// Calls: `product_document.rs`: `read_product_document`,
+/// `insert_product_document`; `lab_proof.rs`: `read_lab_proof`,
+/// `insert_lab_proof`; [`mapped`].
 fn copied_places(
     db: &UserDatabase,
     connection: &Connection,
@@ -500,20 +629,37 @@ fn copied_places(
     Ok(copies)
 }
 
-/// Begins an evaluation: copies the plan `source` (in planning, neither
-/// blocked nor with a cross reference, as `panels/logic/evaluation_plan/order.rs`
-/// marks them) in one transaction, as the evaluation of `product` for
-/// `client` by `evaluator`, begun at `started`, with the agent `agent` for the
-/// work units without one of their own. The copy has its own places
-/// of the documents and proofs and its own work units, in the order of the
-/// plan: first written without their dependencies, then given them by their
-/// new ids, so that the order of the writing does not matter. The plan
-/// stays as it was. Gives the id of the evaluation.
+/// Begins an evaluation: copies a plan in one transaction, as the
+/// evaluation of one product. The copy has its own places of the documents
+/// and proofs and its own work units, in the order of the plan; the plan
+/// stays as it was.
 ///
-/// Called by: `panels/logic/evaluation/evaluations.rs` (`new_evaluation`).
-/// Calls: [`read_evaluation_plan`], `read_work_units`, [`copied_places`],
-/// [`insert_plan`], [`copied_unit`], `insert_work_unit`,
-/// `write_dependencies`.
+/// Input:
+/// - `db`: the open database of the user.
+/// - `source`: the id of the plan, in planning, neither blocked nor with a
+///   cross reference (as `panels/logic/evaluation_plan/order.rs` marks
+///   them).
+/// - `product`, `client`, `evaluator`: the identification ISO/IEC 17025
+///   asks for ("Router X 2.1", "ACME", "Anna Kowalska").
+/// - `started`: when the evaluation begins, seconds since 1970.
+/// - `agent`: the agent of the work units without one of their own, or
+///   none.
+///
+/// Output: the id of the evaluation (21). An error when the plan is not in
+/// planning, is blocked or has a cross reference, or as [`insert_plan`]
+/// and `work_unit.rs`: `insert_work_unit`; nothing is then written.
+///
+/// ```text
+/// plan 8                          evaluation 21
+///   places: ST (3)        ──►       ST (30)            copied_places
+///   work units 12, 13     ──►       40, 41             insert_work_unit, without dependencies
+///   13 depends on 12      ──►       41 depends on 40   write_dependencies, by the new ids
+/// ```
+///
+/// Called by: `panels/logic/evaluation/evaluations.rs`: `new_evaluation`.
+/// Calls: [`read_evaluation_plan`], `work_unit.rs`: `read_work_units`;
+/// [`copied_places`], [`all_mapped`], [`insert_plan`], [`copied_unit`],
+/// `work_unit.rs`: `insert_work_unit`, `write_dependencies`; [`mapped`].
 pub fn create_evaluation(
     db: &UserDatabase,
     source: i64,
@@ -536,6 +682,8 @@ pub fn create_evaluation(
         );
     }
 
+    // The places of the documents and proofs first: the work units name
+    // them by their new ids.
     let transaction = db.connection().unchecked_transaction()?;
     let mut copies = copied_places(db, &transaction, &plan, &units)?;
     let evaluation = EvaluationPlan {
@@ -554,12 +702,16 @@ pub fn create_evaluation(
     };
     let id = insert_plan(&transaction, &evaluation)?;
 
+    // Each work unit written without its dependencies: a dependency may
+    // come later in the plan and have no new id yet.
     for unit in &units {
         let alone = WorkUnit { dependencies: Vec::new(), ..copied_unit(unit, &copies)? };
 
         copies.units.push((unit.id, insert_work_unit(&transaction, id, &alone)?));
     }
 
+    // Every work unit has its new id now: the dependencies are written by
+    // them.
     for unit in &units {
         write_dependencies(
             &transaction,

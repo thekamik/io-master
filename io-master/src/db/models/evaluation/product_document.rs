@@ -47,19 +47,31 @@ pub const SCHEMA: &str = "
     );
 ";
 
-/// Stores a new document (or the place of one) and gives its id. A new
-/// object has no id yet (`id` 0): the database gives it.
+/// Stores a new document of the product, or the place of one in a plan (its
+/// name only: "ST"), and gives its id.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `document`, the new document,
+/// its `id` 0 (the database gives it).
+///
+/// Output: the id of the document (3); an error as
+/// [`insert_product_document`].
+///
+/// Called by: `panels/logic/evaluation_plan/plans.rs`: `add_document_place`.
 /// Calls: [`insert_product_document`].
 pub fn create_product_document(db: &UserDatabase, document: &ProductDocument) -> Result<i64, DbError> {
     insert_product_document(db.connection(), document)
 }
 
 /// Writes a new document and gives its id, inside the transaction of its
-/// caller (the copy of a plan writes its documents in its own).
+/// caller, so that the copy of a plan writes its documents in its own.
 ///
-/// Called by: [`create_product_document`], `evaluation_plan::create_evaluation`.
+/// Input: `connection`, the open database; `document`, the new document, its
+/// `id` 0 and a name.
+///
+/// Output: the id of the document; an error when it has an id or no name.
+///
+/// Called by: [`create_product_document`]; `evaluation_plan.rs`:
+/// `copied_places`.
 pub(in crate::db) fn insert_product_document(
     connection: &Connection,
     document: &ProductDocument,
@@ -75,9 +87,23 @@ pub(in crate::db) fn insert_product_document(
     Ok(connection.last_insert_rowid())
 }
 
-/// Reads the document `id`, with its file.
+/// Reads the document `id`, with its file once given.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `id`, the id of the document
+/// (3).
+///
+/// Output: the document (its file `None` while the place is only reserved);
+/// `DbError::NoRow` when there is none.
+///
+/// Called by: [`update_product_document`]; `evaluation_plan.rs`:
+/// `copied_places`; `panels/logic/evaluation/answer.rs`: `checked_quotes`;
+/// `panels/logic/evaluation/inputs.rs`: `give_document`, `inputs`;
+/// `panels/logic/evaluation/question.rs`: `documents_text`, `unit_json`;
+/// `panels/logic/evaluation/results.rs`: `check_quotes`;
+/// `panels/logic/evaluation/run.rs`: `missing_inputs`;
+/// `panels/logic/evaluation_plan/fill.rs`: `names_of`;
+/// `panels/views/evaluation/work_units.rs`: `needs_of`;
+/// `panels/views/evaluation_plan/plans.rs`: `plan_view`.
 pub fn read_product_document(db: &UserDatabase, id: i64) -> Result<ProductDocument, DbError> {
     let connection = db.connection();
     let mut statement =
@@ -95,11 +121,17 @@ pub fn read_product_document(db: &UserDatabase, id: i64) -> Result<ProductDocume
     })
 }
 
-/// Indexes the text `text` of the document `id`, passage by passage with
-/// their places. Run inside the transaction of its caller.
+/// Indexes the text of a document passage by passage, each with its place.
+/// Run inside the transaction of its caller.
+///
+/// Input: `connection`, the open database inside a transaction; `id`, the id
+/// of the document; `text`, its text read from its file.
+///
+/// Output: nothing; an error when the text makes more than `MAX_PASSAGES`
+/// passages.
 ///
 /// Called by: [`update_product_document`].
-/// Calls: `rag::passages`.
+/// Calls: `models/ai/rag.rs`: `passages`.
 fn write_passages(connection: &Connection, id: i64, text: &str) -> Result<(), DbError> {
     let cut = passages(text);
 
@@ -121,12 +153,24 @@ fn write_passages(connection: &Connection, id: i64, text: &str) -> Result<(), Db
 }
 
 /// Writes the document `document.id` anew: the file given in its reserved
-/// place with its text `text` (read by the caller from the file), indexed
-/// in the same transaction; or a correction of the place while it has no
-/// file (`text` `None`). Refused once the file is given: the document is
-/// then frozen.
+/// place with its text, indexed in the same transaction; or a correction of
+/// the place while it has no file. Refused once the file is given: the
+/// document is then frozen.
 ///
-/// Called by: `panels/logic/evaluation/inputs.rs` (`give_document`).
+/// Input:
+/// - `db`: the open database of the user.
+/// - `document`: the document as it is to be kept, its `id` that of a
+///   stored one, a name; `content` the file, or `None` for a correction of
+///   the place.
+/// - `text`: the text of the file, read by the caller (a PDF through
+///   Poppler); given exactly when the file is.
+///
+/// Output: nothing; an error when it has no name, when the file and the text
+/// do not come together, when the file is given already, or
+/// `DbError::NoRow` when there is no document `document.id`; nothing is
+/// then written.
+///
+/// Called by: `panels/logic/evaluation/inputs.rs`: `give_document`.
 /// Calls: [`read_product_document`], [`write_passages`].
 pub fn update_product_document(
     db: &UserDatabase,
@@ -168,12 +212,16 @@ pub fn update_product_document(
     Ok(())
 }
 
-/// The text of the document `id` as its index keeps it: its passages in
+/// Reads the text of a document as its index keeps it: its passages in
 /// their order, each on its own line (the spaces between the words of a
-/// passage are one). Empty while the file is not given.
+/// passage are one), without reading the file again.
 ///
-/// Called by: `panels/logic/evaluation/` (the question of a work unit, the
-/// check of its quotes).
+/// Input: `db`, the open database of the user; `id`, the id of the document.
+///
+/// Output: the text; empty while the file is not given.
+///
+/// Called by: `panels/logic/evaluation/answer.rs`: `checked_quotes`;
+/// `panels/logic/evaluation/question.rs`: `documents_text`.
 pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError> {
     let mut statement = db.connection().prepare(
         "SELECT text FROM product_document_passages WHERE document = :id ORDER BY CAST(position AS INTEGER)",
@@ -192,13 +240,22 @@ pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError>
     Ok(text)
 }
 
-/// The passages of the documents `documents` that fit `question` best (BM25
-/// of FTS5), at most `count` and at most `MAX_FOUND`, the best first, each
-/// with its document.
+/// Finds the passages of the documents of a work unit that fit a question
+/// best (BM25 of FTS5), the best first, when the whole documents do not fit
+/// into the context of the model.
 ///
-/// Called by: `panels/logic/evaluation/` (the question of a work unit whose
-/// documents do not fit whole).
-/// Calls: `rag::query_of`.
+/// Input:
+/// - `db`: the open database of the user.
+/// - `documents`: the ids of the documents to search.
+/// - `question`: the text to look for (the requirement of the work unit).
+/// - `count`: the most passages wanted.
+///
+/// Output: at most `count` and at most `MAX_FOUND` passages, each with its
+/// document (`[(3, "The TOE protects ...")]`); none when the question has no
+/// word to look for.
+///
+/// Called by: `panels/logic/evaluation/question.rs`: `documents_text`.
+/// Calls: `models/ai/rag.rs`: `query_of`.
 pub fn read_document_passages(
     db: &UserDatabase,
     documents: &[i64],

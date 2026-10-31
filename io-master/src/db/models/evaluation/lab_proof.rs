@@ -28,19 +28,30 @@ pub const SCHEMA: &str = "
     );
 ";
 
-/// Stores a new proof (or the place of one) and gives its id. A new
-/// object has no id yet (`id` 0): the database gives it.
+/// Stores a new proof of the laboratory, or the place of one in a plan (its
+/// name only: "results of the scan of the ports"), and gives its id.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `proof`, the new proof, its
+/// `id` 0 (the database gives it).
+///
+/// Output: the id of the proof (6); an error as [`insert_lab_proof`].
+///
+/// Called by: `panels/logic/evaluation_plan/fill.rs`: `chosen_proofs`;
+/// `panels/logic/evaluation_plan/work_units.rs`: `add_proof_place`.
 /// Calls: [`insert_lab_proof`].
 pub fn create_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<i64, DbError> {
     insert_lab_proof(db.connection(), proof)
 }
 
 /// Writes a new proof and gives its id, inside the transaction of its
-/// caller (the copy of a plan writes its proofs in its own).
+/// caller, so that the copy of a plan writes its proofs in its own.
 ///
-/// Called by: [`create_lab_proof`], `evaluation_plan::create_evaluation`.
+/// Input: `connection`, the open database; `proof`, the new proof, its `id`
+/// 0 and a name.
+///
+/// Output: the id of the proof; an error when it has an id or no name.
+///
+/// Called by: [`create_lab_proof`]; `evaluation_plan.rs`: `copied_places`.
 pub(in crate::db) fn insert_lab_proof(connection: &Connection, proof: &LabProof) -> Result<i64, DbError> {
     ensure!(proof.id == 0, DbError::Inconsistent("a new proof has an id already".to_owned()));
     ensure!(!proof.name.is_empty(), DbError::Inconsistent("a proof without a name".to_owned()));
@@ -60,9 +71,21 @@ pub(in crate::db) fn insert_lab_proof(connection: &Connection, proof: &LabProof)
     Ok(connection.last_insert_rowid())
 }
 
-/// Reads the proof `id`.
+/// Reads the proof `id`: its name, and its text with the record of its test
+/// once given.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `id`, the id of the proof (6).
+///
+/// Output: the proof (its text `None` while the place is only reserved);
+/// `DbError::NoRow` when there is none.
+///
+/// Called by: [`update_lab_proof`]; `evaluation_plan.rs`: `copied_places`;
+/// `panels/logic/evaluation/inputs.rs`: `give_proof`, `inputs`;
+/// `panels/logic/evaluation/question.rs`: `proofs_text`, `unit_json`;
+/// `panels/logic/evaluation/run.rs`: `missing_inputs`;
+/// `panels/logic/evaluation_plan/fill.rs`: `current_parameters`,
+/// `proof_named`; `panels/views/evaluation/work_units.rs`: `needs_of`;
+/// `panels/views/evaluation_plan/work_units.rs`: `work_unit_get`.
 pub fn read_lab_proof(db: &UserDatabase, id: i64) -> Result<LabProof, DbError> {
     let connection = db.connection();
     let mut statement =
@@ -82,11 +105,17 @@ pub fn read_lab_proof(db: &UserDatabase, id: i64) -> Result<LabProof, DbError> {
     })
 }
 
-/// Writes the proof `proof.id` anew: the text and the record of the test
+/// Writes the proof `proof.id` anew: its text and the record of its test
 /// given in its reserved place, or a correction of the place while it has
 /// no text. Refused once the text is given: the proof is then frozen.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `proof`, the proof as it is
+/// to be kept, its `id` that of a stored one, a name.
+///
+/// Output: nothing; an error when it has no name, when its text is given
+/// already, or `DbError::NoRow` when there is no proof `proof.id`.
+///
+/// Called by: `panels/logic/evaluation/inputs.rs`: `give_proof`.
 /// Calls: [`read_lab_proof`].
 pub fn update_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<(), DbError> {
     ensure!(!proof.name.is_empty(), DbError::Inconsistent("a proof without a name".to_owned()));

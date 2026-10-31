@@ -28,10 +28,17 @@ pub const SCHEMA: &str = "
 /// The columns every read selects, in the order of the model.
 const COLUMNS: &str = "id, title, doc, version";
 
-/// Stores a new standard and gives its id. A new object has no id yet
-/// (`id` 0): the database gives it.
+/// Stores a new standard, an OSCAL catalog checked by its caller, and gives
+/// its id.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `document`, the new standard,
+/// its `id` 0 (the database gives it): its title ("CEM 3.1 R5"), the JSON of
+/// the catalog, its version.
+///
+/// Output: the id of the standard (1); an error when the user keeps
+/// [`MAX_OSCAL_STANDARD_DOCUMENTS`] already.
+///
+/// Called by: `panels/logic/evaluation_plan/standards.rs`: `import_standard`.
 pub fn create_oscal_standard_document(db: &UserDatabase, document: &OscalStandardDocument) -> Result<i64, DbError> {
     ensure!(document.id == 0, DbError::Inconsistent("a new standard has an id already".to_owned()));
 
@@ -52,9 +59,10 @@ pub fn create_oscal_standard_document(db: &UserDatabase, document: &OscalStandar
     Ok(connection.last_insert_rowid())
 }
 
-/// The model of a row of `oscal_standard_documents`.
+/// The model of one row of `oscal_standard_documents`.
 ///
-/// Called by: [`read_oscal_standard_document`], [`read_oscal_standard_documents`].
+/// Called by: [`read_oscal_standard_document`],
+/// [`read_oscal_standard_documents`].
 fn document_of(row: &Row<'_>) -> Result<OscalStandardDocument, DbError> {
     Ok(OscalStandardDocument {
         id: row.get("id")?,
@@ -64,9 +72,18 @@ fn document_of(row: &Row<'_>) -> Result<OscalStandardDocument, DbError> {
     })
 }
 
-/// Reads the standard `id`.
+/// Reads the standard `id`, with the JSON of its catalog.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `id`, the id of the standard
+/// (1).
+///
+/// Output: the standard; `DbError::NoRow` when there is none.
+///
+/// Called by: `panels/logic/evaluation/question.rs`: `unit_json`;
+/// `panels/logic/evaluation_plan/fill.rs`: `parameters_question`;
+/// `panels/logic/evaluation_plan/work_units.rs`: `controls_of`;
+/// `panels/views/evaluation/work_units.rs`: `unit_view`;
+/// `panels/views/evaluation_plan/work_units.rs`: `standard_title`.
 /// Calls: [`document_of`].
 pub fn read_oscal_standard_document(db: &UserDatabase, id: i64) -> Result<OscalStandardDocument, DbError> {
     let connection: &Connection = db.connection();
@@ -80,9 +97,16 @@ pub fn read_oscal_standard_document(db: &UserDatabase, id: i64) -> Result<OscalS
     document_of(row)
 }
 
-/// Reads every standard, by its title.
+/// Reads every standard, with the JSON of its catalog, by their titles.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user.
+///
+/// Output: the standards, ordered by title; an error when the table holds
+/// more than [`MAX_OSCAL_STANDARD_DOCUMENTS`] (a database the program did
+/// not write).
+///
+/// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_view`;
+/// `panels/views/evaluation_plan/standards.rs`: `standard_list`.
 /// Calls: [`document_of`].
 pub fn read_oscal_standard_documents(db: &UserDatabase) -> Result<Vec<OscalStandardDocument>, DbError> {
     let connection = db.connection();
@@ -104,7 +128,13 @@ pub fn read_oscal_standard_documents(db: &UserDatabase) -> Result<Vec<OscalStand
 
 /// Writes the standard `document.id` anew.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `document`, the standard as
+/// it is to be kept, its `id` that of a stored one.
+///
+/// Output: nothing; `DbError::NoRow` when there is no standard
+/// `document.id`.
+///
+/// Called by: nothing yet (no view changes a standard once imported).
 pub fn update_oscal_standard_document(db: &UserDatabase, document: &OscalStandardDocument) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE oscal_standard_documents SET title = :title, doc = :doc, version = :version WHERE id = :id",
