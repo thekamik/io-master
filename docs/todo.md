@@ -12,7 +12,7 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 - The review of the code by the user, file by file (`review.md`); the functional hardening: a limit of failed logins, a full disk, a damaged database, the limits of the inputs measured on real documents.
 - `[lints]` in `Cargo.toml` for the rules of `CLAUDE.md` (clippy `pedantic` and the restriction lints).
 - `cargo-audit` and `cargo-deny`; the package for Debian 13.
-- Version 1: from then on the data is kept and every change of a table is a migration.
+- Version 1: from then on the data is kept and every change of a table is a migration. The names of the database files keep their `.v2` until then (user, 2026-10-31: the databases of the tests are not broken for a name).
 
 ## Reminders
 
