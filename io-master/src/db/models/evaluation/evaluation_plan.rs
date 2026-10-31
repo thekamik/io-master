@@ -26,7 +26,7 @@ use crate::db::models::evaluation::product_document::{insert_product_document, r
 use crate::db::models::evaluation::work_unit::{
     MAX_WORK_UNITS, insert_work_unit, read_work_units, verdict_name, verdict_of, write_dependencies,
 };
-use crate::db::models::lists::{check_length, position, read_ids, write_ids};
+use crate::db::models::lists::{check_length, position, read_id_list, write_id_list};
 use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::lab_proof::LabProof;
@@ -131,9 +131,9 @@ fn check_plan(plan: &EvaluationPlan) -> Result<(), DbError> {
 /// and its verdicts. Run inside the transaction of its caller.
 ///
 /// Called by: [`create_evaluation_plan`], [`update_evaluation_plan`].
-/// Calls: `lists::write_ids`.
+/// Calls: `lists::write_id_list`.
 fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Result<(), DbError> {
-    write_ids(
+    write_id_list(
         connection,
         "DELETE FROM evaluation_plan_standards WHERE evaluation_plan = :owner",
         "INSERT INTO evaluation_plan_standards (evaluation_plan, position, oscal_standard_document)
@@ -141,7 +141,7 @@ fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Resul
         id,
         &plan.oscal_documents,
     )?;
-    write_ids(
+    write_id_list(
         connection,
         "DELETE FROM evaluation_plan_documents WHERE evaluation_plan = :owner",
         "INSERT INTO evaluation_plan_documents (evaluation_plan, position, product_document)
@@ -272,23 +272,23 @@ fn read_verdicts(connection: &Connection, id: i64) -> Result<Vec<Verdict>, DbErr
 /// documents, its verdicts and the ids of its work units.
 ///
 /// Called by: [`read_evaluation_plan`].
-/// Calls: `lists::read_ids`, [`read_verdicts`].
+/// Calls: `lists::read_id_list`, [`read_verdicts`].
 fn read_lists(connection: &Connection, plan: &mut EvaluationPlan) -> Result<(), DbError> {
-    plan.oscal_documents = read_ids(
+    plan.oscal_documents = read_id_list(
         connection,
         "SELECT oscal_standard_document AS id FROM evaluation_plan_standards
          WHERE evaluation_plan = :owner ORDER BY position",
         plan.id,
         MAX_STANDARDS,
     )?;
-    plan.product_documents = read_ids(
+    plan.product_documents = read_id_list(
         connection,
         "SELECT product_document AS id FROM evaluation_plan_documents WHERE evaluation_plan = :owner ORDER BY position",
         plan.id,
         MAX_DOCUMENTS,
     )?;
     plan.possible_verdicts = read_verdicts(connection, plan.id)?;
-    plan.work_units = read_ids(
+    plan.work_units = read_id_list(
         connection,
         "SELECT id FROM work_units WHERE evaluation_plan = :owner ORDER BY position",
         plan.id,
@@ -342,7 +342,8 @@ pub fn read_evaluation_plans(db: &UserDatabase) -> Result<Vec<EvaluationPlan>, D
 ///
 /// Called by: [`update_evaluation_plan`].
 fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(), DbError> {
-    let stored = read_ids(connection, "SELECT id FROM work_units WHERE evaluation_plan = :owner", id, MAX_WORK_UNITS)?;
+    let stored =
+        read_id_list(connection, "SELECT id FROM work_units WHERE evaluation_plan = :owner", id, MAX_WORK_UNITS)?;
 
     ensure!(
         units.len() == stored.len(),

@@ -20,7 +20,13 @@
 - **Concept first, approved by the user, then code.** After each larger stage ask for the approval of the next, unless the user allowed a whole step; short mechanical phases of an approved step run without asking.
 - **Questions to the user are numbered, one short point each**, with a recommendation, so that the user answers by number (user, 2026-10-29).
 - Small steps, each tested on its own; window tests only on a private Xvfb display (`docs/handover.md`), never on the user's screen.
-- **Comments** (user, 2026-10-23): at every function, what it does, where it is called from and which functions it calls. Descriptions of the architecture are in `docs/`, as Markdown with schemes, never repeated over the code.
+- **Comments** (user, 2026-10-23; the pattern 2026-10-31): the code is written to be read by a human. At every function:
+  - the first sentence: what it does, in plain words, with an example of the domain ("the dependencies of a work unit");
+  - `Input:` each parameter, what it is and what it must be; `Output:` what comes back on success, with an example value (`[12, 15]`), and when an error comes back;
+  - `Called by:` and `Calls:` precise, each function with its file (`` `evaluation/work_unit.rs`: `read_lists` ``), never "the files of `db/`";
+  - inside, a comment over every step that is not plain from the code: why, and what it means, never a repetition of the code.
+
+  A very short function (one or two lines, `path()`) has only its first sentence and `Called by:`. Descriptions of the architecture are in `docs/`, as Markdown with schemes, never repeated over the code.
 - **Tests** live in the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }`. Help for the tests only in `src/test_support.rs` and `src/test_support/`; the test of the whole program in `src/architecture_tests.rs`.
 - `cargo fmt` (`rustfmt.toml`, 120 characters), `cargo clippy --all-targets` and `npm run check` before every commit.
 - Prefer few, well-known dependencies, versions pinned; explain each one when it is added.

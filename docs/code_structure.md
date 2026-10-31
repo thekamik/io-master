@@ -82,7 +82,7 @@ A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `c
 | Topic | Rule |
 |---|---|
 | Names | No file repeats the name of its folder. Functions are verbs; `db/` functions are `create_`, `read_`, `update_` with the name of their model. |
-| Comments | At every function: what it does, where it is called from, which functions it calls. The head of every file says what it holds; a file of `db/models/` draws its tables. |
+| Comments | At every function: what it does, `Input:`, `Output:`, `Called by:` and `Calls:` with the file of each function, a comment over every step that is not plain (`CLAUDE.md`, "Comments"). The head of every file says what it holds; a file of `db/models/` draws its tables. |
 | Rules of the code | `CLAUDE.md`, "The Power of 10" and its rules for Rust. |
 | Tests | In the file they test, its last item. Help in `src/test_support.rs` and `src/test_support/` (`database.rs`: a database with its data; `pdf.rs`: a small PDF; `ai_service.rs`: a fake AI service on 127.0.0.1 with real TLS, either protocol; `evaluation.rs`: an evaluation begun on a plan, its ST given). |
 | Checks | `cargo test`, `cargo clippy --all-targets` (clean but `dead_code` during the rebuild), `npm run check`, `cargo fmt --check`. |

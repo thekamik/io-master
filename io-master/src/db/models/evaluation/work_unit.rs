@@ -26,7 +26,7 @@
 use rusqlite::{Connection, Row, named_params};
 
 use crate::db::error::DbError;
-use crate::db::models::lists::{check_length, position, read_ids, write_ids};
+use crate::db::models::lists::{check_length, position, read_id_list, write_id_list};
 use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
 
@@ -174,19 +174,20 @@ fn check_lists(unit: &WorkUnit) -> Result<(), DbError> {
 ///
 /// Called by: [`create_work_unit`], [`update_work_unit`].
 fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<(), DbError> {
-    let standards = read_ids(
+    let standards = read_id_list(
         connection,
         "SELECT oscal_standard_document AS id FROM evaluation_plan_standards WHERE evaluation_plan = :owner",
         plan,
         crate::db::models::evaluation::evaluation_plan::MAX_STANDARDS,
     )?;
-    let documents = read_ids(
+    let documents = read_id_list(
         connection,
         "SELECT product_document AS id FROM evaluation_plan_documents WHERE evaluation_plan = :owner",
         plan,
         crate::db::models::evaluation::evaluation_plan::MAX_DOCUMENTS,
     )?;
-    let units = read_ids(connection, "SELECT id FROM work_units WHERE evaluation_plan = :owner", plan, MAX_WORK_UNITS)?;
+    let units =
+        read_id_list(connection, "SELECT id FROM work_units WHERE evaluation_plan = :owner", plan, MAX_WORK_UNITS)?;
 
     ensure!(
         standards.contains(&unit.reference),
@@ -225,23 +226,23 @@ fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<()
 /// its caller.
 ///
 /// Called by: [`create_work_unit`], [`update_work_unit`].
-/// Calls: `lists::write_ids`.
+/// Calls: `lists::write_id_list`.
 fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), DbError> {
-    write_ids(
+    write_id_list(
         connection,
         "DELETE FROM work_unit_dependencies WHERE work_unit = :owner",
         "INSERT INTO work_unit_dependencies (work_unit, position, depends_on) VALUES (:owner, :position, :id)",
         id,
         &unit.dependencies,
     )?;
-    write_ids(
+    write_id_list(
         connection,
         "DELETE FROM work_unit_documents WHERE work_unit = :owner",
         "INSERT INTO work_unit_documents (work_unit, position, product_document) VALUES (:owner, :position, :id)",
         id,
         &unit.input_product_documents,
     )?;
-    write_ids(
+    write_id_list(
         connection,
         "DELETE FROM work_unit_proofs WHERE work_unit = :owner",
         "INSERT INTO work_unit_proofs (work_unit, position, lab_proof) VALUES (:owner, :position, :id)",
@@ -272,12 +273,12 @@ fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), 
 /// dependencies once every copy has its id.
 ///
 /// Called by: `evaluation_plan.rs` (`create_evaluation`).
-/// Calls: `lists::write_ids`.
+/// Calls: `lists::write_id_list`.
 pub(in crate::db) fn write_dependencies(connection: &Connection, id: i64, dependencies: &[i64]) -> Result<(), DbError> {
     check_length(dependencies.len(), MAX_DEPENDENCIES, "dependencies of a work unit")?;
     ensure!(!dependencies.contains(&id), DbError::Inconsistent("a work unit that depends on itself".to_owned()));
 
-    write_ids(
+    write_id_list(
         connection,
         "DELETE FROM work_unit_dependencies WHERE work_unit = :owner",
         "INSERT INTO work_unit_dependencies (work_unit, position, depends_on) VALUES (:owner, :position, :id)",
@@ -417,15 +418,15 @@ fn read_quotes(connection: &Connection, id: i64) -> Result<Vec<Quote>, DbError> 
 /// Fills the lists of `unit` from their tables.
 ///
 /// Called by: [`read_work_unit`].
-/// Calls: `lists::read_ids`, [`read_quotes`].
+/// Calls: `lists::read_id_list`, [`read_quotes`].
 fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbError> {
-    unit.dependencies = read_ids(
+    unit.dependencies = read_id_list(
         connection,
         "SELECT depends_on AS id FROM work_unit_dependencies WHERE work_unit = :owner ORDER BY position",
         unit.id,
         MAX_DEPENDENCIES,
     )?;
-    unit.input_product_documents = read_ids(
+    unit.input_product_documents = read_id_list(
         connection,
         "SELECT product_document AS id FROM work_unit_documents WHERE work_unit = :owner ORDER BY position",
         unit.id,
@@ -433,7 +434,7 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
     )?;
 
     if unit.input_functional.is_some() {
-        unit.input_functional = Some(read_ids(
+        unit.input_functional = Some(read_id_list(
             connection,
             "SELECT lab_proof AS id FROM work_unit_proofs WHERE work_unit = :owner ORDER BY position",
             unit.id,
@@ -467,9 +468,9 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
 /// Reads every work unit of the plan `plan`, in the order of the plan.
 ///
 /// Called by: nothing yet (the views rewritten on `db/`).
-/// Calls: `lists::read_ids`, [`read_work_unit`].
+/// Calls: `lists::read_id_list`, [`read_work_unit`].
 pub fn read_work_units(db: &UserDatabase, plan: i64) -> Result<Vec<WorkUnit>, DbError> {
-    let ids = read_ids(
+    let ids = read_id_list(
         db.connection(),
         "SELECT id FROM work_units WHERE evaluation_plan = :owner ORDER BY position",
         plan,

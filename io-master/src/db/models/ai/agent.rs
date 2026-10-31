@@ -12,7 +12,7 @@ use rusqlite::{Connection, Row, named_params};
 
 use crate::db::error::DbError;
 use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND};
-use crate::db::models::lists::{check_length, position, read_ids, write_ids};
+use crate::db::models::lists::{check_length, position, read_id_list, write_id_list};
 use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::agent::{Agent, GlossaryEntry};
 
@@ -86,9 +86,9 @@ fn check_agent(agent: &Agent) -> Result<(), DbError> {
 /// glossary. Run inside the transaction of its caller.
 ///
 /// Called by: [`create_agent`], [`update_agent`].
-/// Calls: `lists::write_ids`.
+/// Calls: `lists::write_id_list`.
 fn write_lists(connection: &Connection, id: i64, agent: &Agent) -> Result<(), DbError> {
-    write_ids(
+    write_id_list(
         connection,
         "DELETE FROM ai_agent_knowledge_bases WHERE agent = :owner",
         "INSERT INTO ai_agent_knowledge_bases (agent, position, knowledge_base) VALUES (:owner, :position, :id)",
@@ -184,7 +184,7 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 /// Reads the agent `id` with its lists.
 ///
 /// Called by: [`read_agents`]; the views rewritten on `db/`.
-/// Calls: [`agent_of`], `lists::read_ids`, [`read_glossary`].
+/// Calls: [`agent_of`], `lists::read_id_list`, [`read_glossary`].
 pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_agents WHERE id = :id"))?;
@@ -194,7 +194,7 @@ pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     };
     let mut agent = agent_of(row)?;
 
-    agent.knowledge_bases = read_ids(
+    agent.knowledge_bases = read_id_list(
         connection,
         "SELECT knowledge_base AS id FROM ai_agent_knowledge_bases WHERE agent = :owner ORDER BY position",
         id,
