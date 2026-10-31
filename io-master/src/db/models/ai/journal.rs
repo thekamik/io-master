@@ -56,7 +56,10 @@ pub const SCHEMA: &str = "
 const COLUMNS: &str =
     "id, time, integration, model, agent, work_unit, request, answer, ending, input_tokens, output_tokens";
 
-/// The name of an ending in the database.
+/// The name of an ending in the column `ending` (`Ending::Stopped` →
+/// "stopped").
+///
+/// Called by: [`create_journal_entry`].
 fn ending_name(ending: Ending) -> &'static str {
     match ending {
         Ending::Complete => "complete",
@@ -67,8 +70,11 @@ fn ending_name(ending: Ending) -> &'static str {
     }
 }
 
-/// The ending of its name; a name the program never writes is
+/// The ending of its name in the column `ending` ("stopped" →
+/// `Ending::Stopped`); a name the program never writes is
 /// `DbError::Corrupt`.
+///
+/// Called by: [`entry_of`].
 fn ending_of(name: &str) -> Result<Ending, DbError> {
     match name {
         "complete" => Ok(Ending::Complete),
@@ -80,10 +86,20 @@ fn ending_of(name: &str) -> Result<Ending, DbError> {
     }
 }
 
-/// Writes a new entry and gives its id. A new object has no id yet (`id`
-/// 0): the database gives it.
+/// Writes a new entry of the journal of an agent, a question and its answer,
+/// and gives its id. An entry is never changed afterwards.
 ///
-/// Called by: nothing yet (the AI layer rewritten on `db/`: every question).
+/// Input:
+/// - `db`: the open database of the user.
+/// - `entry`: the new entry, its `id` 0 (the database gives it): the time,
+///   the integration and the model by their names, the agent, the work unit
+///   (or none), the request, the answer, how it ended, the tokens.
+///
+/// Output: the id of the entry (57). An error when the request is empty or
+/// the agent is not stored (foreign key).
+///
+/// Called by: `ai/ask.rs`: `write_entry`.
+/// Calls: [`ending_name`].
 pub fn create_journal_entry(db: &UserDatabase, entry: &JournalEntry) -> Result<i64, DbError> {
     ensure!(entry.id == 0, DbError::Inconsistent("a new entry has an id already".to_owned()));
     ensure!(!entry.request.is_empty(), DbError::Inconsistent("an entry without its request".to_owned()));
@@ -112,9 +128,11 @@ pub fn create_journal_entry(db: &UserDatabase, entry: &JournalEntry) -> Result<i
     Ok(connection.last_insert_rowid())
 }
 
-/// The model of a row of `ai_journal`.
+/// The model of one row of `ai_journal`.
 ///
-/// Called by: [`read_journal_entry`], [`read_journal_entries`].
+/// Called by: [`read_journal_entry`], [`read_journal_entries`],
+/// [`read_latest_journal_entry`].
+/// Calls: [`ending_of`].
 fn entry_of(row: &Row<'_>) -> Result<JournalEntry, DbError> {
     let ending: String = row.get("ending")?;
 
@@ -133,9 +151,13 @@ fn entry_of(row: &Row<'_>) -> Result<JournalEntry, DbError> {
     })
 }
 
-/// Reads the entry `id`.
+/// Reads the entry `id`, with its whole request and answer.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `id`, the id of the entry (57).
+///
+/// Output: the entry; `DbError::NoRow` when there is none.
+///
+/// Called by: `panels/views/agents/journal.rs`: `agent_journal_get`.
 /// Calls: [`entry_of`].
 pub fn read_journal_entry(db: &UserDatabase, id: i64) -> Result<JournalEntry, DbError> {
     let connection = db.connection();
@@ -148,10 +170,17 @@ pub fn read_journal_entry(db: &UserDatabase, id: i64) -> Result<JournalEntry, Db
     entry_of(row)
 }
 
-/// Reads one page of the journal of the agent `agent`, the newest first:
-/// its entries older than `before` (all with `None`), at most [`PAGE`].
+/// Reads one page of the journal of an agent, the newest first.
 ///
-/// Called by: `panels/views/agents/` (the journal of an agent).
+/// Input:
+/// - `db`: the open database of the user.
+/// - `agent`: the id of the agent.
+/// - `before`: the id of the oldest entry of the page shown, to read the
+///   next page (the entries older than it); `None` for the first page.
+///
+/// Output: at most [`PAGE`] entries; none past the last page.
+///
+/// Called by: `panels/views/agents/journal.rs`: `agent_journal_list`.
 /// Calls: [`entry_of`].
 pub fn read_journal_entries(db: &UserDatabase, agent: i64, before: Option<i64>) -> Result<Vec<JournalEntry>, DbError> {
     let connection = db.connection();
@@ -172,11 +201,15 @@ pub fn read_journal_entries(db: &UserDatabase, agent: i64, before: Option<i64>) 
     Ok(entries)
 }
 
-/// The newest entry of the journal about the work unit `work_unit`, of any
-/// agent; `None` when the AI was never asked about it.
+/// Reads the newest entry about a work unit, of any agent: the last question
+/// of the AI about it and its answer.
 ///
-/// Called by: `panels/views/evaluation/` (the question and the answer of
-/// the AI shown with a work unit).
+/// Input: `db`, the open database of the user; `work_unit`, the id of the
+/// work unit.
+///
+/// Output: the entry; `None` when the AI was never asked about it.
+///
+/// Called by: `panels/views/evaluation/work_units.rs`: `unit_view`.
 /// Calls: [`entry_of`].
 pub fn read_latest_journal_entry(db: &UserDatabase, work_unit: i64) -> Result<Option<JournalEntry>, DbError> {
     let connection = db.connection();

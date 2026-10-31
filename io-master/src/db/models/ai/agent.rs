@@ -54,10 +54,17 @@ pub const SCHEMA: &str = "
 /// The columns every read of an agent selects.
 const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_characters";
 
-/// Refuses an agent without a name, with lists or limits over theirs, or a
-/// term of its glossary without a meaning.
+/// Refuses an agent that does not hold together: lists over their limits, no
+/// name, limits of its knowledge over the program's, or a term of its
+/// glossary without its meaning.
+///
+/// Input: `agent`, the agent to be stored.
+///
+/// Output: nothing when it is good; otherwise `DbError::Inconsistent` naming
+/// what is wrong.
 ///
 /// Called by: [`create_agent`], [`update_agent`].
+/// Calls: `lists.rs`: `check_length`.
 fn check_agent(agent: &Agent) -> Result<(), DbError> {
     check_length(agent.knowledge_bases.len(), MAX_BASES, "knowledge bases of an agent")?;
     check_length(agent.glossary.len(), MAX_TERMS, "terms of a glossary")?;
@@ -82,11 +89,18 @@ fn check_agent(agent: &Agent) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Writes the lists of the agent `id` anew: its knowledge bases and its
-/// glossary. Run inside the transaction of its caller.
+/// Writes the lists of the agent `id` anew: its knowledge bases (a list of
+/// ids) and its glossary (a list of values, two columns each). Run inside
+/// the transaction of its caller.
+///
+/// Input: `connection`, the open database inside a transaction; `id`, the id
+/// of the agent; `agent`, its lists, checked by [`check_agent`].
+///
+/// Output: nothing; an error of SQLite when a knowledge base is not stored
+/// (foreign key) or comes twice (`UNIQUE`).
 ///
 /// Called by: [`create_agent`], [`update_agent`].
-/// Calls: `lists::write_id_list`.
+/// Calls: `lists.rs`: `write_id_list`, `position`.
 fn write_lists(connection: &Connection, id: i64, agent: &Agent) -> Result<(), DbError> {
     write_id_list(
         connection,
@@ -108,10 +122,20 @@ fn write_lists(connection: &Connection, id: i64, agent: &Agent) -> Result<(), Db
     Ok(())
 }
 
-/// Stores a new agent and gives its id, in one transaction with its lists.
-/// A new object has no id yet (`id` 0): the database gives it.
+/// Stores a new agent with its lists and gives its id, in one transaction.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input:
+/// - `db`: the open database of the user.
+/// - `agent`: the new agent, its `id` 0 (the database gives it): its name,
+///   its integration, its instructions, its knowledge bases, its glossary and
+///   the limits of the knowledge it gives with a question.
+///
+/// Output: the id of the agent (4). An error when it is refused
+/// ([`check_agent`]), when the user has [`MAX_AGENTS`] already, when its name
+/// is taken (`UNIQUE`), or when its integration or a knowledge base is not
+/// stored (foreign key); nothing is then written.
+///
+/// Called by: `panels/logic/agents/agent.rs`: `new_agent`.
 /// Calls: [`check_agent`], [`write_lists`].
 pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
     ensure!(agent.id == 0, DbError::Inconsistent("a new agent has an id already".to_owned()));
@@ -145,7 +169,8 @@ pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
     Ok(id)
 }
 
-/// The model of a row of `ai_agents`, its lists still empty.
+/// The model of one row of `ai_agents`, its lists still empty
+/// ([`read_agent`] fills them).
 ///
 /// Called by: [`read_agent`].
 fn agent_of(row: &Row<'_>) -> Result<Agent, DbError> {
@@ -162,6 +187,12 @@ fn agent_of(row: &Row<'_>) -> Result<Agent, DbError> {
 }
 
 /// Reads the glossary of the agent `id`, in its order.
+///
+/// Input: `connection`, the open database; `id`, the id of the agent.
+///
+/// Output: the terms with their meanings (`[GlossaryEntry { term: "TOE",
+/// meaning: "target of evaluation" }]`); an error when there are more than
+/// [`MAX_TERMS`] (a database the program did not write).
 ///
 /// Called by: [`read_agent`].
 fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>, DbError> {
@@ -183,8 +214,22 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 
 /// Reads the agent `id` with its lists.
 ///
-/// Called by: [`read_agents`]; the views rewritten on `db/`.
-/// Calls: [`agent_of`], `lists::read_id_list`, [`read_glossary`].
+/// Input: `db`, the open database of the user; `id`, the id of the agent (4).
+///
+/// Output: the agent; `DbError::NoRow` when there is none.
+///
+/// Called by: [`read_agents`]; `panels/logic/agents/agent.rs`:
+/// `agent_knowledge`, `change_agent`; `panels/logic/chat/chats.rs`:
+/// `chat_question`, `new_chat`; `panels/logic/evaluation/evaluations.rs`:
+/// `change_agent`, `new_evaluation`; `panels/logic/evaluation/question.rs`:
+/// `question_of`; `panels/logic/evaluation/run.rs`: `preview`;
+/// `panels/logic/evaluation_plan/fill.rs`: `fill_preview`, `question_of`;
+/// `panels/logic/evaluation_plan/plans.rs`: `update_plan`;
+/// `panels/logic/evaluation_plan/work_units.rs`:
+/// `update_work_unit_parameters`; `panels/views/agents/agent.rs`:
+/// `agent_get`; `panels/views/chat/chats.rs`: `agent_name`;
+/// `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`.
+/// Calls: [`agent_of`], `lists.rs`: `read_id_list`, [`read_glossary`].
 pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_agents WHERE id = :id"))?;
@@ -205,9 +250,18 @@ pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     Ok(agent)
 }
 
-/// Reads every agent, by its name.
+/// Reads every agent of the user with its lists, by their names.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user.
+///
+/// Output: the agents, ordered by name; an error when the table holds more
+/// than [`MAX_AGENTS`] (a database the program did not write).
+///
+/// Called by: `panels/logic/evaluation_plan/fill.rs`: `names_of`;
+/// `panels/views/agents/agent.rs`: `agent_list`;
+/// `panels/views/evaluation/evaluations.rs`: `evaluation_get`;
+/// `panels/views/evaluation_plan/plans.rs`: `plan_view`;
+/// `panels/views/evaluation_plan/work_units.rs`: `work_unit_get`.
 /// Calls: [`read_agent`].
 pub fn read_agents(db: &UserDatabase) -> Result<Vec<Agent>, DbError> {
     let mut statement = db.connection().prepare("SELECT id FROM ai_agents ORDER BY name")?;
@@ -225,9 +279,16 @@ pub fn read_agents(db: &UserDatabase) -> Result<Vec<Agent>, DbError> {
     Err(DbError::Inconsistent(format!("more than {MAX_AGENTS} agents in the database")))
 }
 
-/// Writes the agent `agent.id` anew, with its lists, in one transaction.
+/// Writes the agent `agent.id` anew with its lists, in one transaction.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input:
+/// - `db`: the open database of the user.
+/// - `agent`: the agent as it is to be kept, its `id` that of a stored one.
+///
+/// Output: nothing; an error as [`create_agent`], or `DbError::NoRow` when
+/// there is no agent `agent.id`; nothing is then written.
+///
+/// Called by: `panels/logic/agents/agent.rs`: `change_agent`.
 /// Calls: [`check_agent`], [`write_lists`].
 pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
     check_agent(agent)?;

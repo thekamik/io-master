@@ -34,11 +34,18 @@ pub const SCHEMA: &str = "
     );
 ";
 
-/// The origin of the address of the integration `integration`: the scheme,
-/// the host and the port its key is bound to.
+/// The origin of the address of an integration: the scheme, the host and the
+/// port its key is bound to ("https://api.openai.com/v1/chat/completions" →
+/// "https://api.openai.com").
+///
+/// Input: `db`, the open database of the user; `integration`, the id of the
+/// integration.
+///
+/// Output: the origin; an error when the integration is not stored or its
+/// address has no origin.
 ///
 /// Called by: [`write_api_key`], [`read_api_key`].
-/// Calls: `integration::read_integration`.
+/// Calls: `integration.rs`: `read_integration`.
 fn origin_of(db: &UserDatabase, integration: i64) -> Result<String, DbError> {
     let url = read_integration(db, integration)?.url;
     let parsed = Url::parse(&url).map_err(|error| DbError::Inconsistent(format!("the address {url}: {error}")))?;
@@ -49,8 +56,14 @@ fn origin_of(db: &UserDatabase, integration: i64) -> Result<String, DbError> {
     Ok(origin)
 }
 
-/// Writes the key of an integration with the origin of its address:
-/// made, or replaced.
+/// Writes the key of an integration with the origin of its present address:
+/// made when it has none, replaced when it has one.
+///
+/// Input: `db`, the open database of the user; `key`, the integration and
+/// its key, not empty and at most [`MAX_KEY`] characters.
+///
+/// Output: nothing; an error when the key is empty or too long, or the
+/// integration is not stored.
 ///
 /// Called by: [`create_api_key`], [`update_api_key`].
 /// Calls: [`origin_of`].
@@ -74,7 +87,14 @@ fn write_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
 /// Stores the key of an integration that has none, bound to its present
 /// address.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `key`, the integration and
+/// its key.
+///
+/// Output: nothing; an error when the integration has a key already, or as
+/// [`write_api_key`].
+///
+/// Called by: nothing yet (`panels/logic/settings/integrations.rs`:
+/// `set_key` gives a key with [`update_api_key`]).
 /// Calls: [`write_api_key`].
 pub fn create_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     let count: i64 = db.connection().query_row(
@@ -88,11 +108,18 @@ pub fn create_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     write_api_key(db, key)
 }
 
-/// Reads the key of the integration `integration`; `None` when it has
-/// none, or when its address has changed since the key was given (the key
-/// is not sent to another service).
+/// Reads the key of an integration, to put it into the header of a
+/// question.
 ///
-/// Called by: nothing yet (the AI layer rewritten on `db/`).
+/// Input: `db`, the open database of the user; `integration`, the id of the
+/// integration.
+///
+/// Output: the key; `None` when it has none, or when its address has
+/// changed since the key was given, so that a key is never sent to another
+/// service.
+///
+/// Called by: `ai/ask.rs`: `prepare`; `panels/logic/settings/integrations.rs`:
+/// `has_key`.
 /// Calls: [`origin_of`].
 pub fn read_api_key(db: &UserDatabase, integration: i64) -> Result<Option<ApiKey>, DbError> {
     let origin = origin_of(db, integration)?;
@@ -111,9 +138,15 @@ pub fn read_api_key(db: &UserDatabase, integration: i64) -> Result<Option<ApiKey
     Ok(Some(ApiKey { integration, key: Zeroizing::new(row.get("key")?) }))
 }
 
-/// Replaces the key of an integration, bound to its present address.
+/// Gives an integration its key, bound to its present address: a key it had
+/// is replaced, and one is made when it had none.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `key`, the integration and
+/// its key.
+///
+/// Output: nothing; an error as [`write_api_key`].
+///
+/// Called by: `panels/logic/settings/integrations.rs`: `set_key`.
 /// Calls: [`write_api_key`].
 pub fn update_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     write_api_key(db, key)

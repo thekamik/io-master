@@ -32,7 +32,10 @@ pub const SCHEMA: &str = "
 /// The columns every read selects.
 const COLUMNS: &str = "id, name, url, model, protocol, ca_certificate, context_size";
 
-/// The name of a protocol in the database.
+/// The name of a protocol in the column `protocol` (`Protocol::OpenAiChat` →
+/// "openai_chat").
+///
+/// Called by: [`create_integration`], [`update_integration`].
 fn protocol_name(protocol: Protocol) -> &'static str {
     match protocol {
         Protocol::OpenAiChat => "openai_chat",
@@ -40,8 +43,11 @@ fn protocol_name(protocol: Protocol) -> &'static str {
     }
 }
 
-/// The protocol of its name; a name the program never writes is
+/// The protocol of its name in the column `protocol` ("openai_chat" →
+/// `Protocol::OpenAiChat`); a name the program never writes is
 /// `DbError::Corrupt`.
+///
+/// Called by: [`integration_of`].
 fn protocol_of(name: &str) -> Result<Protocol, DbError> {
     match name {
         "openai_chat" => Ok(Protocol::OpenAiChat),
@@ -51,7 +57,11 @@ fn protocol_of(name: &str) -> Result<Protocol, DbError> {
 }
 
 /// Refuses an integration without a name or an address, or with no room
-/// for a question.
+/// for a question (a context of 0 tokens).
+///
+/// Input: `integration`, the integration to be stored.
+///
+/// Output: nothing when it is good; otherwise `DbError::Inconsistent`.
 ///
 /// Called by: [`create_integration`], [`update_integration`].
 fn check_integration(integration: &Integration) -> Result<(), DbError> {
@@ -62,11 +72,21 @@ fn check_integration(integration: &Integration) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Stores a new integration and gives its id. A new object has no id yet
-/// (`id` 0): the database gives it.
+/// Stores a new integration with an AI service and gives its id.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
-/// Calls: [`check_integration`].
+/// Input:
+/// - `db`: the open database of the user.
+/// - `integration`: the new integration, its `id` 0 (the database gives
+///   it): a name, the address ("https://api.openai.com/v1/chat/completions"),
+///   the model, the protocol, an optional CA certificate, the size of the
+///   context.
+///
+/// Output: the id of the integration (3). An error when it is refused
+/// ([`check_integration`]), when the user has [`MAX_INTEGRATIONS`] already,
+/// or when its name is taken (`UNIQUE`).
+///
+/// Called by: `panels/logic/settings/integrations.rs`: `add_integration`.
+/// Calls: [`check_integration`], [`protocol_name`].
 pub fn create_integration(db: &UserDatabase, integration: &Integration) -> Result<i64, DbError> {
     ensure!(integration.id == 0, DbError::Inconsistent("a new integration has an id already".to_owned()));
     check_integration(integration)?;
@@ -95,9 +115,10 @@ pub fn create_integration(db: &UserDatabase, integration: &Integration) -> Resul
     Ok(connection.last_insert_rowid())
 }
 
-/// The model of a row of `ai_integrations`.
+/// The model of one row of `ai_integrations`.
 ///
 /// Called by: [`read_integration`], [`read_integrations`].
+/// Calls: [`protocol_of`].
 fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
     let protocol: String = row.get("protocol")?;
 
@@ -112,10 +133,19 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
     })
 }
 
-/// Reads the integration `id`.
+/// Reads the integration `id`: where a question is sent and how.
 ///
-/// Called by: `api_key.rs` (the address a key is bound to); the views
-/// rewritten on `db/`.
+/// Input: `db`, the open database of the user; `id`, the id of the
+/// integration (3).
+///
+/// Output: the integration; `DbError::NoRow` when there is none.
+///
+/// Called by: `ai/ask.rs`: `prepare`; `api_key.rs`: `origin_of`;
+/// `panels/logic/agents/agent.rs`: `checked`, `new_agent`;
+/// `panels/logic/evaluation_plan/fill.rs`: `fill_preview`;
+/// `panels/logic/settings/integrations.rs`: `activate_integration`,
+/// `change_integration`, `set_key`; `panels/views/agents/agent.rs`:
+/// `agent_list`.
 /// Calls: [`integration_of`].
 pub fn read_integration(db: &UserDatabase, id: i64) -> Result<Integration, DbError> {
     let connection = db.connection();
@@ -128,9 +158,15 @@ pub fn read_integration(db: &UserDatabase, id: i64) -> Result<Integration, DbErr
     integration_of(row)
 }
 
-/// Reads every integration, by its name.
+/// Reads every integration of the user, by their names.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user.
+///
+/// Output: the integrations, ordered by name; an error when the table holds
+/// more than [`MAX_INTEGRATIONS`] (a database the program did not write).
+///
+/// Called by: `panels/views/agents/agent.rs`: `agent_get`;
+/// `panels/views/settings/integrations.rs`: `integration_list`.
 /// Calls: [`integration_of`].
 pub fn read_integrations(db: &UserDatabase) -> Result<Vec<Integration>, DbError> {
     let connection = db.connection();
@@ -150,11 +186,20 @@ pub fn read_integrations(db: &UserDatabase) -> Result<Vec<Integration>, DbError>
 }
 
 /// Writes the integration `integration.id` anew. A new address does not
-/// carry its key along: the key stays bound to the address it was given
-/// for (`api_key.rs`).
+/// carry its key along: the key stays bound to the address it was given for
+/// (`api_key.rs`), so it must be given again.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
-/// Calls: [`check_integration`].
+/// Input:
+/// - `db`: the open database of the user.
+/// - `integration`: the integration as it is to be kept, its `id` that of a
+///   stored one.
+///
+/// Output: nothing; an error when it is refused ([`check_integration`]) or
+/// its name is taken, or `DbError::NoRow` when there is no integration
+/// `integration.id`.
+///
+/// Called by: `panels/logic/settings/integrations.rs`: `change_integration`.
+/// Calls: [`check_integration`], [`protocol_name`].
 pub fn update_integration(db: &UserDatabase, integration: &Integration) -> Result<(), DbError> {
     check_integration(integration)?;
 

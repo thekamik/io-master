@@ -70,10 +70,16 @@ pub const SCHEMA: &str = "
     );
 ";
 
-/// Stores a new knowledge base and gives its id. A new object has no id
-/// yet (`id` 0): the database gives it.
+/// Stores a new knowledge base (a folder of sources, shared by the agents
+/// that name it) and gives its id.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `base`, the new base, its `id`
+/// 0 (the database gives it), its name ("CEM 3.1") and description.
+///
+/// Output: the id of the base (2). An error when it has no name, when the
+/// user has [`MAX_BASES`] already, or when its name is taken (`UNIQUE`).
+///
+/// Called by: `panels/logic/agents/knowledge.rs`: `add_base`.
 pub fn create_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<i64, DbError> {
     ensure!(base.id == 0, DbError::Inconsistent("a new knowledge base has an id already".to_owned()));
     ensure!(!base.name.is_empty(), DbError::Inconsistent("a knowledge base without a name".to_owned()));
@@ -94,7 +100,7 @@ pub fn create_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<
     Ok(connection.last_insert_rowid())
 }
 
-/// The model of a row of `knowledge_bases`.
+/// The model of one row of `knowledge_bases`.
 ///
 /// Called by: [`read_knowledge_base`], [`read_knowledge_bases`].
 fn base_of(row: &Row<'_>) -> Result<KnowledgeBase, DbError> {
@@ -103,7 +109,13 @@ fn base_of(row: &Row<'_>) -> Result<KnowledgeBase, DbError> {
 
 /// Reads the knowledge base `id`.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `id`, the id of the base (2).
+///
+/// Output: the base; `DbError::NoRow` when there is none.
+///
+/// Called by: `panels/logic/agents/agent.rs`: `checked`;
+/// `panels/logic/agents/knowledge.rs`: `add_source`, `change_base`,
+/// `search_base`.
 /// Calls: [`base_of`].
 pub fn read_knowledge_base(db: &UserDatabase, id: i64) -> Result<KnowledgeBase, DbError> {
     let connection = db.connection();
@@ -116,9 +128,16 @@ pub fn read_knowledge_base(db: &UserDatabase, id: i64) -> Result<KnowledgeBase, 
     base_of(row)
 }
 
-/// Reads every knowledge base, by its name.
+/// Reads every knowledge base, by their names.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user.
+///
+/// Output: the bases, ordered by name; an error when the table holds more
+/// than [`MAX_BASES`] (a database the program did not write).
+///
+/// Called by: `panels/logic/agents/knowledge.rs`: `add_base`;
+/// `panels/views/agents/agent.rs`: `agent_get`;
+/// `panels/views/agents/knowledge.rs`: `knowledge_base_list`.
 /// Calls: [`base_of`].
 pub fn read_knowledge_bases(db: &UserDatabase) -> Result<Vec<KnowledgeBase>, DbError> {
     let connection = db.connection();
@@ -137,9 +156,16 @@ pub fn read_knowledge_bases(db: &UserDatabase) -> Result<Vec<KnowledgeBase>, DbE
     Err(DbError::Inconsistent(format!("more than {MAX_BASES} knowledge bases in the database")))
 }
 
-/// Writes the knowledge base `base.id` anew.
+/// Writes the name and the description of the knowledge base `base.id`
+/// anew.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `base`, the base as it is to
+/// be kept, its `id` that of a stored one.
+///
+/// Output: nothing; an error when it has no name or its name is taken, or
+/// `DbError::NoRow` when there is no base `base.id`.
+///
+/// Called by: `panels/logic/agents/knowledge.rs`: `change_base`.
 pub fn update_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), DbError> {
     ensure!(!base.name.is_empty(), DbError::Inconsistent("a knowledge base without a name".to_owned()));
 
@@ -153,13 +179,20 @@ pub fn update_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<
     Ok(())
 }
 
-/// Cuts `text` into passages of at most [`PASSAGE_CHARS`] characters: whole
-/// paragraphs (parted by an empty line) joined while they fit, a longer
-/// paragraph cut between words, a word longer than a passage cut where it
-/// reaches the limit. The spaces between the words become one.
+/// Cuts a text into passages of at most [`PASSAGE_CHARS`] characters, for the
+/// index: whole paragraphs (parted by an empty line) joined while they fit,
+/// a longer paragraph cut between words, a word longer than a passage cut
+/// where it reaches the limit. The spaces between the words become one.
 ///
-/// Called by: [`write_passages`]; `db/models/evaluation/product_document.rs` (the
-/// index of a document of the product).
+/// Input: `text`, the text of a source or of a document of the product, its
+/// length checked by its caller.
+///
+/// Output: the passages in the order of the text (a text of 4000 characters
+/// in paragraphs of 1000 → `["<paragraphs 1 and 2>", "<paragraph 3>",
+/// "<paragraph 4>"]`); none for an empty text.
+///
+/// Called by: [`write_passages`]; `evaluation/product_document.rs`:
+/// `write_passages` (the index of a document of the product).
 /// Calls: [`push_passage`].
 pub(in crate::db) fn passages(text: &str) -> Vec<String> {
     let mut passages = Vec::new();
@@ -203,8 +236,14 @@ pub(in crate::db) fn passages(text: &str) -> Vec<String> {
     passages
 }
 
-/// Closes the passage `current`: adds it to `passages` without the spaces
-/// around it, when it holds anything, and empties it.
+/// Closes the passage being made: adds it to `passages` without the spaces
+/// around it, when it holds anything, and empties it for the next.
+///
+/// Input: `passages`, the passages closed so far; `current`, the passage
+/// being made.
+///
+/// Output: nothing; `passages` holds one more passage unless `current` was
+/// empty, and `current` is empty.
 ///
 /// Called by: [`passages`].
 fn push_passage(passages: &mut Vec<String>, current: &mut String) {
@@ -217,9 +256,15 @@ fn push_passage(passages: &mut Vec<String>, current: &mut String) {
     current.clear();
 }
 
-/// Makes the index of the source `id` anew from its text. Run inside the
-/// transaction of its caller; the rows of the index are no data of their
-/// own, so their replacement is no deletion of a model.
+/// Makes the index of the source `id` anew from its text: its old passages
+/// removed, the new ones inserted. Run inside the transaction of its caller;
+/// the rows of the index are no data of their own, made again from the
+/// text, so their replacement is no deletion of a model.
+///
+/// Input: `connection`, the open database inside a transaction; `id`, the id
+/// of the source; `text`, its text.
+///
+/// Output: nothing; an error of SQLite when a statement fails.
 ///
 /// Called by: [`create_source`], [`update_source`].
 /// Calls: [`passages`].
@@ -236,7 +281,12 @@ fn write_passages(connection: &Connection, id: i64, text: &str) -> Result<(), Db
     Ok(())
 }
 
-/// Refuses a source without a name, or with a text over its limit.
+/// Refuses a source without a name, or with a text longer than
+/// [`MAX_SOURCE_CHARS`].
+///
+/// Input: `source`, the source to be stored.
+///
+/// Output: nothing when it is good; otherwise `DbError::Inconsistent`.
 ///
 /// Called by: [`create_source`], [`update_source`].
 fn check_source(source: &Source) -> Result<(), DbError> {
@@ -249,11 +299,18 @@ fn check_source(source: &Source) -> Result<(), DbError> {
     Ok(())
 }
 
-/// Stores a new source of its knowledge base with the index of its
-/// passages, in one transaction, and gives its id. A new object has no id
-/// yet (`id` 0): the database gives it.
+/// Stores a new source of a knowledge base (one text: an earlier
+/// evaluation, a note, a standard) with the index of its passages, in one
+/// transaction, and gives its id.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `source`, the new source, its
+/// `id` 0 (the database gives it), its knowledge base, its name and its text.
+///
+/// Output: the id of the source (9). An error when it is refused
+/// ([`check_source`]), when its base has [`MAX_SOURCES`] already, or when the
+/// base is not stored (foreign key); nothing is then written.
+///
+/// Called by: `panels/logic/agents/knowledge.rs`: `add_source`.
 /// Calls: [`check_source`], [`write_passages`].
 pub fn create_source(db: &UserDatabase, source: &Source) -> Result<i64, DbError> {
     ensure!(source.id == 0, DbError::Inconsistent("a new source has an id already".to_owned()));
@@ -284,7 +341,7 @@ pub fn create_source(db: &UserDatabase, source: &Source) -> Result<i64, DbError>
     Ok(id)
 }
 
-/// The model of a row of `knowledge_sources`.
+/// The model of one row of `knowledge_sources`.
 ///
 /// Called by: [`read_source`], [`read_sources`].
 fn source_of(row: &Row<'_>) -> Result<Source, DbError> {
@@ -298,7 +355,12 @@ fn source_of(row: &Row<'_>) -> Result<Source, DbError> {
 
 /// Reads the source `id`, with its text.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `id`, the id of the source (9).
+///
+/// Output: the source; `DbError::NoRow` when there is none.
+///
+/// Called by: `panels/logic/agents/knowledge.rs`: `rename_source`,
+/// `replace_source_text`.
 /// Calls: [`source_of`].
 pub fn read_source(db: &UserDatabase, id: i64) -> Result<Source, DbError> {
     let connection = db.connection();
@@ -312,9 +374,18 @@ pub fn read_source(db: &UserDatabase, id: i64) -> Result<Source, DbError> {
     source_of(row)
 }
 
-/// Reads every source of the knowledge base `base`, by its name.
+/// Reads every source of a knowledge base, with their texts, by their
+/// names.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `base`, the id of the
+/// knowledge base.
+///
+/// Output: the sources, ordered by name; an error when the base has more
+/// than [`MAX_SOURCES`] (a database the program did not write).
+///
+/// Called by: `panels/logic/agents/knowledge.rs`: `add_source`;
+/// `panels/views/agents/knowledge.rs`: `knowledge_base_list`,
+/// `knowledge_source_list`.
 /// Calls: [`source_of`].
 pub fn read_sources(db: &UserDatabase, base: i64) -> Result<Vec<Source>, DbError> {
     let connection = db.connection();
@@ -335,10 +406,17 @@ pub fn read_sources(db: &UserDatabase, base: i64) -> Result<Vec<Source>, DbError
     Err(DbError::Inconsistent(format!("more than {MAX_SOURCES} sources of a knowledge base in the database")))
 }
 
-/// Writes the source `source.id` anew, with the index of its passages, in
-/// one transaction.
+/// Writes the source `source.id` anew (its base, its name, its text) with
+/// the index of its passages, in one transaction.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user; `source`, the source as it is
+/// to be kept, its `id` that of a stored one.
+///
+/// Output: nothing; an error as [`create_source`], or `DbError::NoRow` when
+/// there is no source `source.id`; nothing is then written.
+///
+/// Called by: `panels/logic/agents/knowledge.rs`: `rename_source`,
+/// `replace_source_text`.
 /// Calls: [`check_source`], [`write_passages`].
 pub fn update_source(db: &UserDatabase, source: &Source) -> Result<(), DbError> {
     check_source(source)?;
@@ -358,11 +436,15 @@ pub fn update_source(db: &UserDatabase, source: &Source) -> Result<(), DbError> 
 }
 
 /// The query of FTS5 for a question: its words but the [`STOP_WORDS`], each
-/// quoted (so that no word is read as an operator of FTS5), any of them;
+/// quoted (so that no word is read as an operator of FTS5), any of them.
+///
+/// Input: `question`, the text to look for ("What is the TSF of the TOE?").
+///
+/// Output: the query (`"\"TSF\" OR \"TOE\""`), at most `MAX_WORDS` words;
 /// `None` for a question without such words.
 ///
-/// Called by: [`read_passages`]; `db/models/evaluation/product_document.rs` (the
-/// search in the documents of the product).
+/// Called by: [`read_passages`]; `evaluation/product_document.rs`:
+/// `read_document_passages` (the search in the documents of the product).
 pub(in crate::db) fn query_of(question: &str) -> Option<String> {
     let mut words = Vec::new();
 
@@ -377,11 +459,21 @@ pub(in crate::db) fn query_of(question: &str) -> Option<String> {
     if words.is_empty() { None } else { Some(words.join(" OR ")) }
 }
 
-/// The passages of the sources of the knowledge bases `bases` that fit the
-/// `question` best (BM25 of FTS5), at most `count` and at most
-/// [`MAX_FOUND`], the best first.
+/// Finds the passages of the knowledge bases of an agent that fit a
+/// question best (BM25 of FTS5), the best first.
 ///
-/// Called by: nothing yet (the AI layer rewritten on `db/`).
+/// Input:
+/// - `db`: the open database of the user.
+/// - `bases`: the ids of the knowledge bases to search, at most
+///   [`MAX_BASES`].
+/// - `question`: the text to look for.
+/// - `count`: the most passages wanted (the limit of the agent).
+///
+/// Output: at most `count` and at most [`MAX_FOUND`] passages; none when the
+/// question has no word to look for. An error when there are too many bases.
+///
+/// Called by: `panels/logic/agents/agent.rs`: `agent_knowledge`;
+/// `panels/logic/agents/knowledge.rs`: `search_base`.
 /// Calls: [`query_of`].
 pub fn read_passages(db: &UserDatabase, bases: &[i64], question: &str, count: usize) -> Result<Vec<String>, DbError> {
     ensure!(bases.len() <= MAX_BASES, DbError::Inconsistent(format!("more than {MAX_BASES} knowledge bases")));

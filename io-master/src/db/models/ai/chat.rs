@@ -40,7 +40,9 @@ pub const SCHEMA: &str = "
     );
 ";
 
-/// The name of a speaker in the database.
+/// The name of a speaker in the column `speaker` (`Speaker::Ai` → "ai").
+///
+/// Called by: [`insert_message`].
 fn speaker_name(speaker: Speaker) -> &'static str {
     match speaker {
         Speaker::User => "user",
@@ -48,8 +50,10 @@ fn speaker_name(speaker: Speaker) -> &'static str {
     }
 }
 
-/// The speaker of its name; a name the program never writes is
-/// `DbError::Corrupt`.
+/// The speaker of its name in the column `speaker` ("ai" → `Speaker::Ai`); a
+/// name the program never writes is `DbError::Corrupt`.
+///
+/// Called by: [`read_messages`].
 fn speaker_of(name: &str) -> Result<Speaker, DbError> {
     match name {
         "user" => Ok(Speaker::User),
@@ -58,10 +62,17 @@ fn speaker_of(name: &str) -> Result<Speaker, DbError> {
     }
 }
 
-/// Adds `message` as the last of the chat `chat`, inside the transaction
-/// of its caller.
+/// Adds a message as the last of its chat, inside the transaction of its
+/// caller. Its position is the number of the messages before it.
+///
+/// Input: `connection`, the open database; `chat`, the id of the chat;
+/// `message`, who speaks, the text and the time.
+///
+/// Output: nothing; an error when the chat has [`MAX_MESSAGES`] already, or
+/// is not stored (foreign key).
 ///
 /// Called by: [`create_chat`], [`create_message`].
+/// Calls: [`speaker_name`].
 fn insert_message(connection: &Connection, chat: i64, message: &Message) -> Result<(), DbError> {
     let count: i64 = connection.query_row(
         "SELECT COUNT(*) FROM chat_messages WHERE chat = :chat",
@@ -88,10 +99,20 @@ fn insert_message(connection: &Connection, chat: i64, message: &Message) -> Resu
     Ok(())
 }
 
-/// Stores a new chat with its first messages, in one transaction, and gives
-/// its id. A new object has no id yet (`id` 0): the database gives it.
+/// Stores a new chat with its first messages and gives its id, in one
+/// transaction.
 ///
-/// Called by: `panels/logic/chat/chats.rs` (`new_chat`).
+/// Input:
+/// - `db`: the open database of the user.
+/// - `chat`: the new chat, its `id` 0 (the database gives it): its title, its
+///   agent, the work unit it is about (or none), its messages.
+///
+/// Output: the id of the chat (12). An error when it has more than
+/// [`MAX_MESSAGES`] messages, when the user has [`MAX_CHATS`] already, or
+/// when its agent or work unit is not stored (foreign key); nothing is then
+/// written.
+///
+/// Called by: `panels/logic/chat/chats.rs`: `new_chat`.
 /// Calls: [`insert_message`].
 pub fn create_chat(db: &UserDatabase, chat: &Chat) -> Result<i64, DbError> {
     ensure!(chat.id == 0, DbError::Inconsistent("a new chat has an id already".to_owned()));
@@ -121,9 +142,16 @@ pub fn create_chat(db: &UserDatabase, chat: &Chat) -> Result<i64, DbError> {
     Ok(id)
 }
 
-/// Adds `message` as the last of the chat `chat`.
+/// Adds a message as the last of the chat `chat`: the question of the user
+/// or the answer of the AI.
 ///
-/// Called by: `panels/logic/chat/chats.rs` (`add_question`, `add_answer`).
+/// Input: `db`, the open database of the user; `chat`, the id of the chat;
+/// `message`, not empty.
+///
+/// Output: nothing; an error when the message is empty, or as
+/// [`insert_message`].
+///
+/// Called by: `panels/logic/chat/chats.rs`: `add_question`, `add_answer`.
 /// Calls: [`insert_message`].
 pub fn create_message(db: &UserDatabase, chat: i64, message: &Message) -> Result<(), DbError> {
     ensure!(!message.text.is_empty(), DbError::Inconsistent("an empty message".to_owned()));
@@ -133,7 +161,13 @@ pub fn create_message(db: &UserDatabase, chat: i64, message: &Message) -> Result
 
 /// Reads the messages of the chat `id`, from the first.
 ///
+/// Input: `connection`, the open database; `id`, the id of the chat.
+///
+/// Output: the messages in their order; an error when there are more than
+/// [`MAX_MESSAGES`] (a database the program did not write).
+///
 /// Called by: [`read_chat`].
+/// Calls: [`speaker_of`].
 fn read_messages(connection: &Connection, id: i64) -> Result<Vec<Message>, DbError> {
     let mut statement =
         connection.prepare("SELECT speaker, text, time FROM chat_messages WHERE chat = :id ORDER BY position")?;
@@ -152,7 +186,8 @@ fn read_messages(connection: &Connection, id: i64) -> Result<Vec<Message>, DbErr
     Err(DbError::Inconsistent(format!("more than {MAX_MESSAGES} messages of a chat in the database")))
 }
 
-/// The model of a row of `chats`, its messages still empty.
+/// The model of one row of `chats`, its messages still empty ([`read_chat`]
+/// fills them).
 ///
 /// Called by: [`read_chat`].
 fn chat_of(row: &Row<'_>) -> Result<Chat, DbError> {
@@ -167,8 +202,12 @@ fn chat_of(row: &Row<'_>) -> Result<Chat, DbError> {
 
 /// Reads the chat `id` with its messages.
 ///
-/// Called by: [`read_chats`]; `panels/logic/chat/chats.rs` (`rename_chat`,
-/// `chat_question`).
+/// Input: `db`, the open database of the user; `id`, the id of the chat (12).
+///
+/// Output: the chat; `DbError::NoRow` when there is none.
+///
+/// Called by: [`read_chats`]; `panels/logic/chat/chats.rs`: `chat_question`,
+/// `rename_chat`; `panels/views/chat/chats.rs`: `chat_get`.
 /// Calls: [`chat_of`], [`read_messages`].
 pub fn read_chat(db: &UserDatabase, id: i64) -> Result<Chat, DbError> {
     let connection = db.connection();
@@ -186,7 +225,12 @@ pub fn read_chat(db: &UserDatabase, id: i64) -> Result<Chat, DbError> {
 
 /// Reads every chat with its messages, the newest first.
 ///
-/// Called by: nothing yet (the views rewritten on `db/`).
+/// Input: `db`, the open database of the user.
+///
+/// Output: the chats; an error when the table holds more than [`MAX_CHATS`]
+/// (a database the program did not write).
+///
+/// Called by: `panels/views/chat/chats.rs`: `chat_list`.
 /// Calls: [`read_chat`].
 pub fn read_chats(db: &UserDatabase) -> Result<Vec<Chat>, DbError> {
     let mut statement = db.connection().prepare("SELECT id FROM chats ORDER BY id DESC")?;
@@ -207,7 +251,13 @@ pub fn read_chats(db: &UserDatabase) -> Result<Vec<Chat>, DbError> {
 /// Writes the title, the agent and the work unit of the chat `chat.id`
 /// anew; its messages stay as they were (a message is never changed).
 ///
-/// Called by: `panels/logic/chat/chats.rs` (`rename_chat`).
+/// Input: `db`, the open database of the user; `chat`, the chat as it is to
+/// be kept, its `id` that of a stored one.
+///
+/// Output: nothing; an error when its agent or work unit is not stored, or
+/// `DbError::NoRow` when there is no chat `chat.id`.
+///
+/// Called by: `panels/logic/chat/chats.rs`: `rename_chat`.
 pub fn update_chat(db: &UserDatabase, chat: &Chat) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE chats SET title = :title, agent = :agent, work_unit = :work_unit WHERE id = :id",
