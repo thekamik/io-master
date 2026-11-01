@@ -21,7 +21,7 @@
 //!
 //! Every question also carries the instructions of the agent, its task and
 //! the knowledge of the agent that fits the work unit; it is asked through
-//! `ai/ask/` and kept in the journal of the agent. **A dependency that
+//! the integration of the agent and kept in the journal of the agent. **A dependency that
 //! closes a cycle is written as proposed** (user, 2026-10-29): the planner
 //! decides; the work units of the cycle are marked `cross_reference`, the
 //! plan `blocked`, until the planner corrects them.
@@ -30,8 +30,8 @@ use std::collections::HashMap;
 
 use serde_json::{Value, json};
 
-use crate::ai::agent::knowledge::agent_knowledge;
-use crate::ai::ask::question::Question;
+use crate::ai::models::ai::agent::agent_question;
+use crate::ai::models::ai::integration::question::Question;
 use crate::db::models::ai::agent::{read_agent, read_agents};
 use crate::db::models::ai::integration::read_integration;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
@@ -215,7 +215,7 @@ fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, PlanError
 /// knowledge that fits the work unit, and the text `text` of the question.
 ///
 /// Called by: [`parameters_question`], [`dependencies_question`].
-/// Calls: [`plan_to_fill`], `read_agent`, `agent_knowledge`.
+/// Calls: [`plan_to_fill`], `ai/models/ai/agent.rs`: `agent_question`.
 fn question_of(db: &UserDatabase, plan: i64, unit: &WorkUnit, task: &str, text: String) -> Result<Question, PlanError> {
     let (stored, agent_id) = plan_to_fill(db, plan)?;
 
@@ -224,22 +224,10 @@ fn question_of(db: &UserDatabase, plan: i64, unit: &WorkUnit, task: &str, text: 
         PlanError::Refused("the work unit is not one of the plan".to_owned())
     );
 
-    let agent = read_agent(db, agent_id)?;
-    let knowledge = agent_knowledge(db, agent_id, &format!("{} {}", unit.label, unit.requirement))?;
-    let mut system = format!("{}\n\n{task}", agent.instructions);
+    let search = format!("{} {}", unit.label, unit.requirement);
+    let messages = vec![Message { speaker: Speaker::User, text, time: 0 }];
 
-    if !knowledge.is_empty() {
-        system.push_str("\n\nYour knowledge for this work unit:\n\n");
-        system.push_str(&knowledge.join("\n\n---\n\n"));
-    }
-
-    Ok(Question {
-        integration: agent.integration,
-        agent: Some(agent_id),
-        work_unit: Some(unit.id),
-        system,
-        messages: vec![Message { speaker: Speaker::User, text, time: 0 }],
-    })
+    Ok(agent_question(db, agent_id, task, &search, Some(unit.id), messages)?)
 }
 
 /// The parameters but the dependencies of the work unit `unit` now, as the

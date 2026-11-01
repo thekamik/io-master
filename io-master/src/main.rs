@@ -114,37 +114,41 @@ mod db {
     }
 }
 
-// ai/: the core of the program that talks with the AI (user, 2026-11-01),
-// in layers from the top down: agent/ uses ask/, ask/ uses provider/
-// (checked by architecture_tests.rs); error.rs is the error of all of them.
+// ai/: the core of the program that talks with the AI (user, 2026-11-01):
+// the functions of the AI on the models, in a mirror of model/, as db/models/
+// holds their functions in the database; error.rs is the error of all of them.
 mod ai {
     pub mod error;
-    // ai/agent/: the agent, a layer of knowledge over the model of an
-    // integration: the knowledge it gives with a question.
-    pub mod agent {
-        pub mod knowledge;
-    }
-    // ai/ask/: the only way to an AI service (user, 2026-10-29), in three
-    // steps: a question prepared from the integration and its key, sent
-    // without the database, its answer written into the journal of its
-    // agent before it is given out.
-    pub mod ask {
-        pub mod journal;
-        pub mod question;
-        pub mod sending;
-    }
-    // ai/provider/: the API of a provider, what goes over the network: the
-    // address checked, the connection over TLS 1.3, the key masked, the
-    // body and the stream of each protocol.
-    pub mod provider {
-        pub mod address;
-        pub mod anthropic;
-        pub mod connection;
-        pub mod masking;
-        pub mod openai;
-        pub mod reading;
-        pub mod sse;
-        pub mod turns;
+    pub mod models {
+        // ai/models/ai/: the AI on the models of model/ai/.
+        pub mod ai {
+            // The agent: the knowledge it gives with a question, and the
+            // question it asks with it.
+            pub mod agent;
+            // The API key: masked in every text taken from an answer.
+            pub mod api_key;
+            // The chat: a question shortened from its oldest messages until
+            // it fits.
+            pub mod chat;
+            // The journal: the answer written into the journal of its agent
+            // before it is given out (record).
+            pub mod journal;
+            // ai/models/ai/integration/: the integration, the service that
+            // answers: the question prepared and sent, the address checked,
+            // the connection over TLS 1.3, the body and the stream of each
+            // protocol.
+            pub mod integration {
+                pub mod address;
+                pub mod anthropic;
+                pub mod connection;
+                pub mod openai;
+                pub mod question;
+                pub mod reading;
+                pub mod sending;
+                pub mod sse;
+                pub mod turns;
+            }
+        }
     }
 }
 

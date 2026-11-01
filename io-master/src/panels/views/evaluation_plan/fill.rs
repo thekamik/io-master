@@ -24,9 +24,9 @@ use serde::Serialize;
 use tauri::State;
 use tauri::ipc::Channel;
 
-use crate::ai::ask::journal::record;
-use crate::ai::ask::question::{Prepared, prepare};
-use crate::ai::ask::sending::{Sent, send_whole};
+use crate::ai::models::ai::integration::question::{Prepared, prepare};
+use crate::ai::models::ai::integration::sending::{Sent, send_whole};
+use crate::ai::models::ai::journal::record;
 use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::db::storage::user_database::UserDatabase;
 use crate::panels::logic::evaluation_plan::error::PlanError;
@@ -92,7 +92,7 @@ enum Outcome {
 ///
 /// Called by: [`fill_step`].
 /// Calls: `read_work_unit`, `parameters_question`, `dependencies_question`,
-/// `ai/ask/question.rs`: `prepare`.
+/// `ai/models/ai/integration/question.rs`: `prepare`.
 fn prepared_question(
     session: &Session,
     task: Task,
@@ -131,7 +131,7 @@ fn applied(db: &UserDatabase, task: Task, plan: i64, unit: i64, answer: &str) ->
 /// into the work unit `unit`.
 ///
 /// Called by: [`fill_step`].
-/// Calls: `ai/ask/journal.rs`: `record`, [`applied`].
+/// Calls: `ai/models/ai/journal.rs`: `record`, [`applied`].
 fn written(session: &Session, step: (Task, i64, i64), prepared: Prepared, sent: Sent) -> Result<Outcome, ViewError> {
     let (task, plan, unit) = step;
     let opened = session.lock()?;
@@ -153,7 +153,7 @@ fn written(session: &Session, step: (Task, i64, i64), prepared: Prepared, sent: 
 /// it again.
 ///
 /// Called by: [`fill`].
-/// Calls: [`prepared_question`], `ai/ask/sending.rs`: `send_whole`, [`written`].
+/// Calls: [`prepared_question`], `ai/models/ai/integration/sending.rs`: `send_whole`, [`written`].
 async fn fill_step(session: &Session, task: Task, plan: i64, unit: i64) -> Result<(String, Outcome), ViewError> {
     let (label, prepared) = prepared_question(session, task, plan, unit)?;
     let prepared = match prepared {

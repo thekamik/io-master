@@ -11,7 +11,7 @@ io-master/src/
   security/       random bytes from the kernel; no memory dumps of the process
   pdf/            pdfinfo and pdftotext of Poppler, the PDF on their standard input
   db/             storage/: the two database files and their encryption; models/: create, read, update of the models
-  ai/             the AI: agent/ (the knowledge of an agent), ask/ (the only way to an AI service), provider/ (the API of a provider)
+  ai/             the AI on the models (models/, a mirror of model/): the integration, the journal, the agent, the chat
   session/        the data folder; the user logged in with their open database; a long work and its stop
   panels/logic/   the work behind each panel, given the open database
   panels/views/   the commands the page calls
@@ -24,12 +24,12 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 |---|---|
 | `model`, `security`, `pdf` | nothing of the program |
 | `db` | `model`, `security` (inside: `models/` uses `storage/`; `storage/` uses only `models/schema.rs`) |
-| `ai` | `db`, `model` (inside: `agent/` uses `ask/`, `ask/` uses `provider/`; `provider/` uses no database) |
+| `ai` | `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
 | `session` | `db`, `model` |
-| `panels::logic` | `ai` (but `provider/`, of which only `address.rs`), `db`, `model`, `security`, `pdf` |
-| `panels::views` | `panels::logic`, `ai` (but `provider/`), `db`, `model`, `session` |
+| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `db`, `model`, `security`, `pdf` |
+| `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `db`, `model`, `session` |
 
-`panels/views/` uses `ai/ask/` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only (`evaluation` uses `evaluation_plan` for the order of the work).
+`panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only (`evaluation` uses `evaluation_plan` for the order of the work).
 
 ## 2. The folders
 
@@ -53,27 +53,31 @@ storage/ ──UserDatabase / SystemDatabase (the connection, seen only in db/)�
 
 ### `ai/`
 
-The core of the program that talks with the AI (user, 2026-11-01: a core part gets a folder of its own, as `db/` has; `panels/logic/` holds only what a panel shows). Three parts in layers, and `error.rs` (`AiError`), the error of all of them:
+The core of the program that talks with the AI (user, 2026-11-01: a core part gets a folder of its own, as `db/` has; `panels/logic/` holds only what a panel shows). **`ai/models/` mirrors `model/`**, as `db/models/` does: the functions of the AI on each model are in the file (or the folder) of its name. `error.rs` (`AiError`) is the error of all of them.
 
 ```text
 ai/
-  error.rs       AiError
-  agent/         the agent, a layer of knowledge over the model of an integration
-                 knowledge.rs: the passages of its bases that fit a question (its glossary, its limits)
-  ask/           the only way to an AI service, in three steps
-                 question.rs: Question, prepare ──► Prepared (the integration, its key, the body; the size checked)
-                 sending.rs:  send ──► Sent (the answer streamed, no database); send_whole (the answer awaited whole)
-                 journal.rs:  record ──► Answer (the journal of the agent written first)
-  provider/      the API of a provider: what goes over the network
-                 address.rs (the address and the CA certificate checked), connection.rs (TLS 1.3, no redirect,
-                 no proxy, the stream read, every input bounded), masking.rs (the key masked in every text),
-                 openai.rs, anthropic.rs (the body, the key header, one event read), sse.rs (events from pieces of
-                 any size), turns.rs (alternating turns starting with the user), reading.rs (the answer read so far)
+  error.rs              AiError
+  models/ai/
+    integration/        Integration, the service that answers
+                        question.rs: Question, prepare ──► Prepared (the integration, its key, the body; the size checked)
+                        sending.rs:  send ──► Sent (the answer streamed, no database); send_whole (awaited whole)
+                        address.rs (the address and the CA certificate checked), connection.rs (TLS 1.3, no
+                        redirect, no proxy, the stream read, every input bounded), openai.rs, anthropic.rs (the body,
+                        the key header, one event read), sse.rs (events from pieces of any size), turns.rs
+                        (alternating turns starting with the user), reading.rs (the answer read so far)
+    api_key.rs          ApiKey: the key masked in every text taken from an answer
+    journal.rs          JournalEntry: record ──► Answer (the journal of the agent written before the answer is given)
+    agent.rs            Agent: the passages of its bases that fit a question (its glossary, its limits);
+                        agent_question (its instructions, the task, its knowledge, the messages ──► Question)
+    chat.rs             Chat: a question prepared with its oldest messages left out until it fits
 
-panels ──► agent/knowledge.rs ──► db (read_agent, read_passages)
-panels ──► ask/question.rs: prepare ──► ask/sending.rs: send ──► provider/connection.rs ──► the service
-                                                └──────────────► ask/journal.rs: record ──► db (the journal)
+panels ──► agent.rs: agent_question ──► integration/question.rs: prepare ──► integration/sending.rs: send
+                                                                   ──► integration/connection.rs ──► the service
+       ──► journal.rs: record ──► db (the journal of the agent)
 ```
+
+The integration knows of the other models only the API key (masked in its errors); the journal, the agent and the chat ask through the integration (checked by `architecture_tests.rs`). The panels never see the connection or a protocol.
 
 ### `session/`
 
@@ -87,7 +91,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 |---|---|---|
 | `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
 | `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs`, `order.rs` (Kahn: the order, the cross references, `blocked`), `fill.rs` ("Fill with AI": parameters, dependencies, the preview) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_stop` |
-| `agents` | `agent.rs` (an agent made, its changes checked; its knowledge is in `ai/agent/`), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
+| `agents` | `agent.rs` (an agent made, its changes checked; its knowledge and its question are in `ai/models/ai/agent.rs`), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `evaluations.rs` (an evaluation begun on a copy of a plan with its agent; the agent changed), `inputs.rs` (the documents and proofs given once; whether a file is a PDF told by its first bytes), `question.rs` (the question of a work unit: its JSON, its dependencies, its documents whole or by passages, its proofs), `answer.rs` (the answer read; the quotes checked in the documents; the verdict with the dependencies), `run.rs` (the work units in the order of the work, the preview with the inputs missing, the question prepared), `results.rs` (the results of the evaluator, of author User) | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |

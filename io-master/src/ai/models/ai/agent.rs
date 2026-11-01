@@ -1,18 +1,23 @@
-//! The knowledge an agent gives with a question (RAG, user 2026-10-29):
-//! the passages of its knowledge bases that fit the question best, found
-//! with the help of its glossary, within its limits.
+//! The agent (user, 2026-10-29): a layer of knowledge over the model of an
+//! integration. The knowledge it gives with a question (RAG): the passages
+//! of its knowledge bases that fit the question best, found with the help
+//! of its glossary, within its limits; and the question it asks with it.
 //!
 //! ```text
 //! a question ──► the words of the question, widened by the meanings of the terms of the glossary
 //!            ──► read_passages in the bases of the agent, at most max_passages
 //!            ──► the best first, as many as fit in max_characters (a passage never shortened)
+//!
+//! agent_question ──► the instructions of the agent + the task + the knowledge + the messages ──► Question
 //! ```
 
 use crate::ai::error::AiError;
+use crate::ai::models::ai::integration::question::Question;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::rag::{MAX_FOUND, read_passages};
 use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::agent::GlossaryEntry;
+use crate::model::ai::chat::Message;
 
 /// The words of `text` in lower case: what lies between the signs that are
 /// no letter or digit.
@@ -78,10 +83,8 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 /// many of them, the best first, as fit in its `max_characters`. A passage
 /// is never shortened: one that does not fit is left out.
 ///
-/// Called by: `panels/views/agents/agent.rs`: `agent_knowledge_test`;
-/// `panels/logic/evaluation_plan/fill.rs`: `question_of`;
-/// `panels/logic/evaluation/question.rs`: `assessment_question`;
-/// `panels/logic/chat/chats.rs`: `chat_question`.
+/// Called by: [`agent_question`]; `panels/views/agents/agent.rs`:
+/// `agent_knowledge_test`.
 /// Calls: `db/models/ai/agent.rs`: `read_agent`; [`widened`];
 /// `db/models/ai/rag.rs`: `read_passages`.
 pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<Vec<String>, AiError> {
@@ -104,6 +107,60 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
     Ok(given)
 }
 
+/// The question the agent `agent` asks of its integration: its
+/// instructions, then the task `task` (none when empty), then its knowledge
+/// that fits `search`, then the messages `messages`, the last of them the
+/// question of the user.
+///
+/// Input:
+/// - `agent`: the id of a stored agent.
+/// - `task`: what the agent is asked to do and in which form it answers
+///   (the assessment of a work unit); empty for a chat.
+/// - `search`: what its knowledge is looked for with ("ADV_ARC.1-1 The
+///   developer shall ...").
+/// - `work_unit`: the work unit the question is for; `None` outside an
+///   evaluation.
+/// - `messages`: the conversation, at least one message.
+///
+/// Output: the question, not prepared yet (`integration/question.rs`:
+/// `prepare`). An error when the agent cannot be read, or there is no
+/// message.
+///
+/// Called by: `panels/logic/evaluation_plan/fill.rs`: `question_of`;
+/// `panels/logic/evaluation/question.rs`: `question_of`;
+/// `panels/logic/chat/chats.rs`: `chat_question`.
+/// Calls: `db/models/ai/agent.rs`: `read_agent`; [`agent_knowledge`].
+pub fn agent_question(
+    db: &UserDatabase,
+    agent: i64,
+    task: &str,
+    search: &str,
+    work_unit: Option<i64>,
+    messages: Vec<Message>,
+) -> Result<Question, AiError> {
+    ensure!(!messages.is_empty(), AiError::NoQuestion);
+
+    let stored = read_agent(db, agent)?;
+    let knowledge = agent_knowledge(db, agent, search)?;
+    let mut system = stored.instructions;
+
+    if !task.is_empty() {
+        system.push_str("\n\n");
+        system.push_str(task);
+    }
+
+    // The knowledge is named for what it was found for, so that the model
+    // knows what it is about.
+    if !knowledge.is_empty() {
+        let found_for = if work_unit.is_some() { "this work unit" } else { "this question" };
+
+        system.push_str(&format!("\n\nYour knowledge for {found_for}:\n\n"));
+        system.push_str(&knowledge.join("\n\n---\n\n"));
+    }
+
+    Ok(Question { integration: stored.integration, agent: Some(agent), work_unit, system, messages })
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of the knowledge of an agent: found with the glossary and
@@ -114,6 +171,8 @@ mod tests {
     use crate::db::models::ai::agent::{create_agent, update_agent};
     use crate::db::models::ai::integration::create_integration;
     use crate::db::models::ai::rag::{create_knowledge_base, create_source};
+    use crate::model::ai::agent::Agent;
+    use crate::model::ai::chat::Speaker;
     use crate::model::ai::rag::{KnowledgeBase, Source};
     use crate::test_support::database::{agent, database, integration};
 
@@ -159,5 +218,32 @@ mod tests {
         assert_eq!(widened("the test of the TOE", &glossary), "the test of the TOE");
         assert_eq!(widened("Read the ST.", &glossary), "Read the ST. Security Target");
         assert_eq!(widened("the toe Scope", &glossary), "the toe Scope the boundary");
+    }
+
+    #[test]
+    fn the_question_of_an_agent_holds_its_instructions_its_task_and_its_knowledge() {
+        let (_directory, db) = database();
+        let local = create_integration(&db, &integration()).unwrap();
+        let id = create_agent(&db, &agent(local)).unwrap();
+        let base =
+            create_knowledge_base(&db, &KnowledgeBase { id: 0, name: "CEM".to_owned(), description: String::new() })
+                .unwrap();
+        let text = "The developer shall describe the security architecture.".to_owned();
+
+        create_source(&db, &Source { id: 0, knowledge_base: base, name: "notes".to_owned(), text }).unwrap();
+        update_agent(&db, &Agent { id, knowledge_bases: vec![base], ..agent(local) }).unwrap();
+
+        let message = Message { speaker: Speaker::User, text: "Assess it.".to_owned(), time: 0 };
+        let question =
+            agent_question(&db, id, "Answer in JSON.", "security architecture", Some(3), vec![message]).unwrap();
+
+        assert!(question.system.starts_with("You assess work units of the CEM.\n\nAnswer in JSON."));
+        assert!(question.system.contains("Your knowledge for this work unit:\n\nThe developer shall"));
+        assert_eq!((question.integration, question.agent, question.work_unit), (local, Some(id), Some(3)));
+
+        let chat = agent_question(&db, id, "", "routers", None, question.messages.clone()).unwrap();
+
+        assert_eq!(chat.system, "You assess work units of the CEM.");
+        assert!(matches!(agent_question(&db, id, "", "", None, Vec::new()), Err(AiError::NoQuestion)));
     }
 }

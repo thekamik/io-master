@@ -18,16 +18,16 @@ use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
 use crate::ai::error::{AiError, shorten};
-use crate::ai::provider::reading::Reading;
-use crate::ai::provider::sse::SseEvent;
-use crate::ai::provider::turns::Turn;
+use crate::ai::models::ai::integration::reading::Reading;
+use crate::ai::models::ai::integration::sse::SseEvent;
+use crate::ai::models::ai::integration::turns::Turn;
 use crate::model::ai::chat::Speaker;
 use crate::model::ai::journal::Ending;
 
 /// The body of a question: the instructions as the first message of the
 /// role `system`, then the turns.
 ///
-/// Called by: `ai/ask/question.rs`: `prepare`.
+/// Called by: `question.rs`: `prepare`.
 pub fn body(model: &str, system: &str, turns: &[Turn]) -> Value {
     let mut messages = Vec::with_capacity(turns.len() + 1);
 

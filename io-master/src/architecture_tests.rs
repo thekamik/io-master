@@ -9,7 +9,7 @@
 //!   panels/logic/   (the work behind the panels: program_start, evaluation_plan, ...)
 //!         │
 //!         ▼
-//!        ai/        (agent/ ──► ask/ ──► provider/: the agent, the way to the AI, the API of a provider)
+//!        ai/        (models/: the AI on the models, a mirror of model/)
 //!         │
 //!         ▼
 //!        db/        (create, read and update of the models; the database files)
@@ -39,35 +39,45 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 11] = [
+const ALLOWED: [(&str, &[&str]); 13] = [
     ("model", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
     ("db", &["model", "security"]),
     // The AI: it reads the integration, its key and the knowledge, and
-    // writes the journal. Inside, in layers from the top down: agent/ uses
-    // ask/, ask/ uses provider/; error.rs is the error of all of them.
+    // writes the journal. Inside, ai/models/ai/ mirrors model/ai/: the
+    // integration (the service, its connection) knows of the other models
+    // only the API key, masked in its errors; the journal, the agent and the
+    // chat ask through the integration.
     ("ai", &["db", "model"]),
-    ("ai::agent", &["ai::ask", "ai::error", "db", "model"]),
-    ("ai::ask", &["ai::provider", "ai::error", "db", "model"]),
-    // The API of a provider knows nothing of the database.
-    ("ai::provider", &["ai::error", "model"]),
+    ("ai::models::ai::api_key", &["ai::error", "model"]),
+    ("ai::models::ai::integration", &["ai::error", "ai::models::ai::api_key", "db", "model"]),
+    ("ai::models::ai::journal", &["ai::error", "ai::models::ai::integration", "db", "model"]),
+    ("ai::models::ai::agent", &["ai::error", "ai::models::ai::integration", "db", "model"]),
+    ("ai::models::ai::chat", &["ai::error", "ai::models::ai::integration", "db", "model"]),
     // The work behind the panels, one folder per panel; a panel may use
     // another (in one direction: evaluation uses evaluation_plan, never the
-    // other way). It gets the open database as a
-    // parameter and never reaches the session. Of the provider it sees only
-    // the checks of an address and of a certificate (the settings of the AI).
+    // other way). It gets the open database as a parameter and never reaches
+    // the session. Of the integration it sees the question, its sending and
+    // the checks of an address and a certificate (the settings of the AI),
+    // never the connection or a protocol.
     // The sources of the knowledge of an agent are read from PDFs too.
-    (
-        "panels::logic",
-        &["ai::agent", "ai::ask", "ai::error", "ai::provider::address", "db", "model", "security", "pdf"],
-    ),
+    ("panels::logic", &[AI_ERROR, AGENT, CHAT, JOURNAL, QUESTION, SENDING, ADDRESS, "db", "model", "security", "pdf"]),
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
     // The commands of the page: they do their work with the folders below.
-    ("panels::views", &["panels::logic", "ai::agent", "ai::ask", "ai::error", "db", "model", "session"]),
+    ("panels::views", &["panels::logic", AI_ERROR, AGENT, CHAT, JOURNAL, QUESTION, SENDING, "db", "model", "session"]),
 ];
+
+/// The parts of `ai/` the panels may use, named once for both layers.
+const AI_ERROR: &str = "ai::error";
+const AGENT: &str = "ai::models::ai::agent";
+const CHAT: &str = "ai::models::ai::chat";
+const JOURNAL: &str = "ai::models::ai::journal";
+const QUESTION: &str = "ai::models::ai::integration::question";
+const SENDING: &str = "ai::models::ai::integration::sending";
+const ADDRESS: &str = "ai::models::ai::integration::address";
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:
 /// names joined by `::`, a list in braces cut off).
@@ -75,6 +85,11 @@ fn paths(text: &str) -> Vec<String> {
     let mut found = Vec::new();
 
     for (at, _) in text.match_indices("crate::") {
+        // `pub(in crate::a)` names where an item is seen, not what it uses.
+        if text[..at].ends_with("(in ") {
+            continue;
+        }
+
         let rest = &text[at + "crate::".len()..];
         let end = rest.find(|c: char| !(c.is_alphanumeric() || c == '_' || c == ':')).unwrap_or(rest.len());
         let path = rest[..end].trim_end_matches(':');

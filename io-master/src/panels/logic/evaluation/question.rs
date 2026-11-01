@@ -13,14 +13,13 @@
 //! ```
 //!
 //! Whether the documents fit whole into the context of the model is told by
-//! `ai/ask/` when the question is prepared: the caller asks first for
+//! `ai/models/ai/integration/question.rs` (`prepare`) when the question is prepared: the caller asks first for
 //! them whole, then for their passages.
 
 use serde_json::{Value, json};
 
-use crate::ai::agent::knowledge::agent_knowledge;
-use crate::ai::ask::question::Question;
-use crate::db::models::ai::agent::read_agent;
+use crate::ai::models::ai::agent::agent_question;
+use crate::ai::models::ai::integration::question::Question;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
@@ -246,8 +245,8 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, EvaluationE
 /// asked of the agent `agent`; its documents whole with `whole`.
 ///
 /// Called by: [`assessment_question`].
-/// Calls: `read_agent`, `agent_knowledge`, [`unit_json`],
-/// [`dependencies_text`], [`documents_text`], [`proofs_text`].
+/// Calls: [`unit_json`], [`dependencies_text`], [`documents_text`],
+/// [`proofs_text`], `ai/models/ai/agent.rs`: `agent_question`.
 fn question_of(
     db: &UserDatabase,
     evaluation: &EvaluationPlan,
@@ -256,23 +255,13 @@ fn question_of(
     whole: bool,
 ) -> Result<Question, EvaluationError> {
     let units = read_work_units(db, evaluation.id)?;
-    let stored = read_agent(db, agent)?;
     let mut verdicts = Vec::with_capacity(evaluation.possible_verdicts.len());
 
     for verdict in &evaluation.possible_verdicts {
         verdicts.push(format!("\"{}\"", verdict_name(*verdict)));
     }
 
-    let mut system =
-        format!("{}\n\n{}", stored.instructions, ASSESSMENT_TASK.replace("{verdicts}", &verdicts.join(", ")));
-    let knowledge = agent_knowledge(db, agent, &format!("{} {}", unit.label, unit.requirement))
-        .map_err(|error| EvaluationError::Refused(format!("the knowledge of the agent: {error}")))?;
-
-    if !knowledge.is_empty() {
-        system.push_str("\n\nYour knowledge for this work unit:\n\n");
-        system.push_str(&knowledge.join("\n\n---\n\n"));
-    }
-
+    let task = ASSESSMENT_TASK.replace("{verdicts}", &verdicts.join(", "));
     let text = format!(
         "The work unit:\n{}\n\nIts dependencies:\n{}\nIts documents of the product:\n{}\nIts proofs of the laboratory:\n{}",
         unit_json(db, unit, &units)?,
@@ -281,13 +270,11 @@ fn question_of(
         proofs_text(db, unit)?,
     );
 
-    Ok(Question {
-        integration: stored.integration,
-        agent: Some(agent),
-        work_unit: Some(unit.id),
-        system,
-        messages: vec![Message { speaker: Speaker::User, text, time: 0 }],
-    })
+    let search = format!("{} {}", unit.label, unit.requirement);
+    let messages = vec![Message { speaker: Speaker::User, text, time: 0 }];
+
+    agent_question(db, agent, &task, &search, Some(unit.id), messages)
+        .map_err(|error| EvaluationError::Refused(format!("the question of the agent: {error}")))
 }
 
 /// The question of the assessment of the work unit `unit` of the evaluation

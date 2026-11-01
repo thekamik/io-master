@@ -9,8 +9,8 @@
 
 use zeroize::Zeroizing;
 
-use crate::ai::ask::question::{Prepared, Question, prepare};
-use crate::ai::provider::address::{check_address, check_certificate};
+use crate::ai::models::ai::integration::address::{check_address, check_certificate};
+use crate::ai::models::ai::integration::question::{Prepared, Question, prepare};
 use crate::db::models::ai::api_key::{MAX_KEY, read_api_key, update_api_key};
 use crate::db::models::ai::integration::{create_integration, read_integration, update_integration};
 use crate::db::models::user::program_data::{read_settings, update_settings};
@@ -141,7 +141,7 @@ pub fn has_key(db: &UserDatabase, id: i64) -> Result<bool, SettingsError> {
 
 /// The question that checks the integration `id`, prepared: one short
 /// message, no instructions, no agent, so it is not kept in a journal
-/// (`ai/ask/`).
+/// (`ai/models/ai/journal.rs`: `record`).
 ///
 /// Called by: `panels/views/settings/integrations.rs` (the check).
 /// Calls: `prepare`.

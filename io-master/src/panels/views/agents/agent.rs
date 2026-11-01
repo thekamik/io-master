@@ -12,7 +12,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::ai::agent::knowledge::agent_knowledge;
+use crate::ai::models::ai::agent::agent_knowledge;
 use crate::db::models::ai::agent::{read_agent, read_agents};
 use crate::db::models::ai::integration::{read_integration, read_integrations};
 use crate::db::models::ai::rag::read_knowledge_bases;

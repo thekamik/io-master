@@ -18,7 +18,7 @@ pub struct Turn {
 
 /// The turns of the messages `messages`, as described at the top.
 ///
-/// Called by: `ai/ask/question.rs`: `prepare`.
+/// Called by: `question.rs`: `prepare`.
 pub fn turns(messages: &[Message]) -> Vec<Turn> {
     let mut turns: Vec<Turn> = Vec::with_capacity(messages.len());
 

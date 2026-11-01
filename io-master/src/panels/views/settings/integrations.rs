@@ -16,8 +16,8 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::ai::ask::journal::record;
-use crate::ai::ask::sending::send_whole;
+use crate::ai::models::ai::integration::sending::send_whole;
+use crate::ai::models::ai::journal::record;
 use crate::db::models::ai::integration::read_integrations;
 use crate::db::models::user::program_data::read_settings;
 use crate::model::ai::integration::{Integration, Protocol};
@@ -224,7 +224,7 @@ pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) ->
 /// the answer is awaited, so the window stays usable.
 ///
 /// Called by: `Integrations.svelte`, "Check the connection".
-/// Calls: `check_question`, `ai/ask/sending.rs`: `send_whole`, `ai/ask/journal.rs`: `record`.
+/// Calls: `check_question`, `ai/models/ai/integration/sending.rs`: `send_whole`, `ai/models/ai/journal.rs`: `record`.
 #[tauri::command]
 pub async fn integration_check(session: State<'_, Session>, id: i64) -> Result<CheckView, ViewError> {
     let prepared = {

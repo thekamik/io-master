@@ -22,9 +22,9 @@ use serde::Serialize;
 use tauri::State;
 use tauri::ipc::Channel;
 
-use crate::ai::ask::journal::record;
-use crate::ai::ask::question::Prepared;
-use crate::ai::ask::sending::{Sent, send_whole};
+use crate::ai::models::ai::integration::question::Prepared;
+use crate::ai::models::ai::integration::sending::{Sent, send_whole};
+use crate::ai::models::ai::journal::record;
 use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::panels::logic::evaluation::question::verdict_name;
 use crate::panels::logic::evaluation::run::{Preview, assessed, prepared_assessment, preview};
@@ -135,7 +135,7 @@ fn prepared_question(
 /// `unit`; gives its verdict and the notes, or no verdict and why.
 ///
 /// Called by: [`assess_step`].
-/// Calls: `ai/ask/journal.rs`: `record`, `assessed`, `read_work_unit`.
+/// Calls: `ai/models/ai/journal.rs`: `record`, `assessed`, `read_work_unit`.
 fn written(
     session: &Session,
     step: (i64, i64),
@@ -161,7 +161,7 @@ fn written(
 /// the session, sent without it, the answer written under it again.
 ///
 /// Called by: [`assess`].
-/// Calls: [`prepared_question`], `ai/ask/sending.rs`: `send_whole`, [`written`].
+/// Calls: [`prepared_question`], `ai/models/ai/integration/sending.rs`: `send_whole`, [`written`].
 async fn assess_step(
     session: &Session,
     evaluation: i64,

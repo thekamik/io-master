@@ -5,7 +5,7 @@
 //! the answer; the explanation from the answer itself (its `error.message`,
 //! else its beginning on one line), so that the user sees what the service
 //! said. No error holds the API key: the key travels only in a header, and
-//! every text taken from an answer is masked (`provider/masking.rs`).
+//! every text taken from an answer is masked (`ai/models/ai/api_key.rs`).
 
 use std::fmt;
 
@@ -95,7 +95,7 @@ impl From<DbError> for AiError {
 /// The error of an answer that is no success: its HTTP status decides the
 /// kind, its body gives the explanation.
 ///
-/// Called by: `provider/connection.rs` (an answer that is no success).
+/// Called by: `ai/models/ai/integration/connection.rs` (an answer that is no success).
 /// Calls: [`explanation`].
 pub(in crate::ai) fn from_status(status: u16, body: &[u8]) -> AiError {
     let message = explanation(body);
@@ -131,7 +131,7 @@ fn explanation(body: &[u8]) -> String {
 
 /// The text cut to [`EXPLANATION_LENGTH`] characters.
 ///
-/// Called by: [`explanation`]; `provider/openai.rs`, `provider/anthropic.rs` (an error in the
+/// Called by: [`explanation`]; `ai/models/ai/integration/openai.rs`, `ai/models/ai/integration/anthropic.rs` (an error in the
 /// middle of an answer).
 pub(in crate::ai) fn shorten(text: &str) -> String {
     if text.chars().count() <= EXPLANATION_LENGTH {

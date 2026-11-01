@@ -17,7 +17,7 @@ use crate::ai::error::AiError;
 /// Refuses an address the program does not send to: one that is no URL,
 /// one that is neither `https://` nor `http://` on this computer.
 ///
-/// Called by: `ai/ask/question.rs`: `prepare`,
+/// Called by: `question.rs`: `prepare`,
 /// `connection.rs` (`exchange`); the settings of the AI (an integration
 /// saved).
 pub fn check_address(url: &str) -> Result<(), AiError> {
@@ -40,7 +40,7 @@ pub fn check_address(url: &str) -> Result<(), AiError> {
 /// or is no PEM.
 ///
 /// Called by: `connection.rs` (`http_client`); [`check_certificate`].
-pub(in crate::ai::provider) fn certificates(pem: &str) -> Result<Vec<Certificate>, AiError> {
+pub(in crate::ai::models::ai::integration) fn certificates(pem: &str) -> Result<Vec<Certificate>, AiError> {
     let certificates = Certificate::from_pem_bundle(pem.as_bytes())
         .map_err(|error| AiError::Address(format!("the CA certificate: {error}")))?;
 

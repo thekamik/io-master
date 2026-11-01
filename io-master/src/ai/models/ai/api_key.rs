@@ -21,7 +21,7 @@ fn mask(text: String, key: Option<&str>) -> String {
 ///
 /// Called by: `connection.rs` (`send`).
 /// Calls: [`mask`].
-pub(in crate::ai::provider) fn masked(error: AiError, key: Option<&str>) -> AiError {
+pub(in crate::ai::models::ai) fn masked(error: AiError, key: Option<&str>) -> AiError {
     match error {
         AiError::Address(text) => AiError::Address(mask(text, key)),
         AiError::KeyRejected(text) => AiError::KeyRejected(mask(text, key)),

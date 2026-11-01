@@ -80,7 +80,7 @@ They bind **our code** (`src/`, `ui/`). The dependencies cannot follow them; the
 
 ## The AI
 
-- **`ai/` is the only way to an AI service** (user, 2026-10-29): `prepare` (under the lock of the session), `send` (without it), `record` (the journal), in `ai/ask/` (`question.rs`, `sending.rs`, `journal.rs`); the answer is read only after `record`.
+- **`ai/` is the only way to an AI service** (user, 2026-10-29): `prepare` (under the lock of the session), `send` (without it), `record` (the journal), in `ai/models/ai/integration/question.rs`, `integration/sending.rs` and `ai/models/ai/journal.rs`; the answer is read only after `record`.
 - **Every question of an agent is kept in the journal of that agent**; a question without an agent (the check of an integration) is not kept.
 - An agent is a layer of knowledge over the model of an integration; integrations are only in the AI settings, agents and knowledge bases in the panel Agents.
 

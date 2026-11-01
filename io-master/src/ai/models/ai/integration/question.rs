@@ -4,7 +4,7 @@
 //! fits into the context of the model beside its answer.
 //!
 //! ```text
-//! Question ──► prepare ──► Prepared ──► sending.rs: send ──► Sent ──► journal.rs: record ──► Answer
+//! Question ──► prepare ──► Prepared ──► sending.rs: send ──► Sent ──► ../journal.rs: record ──► Answer
 //!               ├► read_integration, read_api_key       (the integration and its key)
 //!               ├► check_address, turns, check_size      (refused, never shortened)
 //!               └► openai::body / anthropic::body        (the body of the request)
@@ -20,10 +20,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::Zeroizing;
 
 use crate::ai::error::AiError;
-use crate::ai::provider::address::check_address;
-use crate::ai::provider::connection::Request;
-use crate::ai::provider::turns::{Turn, turns};
-use crate::ai::provider::{anthropic, openai};
+use crate::ai::models::ai::integration::address::check_address;
+use crate::ai::models::ai::integration::connection::Request;
+use crate::ai::models::ai::integration::turns::{Turn, turns};
+use crate::ai::models::ai::integration::{anthropic, openai};
 use crate::db::models::ai::api_key::read_api_key;
 use crate::db::models::ai::integration::read_integration;
 use crate::db::storage::user_database::UserDatabase;
@@ -59,11 +59,11 @@ pub struct Question {
 
 /// A question ready to be sent, with what its entry of the journal needs.
 pub struct Prepared {
-    pub(in crate::ai::ask) request: Request,
-    pub(in crate::ai::ask) integration: Integration,
-    pub(in crate::ai::ask) agent: Option<i64>,
-    pub(in crate::ai::ask) work_unit: Option<i64>,
-    pub(in crate::ai::ask) time: i64,
+    pub(in crate::ai::models::ai) request: Request,
+    pub(in crate::ai::models::ai) integration: Integration,
+    pub(in crate::ai::models::ai) agent: Option<i64>,
+    pub(in crate::ai::models::ai) work_unit: Option<i64>,
+    pub(in crate::ai::models::ai) time: i64,
 }
 
 /// The time now, in seconds since 1970 (UTC).
@@ -116,9 +116,9 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// `panels/views/evaluation_plan/fill.rs`: `prepared_question`; under the
 /// lock of the session.
 /// Calls: `db/models/ai/integration.rs`: `read_integration`;
-/// `db/models/ai/api_key.rs`: `read_api_key`; `provider/address.rs`:
-/// `check_address`; `provider/turns.rs`: `turns`; [`check_size`];
-/// `provider/openai.rs`: `body`; `provider/anthropic.rs`: `body`.
+/// `db/models/ai/api_key.rs`: `read_api_key`; `address.rs`:
+/// `check_address`; `turns.rs`: `turns`; [`check_size`];
+/// `openai.rs`: `body`; `anthropic.rs`: `body`.
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
     ensure!(question.messages.len() <= MAX_MESSAGES, AiError::TooLong { estimated: u64::MAX, room: 0 });
 

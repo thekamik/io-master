@@ -4,15 +4,15 @@
 //! an integration) is not kept: it is no part of an evaluation.
 //!
 //! ```text
-//! question.rs: prepare ──► Prepared ──► sending.rs: send ──► Sent ──► record ──► Answer
-//!                                                                       └► create_journal_entry (with an agent)
+//! integration/question.rs: prepare ──► Prepared ──► integration/sending.rs: send ──► Sent ──► record ──► Answer
+//!                                                                                             └► create_journal_entry (with an agent)
 //! ```
 //!
 //! The caller holds the lock of the session for it, as for `prepare`.
 
-use crate::ai::ask::question::Prepared;
-use crate::ai::ask::sending::Sent;
 use crate::ai::error::AiError;
+use crate::ai::models::ai::integration::question::Prepared;
+use crate::ai::models::ai::integration::sending::Sent;
 use crate::db::models::ai::journal::create_journal_entry;
 use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::journal::{Ending, JournalEntry};
@@ -113,8 +113,8 @@ mod tests {
     use tokio::sync::mpsc;
     use zeroize::Zeroizing;
 
-    use crate::ai::ask::question::{Question, prepare};
-    use crate::ai::ask::sending::send;
+    use crate::ai::models::ai::integration::question::{Question, prepare};
+    use crate::ai::models::ai::integration::sending::send;
     use crate::db::models::ai::agent::create_agent;
     use crate::db::models::ai::api_key::{create_api_key, update_api_key};
     use crate::db::models::ai::integration::{create_integration, update_integration};

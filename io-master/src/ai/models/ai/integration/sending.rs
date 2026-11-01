@@ -4,7 +4,7 @@
 //! window are not held up by a long answer.
 //!
 //! ```text
-//! question.rs: prepare ──► Prepared ──► send ──► Sent ──► journal.rs: record
+//! question.rs: prepare ──► Prepared ──► send ──► Sent ──► ../journal.rs: record
 //!                                  └──► send_whole (the pieces drained: the answer awaited whole)
 //! ```
 //!
@@ -13,17 +13,17 @@
 
 use tokio::sync::mpsc;
 
-use crate::ai::ask::question::Prepared;
-use crate::ai::provider::connection::{self, Received};
+use crate::ai::models::ai::integration::connection::{self, Received};
+use crate::ai::models::ai::integration::question::Prepared;
 
 /// The most pieces of an answer drained: every piece has at least one byte
-/// of the stream, whose limit is 32 MiB (`provider/connection.rs`).
+/// of the stream, whose limit is 32 MiB (`connection.rs`).
 const MAX_PIECES: usize = 32 * 1024 * 1024;
 
 /// The answer as it came, not written into the journal yet: only `record`
-/// (`journal.rs`) gives it out.
+/// (`ai/models/ai/journal.rs`) gives it out.
 #[must_use = "an answer is read only through record(), which writes the journal of its agent"]
-pub struct Sent(pub(in crate::ai::ask) Received);
+pub struct Sent(pub(in crate::ai::models::ai) Received);
 
 /// Sends the question and passes the pieces of the answer into `pieces`
 /// while it is written; stops when the receiver of `pieces` is dropped.
@@ -31,7 +31,7 @@ pub struct Sent(pub(in crate::ai::ask) Received);
 ///
 /// Called by: [`send_whole`]; `panels/views/chat/chats.rs`: `forwarded`, the
 /// lock of the session released.
-/// Calls: `provider/connection.rs`: `send`.
+/// Calls: `connection.rs`: `send`.
 pub async fn send(prepared: &Prepared, pieces: &mpsc::Sender<String>) -> Sent {
     Sent(connection::send(&prepared.request, pieces).await)
 }

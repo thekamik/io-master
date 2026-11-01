@@ -12,8 +12,8 @@
 //!            assessed            ──► read_assessment, apply_assessment
 //! ```
 
-use crate::ai::ask::question::{Prepared, prepare};
 use crate::ai::error::AiError;
+use crate::ai::models::ai::integration::question::{Prepared, prepare};
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::product_document::read_product_document;
@@ -148,7 +148,7 @@ pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Previe
 /// or with their passages when they do not fit into the context of the model.
 ///
 /// Called by: `panels/views/evaluation/run.rs` (each work unit).
-/// Calls: `assessment_question`, `ai/ask/question.rs`: `prepare`.
+/// Calls: `assessment_question`, `ai/models/ai/integration/question.rs`: `prepare`.
 pub fn prepared_assessment(db: &UserDatabase, evaluation: i64, unit: i64) -> Result<Prepared, EvaluationError> {
     match prepare(db, &assessment_question(db, evaluation, unit, true)?) {
         Ok(prepared) => Ok(prepared),
@@ -161,7 +161,7 @@ pub fn prepared_assessment(db: &UserDatabase, evaluation: i64, unit: i64) -> Res
 /// the notes of what was not taken.
 ///
 /// Called by: `panels/views/evaluation/run.rs` (each answer, after
-/// `ai/ask/journal.rs`: `record`).
+/// `ai/models/ai/journal.rs`: `record`).
 /// Calls: `read_assessment`, `apply_assessment`.
 pub fn assessed(db: &UserDatabase, evaluation: i64, unit: i64, answer: &str) -> Result<Vec<String>, EvaluationError> {
     apply_assessment(db, evaluation, unit, &read_assessment(answer)?)

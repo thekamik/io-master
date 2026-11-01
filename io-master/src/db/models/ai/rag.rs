@@ -480,7 +480,7 @@ pub(in crate::db) fn query_of(question: &str) -> Option<String> {
 /// Output: at most `count` and at most [`MAX_FOUND`] passages; none when the
 /// question has no word to look for. An error when there are too many bases.
 ///
-/// Called by: `ai/agent/knowledge.rs`: `agent_knowledge`;
+/// Called by: `ai/models/ai/agent.rs`: `agent_knowledge`;
 /// `panels/logic/agents/knowledge.rs`: `search_base`.
 /// Calls: [`query_of`].
 pub fn read_passages(db: &UserDatabase, bases: &[i64], question: &str, count: usize) -> Result<Vec<String>, DbError> {

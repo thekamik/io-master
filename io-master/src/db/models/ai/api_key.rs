@@ -118,7 +118,7 @@ pub fn create_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
 /// changed since the key was given, so that a key is never sent to another
 /// service.
 ///
-/// Called by: `ai/ask/question.rs`: `prepare`; `panels/logic/settings/integrations.rs`:
+/// Called by: `ai/models/ai/integration/question.rs`: `prepare`; `panels/logic/settings/integrations.rs`:
 /// `has_key`.
 /// Calls: [`origin_of`].
 pub fn read_api_key(db: &UserDatabase, integration: i64) -> Result<Option<ApiKey>, DbError> {

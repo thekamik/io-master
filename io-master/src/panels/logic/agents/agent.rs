@@ -1,6 +1,6 @@
 //! The agents, as their panel makes and changes them: an agent made, its
 //! changes checked. The knowledge it gives with a question is a part of the
-//! AI (`ai/agent/knowledge.rs`).
+//! AI (`ai/models/ai/agent.rs`).
 //!
 //! An agent is a layer of knowledge over the model of an integration (user,
 //! 2026-10-29): it names the integration that answers it, its instructions,

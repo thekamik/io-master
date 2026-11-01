@@ -11,7 +11,7 @@
 //!   the address of the integration and nowhere else;
 //! - proxies of the environment (`HTTPS_PROXY`) are not used;
 //! - the key is marked "sensitive" in its header, and masked in every text
-//!   taken from an answer (`masking.rs`).
+//!   taken from an answer (`ai/models/ai/api_key.rs`).
 //!
 //! **An answer can be stopped by the caller**: [`send`] passes the pieces
 //! of the answer into a channel and stops as soon as the receiving end of
@@ -33,11 +33,11 @@ use tokio::sync::mpsc;
 use zeroize::Zeroizing;
 
 use crate::ai::error::{AiError, from_status};
-use crate::ai::provider::address::{certificates, check_address};
-use crate::ai::provider::masking::masked;
-use crate::ai::provider::reading::Reading;
-use crate::ai::provider::sse::{SseDecoder, SseEvent};
-use crate::ai::provider::{anthropic, openai};
+use crate::ai::models::ai::api_key::masked;
+use crate::ai::models::ai::integration::address::{certificates, check_address};
+use crate::ai::models::ai::integration::reading::Reading;
+use crate::ai::models::ai::integration::sse::{SseDecoder, SseEvent};
+use crate::ai::models::ai::integration::{anthropic, openai};
 use crate::model::ai::integration::Protocol;
 
 /// How long a connection may take to open.
@@ -103,8 +103,8 @@ enum StreamEnd {
 /// fails as a whole: how it ended is in [`Received`], next to what was
 /// written until then.
 ///
-/// Called by: `ai/ask/sending.rs`: `send`.
-/// Calls: [`exchange`], `masking.rs`: `masked`.
+/// Called by: `sending.rs`: `send`.
+/// Calls: [`exchange`], `ai/models/ai/api_key.rs`: `masked`.
 pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received {
     let mut reading = Reading::default();
 
@@ -302,7 +302,7 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::ai::provider::masking::MASK;
+    use crate::ai::models::ai::api_key::MASK;
     use crate::model::ai::journal::Ending;
     use crate::test_support::ai_service::{FakeAnswer, FakeService, anthropic_events, openai_events, sse};
 

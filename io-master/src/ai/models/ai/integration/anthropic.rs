@@ -18,9 +18,9 @@ use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
 use crate::ai::error::{AiError, shorten};
-use crate::ai::provider::reading::Reading;
-use crate::ai::provider::sse::SseEvent;
-use crate::ai::provider::turns::Turn;
+use crate::ai::models::ai::integration::reading::Reading;
+use crate::ai::models::ai::integration::sse::SseEvent;
+use crate::ai::models::ai::integration::turns::Turn;
 use crate::model::ai::chat::Speaker;
 use crate::model::ai::journal::Ending;
 
@@ -31,7 +31,7 @@ const VERSION: &str = "2026-10-21";
 /// The body of a question: the instructions in the field `system`, the
 /// turns in `messages`, the answer at most `answer_tokens` long.
 ///
-/// Called by: `ai/ask/question.rs`: `prepare`.
+/// Called by: `question.rs`: `prepare`.
 pub fn body(model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Value {
     let mut messages = Vec::with_capacity(turns.len());
 
