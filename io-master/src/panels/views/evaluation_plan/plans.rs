@@ -7,11 +7,11 @@
 //! EvaluationPlan.svelte ──plan_list()─────────────► the plans in planning ──► [PlanSummaryView]
 //!                       ──plan_create(name, desc)─► create_plan ──► id
 //! PlanForm.svelte       ──plan_get(id)────────────► the plan, the standards, the documents ──► PlanView
-//!                       ──plan_save(...)──────────► update_plan
+//!                       ──plan_save(fields)───────► update_plan
 //!                       ──plan_add_document(name)─► add_document_place ──► id
 //! ```
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::infrastructure::storage::user_database::UserDatabase;
@@ -191,44 +191,49 @@ pub fn plan_get(session: State<'_, Session>, id: i64) -> Result<PlanView, ViewEr
     plan_view(db, read_evaluation_plan(db, id)?)
 }
 
-/// Saves the data of the plan `id` the planner changed: its name,
-/// description, standards, places of documents, verdicts and the agent of
-/// its planner.
+/// The data of a plan the planner changed, as the page sends it from the
+/// form of the plan.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlanFields {
+    /// The plan.
+    id: i64,
+    name: String,
+    description: String,
+    /// The standards it names, by their ids.
+    standards: Vec<i64>,
+    /// The places of the documents of the product, by their ids.
+    documents: Vec<i64>,
+    /// The verdicts it knows, by their names ("pass").
+    verdicts: Vec<String>,
+    /// The agent of its planner.
+    ai_agent: Option<i64>,
+}
+
+/// Saves the data of the plan the planner changed: its name, description,
+/// standards, places of documents, verdicts and the agent of its planner.
 ///
 /// Called by: `PlanForm.svelte`, "Save".
 /// Calls: `read_evaluation_plan`; `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
 /// `update_plan`.
 #[tauri::command]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "one argument per field of the form of a plan, named as the page sends them"
-)]
-pub fn plan_save(
-    session: State<'_, Session>,
-    id: i64,
-    name: String,
-    description: String,
-    standards: Vec<i64>,
-    documents: Vec<i64>,
-    verdicts: Vec<String>,
-    ai_agent: Option<i64>,
-) -> Result<(), ViewError> {
+pub fn plan_save(session: State<'_, Session>, fields: PlanFields) -> Result<(), ViewError> {
     let opened = session.lock()?;
     let db = database(&opened)?;
-    let mut possible_verdicts = Vec::with_capacity(verdicts.len());
+    let mut possible_verdicts = Vec::with_capacity(fields.verdicts.len());
 
-    for verdict in &verdicts {
+    for verdict in &fields.verdicts {
         possible_verdicts.push(verdict_of(verdict)?);
     }
 
     let plan = EvaluationPlan {
-        name,
-        description,
-        oscal_documents: standards,
-        product_documents: documents,
+        name: fields.name,
+        description: fields.description,
+        oscal_documents: fields.standards,
+        product_documents: fields.documents,
         possible_verdicts,
-        ai_agent,
-        ..read_evaluation_plan(db, id)?
+        ai_agent: fields.ai_agent,
+        ..read_evaluation_plan(db, fields.id)?
     };
 
     Ok(update_plan(db, &plan)?)

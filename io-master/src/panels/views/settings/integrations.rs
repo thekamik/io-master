@@ -3,15 +3,14 @@
 //! connection.
 //!
 //! ```text
-//! Integrations.svelte ──integration_list()──────► the integrations, the active one, has a key ──► [IntegrationView]
-//!                     ──integration_create(...)─► add_integration ──► id
-//!                     ──integration_save(...)───► change_integration
-//!                     ──integration_activate()──► activate_integration
-//!                     ──integration_set_key()───► set_key            (the key goes in, never out)
-//!                     ──integration_check(id)───► check_question ─► sending::send_whole ─► journal::record ──►
-//! CheckView
-//!                                                  (the lock held)   (released)   (the lock held; no agent,
-//!                                                                                  so nothing is written)
+//! IntegrationList.svelte ──integration_list()──────► the integrations, the active one, has a key ──► [IntegrationView]
+//!                        ──integration_activate()──► activate_integration
+//! IntegrationForm.svelte ──integration_create(...)─► add_integration ──► id
+//!                        ──integration_save(...)───► change_integration
+//!                        ──integration_set_key()───► set_key            (the key goes in, never out)
+//!                        ──integration_check(id)───► check_question ─► sending::send_whole ─► journal::record
+//!                                                    (the lock held)   (released)   (the lock held; no agent,
+//!                                                                                    so nothing is written) ──► CheckView
 //! ```
 
 use serde::{Deserialize, Serialize};
@@ -149,7 +148,8 @@ pub struct IntegrationFields {
 /// Every integration of the user, the active one marked, whether each has a
 /// key.
 ///
-/// Called by: `Integrations.svelte`, when the tab opens and after a change.
+/// Called by: `IntegrationList.svelte`, when the tab opens and after a change;
+/// `AgentList.svelte` (the integration of a new agent).
 /// Calls: `read_integrations`, `read_settings`, `has_key`.
 #[tauri::command]
 pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationView>, ViewError> {
@@ -177,7 +177,7 @@ pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationVi
 
 /// Stores a new integration; gives its id.
 ///
-/// Called by: `Integrations.svelte`, "Add".
+/// Called by: `IntegrationForm.svelte`, "Add the integration".
 /// Calls: [`integration_of`], `add_integration`.
 #[tauri::command]
 pub fn integration_create(session: State<'_, Session>, fields: IntegrationFields) -> Result<i64, ViewError> {
@@ -189,7 +189,7 @@ pub fn integration_create(session: State<'_, Session>, fields: IntegrationFields
 
 /// Saves the data of the integration `fields.id`.
 ///
-/// Called by: `Integrations.svelte`, "Save".
+/// Called by: `IntegrationForm.svelte`, "Save".
 /// Calls: [`integration_of`], `change_integration`.
 #[tauri::command]
 pub fn integration_save(session: State<'_, Session>, fields: IntegrationFields) -> Result<(), ViewError> {
@@ -201,7 +201,7 @@ pub fn integration_save(session: State<'_, Session>, fields: IntegrationFields) 
 
 /// Makes the integration `id` the active one.
 ///
-/// Called by: `Integrations.svelte`, "Make active".
+/// Called by: `IntegrationList.svelte`, "Make active".
 /// Calls: `activate_integration`.
 #[tauri::command]
 pub fn integration_activate(session: State<'_, Session>, id: i64) -> Result<(), ViewError> {
@@ -213,7 +213,7 @@ pub fn integration_activate(session: State<'_, Session>, id: i64) -> Result<(), 
 /// Stores the API key of the integration `id`. The key goes in only: no
 /// command gives it back.
 ///
-/// Called by: `Integrations.svelte`, "Store the key".
+/// Called by: `IntegrationForm.svelte`, "Store the key".
 /// Calls: `set_key`.
 #[tauri::command]
 pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) -> Result<(), ViewError> {
@@ -226,7 +226,7 @@ pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) ->
 /// it is not kept in a journal. The lock of the session is released while
 /// the answer is awaited, so the window stays usable.
 ///
-/// Called by: `Integrations.svelte`, "Check the connection".
+/// Called by: `IntegrationForm.svelte`, "Check the connection".
 /// Calls: `check_question`, `objects/ai/integration/integration_ai/sending.rs`: `send_whole`,
 /// `objects/ai/journal/journal_ai.rs`: `record`.
 #[tauri::command]

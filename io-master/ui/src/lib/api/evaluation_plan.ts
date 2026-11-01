@@ -117,8 +117,8 @@ export function planGet(id: number): Promise<PlanView> {
   return invoke("plan_get", { id });
 }
 
-/** Saves the data of a plan. Called by PlanForm.svelte. */
-export function planSave(fields: {
+/** The data of a plan as the form sends it (plans.rs, PlanFields). */
+export interface PlanFields {
   id: number;
   name: string;
   description: string;
@@ -126,8 +126,11 @@ export function planSave(fields: {
   documents: number[];
   verdicts: VerdictName[];
   aiAgent: number | null;
-}): Promise<void> {
-  return invoke("plan_save", fields);
+}
+
+/** Saves the data of a plan. Called by PlanForm.svelte. */
+export function planSave(fields: PlanFields): Promise<void> {
+  return invoke("plan_save", { fields });
 }
 
 /** A new place of a document in a plan; gives its id. Called by PlanForm.svelte. */
@@ -160,13 +163,13 @@ export function workUnitRemove(plan: number, unit: number): Promise<void> {
   return invoke("work_unit_remove", { plan, unit });
 }
 
-/** A work unit for its form. Called by WorkUnitForm.svelte. */
+/** A work unit for its form. Called by WorkUnitEditor.svelte. */
 export function workUnitGet(unit: number): Promise<WorkUnitView> {
   return invoke("work_unit_get", { unit });
 }
 
-/** Saves the parameters of a work unit. Called by WorkUnitForm.svelte. */
-export function workUnitSave(fields: {
+/** The parameters of a work unit as the form sends them (work_units.rs, WorkUnitFields). */
+export interface WorkUnitFields {
   plan: number;
   unit: number;
   dependencies: number[];
@@ -174,11 +177,14 @@ export function workUnitSave(fields: {
   proofs: number[];
   aiAgent: number | null;
   guidance: string;
-}): Promise<void> {
-  return invoke("work_unit_save", fields);
 }
 
-/** A new place of a proof for a work unit; gives its id. Called by WorkUnitForm.svelte. */
+/** Saves the parameters of a work unit. Called by WorkUnitEditor.svelte. */
+export function workUnitSave(fields: WorkUnitFields): Promise<void> {
+  return invoke("work_unit_save", { fields });
+}
+
+/** A new place of a proof for a work unit; gives its id. Called by WorkUnitEditor.svelte. */
 export function workUnitAddProof(plan: number, unit: number, name: string): Promise<number> {
   return invoke("work_unit_add_proof", { plan, unit, name });
 }

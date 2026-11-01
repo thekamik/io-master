@@ -4,15 +4,15 @@
 //! parameters, a place of a proof of the laboratory added.
 //!
 //! ```text
-//! WorkUnits.svelte    ──work_unit_list(plan)───────────────► [WorkUnitRowView]
-//!                     ──work_unit_controls(plan, standard)─► available_controls ──► [ControlView]
-//!                     ──work_unit_add / _add_all / _remove─► add_work_unit, add_all_work_units, remove_work_unit
-//! WorkUnitForm.svelte ──work_unit_get(unit)────────────────► WorkUnitView
-//!                     ──work_unit_save(plan, unit, ...)────► update_work_unit_parameters
-//!                     ──work_unit_add_proof(plan, unit, name)► add_proof_place
+//! PlanWorkUnits.svelte  ──work_unit_list(plan)───────────────► [WorkUnitRowView]
+//!                       ──work_unit_controls(plan, standard)─► available_controls ──► [ControlView]
+//!                       ──work_unit_add / _add_all / _remove─► add_work_unit, add_all_work_units, remove_work_unit
+//! WorkUnitEditor.svelte ──work_unit_get(unit)────────────────► WorkUnitView
+//!                       ──work_unit_save(fields)─────────────► update_work_unit_parameters
+//!                       ──work_unit_add_proof(plan, unit, name)► add_proof_place
 //! ```
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::State;
 
 use crate::infrastructure::storage::user_database::UserDatabase;
@@ -94,7 +94,7 @@ fn standard_title(db: &UserDatabase, id: i64) -> Result<String, ViewError> {
 
 /// The work units of the plan `plan`, in its order.
 ///
-/// Called by: `WorkUnits.svelte`, when a plan is chosen and after a change.
+/// Called by: `PlanWorkUnits.svelte`, when a plan is chosen and after a change; `WorkUnitEditor.svelte` (the dependencies to choose).
 /// Calls: `read_work_units`, [`standard_title`].
 #[tauri::command]
 pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<WorkUnitRowView>, ViewError> {
@@ -140,7 +140,7 @@ pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<Work
 /// The controls of the standard `standard` the plan `plan` does not hold
 /// yet.
 ///
-/// Called by: `WorkUnits.svelte`, when a standard is chosen to add from.
+/// Called by: `PlanWorkUnits.svelte`, when a standard is chosen to add from.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `available_controls`.
 #[tauri::command]
 pub fn work_unit_controls(
@@ -165,7 +165,7 @@ pub fn work_unit_controls(
 /// Adds the work unit of the control `oscal_key` of the standard `standard`
 /// to the plan `plan`. Gives its id.
 ///
-/// Called by: `WorkUnits.svelte`, "Add" at a control.
+/// Called by: `PlanWorkUnits.svelte`, "Add" at a control.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_work_unit`.
 #[tauri::command]
 pub fn work_unit_add(
@@ -182,7 +182,7 @@ pub fn work_unit_add(
 /// Adds every control of the standard `standard` the plan `plan` does not
 /// hold yet. Gives how many were added.
 ///
-/// Called by: `WorkUnits.svelte`, "Add all".
+/// Called by: `PlanWorkUnits.svelte`, "Add all".
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_all_work_units`.
 #[tauri::command(async)]
 pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) -> Result<usize, ViewError> {
@@ -193,7 +193,7 @@ pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) 
 
 /// Removes the work unit `unit` from the plan `plan`.
 ///
-/// Called by: `WorkUnits.svelte`, "Remove" at a work unit.
+/// Called by: `PlanWorkUnits.svelte`, "Remove" at a work unit.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `remove_work_unit`.
 #[tauri::command]
 pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Result<(), ViewError> {
@@ -237,41 +237,48 @@ pub fn work_unit_get(session: State<'_, Session>, unit: i64) -> Result<WorkUnitV
     })
 }
 
-/// Saves the parameters of the work unit `unit` of the plan `plan`.
-///
-/// Called by: `WorkUnitForm.svelte`, "Save".
-/// Calls: `update_work_unit_parameters`.
-#[tauri::command]
-#[allow(
-    clippy::too_many_arguments,
-    reason = "one argument per field of the form of a work unit, named as the page sends them"
-)]
-pub fn work_unit_save(
-    session: State<'_, Session>,
+/// The parameters of a work unit the planner changed, as the page sends
+/// them from the form of the work unit.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkUnitFields {
+    /// The plan of the work unit.
     plan: i64,
+    /// The work unit.
     unit: i64,
+    /// The work units of the same plan it depends on.
     dependencies: Vec<i64>,
+    /// The places of the documents of the product it needs.
     documents: Vec<i64>,
+    /// The places of the proofs of the laboratory it needs.
     proofs: Vec<i64>,
+    /// Its own agent.
     ai_agent: Option<i64>,
     guidance: String,
-) -> Result<(), ViewError> {
+}
+
+/// Saves the parameters of a work unit.
+///
+/// Called by: `WorkUnitEditor.svelte`, "Save".
+/// Calls: `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+#[tauri::command]
+pub fn work_unit_save(session: State<'_, Session>, fields: WorkUnitFields) -> Result<(), ViewError> {
     let opened = session.lock()?;
     let parameters = WorkUnitParameters {
-        dependencies,
-        input_product_documents: documents,
-        input_functional: proofs,
-        ai_agent,
-        guidance,
+        dependencies: fields.dependencies,
+        input_product_documents: fields.documents,
+        input_functional: fields.proofs,
+        ai_agent: fields.ai_agent,
+        guidance: fields.guidance,
     };
 
-    Ok(update_work_unit_parameters(database(&opened)?, plan, unit, &parameters)?)
+    Ok(update_work_unit_parameters(database(&opened)?, fields.plan, fields.unit, &parameters)?)
 }
 
 /// Reserves a place of a proof of the laboratory (`name`) for the work unit
 /// `unit` of the plan `plan`. Gives the id of the place.
 ///
-/// Called by: `WorkUnitForm.svelte`, "Add a proof".
+/// Called by: `WorkUnitEditor.svelte`, "Add a proof".
 /// Calls: `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`.
 #[tauri::command]
 pub fn work_unit_add_proof(session: State<'_, Session>, plan: i64, unit: i64, name: String) -> Result<i64, ViewError> {
