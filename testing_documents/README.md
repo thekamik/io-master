@@ -107,3 +107,17 @@ The copyright of the text stays with its holders; the source is named above. The
 | ACO_VUL.1-8 | The evaluator shall conduct penetration testing as detailed for AVA_VAN.1.3E. |
 | ACO_VUL.2-9 | The evaluator shall conduct penetration testing as detailed for AVA_VAN.2.4E. |
 | ACO_VUL.3-9 | The evaluator shall conduct penetration testing as detailed for AVA_VAN.3.4E. |
+
+## ETSI_TS103701_V2.1.1_test_cases_catalog.json
+
+The **test cases of ETSI TS 103 701 V2.1.1 (2025-05)** (Cyber Security for Consumer Internet of Things: Conformance Assessment of Baseline Requirements, the assessment of ETSI EN 303 645) as an **OSCAL 1.2.3 catalog**. It is imported in the window like the CEM and passes the check against the schema of NIST; its 131 test cases become 131 work units.
+
+Source: the PDF `ts_103701v020101p.pdf` of ETSI, SHA-256 `25afe7ad6273bbf1df96522a1a6f94b6ba4308d01201bef6f1ed134e91c78797`, named in the back matter of the catalog. The script that made the catalog is not in `tools/`.
+
+**The structure:**
+
+- 15 groups, one per test group objective of the standard ("TSO 5.0 Reporting implementation", "TSO 5.1 No universal default passwords", ...), with 78 test groups inside them ("Test group 5.0-1").
+- 131 controls, one per test case, `id` `tc-5.0-1-1`, label `5.0-1-1`; their properties (namespace `https://github.com/thekamik/io-master/ns/etsi-ts-103701`): `test-case-type` (73 conceptual, 57 functional, 1 conceptual/functional) and `provision` (the provision of EN 303 645 it assesses, `5.0-1`).
+- The parts of a control: `statement` (the purpose of the test case), `test-units`, `assessment-method`, `assignment-of-verdict`.
+
+**What the program takes from it today:** the label, the key and the `statement` as the requirement of a work unit. The catalog has no part `guidance`, so the guidance of every work unit stays empty: the test units, the method of assessment and the assignment of the verdict are kept in the stored catalog but not shown in a work unit.
