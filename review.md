@@ -22,7 +22,7 @@ A file that changes after its approval goes back to "to review", with a note of 
 
 | File | Why |
 |---|---|
-| `io-master/src/infrastructure/storage/encryption/` | Moved unchanged from the earlier program; audited and redesigned by the user later. |
+| `io-master/src/infrastructure/storage/encryption/` | Moved unchanged from the earlier program; audited and redesigned by the user later. For the audit (2026-11-01): `DatabaseKey::fill_with` takes a closure as a parameter (rule 9); `generate_key.rs`, `database_key.rs` and `sqlcipher.rs` lack `Called by:` at their functions. |
 
 ## To review
 

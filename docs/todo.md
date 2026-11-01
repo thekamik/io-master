@@ -11,6 +11,7 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 - The review of the code by the user, file by file (`review.md`); the functional hardening: a limit of failed logins, a full disk, a damaged database, the limits of the inputs measured on real documents.
 - `[lints]` in `Cargo.toml` for the rules of `CLAUDE.md` (clippy `pedantic` and the restriction lints).
+- **The checks with recovery** (rule 5, 2026-11-01): 200 `ensure!` in 503 functions (0.40 on average, the rule asks two): added in the review file by file, for what the types do not guarantee (the limits of an input, the state a function expects).
 - `cargo-audit` and `cargo-deny`; the package for Debian 13.
 - Version 1: from then on the data is kept and every change of a table is a migration. The names of the database files keep their `.v2` until then (user, 2026-10-31: the databases of the tests are not broken for a name).
 
