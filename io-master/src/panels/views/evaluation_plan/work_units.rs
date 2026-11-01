@@ -20,10 +20,10 @@ use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
 use crate::db::models::evaluation::work_unit::{read_work_unit, read_work_units};
 use crate::db::storage::user_database::UserDatabase;
-use crate::domain::models::evaluation::work_unit::{WorkUnitParameters, update_work_unit_parameters};
-use crate::panels::logic::evaluation_plan::work_units::{
-    add_all_work_units, add_proof_place, add_work_unit, available_controls, remove_work_unit,
+use crate::domain::models::evaluation::evaluation_plan::work_units::{
+    add_all_work_units, add_work_unit, available_controls, remove_work_unit,
 };
+use crate::domain::models::evaluation::work_unit::{WorkUnitParameters, add_proof_place, update_work_unit_parameters};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;
@@ -139,7 +139,7 @@ pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<Work
 /// yet.
 ///
 /// Called by: `WorkUnits.svelte`, when a standard is chosen to add from.
-/// Calls: `available_controls`.
+/// Calls: `domain/models/evaluation/evaluation_plan/work_units.rs`: `available_controls`.
 #[tauri::command]
 pub fn work_unit_controls(
     session: State<'_, Session>,
@@ -164,7 +164,7 @@ pub fn work_unit_controls(
 /// to the plan `plan`. Gives its id.
 ///
 /// Called by: `WorkUnits.svelte`, "Add" at a control.
-/// Calls: `add_work_unit`.
+/// Calls: `domain/models/evaluation/evaluation_plan/work_units.rs`: `add_work_unit`.
 #[tauri::command]
 pub fn work_unit_add(
     session: State<'_, Session>,
@@ -181,7 +181,7 @@ pub fn work_unit_add(
 /// hold yet. Gives how many were added.
 ///
 /// Called by: `WorkUnits.svelte`, "Add all".
-/// Calls: `add_all_work_units`.
+/// Calls: `domain/models/evaluation/evaluation_plan/work_units.rs`: `add_all_work_units`.
 #[tauri::command(async)]
 pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) -> Result<usize, ViewError> {
     let opened = session.lock()?;
@@ -192,7 +192,7 @@ pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) 
 /// Removes the work unit `unit` from the plan `plan`.
 ///
 /// Called by: `WorkUnits.svelte`, "Remove" at a work unit.
-/// Calls: `remove_work_unit`.
+/// Calls: `domain/models/evaluation/evaluation_plan/work_units.rs`: `remove_work_unit`.
 #[tauri::command]
 pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
@@ -270,7 +270,7 @@ pub fn work_unit_save(
 /// `unit` of the plan `plan`. Gives the id of the place.
 ///
 /// Called by: `WorkUnitForm.svelte`, "Add a proof".
-/// Calls: `add_proof_place`.
+/// Calls: `domain/models/evaluation/work_unit.rs`: `add_proof_place`.
 #[tauri::command]
 pub fn work_unit_add_proof(session: State<'_, Session>, plan: i64, unit: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;

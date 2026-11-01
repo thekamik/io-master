@@ -195,7 +195,7 @@ fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Resul
 /// Output: the id of the plan (8); an error as [`insert_plan`], and nothing
 /// is then written.
 ///
-/// Called by: `panels/logic/evaluation_plan/plans.rs`: `create_plan`.
+/// Called by: `domain/models/evaluation/evaluation_plan/planning.rs`: `create_plan`.
 /// Calls: [`insert_plan`].
 pub fn create_evaluation_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<i64, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
@@ -357,14 +357,14 @@ fn read_lists(connection: &Connection, plan: &mut EvaluationPlan) -> Result<(), 
 ///
 /// Called by: [`read_evaluation_plans`], [`create_evaluation`];
 /// `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`;
-/// `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`;
+/// `domain/models/evaluation/evaluation_plan/planning.rs`: `evaluation_in_progress`;
 /// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `assessment_question`;
-/// `domain/models/evaluation/evaluation_plan.rs`: `plan_to_fill`;
-/// `domain/models/evaluation/evaluation_plan.rs`: `check_order`;
-/// `panels/logic/evaluation_plan/plans.rs`: `add_document_place`,
-/// `update_plan`; `panels/logic/evaluation_plan/work_units.rs`:
-/// `available_controls`, `plan_in_planning`;
+/// `domain/models/evaluation/evaluation_plan/planning.rs`: `plan_to_fill`;
+/// `domain/models/evaluation/evaluation_plan/order.rs`: `check_order`;
+/// `domain/models/evaluation/evaluation_plan/planning.rs`: `add_document_place`,
+/// `update_plan`, `plan_in_planning`;
+/// `domain/models/evaluation/evaluation_plan/work_units.rs`: `available_controls`;
 /// `panels/views/evaluation/evaluations.rs`: `evaluation_get`;
 /// `panels/views/evaluation/work_units.rs`: `evaluation_unit_get`,
 /// `evaluation_unit_list`; `panels/views/evaluation_plan/plans.rs`:
@@ -461,8 +461,8 @@ fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(
 /// written.
 ///
 /// Called by: `panels/logic/evaluation/evaluations.rs`: `change_agent`;
-/// `domain/models/evaluation/evaluation_plan.rs`: `check_order`;
-/// `panels/logic/evaluation_plan/plans.rs`: `add_document_place`,
+/// `domain/models/evaluation/evaluation_plan/order.rs`: `check_order`;
+/// `domain/models/evaluation/evaluation_plan/planning.rs`: `add_document_place`,
 /// `update_plan`.
 /// Calls: [`check_plan`], [`state_name`], [`write_lists`],
 /// [`order_work_units`].
@@ -637,7 +637,7 @@ fn copied_places(
 /// Input:
 /// - `db`: the open database of the user.
 /// - `source`: the id of the plan, in planning, neither blocked nor with a
-///   cross reference (as `domain/models/evaluation/evaluation_plan.rs` marks
+///   cross reference (as `domain/models/evaluation/evaluation_plan/order.rs` marks
 ///   them).
 /// - `product`, `client`, `evaluator`: the identification ISO/IEC 17025
 ///   asks for ("Router X 2.1", "ACME", "Anna Kowalska").

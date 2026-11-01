@@ -19,9 +19,9 @@ use crate::db::models::evaluation::evaluation_plan::{read_evaluation_plan, read_
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_documents;
 use crate::db::models::evaluation::product_document::read_product_document;
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::models::evaluation::evaluation_plan::planning::{add_document_place, create_plan, update_plan};
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::work_unit::Verdict;
-use crate::panels::logic::evaluation_plan::plans::{add_document_place, create_plan, update_plan};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;
@@ -126,7 +126,7 @@ pub fn plan_list(session: State<'_, Session>) -> Result<Vec<PlanSummaryView>, Vi
 /// Makes a new plan in planning. Gives its id.
 ///
 /// Called by: `EvaluationPlan.svelte`, "New plan".
-/// Calls: `create_plan`.
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `create_plan`.
 #[tauri::command]
 pub fn plan_create(session: State<'_, Session>, name: String, description: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
@@ -194,7 +194,8 @@ pub fn plan_get(session: State<'_, Session>, id: i64) -> Result<PlanView, ViewEr
 /// its planner.
 ///
 /// Called by: `PlanForm.svelte`, "Save".
-/// Calls: `read_evaluation_plan`, `update_plan`.
+/// Calls: `read_evaluation_plan`; `domain/models/evaluation/evaluation_plan/planning.rs`:
+/// `update_plan`.
 #[tauri::command]
 #[allow(
     clippy::too_many_arguments,
@@ -235,7 +236,7 @@ pub fn plan_save(
 /// plan `id`. Gives the id of the place.
 ///
 /// Called by: `PlanForm.svelte`, "Add a document".
-/// Calls: `add_document_place`.
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `add_document_place`.
 #[tauri::command]
 pub fn plan_add_document(session: State<'_, Session>, id: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;

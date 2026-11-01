@@ -37,7 +37,7 @@ pub const SCHEMA: &str = "
 /// Output: the id of the proof (6); an error as [`insert_lab_proof`].
 ///
 /// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `chosen_proofs`;
-/// `panels/logic/evaluation_plan/work_units.rs`: `add_proof_place`.
+/// `domain/models/evaluation/work_unit.rs`: `add_proof_place`.
 /// Calls: [`insert_lab_proof`].
 pub fn create_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<i64, DbError> {
     insert_lab_proof(db.connection(), proof)

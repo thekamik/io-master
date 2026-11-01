@@ -14,7 +14,7 @@ use crate::clock::now;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::evaluation_plan::{create_evaluation, update_evaluation_plan};
 use crate::db::storage::user_database::UserDatabase;
-use crate::domain::models::evaluation::evaluation_plan::evaluation_in_progress;
+use crate::domain::models::evaluation::evaluation_plan::planning::evaluation_in_progress;
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::panels::logic::evaluation::error::EvaluationError;
 
@@ -67,7 +67,7 @@ pub fn new_evaluation(
 /// without an agent of their own.
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs` (`evaluation_set_agent`).
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`, `read_agent`, `update_evaluation_plan`.
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `evaluation_in_progress`, `read_agent`, `update_evaluation_plan`.
 pub fn change_agent(db: &UserDatabase, evaluation: i64, agent: i64) -> Result<(), EvaluationError> {
     let stored = evaluation_in_progress(db, evaluation)?;
 

@@ -6,7 +6,7 @@
 //!   panels/views/   (the commands the page calls) ──► session/ (the user logged in)
 //!         │
 //!         ▼
-//!   panels/logic/   (the work behind the panels: program_start, evaluation_plan, ...)
+//!   panels/logic/   (the work behind the panels: program_start, evaluation, ...)
 //!         │
 //!         ▼
 //!        ai/        (models/: the AI on the models, a mirror of model/)
@@ -75,8 +75,7 @@ const ALLOWED: [(&str, &[&str]); 19] = [
     // The progress of a long work: a helper model, no database.
     ("ai::models::session::progress", &["model"]),
     // The work behind the panels, one folder per panel; a panel may use
-    // another (in one direction: evaluation uses evaluation_plan, never the
-    // other way). It gets the open database as a parameter and never reaches
+    // another, in one direction only. It gets the open database as a parameter and never reaches
     // the session. Of the integration it sees the question, its sending and
     // the checks of an address and a certificate (the settings of the AI),
     // never the connection or a protocol.

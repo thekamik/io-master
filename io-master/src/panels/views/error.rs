@@ -16,7 +16,6 @@ use crate::domain::error::DomainError;
 use crate::panels::logic::agents::error::AgentError;
 use crate::panels::logic::chat::error::ChatError;
 use crate::panels::logic::evaluation::error::EvaluationError;
-use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::program_start::access::AccountError;
 use crate::panels::logic::settings::error::SettingsError;
 use crate::session::state::SessionBroken;
@@ -31,8 +30,6 @@ pub enum ViewError {
     Session,
     /// Nobody is logged in: the page shows the login again.
     NotLoggedIn,
-    /// The making of a plan refused or failed.
-    Plan(PlanError),
     /// The panel of the agents refused a change, or failed.
     Agent(AgentError),
     /// The settings of the AI refused a change, or failed.
@@ -52,12 +49,6 @@ pub enum ViewError {
     /// What the page sent, or a file the user chose, cannot be taken;
     /// holds the reason.
     Invalid(String),
-}
-
-impl From<PlanError> for ViewError {
-    fn from(error: PlanError) -> ViewError {
-        ViewError::Plan(error)
-    }
 }
 
 impl From<AgentError> for ViewError {
@@ -127,13 +118,9 @@ impl ViewError {
                 "invalid"
             }
             ViewError::NotLoggedIn => "not_logged_in",
-            ViewError::Plan(
-                PlanError::Oscal(_)
-                | PlanError::Refused(_)
-                | PlanError::Db(DbError::Inconsistent(_))
-                | PlanError::Domain(DomainError::Refused(_) | DomainError::Db(DbError::Inconsistent(_))),
+            ViewError::Domain(
+                DomainError::Refused(_) | DomainError::Oscal(_) | DomainError::Db(DbError::Inconsistent(_)),
             )
-            | ViewError::Domain(DomainError::Refused(_) | DomainError::Db(DbError::Inconsistent(_)))
             | ViewError::Db(DbError::Inconsistent(_))
             | ViewError::Settings(
                 SettingsError::Refused(_) | SettingsError::Ai(_) | SettingsError::Db(DbError::Inconsistent(_)),
@@ -170,12 +157,13 @@ impl ViewError {
                     | AiError::TooManyMessages { .. },
                 )
                 | EvaluationError::Db(DbError::Inconsistent(_))
-                | EvaluationError::Domain(DomainError::Refused(_) | DomainError::Db(DbError::Inconsistent(_))),
+                | EvaluationError::Domain(
+                    DomainError::Refused(_) | DomainError::Oscal(_) | DomainError::Db(DbError::Inconsistent(_)),
+                ),
             )
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
-            | ViewError::Plan(PlanError::Db(_) | PlanError::Domain(DomainError::Db(_)))
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
             | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))
@@ -196,7 +184,6 @@ impl ViewError {
             ViewError::Account(error) => error.to_string(),
             ViewError::Session => "the session of the window failed: start the program again".to_owned(),
             ViewError::NotLoggedIn => "nobody is logged in".to_owned(),
-            ViewError::Plan(error) => error.to_string(),
             ViewError::Settings(error) => error.to_string(),
             ViewError::Agent(error) => error.to_string(),
             ViewError::Chat(error) => error.to_string(),

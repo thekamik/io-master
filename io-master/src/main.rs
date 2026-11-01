@@ -129,9 +129,17 @@ mod db {
 mod domain {
     pub mod error;
     pub mod models {
-        // domain/models/evaluation/: the rules of a plan and of its work units.
+        // domain/models/evaluation/: the rules of a plan, of its work units
+        // and of its standards.
         pub mod evaluation {
-            pub mod evaluation_plan;
+            // evaluation_plan/: the life of a plan and its data, the order of
+            // its work, its work units as its children.
+            pub mod evaluation_plan {
+                pub mod order;
+                pub mod planning;
+                pub mod work_units;
+            }
+            pub mod oscal_standard_document;
             pub mod work_unit;
         }
     }
@@ -233,17 +241,6 @@ mod panels {
             pub mod evaluations;
             pub mod inputs;
             pub mod results;
-        }
-        // panels/logic/evaluation_plan/: the making of a plan: the standards
-        // checked against the schema of NIST and read, the plans, their work
-        // units ("Fill with AI" is in ai/models/evaluation/, the order of the
-        // work in domain/).
-        pub mod evaluation_plan {
-            pub mod error;
-            pub mod oscal;
-            pub mod plans;
-            pub mod standards;
-            pub mod work_units;
         }
         // panels/logic/program_start/: the first start, the login and the
         // recovery of a forgotten password; the password and the recovery

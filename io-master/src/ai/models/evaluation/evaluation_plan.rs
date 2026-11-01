@@ -35,7 +35,8 @@ use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::product_document::read_product_document;
 use crate::db::models::evaluation::work_unit::read_work_units;
 use crate::db::storage::user_database::UserDatabase;
-use crate::domain::models::evaluation::evaluation_plan::{evaluation_in_progress, plan_to_fill, work_order};
+use crate::domain::models::evaluation::evaluation_plan::order::work_order;
+use crate::domain::models::evaluation::evaluation_plan::planning::{evaluation_in_progress, plan_to_fill};
 use crate::model::evaluation::work_unit::{Author, WorkUnit};
 use crate::model::session::progress::Progress;
 
@@ -78,7 +79,7 @@ pub fn units_in_order(db: &UserDatabase, evaluation: i64) -> Result<Vec<WorkUnit
 /// a verdict only with `again`.
 ///
 /// Called by: [`preview`].
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`; [`units_in_order`].
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `evaluation_in_progress`; [`units_in_order`].
 fn units_to_assess(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Vec<WorkUnit>, AiError> {
     evaluation_in_progress(db, evaluation)?;
 
@@ -139,7 +140,7 @@ fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, AiE
 ///
 /// Called by: [`units_ready`]; `panels/views/evaluation/run.rs`:
 /// `evaluation_assess_preview`.
-/// Calls: [`units_to_assess`], `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`; `assessing_agent`,
+/// Calls: [`units_to_assess`], `domain/models/evaluation/evaluation_plan/planning.rs`: `evaluation_in_progress`; `assessing_agent`,
 /// `read_agent`, [`missing_inputs`], [`count`].
 pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Preview, AiError> {
     let units = units_to_assess(db, evaluation, again)?;
@@ -164,7 +165,7 @@ pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Previe
 ///
 /// Called by: [`fill_preview`]; `panels/views/evaluation_plan/fill.rs`:
 /// `fill` (the start of a filling).
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_to_fill`.
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `plan_to_fill`.
 pub fn fill_units(db: &UserDatabase, plan: i64) -> Result<Vec<i64>, AiError> {
     let (stored, _) = plan_to_fill(db, plan)?;
 
@@ -188,7 +189,7 @@ pub struct FillPreview {
 /// planner starts it; refused as [`fill_units`] refuses.
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs`: `plan_fill_preview`.
-/// Calls: [`fill_units`], `domain/models/evaluation/evaluation_plan.rs`:
+/// Calls: [`fill_units`], `domain/models/evaluation/evaluation_plan/planning.rs`:
 /// `plan_to_fill`; `read_agent`, `read_integration`.
 pub fn fill_preview(db: &UserDatabase, plan: i64) -> Result<FillPreview, AiError> {
     let questions = fill_units(db, plan)?.len();

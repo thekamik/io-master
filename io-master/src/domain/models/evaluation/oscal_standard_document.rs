@@ -1,7 +1,11 @@
-//! The OSCAL catalogs of the standards, read for the plan: a document
-//! checked against the JSON schema of NIST before it is stored (user,
-//! 2026-10-28: a file of its own, not a part of `db/`), and the controls
-//! of a catalog, from which the work units of a plan are made.
+//! The standards (`OscalStandardDocument`): an OSCAL catalog imported by the
+//! user, checked against the JSON schema of NIST before it is stored, and the
+//! controls of a catalog, from which the work units of a plan are made.
+//!
+//! ```text
+//! the page ──the text of a file──► import_standard ──► check_catalog ──► create_oscal_standard_document
+//! a standard of a plan ──► catalog_controls ──► evaluation_plan/work_units.rs (the work units made)
+//! ```
 //!
 //! The schema is the file of NIST in `oscal/schema/v1.2.3/`, built into
 //! the program; nothing is fetched. The tree of a catalog (groups in
@@ -10,6 +14,11 @@
 
 use jsonschema::Validator;
 use serde_json::Value;
+
+use crate::db::models::evaluation::oscal_standard_document::create_oscal_standard_document;
+use crate::db::storage::user_database::UserDatabase;
+use crate::domain::error::DomainError;
+use crate::model::evaluation::oscal_standard_document::OscalStandardDocument;
 
 /// The largest document read, in bytes (the CEM is 3 MB).
 pub const MAX_DOCUMENT: usize = 32 * 1024 * 1024;
@@ -99,7 +108,7 @@ fn metadata_text(document: &Value, field: &str) -> String {
 /// against the schema of NIST. Gives the document read and its title and
 /// version.
 ///
-/// Called by: `standards.rs` (`import_standard`).
+/// Called by: [`import_standard`].
 /// Calls: [`validator`], [`metadata_text`].
 pub fn check_catalog(text: &str) -> Result<(Value, CheckedCatalog), OscalError> {
     ensure!(text.len() <= MAX_DOCUMENT, OscalError::TooLarge);
@@ -230,7 +239,7 @@ fn control_of(control: &Value) -> Result<CatalogControl, OscalError> {
 /// those of its groups (and of the groups inside them) and the controls
 /// inside controls (the enhancements of NIST).
 ///
-/// Called by: `work_units.rs` (`add_work_unit`, `add_all_work_units`).
+/// Called by: `evaluation_plan/work_units.rs`: `controls_of`.
 /// Calls: [`push_items`], [`control_of`].
 pub fn catalog_controls(document: &Value) -> Result<Vec<CatalogControl>, OscalError> {
     let catalog = document.get("catalog").ok_or_else(|| OscalError::NotCatalog(vec!["no \"catalog\"".to_owned()]))?;
@@ -258,12 +267,34 @@ pub fn catalog_controls(document: &Value) -> Result<Vec<CatalogControl>, OscalEr
     Err(OscalError::TooMany)
 }
 
+/// Imports the OSCAL catalog `text`: checked against the schema of NIST,
+/// stored as it was given, with the title and the version of its metadata.
+/// Gives its id.
+///
+/// Called by: `panels/views/evaluation_plan/standards.rs`: `standard_import`.
+/// Calls: [`check_catalog`]; `db/models/evaluation/oscal_standard_document.rs`:
+/// `create_oscal_standard_document`.
+pub fn import_standard(db: &UserDatabase, text: &str) -> Result<i64, DomainError> {
+    let (_document, checked) = check_catalog(text)?;
+
+    ensure!(!checked.title.is_empty(), DomainError::Refused("the catalog has no title".to_owned()));
+
+    let standard =
+        OscalStandardDocument { id: 0, title: checked.title, doc: text.to_owned(), version: checked.version };
+
+    Ok(create_oscal_standard_document(db, &standard)?)
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of the catalogs: the check against the schema of NIST, the
-    //! controls of the sample of NIST and of the catalog of the CEM.
+    //! controls of the sample of NIST and of the catalog of the CEM; the
+    //! import of a standard.
 
     use super::*;
+
+    use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
+    use crate::test_support::database::database;
 
     const NIST_SAMPLE: &str = include_str!("../../../../oscal/examples/basic-catalog.json");
 
@@ -297,5 +328,23 @@ mod tests {
         assert_eq!(controls.len(), 813);
         assert_eq!(controls[0].oscal_key, "APE_INT.1-1");
         assert!(controls[0].requirement.starts_with("The evaluator shall check"));
+    }
+
+    #[test]
+    fn a_catalog_is_imported_as_it_was_given() {
+        let (_directory, db) = database();
+        let id = import_standard(&db, NIST_SAMPLE).unwrap();
+        let stored = read_oscal_standard_document(&db, id).unwrap();
+
+        assert_eq!(stored.doc, NIST_SAMPLE);
+        assert!(!stored.title.is_empty());
+    }
+
+    #[test]
+    fn a_document_that_is_no_catalog_is_not_stored() {
+        let (_directory, db) = database();
+
+        assert!(matches!(import_standard(&db, "{\"catalog\": {}}"), Err(DomainError::Oscal(_))));
+        assert!(matches!(import_standard(&db, "[]"), Err(DomainError::Oscal(_))));
     }
 }

@@ -56,7 +56,7 @@ pub const SCHEMA: &str = "
 /// Output: the id of the document (3); an error as
 /// [`insert_product_document`].
 ///
-/// Called by: `panels/logic/evaluation_plan/plans.rs`: `add_document_place`.
+/// Called by: `domain/models/evaluation/evaluation_plan/planning.rs`: `add_document_place`.
 /// Calls: [`insert_product_document`].
 pub fn create_product_document(db: &UserDatabase, document: &ProductDocument) -> Result<i64, DbError> {
     insert_product_document(db.connection(), document)

@@ -12,7 +12,8 @@ io-master/src/
   security/       random bytes from the kernel; no memory dumps of the process
   pdf/            pdfinfo and pdftotext of Poppler, the PDF on their standard input
   db/             storage/: the two database files and their encryption; models/: create, read, update of the models
-  domain/         the rules of the data (models/, a mirror of model/): where a plan is in its life, the order of its work
+  domain/         the rules of the data (models/, a mirror of model/): a plan made and changed, its work units, its order,
+                  the standards imported
   ai/             the AI on the models (models/, a mirror of model/): the integration, the journal, the agent, the chat
   session/        the data folder; the user logged in, their open database, the progress of the long work of the AI
   panels/logic/   the work behind each panel, given the open database
@@ -32,7 +33,7 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 | `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `clock`, `domain`, `db`, `model`, `security`, `pdf` |
 | `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `domain`, `db`, `model`, `session` |
 
-`panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only (`evaluation` uses `evaluation_plan` for the order of the work).
+`panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only; a panel whose work is all rules of the data has no folder in `panels/logic/` (`evaluation_plan`: its views call `domain/` and `ai/` alone).
 
 **Models × concerns** (user, 2026-11-01). The program is a grid: `model/` declares the structures, and each concern mirrors `model/` with the functions on each model in the file of its name, so that the place of a function follows from its model and its concern:
 
@@ -67,15 +68,21 @@ storage/ ──UserDatabase / SystemDatabase (the connection, seen only in db/)�
 
 ### `domain/`
 
-The rules of the data (user, 2026-11-01: `data_model.md`, "the rules of the data live outside `model/`"), in a mirror of `model/`; `error.rs` (`DomainError`: refused, or a failure of the database), which each panel turns into its own error.
+The rules of the data (user, 2026-11-01: `data_model.md`, "the rules of the data live outside `model/`"), in a mirror of `model/`; `error.rs` (`DomainError`: refused, a document that is no OSCAL catalog, or a failure of the database), which each panel turns into its own error.
 
 ```text
 domain/models/evaluation/
-  evaluation_plan.rs   check_planning, plan_in_planning, evaluation_in_progress (where a plan is in its life);
-                       work_order (Kahn: the order of the work, the cross references), check_order (cross_reference
-                       and blocked written after every change of the work units of a plan)
-  work_unit.rs         WorkUnitParameters, update_work_unit_parameters (the parameters of a work unit in planning,
-                       then check_order)
+  evaluation_plan/
+    planning.rs              the life of a plan and its data: create_plan (the verdicts of Common Criteria),
+                             update_plan, add_document_place; check_planning, plan_in_planning, plan_to_fill,
+                             evaluation_in_progress (the plan, or refused)
+    order.rs                 work_order (Kahn: the order of the work, the cross references), check_order
+                             (cross_reference and blocked written after every change of the work units of a plan)
+    work_units.rs            the work units as children of the plan: available_controls, add_work_unit,
+                             add_all_work_units (from the controls of a standard of the plan), remove_work_unit
+  work_unit.rs               WorkUnitParameters, update_work_unit_parameters (then check_order); add_proof_place
+  oscal_standard_document.rs import_standard; check_catalog (the JSON schema of NIST, built in), catalog_controls
+                             (the tree walked with a bounded stack), OscalError
 ```
 
 ### `ai/`
@@ -132,7 +139,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 | Panel | `logic/` | `views/` commands |
 |---|---|---|
 | `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
-| `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs` ("Fill with AI" is in `ai/models/evaluation/`) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
+| `evaluation_plan` | none: the rules are in `domain/models/evaluation/`, "Fill with AI" in `ai/models/evaluation/` | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | `agent.rs` (an agent made, its changes checked; its knowledge and its question are in `ai/models/ai/agent.rs`), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `evaluations.rs` (an evaluation begun on a copy of a plan with its agent; the agent changed), `inputs.rs` (the documents and proofs given once; whether a file is a PDF told by its first bytes), `results.rs` (the results of the evaluator, of author User) | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |

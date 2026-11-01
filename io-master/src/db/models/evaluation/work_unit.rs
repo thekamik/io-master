@@ -329,7 +329,7 @@ pub(in crate::db) fn write_dependencies(connection: &Connection, id: i64, depend
 /// Output: the id of the work unit (12); an error as [`insert_work_unit`],
 /// and nothing is then written.
 ///
-/// Called by: `panels/logic/evaluation_plan/work_units.rs`:
+/// Called by: `domain/models/evaluation/evaluation_plan/work_units.rs`:
 /// `add_all_work_units`, `add_work_unit`.
 /// Calls: [`insert_work_unit`].
 pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<i64, DbError> {
@@ -525,7 +525,7 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
 /// `assessment_question`; `panels/logic/evaluation/results.rs`:
 /// `save_results`; `ai/models/evaluation/work_unit/proposal.rs`:
 /// `apply_dependencies`, `apply_parameters`, `dependencies_question`,
-/// `parameters_question`; `panels/logic/evaluation_plan/work_units.rs`:
+/// `parameters_question`; `domain/models/evaluation/work_unit.rs`:
 /// `add_proof_place`, `update_work_unit_parameters`;
 /// `ai/models/evaluation/work_unit/assessment.rs`: `prepared_question`, `written`;
 /// `panels/views/evaluation/work_units.rs`: `evaluation_unit_get`,
@@ -559,9 +559,9 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`;
 /// `ai/models/evaluation/evaluation_plan.rs`: `units_in_order`;
 /// `ai/models/evaluation/work_unit/proposal.rs`: `apply_dependencies`,
-/// `dependencies_question`; `domain/models/evaluation/evaluation_plan.rs`:
-/// `check_order`; `panels/logic/evaluation_plan/plans.rs`: `update_plan`;
-/// `panels/logic/evaluation_plan/work_units.rs`: `add_all_work_units`,
+/// `dependencies_question`; `domain/models/evaluation/evaluation_plan/order.rs`:
+/// `check_order`; `domain/models/evaluation/evaluation_plan/planning.rs`: `update_plan`;
+/// `domain/models/evaluation/evaluation_plan/work_units.rs`: `add_all_work_units`,
 /// `add_work_unit`, `available_controls`;
 /// `panels/views/evaluation_plan/work_units.rs`: `work_unit_list`.
 /// Calls: `lists.rs`: `read_id_list`; [`read_work_unit`].
@@ -679,8 +679,8 @@ fn check_frozen(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<(), DbE
 ///
 /// Called by: `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`;
 /// `panels/logic/evaluation/results.rs`: `save_results`;
-/// `domain/models/evaluation/evaluation_plan.rs`: `check_order`;
-/// `panels/logic/evaluation_plan/work_units.rs`: `add_proof_place`,
+/// `domain/models/evaluation/evaluation_plan/order.rs`: `check_order`;
+/// `domain/models/evaluation/work_unit.rs`: `add_proof_place`,
 /// `update_work_unit_parameters`.
 /// Calls: [`check_lists`], [`plan_of`], [`check_frozen`], [`check_links`],
 /// [`verdict_name`], [`author_name`], [`write_lists`].
@@ -736,7 +736,7 @@ pub fn update_work_unit(db: &UserDatabase, unit: &WorkUnit) -> Result<(), DbErro
 /// Output: nothing; an error when its plan is not in planning, or
 /// `DbError::NoRow` when there is no work unit `id`.
 ///
-/// Called by: `panels/logic/evaluation_plan/work_units.rs`:
+/// Called by: `domain/models/evaluation/evaluation_plan/work_units.rs`:
 /// `remove_work_unit`.
 /// Calls: [`plan_of`], [`plan_state`].
 pub fn delete_work_unit(db: &UserDatabase, id: i64) -> Result<(), DbError> {

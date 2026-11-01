@@ -40,7 +40,7 @@ use crate::db::models::evaluation::work_unit::{
     MAX_DEPENDENCIES, MAX_DOCUMENTS, MAX_PROOFS, read_work_unit, read_work_units,
 };
 use crate::db::storage::user_database::UserDatabase;
-use crate::domain::models::evaluation::evaluation_plan::plan_to_fill;
+use crate::domain::models::evaluation::evaluation_plan::planning::plan_to_fill;
 use crate::domain::models::evaluation::work_unit::{WorkUnitParameters, update_work_unit_parameters};
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
@@ -151,7 +151,7 @@ fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, AiError> 
 /// knowledge that fits the work unit, and the text `text` of the question.
 ///
 /// Called by: [`parameters_question`], [`dependencies_question`].
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_to_fill`, `ai/models/ai/agent.rs`: `agent_question`.
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `plan_to_fill`, `ai/models/ai/agent.rs`: `agent_question`.
 fn question_of(db: &UserDatabase, plan: i64, unit: &WorkUnit, task: &str, text: String) -> Result<Question, AiError> {
     let (stored, agent_id) = plan_to_fill(db, plan)?;
 
@@ -194,7 +194,7 @@ fn current_parameters(db: &UserDatabase, unit: &WorkUnit, names: &Names) -> Resu
 /// and the agents.
 ///
 /// Called by: `filling.rs`: `prepared_question`.
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_to_fill`, [`names_of`], [`current_parameters`],
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `plan_to_fill`, [`names_of`], [`current_parameters`],
 /// [`question_of`].
 pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let (stored, _) = plan_to_fill(db, plan)?;
@@ -416,7 +416,7 @@ fn chosen_agent(agents: &HashMap<i64, String>, proposed: Option<&String>, notes:
 /// Gives a note for every name left out.
 ///
 /// Called by: `filling.rs`: `applied`.
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_to_fill`, [`names_of`], [`id_of`], [`chosen_agent`],
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `plan_to_fill`, [`names_of`], [`id_of`], [`chosen_agent`],
 /// [`chosen_proofs`], `update_work_unit_parameters`.
 pub fn apply_parameters(
     db: &UserDatabase,
@@ -458,7 +458,7 @@ pub fn apply_parameters(
 /// every label left out.
 ///
 /// Called by: `filling.rs`: `applied`.
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_to_fill`, [`labels`], [`id_of`],
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `plan_to_fill`, [`labels`], [`id_of`],
 /// `update_work_unit_parameters`.
 pub fn apply_dependencies(
     db: &UserDatabase,

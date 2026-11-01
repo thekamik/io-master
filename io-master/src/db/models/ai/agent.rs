@@ -224,8 +224,8 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 /// `change_agent`, `new_evaluation`; `ai/models/evaluation/work_unit/assessment_question.rs`:
 /// `question_of`; `ai/models/evaluation/evaluation_plan.rs`: `preview`;
 /// `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`; `ai/models/evaluation/work_unit/proposal.rs`: `question_of`;
-/// `panels/logic/evaluation_plan/plans.rs`: `update_plan`;
-/// `panels/logic/evaluation_plan/work_units.rs`:
+/// `domain/models/evaluation/evaluation_plan/planning.rs`: `update_plan`;
+/// `domain/models/evaluation/work_unit.rs`:
 /// `update_work_unit_parameters`; `panels/views/agents/agent.rs`:
 /// `agent_get`; `panels/views/chat/chats.rs`: `agent_name`;
 /// `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`.

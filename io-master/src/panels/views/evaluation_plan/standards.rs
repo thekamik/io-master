@@ -14,8 +14,8 @@ use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_documents;
-use crate::panels::logic::evaluation_plan::oscal::MAX_DOCUMENT;
-use crate::panels::logic::evaluation_plan::standards::import_standard;
+use crate::domain::models::evaluation::oscal_standard_document::MAX_DOCUMENT;
+use crate::domain::models::evaluation::oscal_standard_document::import_standard;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;
@@ -50,7 +50,8 @@ pub fn standard_list(session: State<'_, Session>) -> Result<Vec<StandardView>, V
 /// for the user.
 ///
 /// Called by: `EvaluationPlan.svelte`, "Import a standard".
-/// Calls: the dialog of the system, `import_standard`.
+/// Calls: the dialog of the system; `domain/models/evaluation/oscal_standard_document.rs`:
+/// `import_standard`.
 #[tauri::command(async)]
 pub fn standard_import(app: AppHandle, session: State<'_, Session>) -> Result<Option<i64>, ViewError> {
     let Some(file) =

@@ -22,7 +22,7 @@ use crate::db::models::evaluation::lab_proof::{read_lab_proof, update_lab_proof}
 use crate::db::models::evaluation::product_document::{read_product_document, update_product_document};
 use crate::db::models::evaluation::work_unit::read_work_units;
 use crate::db::storage::user_database::UserDatabase;
-use crate::domain::models::evaluation::evaluation_plan::evaluation_in_progress;
+use crate::domain::models::evaluation::evaluation_plan::planning::evaluation_in_progress;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::product_document::ProductDocument;
 use crate::model::evaluation::work_unit::WorkUnit;
@@ -109,7 +109,7 @@ fn checked(text: Option<&str>, what: &str, limit: usize) -> Result<String, Evalu
 /// `db/` refuses a document given already.
 ///
 /// Called by: `panels/views/evaluation/inputs.rs` (`evaluation_document_give`).
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`; [`checked`], [`document_text`],
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `evaluation_in_progress`; [`checked`], [`document_text`],
 /// `read_product_document`, `update_product_document` (which indexes the
 /// text).
 pub fn give_document(
@@ -160,7 +160,7 @@ fn needed_proofs(units: &[WorkUnit]) -> Vec<i64> {
 /// missing; `db/` refuses a proof given already.
 ///
 /// Called by: `panels/views/evaluation/inputs.rs` (`evaluation_proof_give`).
-/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`; `read_work_units`, [`needed_proofs`],
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `evaluation_in_progress`; `read_work_units`, [`needed_proofs`],
 /// [`checked`], `read_lab_proof`, `update_lab_proof`.
 pub fn give_proof(db: &UserDatabase, evaluation: i64, proof: &LabProof) -> Result<(), EvaluationError> {
     evaluation_in_progress(db, evaluation)?;

@@ -38,7 +38,7 @@ const COLUMNS: &str = "id, title, doc, version";
 /// Output: the id of the standard (1); an error when the user keeps
 /// [`MAX_OSCAL_STANDARD_DOCUMENTS`] already.
 ///
-/// Called by: `panels/logic/evaluation_plan/standards.rs`: `import_standard`.
+/// Called by: `domain/models/evaluation/oscal_standard_document.rs`: `import_standard`.
 pub fn create_oscal_standard_document(db: &UserDatabase, document: &OscalStandardDocument) -> Result<i64, DbError> {
     ensure!(document.id == 0, DbError::Inconsistent("a new standard has an id already".to_owned()));
 
@@ -81,7 +81,7 @@ fn document_of(row: &Row<'_>) -> Result<OscalStandardDocument, DbError> {
 ///
 /// Called by: `ai/models/evaluation/work_unit/assessment_question.rs`: `unit_json`;
 /// `ai/models/evaluation/work_unit/proposal.rs`: `parameters_question`;
-/// `panels/logic/evaluation_plan/work_units.rs`: `controls_of`;
+/// `domain/models/evaluation/evaluation_plan/work_units.rs`: `controls_of`;
 /// `panels/views/evaluation/work_units.rs`: `unit_view`;
 /// `panels/views/evaluation_plan/work_units.rs`: `standard_title`.
 /// Calls: [`document_of`].
