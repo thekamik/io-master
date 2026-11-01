@@ -7,6 +7,10 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 - **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then); the report itself; an assessment that keeps running when the evaluator leaves the evaluation on the page (today the page loses its progress, the work goes on).
 - **The login with the recovery code**, the change of the password and a new recovery code.
 
+## Models × concerns (user, 2026-11-01)
+
+The whole program is brought, step by step, to the grid of `code_structure.md`, section 1: what `panels/logic/` holds that is no presentation moves into the concern that mirrors `model/` (the AI first, below; then the rest of `panels/logic/`, panel by panel, each step agreed with the user).
+
 ## The AI in the mirror of the models (user, 2026-11-01)
 
 `ai/models/` mirrors `model/`; the steps agreed, in this order, each with its commit:

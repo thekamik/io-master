@@ -31,6 +31,16 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 
 `panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only (`evaluation` uses `evaluation_plan` for the order of the work).
 
+**Models × concerns** (user, 2026-11-01). The program is a grid: `model/` declares the structures, and each concern mirrors `model/` with the functions on each model in the file of its name, so that the place of a function follows from its model and its concern:
+
+```text
+                      model/ai/integration.rs     model/evaluation/work_unit.rs     model/session/progress.rs
+db/models/  (store)   db/models/ai/integration.rs db/models/evaluation/work_unit.rs  (never stored)
+ai/models/  (the AI)  ai/models/ai/integration/   ai/models/evaluation/work_unit.rs
+```
+
+The whole program is brought to it step by step (`todo.md`); `panels/logic/` keeps only what a panel shows, and only `panels/views/` knows the window (Tauri, serde), so that another front end (an HTTPS server) would replace it alone.
+
 ## 2. The folders
 
 ### `db/`
