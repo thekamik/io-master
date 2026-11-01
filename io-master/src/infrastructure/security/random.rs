@@ -20,24 +20,49 @@ use std::io;
 use rustix::io::Errno;
 use rustix::rand::{GetRandomFlags, getrandom};
 
+/// The most bytes asked for at once: the keys, salts and nonces of the
+/// program are a few dozen bytes each.
+const MAX_BYTES: usize = 4096;
+
+/// The most calls of `getrandom` for one buffer: each call gives at least
+/// one byte or is interrupted by a signal, and for a buffer within
+/// [`MAX_BYTES`] the kernel gives all of it at once once it is ready.
+const MAX_CALLS: usize = 64;
+
 /// Fills a buffer with random bytes from the kernel.
 ///
-/// Fails only when the kernel cannot provide random bytes, which
-/// on a working Linux system does not happen.
+/// Input: `buffer`, at most [`MAX_BYTES`] bytes (a key of 32 bytes).
+///
+/// Output: nothing; the buffer is filled. An error when the buffer is over
+/// its limit, or the kernel cannot provide random bytes (which on a working
+/// Linux system does not happen).
+///
+/// Called by: `infrastructure/storage/encryption/generate_key.rs`:
+/// `generate_database_key`; `objects/user/user_keys/user_keys_rules/password.rs`:
+/// `wrap`; `objects/user/user_keys/user_keys_rules/recovery.rs`: `new_code`,
+/// `wrap`; the tests.
 pub fn fill_random(buffer: &mut [u8]) -> io::Result<()> {
+    ensure!(buffer.len() <= MAX_BYTES, io::Error::other(format!("more than {MAX_BYTES} random bytes asked for")));
+
     let mut filled = 0;
 
     // getrandom() may deliver fewer bytes than asked for, or be
     // interrupted by a signal while it waits at start-up; both
     // are handled by asking again for the rest.
-    while filled < buffer.len() {
+    for _ in 0..MAX_CALLS {
+        if filled == buffer.len() {
+            return Ok(());
+        }
+
         match getrandom(&mut buffer[filled..], GetRandomFlags::empty()) {
             Ok(0) => return Err(io::Error::other("the kernel returned no random bytes")),
             Ok(count) => filled += count,
-            Err(Errno::INTR) => continue,
+            Err(Errno::INTR) => {}
             Err(error) => return Err(error.into()),
         }
     }
+
+    ensure!(filled == buffer.len(), io::Error::other("the kernel gave too few random bytes"));
 
     Ok(())
 }
@@ -54,13 +79,19 @@ mod tests {
 
     #[test]
     fn a_long_buffer_is_filled_completely() {
-        // Larger than one getrandom() call is guaranteed to deliver.
-        let mut buffer = vec![0u8; 1 << 20];
+        // Larger than the 256 bytes one getrandom() call is guaranteed to
+        // deliver.
+        let mut buffer = vec![0u8; MAX_BYTES];
 
         fill_random(&mut buffer).unwrap();
 
         // The last kilobyte was reached, not only the beginning.
         assert!(buffer[buffer.len() - 1024..].iter().any(|&byte| byte != 0));
+    }
+
+    #[test]
+    fn a_buffer_over_its_limit_is_refused() {
+        assert!(fill_random(&mut vec![0u8; MAX_BYTES + 1]).is_err());
     }
 
     #[test]
