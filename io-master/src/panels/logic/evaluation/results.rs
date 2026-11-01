@@ -12,7 +12,8 @@ use crate::ai::models::evaluation::work_unit::assessment_answer::check_quote;
 use crate::db::models::evaluation::product_document::read_product_document;
 use crate::db::models::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
 use crate::db::storage::user_database::UserDatabase;
-use crate::domain::models::evaluation::evaluation_plan::planning::evaluation_in_progress;
+use crate::domain::models::evaluation::evaluation_plan::evaluation::evaluation_in_progress;
+use crate::domain::text::check_length;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
 use crate::panels::logic::evaluation::error::EvaluationError;
 
@@ -28,18 +29,6 @@ pub struct Results {
     pub notes: String,
     pub quotes: Vec<Quote>,
     pub verdict: Option<Verdict>,
-}
-
-/// Refuses a text of a result over [`MAX_RESULT`] characters.
-///
-/// Called by: [`save_results`].
-fn check_length(text: &str, what: &str) -> Result<(), EvaluationError> {
-    ensure!(
-        text.chars().count() <= MAX_RESULT,
-        EvaluationError::Refused(format!("{what} over {MAX_RESULT} characters"))
-    );
-
-    Ok(())
 }
 
 /// Refuses a quote of the work unit `unit` that is not of one of its
@@ -73,7 +62,7 @@ fn check_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[Quote]) -> Result<
 /// quote stands in its document.
 ///
 /// Called by: `panels/views/evaluation/work_units.rs` (`evaluation_unit_save`).
-/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `evaluation_in_progress`; `read_work_unit`, [`check_length`],
+/// Calls: `domain/models/evaluation/evaluation_plan/evaluation.rs`: `evaluation_in_progress`; `read_work_unit`, `domain/text.rs`: `check_length`;
 /// [`check_quotes`], `update_work_unit`.
 pub fn save_results(db: &UserDatabase, evaluation: i64, unit: i64, results: &Results) -> Result<(), EvaluationError> {
     let stored = evaluation_in_progress(db, evaluation)?;
@@ -87,10 +76,10 @@ pub fn save_results(db: &UserDatabase, evaluation: i64, unit: i64, results: &Res
         results.verdict.is_none_or(|verdict| stored.possible_verdicts.contains(&verdict)),
         EvaluationError::Refused("the verdict is none of the plan".to_owned())
     );
-    check_length(&results.findings, "the findings")?;
-    check_length(&results.analysis, "the analysis")?;
-    check_length(&results.vulnerability_notes, "the vulnerability notes")?;
-    check_length(&results.notes, "the notes")?;
+    check_length(&results.findings, "the findings", MAX_RESULT)?;
+    check_length(&results.analysis, "the analysis", MAX_RESULT)?;
+    check_length(&results.vulnerability_notes, "the vulnerability notes", MAX_RESULT)?;
+    check_length(&results.notes, "the notes", MAX_RESULT)?;
     check_quotes(db, &this, &results.quotes)?;
 
     let written = WorkUnit {

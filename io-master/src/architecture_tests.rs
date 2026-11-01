@@ -51,7 +51,7 @@ const ALLOWED: [(&str, &[&str]); 19] = [
     ("pdf", &[]),
     ("db", &["model", "security"]),
     // The rules of the data: they read and write through db/.
-    ("domain", &["db", "model"]),
+    ("domain", &["clock", "db", "model", "pdf"]),
     // The AI: it reads the integration, its key and the knowledge, and
     // writes the journal. Inside, ai/models/ai/ mirrors model/ai/: the
     // integration (the service, its connection) knows of the other models

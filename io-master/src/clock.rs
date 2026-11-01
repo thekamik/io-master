@@ -28,7 +28,7 @@ impl std::error::Error for ClockError {}
 ///
 /// Called by: `ai/models/ai/integration/question.rs`: `prepare`;
 /// `panels/logic/chat/chats.rs`: `add_question`, `add_answer`;
-/// `panels/logic/evaluation/evaluations.rs`: `new_evaluation`;
+/// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `new_evaluation`;
 /// `panels/logic/program_start/access.rs`: `install`.
 pub fn now() -> Result<i64, ClockError> {
     let seconds =

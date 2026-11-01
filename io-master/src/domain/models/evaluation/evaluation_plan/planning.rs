@@ -1,14 +1,14 @@
 //! The life of a plan (`EvaluationPlan`) and its data: a new plan, its data
 //! changed by the planner (its name, description, standards, places of the
 //! documents of the product, verdicts, agent), a new place of a document;
-//! where a plan is in its life (in planning, in evaluation). A plan is
+//! a plan in planning, or refused. A plan is
 //! changed only while it is planned (state `Plan`); an evaluation is a copy
 //! of it.
 //!
 //! ```text
 //! the planner ──► create_plan ──► create_evaluation_plan
 //!             ──► update_plan ──► check_planning (before and after) ──► update_evaluation_plan
-//! the panels, the AI ──► plan_in_planning, plan_to_fill, evaluation_in_progress (the plan, or refused)
+//! the panels, the AI ──► plan_in_planning, plan_to_fill (the plan in planning, or refused)
 //! ```
 
 use crate::db::models::ai::agent::read_agent;
@@ -19,6 +19,7 @@ use crate::db::models::evaluation::product_document::create_product_document;
 use crate::db::models::evaluation::work_unit::read_work_units;
 use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
+use crate::domain::text::{MAX_NAME, checked_text};
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::product_document::ProductDocument;
 use crate::model::evaluation::work_unit::Verdict;
@@ -39,7 +40,7 @@ pub fn check_planning(plan: &EvaluationPlan) -> Result<(), DomainError> {
 /// The plan `plan`, refused unless it is in planning.
 ///
 /// Called by: [`plan_to_fill`]; `work_units.rs`: `add_work_unit`,
-/// `add_all_work_units`, `remove_work_unit`; `../work_unit.rs`:
+/// `add_all_work_units`, `remove_work_unit`; `../work_unit/parameters.rs`:
 /// `update_work_unit_parameters`, `add_proof_place`.
 /// Calls: `db/models/evaluation/evaluation_plan.rs`: `read_evaluation_plan`;
 /// [`check_planning`].
@@ -69,38 +70,18 @@ pub fn plan_to_fill(db: &UserDatabase, plan: i64) -> Result<(EvaluationPlan, i64
     Ok((stored, agent))
 }
 
-/// The evaluation `id`; refused unless it is being carried out (state
-/// `Evaluation`).
-///
-/// Called by: `panels/logic/evaluation/evaluations.rs`: `change_agent`;
-/// `panels/logic/evaluation/inputs.rs`: `give_document`, `give_proof`;
-/// `panels/logic/evaluation/results.rs`: `save_results`;
-/// `ai/models/evaluation/evaluation_plan.rs`: `units_to_assess`, `preview`.
-/// Calls: `db/models/evaluation/evaluation_plan.rs`: `read_evaluation_plan`.
-pub fn evaluation_in_progress(db: &UserDatabase, id: i64) -> Result<EvaluationPlan, DomainError> {
-    let evaluation = read_evaluation_plan(db, id)?;
-
-    ensure!(
-        evaluation.state == PlanState::Evaluation,
-        DomainError::Refused(format!("{} is no evaluation in progress", evaluation.name))
-    );
-
-    Ok(evaluation)
-}
-
 /// Makes a new plan in planning, without standards or work units yet, with
 /// the verdicts of Common Criteria (`Pass`, `Fail`). Gives its id.
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_create`.
-/// Calls: `db/models/evaluation/evaluation_plan.rs`: `create_evaluation_plan`.
+/// Calls: `domain/text.rs`: `checked_text`; `db/models/evaluation/evaluation_plan.rs`:
+/// `create_evaluation_plan`.
 pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i64, DomainError> {
-    let name = name.trim();
-
-    ensure!(!name.is_empty(), DomainError::Refused("a plan without a name".to_owned()));
+    let name = checked_text(name, "the name of the plan", MAX_NAME)?;
 
     let plan = EvaluationPlan {
         id: 0,
-        name: name.to_owned(),
+        name,
         description: description.trim().to_owned(),
         state: PlanState::Plan,
         source_plan: None,
@@ -172,16 +153,20 @@ pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), Domai
 /// "IXIT") in the plan `plan`. Gives the id of the place.
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_add_document`.
-/// Calls: [`check_planning`]; `db/models/evaluation/evaluation_plan.rs`:
-/// `read_evaluation_plan`, `update_evaluation_plan`;
-/// `db/models/evaluation/product_document.rs`: `create_product_document`.
+/// Calls: [`check_planning`]; `domain/text.rs`: `checked_text`;
+/// `db/models/evaluation/evaluation_plan.rs`: `read_evaluation_plan`,
+/// `update_evaluation_plan`; `db/models/evaluation/product_document.rs`: `create_product_document`.
 pub fn add_document_place(db: &UserDatabase, plan: i64, name: &str) -> Result<i64, DomainError> {
     let mut stored = read_evaluation_plan(db, plan)?;
 
     check_planning(&stored)?;
-    ensure!(!name.trim().is_empty(), DomainError::Refused("a document without a name".to_owned()));
 
-    let place = ProductDocument { id: 0, name: name.trim().to_owned(), content: None, version: None };
+    let place = ProductDocument {
+        id: 0,
+        name: checked_text(name, "the name of the document", MAX_NAME)?,
+        content: None,
+        version: None,
+    };
     let id = create_product_document(db, &place)?;
 
     stored.product_documents.push(id);

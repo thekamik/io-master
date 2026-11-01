@@ -41,7 +41,7 @@ use crate::db::models::evaluation::work_unit::{
 };
 use crate::db::storage::user_database::UserDatabase;
 use crate::domain::models::evaluation::evaluation_plan::planning::plan_to_fill;
-use crate::domain::models::evaluation::work_unit::{WorkUnitParameters, update_work_unit_parameters};
+use crate::domain::models::evaluation::work_unit::parameters::{WorkUnitParameters, update_work_unit_parameters};
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;

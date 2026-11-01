@@ -37,7 +37,7 @@ pub const SCHEMA: &str = "
 /// Output: the id of the proof (6); an error as [`insert_lab_proof`].
 ///
 /// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `chosen_proofs`;
-/// `domain/models/evaluation/work_unit.rs`: `add_proof_place`.
+/// `domain/models/evaluation/work_unit/parameters.rs`: `add_proof_place`.
 /// Calls: [`insert_lab_proof`].
 pub fn create_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<i64, DbError> {
     insert_lab_proof(db.connection(), proof)
@@ -80,7 +80,8 @@ pub(in crate::db) fn insert_lab_proof(connection: &Connection, proof: &LabProof)
 /// `DbError::NoRow` when there is none.
 ///
 /// Called by: [`update_lab_proof`]; `evaluation_plan.rs`: `copied_places`;
-/// `panels/logic/evaluation/inputs.rs`: `give_proof`, `inputs`;
+/// `domain/models/evaluation/lab_proof.rs`: `give_proof`;
+/// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `proofs_text`, `unit_json`;
 /// `ai/models/evaluation/evaluation_plan.rs`: `missing_inputs`;
 /// `ai/models/evaluation/work_unit/proposal.rs`: `current_parameters`,
@@ -115,7 +116,7 @@ pub fn read_lab_proof(db: &UserDatabase, id: i64) -> Result<LabProof, DbError> {
 /// Output: nothing; an error when it has no name, when its text is given
 /// already, or `DbError::NoRow` when there is no proof `proof.id`.
 ///
-/// Called by: `panels/logic/evaluation/inputs.rs`: `give_proof`.
+/// Called by: `domain/models/evaluation/lab_proof.rs`: `give_proof`.
 /// Calls: [`read_lab_proof`].
 pub fn update_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<(), DbError> {
     ensure!(!proof.name.is_empty(), DbError::Inconsistent("a proof without a name".to_owned()));

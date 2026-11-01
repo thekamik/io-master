@@ -119,7 +119,10 @@ impl ViewError {
             }
             ViewError::NotLoggedIn => "not_logged_in",
             ViewError::Domain(
-                DomainError::Refused(_) | DomainError::Oscal(_) | DomainError::Db(DbError::Inconsistent(_)),
+                DomainError::Refused(_)
+                | DomainError::Oscal(_)
+                | DomainError::Pdf(_)
+                | DomainError::Db(DbError::Inconsistent(_)),
             )
             | ViewError::Db(DbError::Inconsistent(_))
             | ViewError::Settings(
@@ -148,7 +151,6 @@ impl ViewError {
             )
             | ViewError::Evaluation(
                 EvaluationError::Refused(_)
-                | EvaluationError::Pdf(_)
                 | EvaluationError::Ai(
                     AiError::NoKey
                     | AiError::Address(_)
@@ -158,7 +160,10 @@ impl ViewError {
                 )
                 | EvaluationError::Db(DbError::Inconsistent(_))
                 | EvaluationError::Domain(
-                    DomainError::Refused(_) | DomainError::Oscal(_) | DomainError::Db(DbError::Inconsistent(_)),
+                    DomainError::Refused(_)
+                    | DomainError::Oscal(_)
+                    | DomainError::Pdf(_)
+                    | DomainError::Db(DbError::Inconsistent(_)),
                 ),
             )
             | ViewError::Invalid(_) => "invalid",

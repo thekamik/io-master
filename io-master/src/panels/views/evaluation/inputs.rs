@@ -12,8 +12,9 @@
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
+use crate::domain::models::evaluation::lab_proof::give_proof;
+use crate::domain::models::evaluation::product_document::{document_file, give_document};
 use crate::model::evaluation::lab_proof::LabProof;
-use crate::panels::logic::evaluation::inputs::{document_file, give_document, give_proof};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;

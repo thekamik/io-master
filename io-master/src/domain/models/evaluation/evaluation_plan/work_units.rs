@@ -8,7 +8,7 @@
 //! ```
 //!
 //! A work unit made from a control has no documents, proofs or agent yet:
-//! the planner gives them (`work_unit.rs`: `update_work_unit_parameters`).
+//! the planner gives them (`../work_unit/parameters.rs`: `update_work_unit_parameters`).
 
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
@@ -174,7 +174,7 @@ mod tests {
     use crate::db::models::evaluation::work_unit::read_work_unit;
     use crate::domain::models::evaluation::evaluation_plan::planning::{create_plan, update_plan};
     use crate::domain::models::evaluation::oscal_standard_document::import_standard;
-    use crate::domain::models::evaluation::work_unit::{WorkUnitParameters, update_work_unit_parameters};
+    use crate::domain::models::evaluation::work_unit::parameters::{WorkUnitParameters, update_work_unit_parameters};
     use crate::test_support::database::database;
 
     const NIST_SAMPLE: &str = include_str!("../../../../../oscal/examples/basic-catalog.json");

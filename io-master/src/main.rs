@@ -128,19 +128,27 @@ mod db {
 // model/, as db/models/ and ai/models/; error.rs is its error.
 mod domain {
     pub mod error;
+    // The one rule of a text the user gives: trimmed, within its limit.
+    pub mod text;
     pub mod models {
         // domain/models/evaluation/: the rules of a plan, of its work units
         // and of its standards.
         pub mod evaluation {
-            // evaluation_plan/: the life of a plan and its data, the order of
-            // its work, its work units as its children.
+            // evaluation_plan/: the life of a plan and its data, the plan in
+            // evaluation, the order of its work, its work units as its children.
             pub mod evaluation_plan {
+                pub mod evaluation;
                 pub mod order;
                 pub mod planning;
                 pub mod work_units;
             }
+            pub mod lab_proof;
             pub mod oscal_standard_document;
-            pub mod work_unit;
+            pub mod product_document;
+            // work_unit/: the parameters the planner gives a work unit.
+            pub mod work_unit {
+                pub mod parameters;
+            }
         }
     }
 }
@@ -238,7 +246,6 @@ mod panels {
         // ai/models/evaluation/).
         pub mod evaluation {
             pub mod error;
-            pub mod evaluations;
             pub mod inputs;
             pub mod results;
         }

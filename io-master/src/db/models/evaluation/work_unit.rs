@@ -525,7 +525,7 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
 /// `assessment_question`; `panels/logic/evaluation/results.rs`:
 /// `save_results`; `ai/models/evaluation/work_unit/proposal.rs`:
 /// `apply_dependencies`, `apply_parameters`, `dependencies_question`,
-/// `parameters_question`; `domain/models/evaluation/work_unit.rs`:
+/// `parameters_question`; `domain/models/evaluation/work_unit/parameters.rs`:
 /// `add_proof_place`, `update_work_unit_parameters`;
 /// `ai/models/evaluation/work_unit/assessment.rs`: `prepared_question`, `written`;
 /// `panels/views/evaluation/work_units.rs`: `evaluation_unit_get`,
@@ -555,7 +555,8 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
 /// [`MAX_WORK_UNITS`] (a database the program did not write).
 ///
 /// Called by: `evaluation_plan.rs`: `create_evaluation`;
-/// `panels/logic/evaluation/inputs.rs`: `give_proof`, `inputs`;
+/// `domain/models/evaluation/lab_proof.rs`: `give_proof`;
+/// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`;
 /// `ai/models/evaluation/evaluation_plan.rs`: `units_in_order`;
 /// `ai/models/evaluation/work_unit/proposal.rs`: `apply_dependencies`,
@@ -680,7 +681,7 @@ fn check_frozen(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<(), DbE
 /// Called by: `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`;
 /// `panels/logic/evaluation/results.rs`: `save_results`;
 /// `domain/models/evaluation/evaluation_plan/order.rs`: `check_order`;
-/// `domain/models/evaluation/work_unit.rs`: `add_proof_place`,
+/// `domain/models/evaluation/work_unit/parameters.rs`: `add_proof_place`,
 /// `update_work_unit_parameters`.
 /// Calls: [`check_lists`], [`plan_of`], [`check_frozen`], [`check_links`],
 /// [`verdict_name`], [`author_name`], [`write_lists`].

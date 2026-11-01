@@ -1,6 +1,6 @@
 //! The rules of a work unit (`WorkUnit`) of a plan in planning: the
 //! parameters the planner gives it, written with the cross references of
-//! its plan marked again (`evaluation_plan/order.rs`: `check_order`); a new
+//! its plan marked again (`../evaluation_plan/order.rs`: `check_order`); a new
 //! place of a proof of the laboratory, which makes it a functional test.
 //!
 //! ```text
@@ -15,6 +15,7 @@ use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
 use crate::domain::models::evaluation::evaluation_plan::order::check_order;
 use crate::domain::models::evaluation::evaluation_plan::planning::plan_in_planning;
+use crate::domain::text::{MAX_NAME, checked_text};
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::work_unit::WorkUnit;
 
@@ -42,8 +43,8 @@ pub struct WorkUnitParameters {
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_save`
 /// (the form of a work unit); `ai/models/evaluation/work_unit/proposal.rs`:
 /// `apply_parameters`, `apply_dependencies` (proposed by the AI).
-/// Calls: `evaluation_plan/planning.rs`: `plan_in_planning`;
-/// `evaluation_plan/order.rs`: `check_order`;
+/// Calls: `../evaluation_plan/planning.rs`: `plan_in_planning`;
+/// `../evaluation_plan/order.rs`: `check_order`;
 /// `db/models/ai/agent.rs`: `read_agent`; `db/models/evaluation/work_unit.rs`:
 /// `read_work_unit`, `update_work_unit`.
 pub fn update_work_unit_parameters(
@@ -84,17 +85,22 @@ pub fn update_work_unit_parameters(
 /// which becomes a functional test. Gives the id of the place.
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_add_proof`.
-/// Calls: `evaluation_plan/planning.rs`: `plan_in_planning`;
-/// `db/models/evaluation/lab_proof.rs`: `create_lab_proof`;
+/// Calls: `../evaluation_plan/planning.rs`: `plan_in_planning`;
+/// `domain/text.rs`: `checked_text`; `db/models/evaluation/lab_proof.rs`: `create_lab_proof`;
 /// `db/models/evaluation/work_unit.rs`: `read_work_unit`, `update_work_unit`.
 pub fn add_proof_place(db: &UserDatabase, plan: i64, unit: i64, name: &str) -> Result<i64, DomainError> {
     let stored = plan_in_planning(db, plan)?;
 
     ensure!(stored.work_units.contains(&unit), DomainError::Refused("the work unit is not one of the plan".to_owned()));
-    ensure!(!name.trim().is_empty(), DomainError::Refused("a proof without a name".to_owned()));
 
-    let place =
-        LabProof { id: 0, name: name.trim().to_owned(), proof: None, performed: None, tester: None, equipment: None };
+    let place = LabProof {
+        id: 0,
+        name: checked_text(name, "the name of the proof", MAX_NAME)?,
+        proof: None,
+        performed: None,
+        tester: None,
+        equipment: None,
+    };
     let id = create_lab_proof(db, &place)?;
     let mut changed = read_work_unit(db, unit)?;
 
@@ -120,7 +126,7 @@ mod tests {
     use crate::model::evaluation::evaluation_plan::EvaluationPlan;
     use crate::test_support::database::{agent, database, integration};
 
-    const NIST_SAMPLE: &str = include_str!("../../../../oscal/examples/basic-catalog.json");
+    const NIST_SAMPLE: &str = include_str!("../../../../../oscal/examples/basic-catalog.json");
 
     /// A plan with the sample of NIST as its standard.
     fn plan_with_standard(db: &UserDatabase) -> (i64, i64) {

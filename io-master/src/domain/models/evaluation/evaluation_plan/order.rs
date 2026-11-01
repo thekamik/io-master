@@ -147,7 +147,7 @@ pub fn work_order(units: &[WorkUnit]) -> Order {
 /// work unit, and `blocked` of the plan when there is one; writes only what
 /// changed. Gives whether the plan is blocked.
 ///
-/// Called by: `work_units.rs`: `remove_work_unit`; `../work_unit.rs`:
+/// Called by: `work_units.rs`: `remove_work_unit`; `../work_unit/parameters.rs`:
 /// `update_work_unit_parameters`.
 /// Calls: `read_work_units`, [`work_order`], `update_work_unit`,
 /// `read_evaluation_plan`, `update_evaluation_plan`.

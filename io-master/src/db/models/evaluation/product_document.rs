@@ -97,7 +97,8 @@ pub(in crate::db) fn insert_product_document(
 ///
 /// Called by: [`update_product_document`]; `evaluation_plan.rs`:
 /// `copied_places`; `ai/models/evaluation/work_unit/assessment_answer.rs`: `checked_quotes`;
-/// `panels/logic/evaluation/inputs.rs`: `give_document`, `inputs`;
+/// `domain/models/evaluation/product_document.rs`: `give_document`;
+/// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `documents_text`, `unit_json`;
 /// `panels/logic/evaluation/results.rs`: `check_quotes`;
 /// `ai/models/evaluation/evaluation_plan.rs`: `missing_inputs`;
@@ -170,7 +171,7 @@ fn write_passages(connection: &Connection, id: i64, text: &str) -> Result<(), Db
 /// `DbError::NoRow` when there is no document `document.id`; nothing is
 /// then written.
 ///
-/// Called by: `panels/logic/evaluation/inputs.rs`: `give_document`.
+/// Called by: `domain/models/evaluation/product_document.rs`: `give_document`.
 /// Calls: [`read_product_document`], [`write_passages`].
 pub fn update_product_document(
     db: &UserDatabase,
