@@ -177,6 +177,8 @@ fn keys_and_database(
 ) -> Result<NewAccount, AccountError> {
     let key = generate_database_key().map_err(|error| AccountError::Key(error.to_string()))?;
     let code = recovery::new_code()?;
+    // `password::wrap` is the function of `user_keys_rules/password.rs`;
+    // `password` beside it is the password the user gave.
     let keys = UserKeys {
         user: user.id,
         password: password::wrap(&key, password, &binding(user.id))?,
@@ -218,6 +220,7 @@ fn removed(path: &Path, failure: AccountError) -> AccountError {
 /// [`removed`].
 pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &str) -> Result<NewAccount, AccountError> {
     ensure!(password == repeated, AccountError::PasswordsDiffer);
+    // The module `user_keys_rules/password.rs` checks the password given.
     password::check_password(password)?;
 
     DirBuilder::new()
@@ -291,6 +294,8 @@ pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, User
         return Err(AccountError::WrongCredentials);
     };
     let keys = read_user_keys(&system, user.id)?;
+    // `password::unwrap` (`user_keys_rules/password.rs`) opens the copy of the
+    // key wrapped with the password (`keys.password`) with the password given.
     let key = password::unwrap(&keys.password, password, &binding(user.id))?;
     let database = user_database::open(data_dir, user.id, &key, &USER_TABLES)?;
 

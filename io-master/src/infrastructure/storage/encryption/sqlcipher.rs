@@ -8,7 +8,8 @@
 //! The key is given to SQLCipher as raw bytes (`PRAGMA key =
 //! "x'...'"`), so SQLCipher uses it as it is and skips its own
 //! slow derivation of a key from a password: the keys of this
-//! program are random or derived in `keys.rs` already.
+//! program are random or derived in
+//! `objects/user/user_keys/user_keys_rules/password.rs` already.
 //!
 //! **The parameters in effect** (the defaults of SQLCipher 4, except the
 //! three of the memory, which `open()` sets; checked by the test
@@ -31,19 +32,20 @@
 //! on the disk is always encrypted, so a cut of the power leaves nothing
 //! readable.
 //!
-//! Where the key comes from: `keys.rs` (the key of the database of an
-//! evaluator, random, stored only wrapped) and `database_key.rs`.
+//! Where the key comes from: `generate_key.rs` (the key of the database of
+//! the user, random), `database_key.rs` (where it is kept in memory) and
+//! `objects/user/user_keys/user_keys_rules/` (stored only wrapped, with the
+//! password and with the recovery code).
 //!
 //! The databases of the program (`docs/architecture.md`,
 //! section 5.3):
 //!
 //! ```text
-//! db/system/   system.db       the installation and the accounts;
-//!                              NOT encrypted (see create_plain())
-//! db/user/     users/<id>.db   the data of one evaluator; encrypted
-//!                              (and the areas db/ai/, db/standards/,
-//!                              and the further areas of db/,
-//!                              whose tables live in it)
+//! system.v2.db       the installation, the user, the wrapped keys;
+//!                    NOT encrypted (see create_plain());
+//!                    ../system_database.rs
+//! users/<id>.v2.db   everything else of the user; encrypted;
+//!                    ../user_database.rs
 //! ```
 //!
 //! This file is the only place where a database file is opened or
@@ -105,7 +107,7 @@ pub fn create(path: &Path, key: &DatabaseKey) -> Result<Connection, DbError> {
 ///
 /// Used only for the system database, which must open at program
 /// start, before anyone has given a password, and which therefore
-/// holds nothing secret (`db/system/`). Its file is readable only
+/// holds nothing secret (`../system_database.rs`). Its file is readable only
 /// by the user.
 pub fn create_plain(path: &Path) -> Result<Connection, DbError> {
     create_file(path)?;
