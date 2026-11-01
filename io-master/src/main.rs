@@ -119,6 +119,20 @@ mod db {
     }
 }
 
+// domain/: the rules of the data (user, 2026-11-01): where a plan is in its
+// life, the order of its work, the parameters of a work unit; a mirror of
+// model/, as db/models/ and ai/models/; error.rs is its error.
+mod domain {
+    pub mod error;
+    pub mod models {
+        // domain/models/evaluation/: the rules of a plan and of its work units.
+        pub mod evaluation {
+            pub mod evaluation_plan;
+            pub mod work_unit;
+        }
+    }
+}
+
 // ai/: the core of the program that talks with the AI (user, 2026-11-01):
 // the functions of the AI on the models, in a mirror of model/, as db/models/
 // holds their functions in the database; error.rs is the error of all of them.
@@ -208,7 +222,6 @@ mod panels {
         pub mod evaluation_plan {
             pub mod error;
             pub mod fill;
-            pub mod order;
             pub mod oscal;
             pub mod plans;
             pub mod standards;

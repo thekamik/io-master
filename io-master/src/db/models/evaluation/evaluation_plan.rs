@@ -357,11 +357,11 @@ fn read_lists(connection: &Connection, plan: &mut EvaluationPlan) -> Result<(), 
 ///
 /// Called by: [`read_evaluation_plans`], [`create_evaluation`];
 /// `panels/logic/evaluation/answer.rs`: `apply_assessment`;
-/// `panels/logic/evaluation/evaluations.rs`: `evaluation_in_progress`;
+/// `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`;
 /// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `panels/logic/evaluation/question.rs`: `assessment_question`;
 /// `panels/logic/evaluation_plan/fill.rs`: `plan_to_fill`;
-/// `panels/logic/evaluation_plan/order.rs`: `check_order`;
+/// `domain/models/evaluation/evaluation_plan.rs`: `check_order`;
 /// `panels/logic/evaluation_plan/plans.rs`: `add_document_place`,
 /// `update_plan`; `panels/logic/evaluation_plan/work_units.rs`:
 /// `available_controls`, `plan_in_planning`;
@@ -461,7 +461,7 @@ fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(
 /// written.
 ///
 /// Called by: `panels/logic/evaluation/evaluations.rs`: `change_agent`;
-/// `panels/logic/evaluation_plan/order.rs`: `check_order`;
+/// `domain/models/evaluation/evaluation_plan.rs`: `check_order`;
 /// `panels/logic/evaluation_plan/plans.rs`: `add_document_place`,
 /// `update_plan`.
 /// Calls: [`check_plan`], [`state_name`], [`write_lists`],
@@ -637,7 +637,7 @@ fn copied_places(
 /// Input:
 /// - `db`: the open database of the user.
 /// - `source`: the id of the plan, in planning, neither blocked nor with a
-///   cross reference (as `panels/logic/evaluation_plan/order.rs` marks
+///   cross reference (as `domain/models/evaluation/evaluation_plan.rs` marks
 ///   them).
 /// - `product`, `client`, `evaluator`: the identification ISO/IEC 17025
 ///   asks for ("Router X 2.1", "ACME", "Anna Kowalska").

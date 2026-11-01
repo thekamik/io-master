@@ -1,4 +1,7 @@
-//! The order of the work of a plan and its cross references (user,
+//! The rules of a plan (`EvaluationPlan`): where it is in its life (in
+//! planning, in evaluation), and the order of its work.
+//!
+//! **The order of the work and the cross references** (user,
 //! 2026-10-28): a work unit comes after all its dependencies; a work unit
 //! that depends on itself, directly or through others, is a cross
 //! reference, a mistake of the planner, and its plan is blocked until it
@@ -16,9 +19,54 @@
 use crate::db::models::evaluation::evaluation_plan::{read_evaluation_plan, update_evaluation_plan};
 use crate::db::models::evaluation::work_unit::{read_work_units, update_work_unit};
 use crate::db::storage::user_database::UserDatabase;
-use crate::model::evaluation::evaluation_plan::EvaluationPlan;
+use crate::domain::error::DomainError;
+use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::work_unit::WorkUnit;
-use crate::panels::logic::evaluation_plan::error::PlanError;
+
+/// Refuses a plan that is no more in planning, and one without a name.
+///
+/// Called by: [`plan_in_planning`]; `panels/logic/evaluation_plan/plans.rs`:
+/// `update_plan`, `add_document_place`.
+pub fn check_planning(plan: &EvaluationPlan) -> Result<(), DomainError> {
+    ensure!(
+        plan.state == PlanState::Plan,
+        DomainError::Refused("only a plan in planning is changed; an evaluation keeps its plan".to_owned())
+    );
+    ensure!(!plan.name.trim().is_empty(), DomainError::Refused("a plan without a name".to_owned()));
+
+    Ok(())
+}
+
+/// The plan `plan`, refused unless it is in planning.
+///
+/// Called by: `work_unit.rs`: `update_work_unit_parameters`;
+/// `panels/logic/evaluation_plan/work_units.rs`, `fill.rs`.
+/// Calls: `db/models/evaluation/evaluation_plan.rs`: `read_evaluation_plan`;
+/// [`check_planning`].
+pub fn plan_in_planning(db: &UserDatabase, plan: i64) -> Result<EvaluationPlan, DomainError> {
+    let stored = read_evaluation_plan(db, plan)?;
+
+    check_planning(&stored)?;
+
+    Ok(stored)
+}
+
+/// The evaluation `id`; refused unless it is being carried out (state
+/// `Evaluation`).
+///
+/// Called by: `panels/logic/evaluation/evaluations.rs`: `change_agent`;
+/// `panels/logic/evaluation/inputs.rs`, `results.rs`, `run.rs`.
+/// Calls: `db/models/evaluation/evaluation_plan.rs`: `read_evaluation_plan`.
+pub fn evaluation_in_progress(db: &UserDatabase, id: i64) -> Result<EvaluationPlan, DomainError> {
+    let evaluation = read_evaluation_plan(db, id)?;
+
+    ensure!(
+        evaluation.state == PlanState::Evaluation,
+        DomainError::Refused(format!("{} is no evaluation in progress", evaluation.name))
+    );
+
+    Ok(evaluation)
+}
 
 /// The order of the work of a plan.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -147,11 +195,12 @@ pub fn work_order(units: &[WorkUnit]) -> Order {
 /// work unit, and `blocked` of the plan when there is one; writes only what
 /// changed. Gives whether the plan is blocked.
 ///
-/// Called by: `work_units.rs`, after every change of the work units of a
-/// plan in planning (a dependency set, a work unit removed).
+/// Called by: `work_unit.rs`: `update_work_unit_parameters`;
+/// `panels/logic/evaluation_plan/work_units.rs`: `remove_work_unit` and the
+/// other changes of the work units of a plan in planning.
 /// Calls: `read_work_units`, [`work_order`], `update_work_unit`,
 /// `read_evaluation_plan`, `update_evaluation_plan`.
-pub fn check_order(db: &UserDatabase, plan: i64) -> Result<bool, PlanError> {
+pub fn check_order(db: &UserDatabase, plan: i64) -> Result<bool, DomainError> {
     let units = read_work_units(db, plan)?;
     let crossed = work_order(&units).crossed;
 

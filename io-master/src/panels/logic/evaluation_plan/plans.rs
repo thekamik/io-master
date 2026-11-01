@@ -10,23 +10,11 @@ use crate::db::models::evaluation::evaluation_plan::{
 use crate::db::models::evaluation::product_document::create_product_document;
 use crate::db::models::evaluation::work_unit::read_work_units;
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::models::evaluation::evaluation_plan::check_planning;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::product_document::ProductDocument;
 use crate::model::evaluation::work_unit::Verdict;
 use crate::panels::logic::evaluation_plan::error::PlanError;
-
-/// Refuses a plan that is no more in planning, and one without a name.
-///
-/// Called by: [`update_plan`], [`add_document_place`]; `work_units.rs`.
-pub(in crate::panels::logic::evaluation_plan) fn check_planning(plan: &EvaluationPlan) -> Result<(), PlanError> {
-    ensure!(
-        plan.state == PlanState::Plan,
-        PlanError::Refused("only a plan in planning is changed; an evaluation keeps its plan".to_owned())
-    );
-    ensure!(!plan.name.trim().is_empty(), PlanError::Refused("a plan without a name".to_owned()));
-
-    Ok(())
-}
 
 /// Makes a new plan in planning, without standards or work units yet, with
 /// the verdicts of Common Criteria (`Pass`, `Fail`). Gives its id.
@@ -67,7 +55,7 @@ pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i
 /// the agent does not exist.
 ///
 /// Called by: `panels/views/evaluation_plan/` (the data of a plan).
-/// Calls: `read_evaluation_plan`, [`check_planning`], `read_agent`,
+/// Calls: `read_evaluation_plan`, `domain/models/evaluation/evaluation_plan.rs`: `check_planning`, `read_agent`,
 /// `read_work_units`, `update_evaluation_plan`.
 pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), PlanError> {
     let stored = read_evaluation_plan(db, plan.id)?;
@@ -111,7 +99,7 @@ pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), PlanE
 /// "IXIT") in the plan `plan`. Gives the id of the place.
 ///
 /// Called by: `panels/views/evaluation_plan/` (a new document of a plan).
-/// Calls: `read_evaluation_plan`, [`check_planning`],
+/// Calls: `read_evaluation_plan`, `domain/models/evaluation/evaluation_plan.rs`: `check_planning`,
 /// `create_product_document`, `update_evaluation_plan`.
 pub fn add_document_place(db: &UserDatabase, plan: i64, name: &str) -> Result<i64, PlanError> {
     let mut stored = read_evaluation_plan(db, plan)?;

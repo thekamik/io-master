@@ -7,6 +7,7 @@ use std::fmt;
 
 use crate::ai::error::AiError;
 use crate::db::error::DbError;
+use crate::domain::error::DomainError;
 use crate::pdf::poppler::PdfError;
 
 /// Why a change of an evaluation was refused or failed.
@@ -23,6 +24,9 @@ pub enum EvaluationError {
     Ai(AiError),
     /// A database failed, or refused what was given to it.
     Db(DbError),
+    /// A rule of the data refused the change, or could not be checked
+    /// (`domain/`).
+    Domain(DomainError),
 }
 
 impl fmt::Display for EvaluationError {
@@ -32,6 +36,7 @@ impl fmt::Display for EvaluationError {
             EvaluationError::Pdf(error) => write!(formatter, "{error}"),
             EvaluationError::Ai(error) => write!(formatter, "{error}"),
             EvaluationError::Db(error) => write!(formatter, "{error}"),
+            EvaluationError::Domain(error) => write!(formatter, "{error}"),
         }
     }
 }
@@ -53,5 +58,11 @@ impl From<AiError> for EvaluationError {
 impl From<DbError> for EvaluationError {
     fn from(error: DbError) -> EvaluationError {
         EvaluationError::Db(error)
+    }
+}
+
+impl From<DomainError> for EvaluationError {
+    fn from(error: DomainError) -> EvaluationError {
+        EvaluationError::Domain(error)
     }
 }

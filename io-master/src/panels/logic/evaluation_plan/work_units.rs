@@ -2,11 +2,11 @@
 //! standards of the plan (one, or all at once), removed, and given their
 //! parameters by the planner (dependencies, documents, proofs of the
 //! laboratory, agent, guidance). After every change of the work units the
-//! cross references of the plan are marked again (`order.rs`).
+//! cross references of the plan are marked again (`domain/models/evaluation/evaluation_plan.rs`: `check_order`).
 //!
 //! ```text
 //! a standard of the plan ──catalog_controls (oscal.rs)──► a control ──► a new work unit (create_work_unit)
-//! the planner ──parameters──► update_work_unit_parameters ──► update_work_unit ──► check_order
+//! the planner ──parameters──► domain/models/evaluation/work_unit.rs: update_work_unit_parameters
 //! ```
 //!
 //! A work unit made from a control has no documents, proofs or agent yet:
@@ -14,7 +14,6 @@
 //! 2026-10-29). A work unit with proofs of the laboratory is a functional
 //! test; without any (`None`), a test of the documentation.
 
-use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::lab_proof::create_lab_proof;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
@@ -22,41 +21,12 @@ use crate::db::models::evaluation::work_unit::{
     create_work_unit, delete_work_unit, read_work_unit, read_work_units, update_work_unit,
 };
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::models::evaluation::evaluation_plan::{check_order, plan_in_planning};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::work_unit::WorkUnit;
 use crate::panels::logic::evaluation_plan::error::PlanError;
-use crate::panels::logic::evaluation_plan::order::check_order;
 use crate::panels::logic::evaluation_plan::oscal::{CatalogControl, catalog_controls};
-use crate::panels::logic::evaluation_plan::plans::check_planning;
-
-/// What the planner gives a work unit.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct WorkUnitParameters {
-    /// The work units of the plan it depends on.
-    pub dependencies: Vec<i64>,
-    /// The documents of the product (places of the plan) it needs.
-    pub input_product_documents: Vec<i64>,
-    /// The proofs of the laboratory it needs; empty: a test of the
-    /// documentation.
-    pub input_functional: Vec<i64>,
-    /// The agent that assesses it; `None`: none.
-    pub ai_agent: Option<i64>,
-    /// The guidance of the standard, as the planner corrected it.
-    pub guidance: String,
-}
-
-/// The plan `plan`, refused unless it is in planning.
-///
-/// Called by: every function of this file.
-/// Calls: `read_evaluation_plan`, `plans::check_planning`.
-fn plan_in_planning(db: &UserDatabase, plan: i64) -> Result<EvaluationPlan, PlanError> {
-    let stored = read_evaluation_plan(db, plan)?;
-
-    check_planning(&stored)?;
-
-    Ok(stored)
-}
 
 /// The controls of the standard `standard`, one of the standards of `plan`.
 ///
@@ -141,7 +111,7 @@ pub fn available_controls(db: &UserDatabase, plan: i64, standard: i64) -> Result
 /// Gives its id.
 ///
 /// Called by: `panels/views/evaluation_plan/` (a work unit added).
-/// Calls: [`plan_in_planning`], [`controls_of`], [`holds`], [`unit_of`],
+/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_in_planning`, [`controls_of`], [`holds`], [`unit_of`],
 /// `create_work_unit`.
 pub fn add_work_unit(db: &UserDatabase, plan: i64, standard: i64, oscal_key: &str) -> Result<i64, PlanError> {
     let stored = plan_in_planning(db, plan)?;
@@ -166,7 +136,7 @@ pub fn add_work_unit(db: &UserDatabase, plan: i64, standard: i64, oscal_key: &st
 /// were added.
 ///
 /// Called by: `panels/views/evaluation_plan/` ("Add all").
-/// Calls: [`plan_in_planning`], [`controls_of`], [`holds`], [`unit_of`],
+/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_in_planning`, [`controls_of`], [`holds`], [`unit_of`],
 /// `create_work_unit`.
 pub fn add_all_work_units(db: &UserDatabase, plan: i64, standard: i64) -> Result<usize, PlanError> {
     let stored = plan_in_planning(db, plan)?;
@@ -188,7 +158,8 @@ pub fn add_all_work_units(db: &UserDatabase, plan: i64, standard: i64) -> Result
 /// dependencies of the others on it, and marks the cross references again.
 ///
 /// Called by: `panels/views/evaluation_plan/` (a work unit removed).
-/// Calls: [`plan_in_planning`], `delete_work_unit`, `order::check_order`.
+/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_in_planning`, `delete_work_unit`, `domain/models/evaluation/evaluation_plan.rs`:
+/// `check_order`.
 pub fn remove_work_unit(db: &UserDatabase, plan: i64, unit: i64) -> Result<(), PlanError> {
     let stored = plan_in_planning(db, plan)?;
 
@@ -200,53 +171,12 @@ pub fn remove_work_unit(db: &UserDatabase, plan: i64, unit: i64) -> Result<(), P
     Ok(())
 }
 
-/// Gives the work unit `unit` of the plan `plan` in planning the
-/// `parameters` of the planner, and marks the cross references again. An
-/// empty list of proofs makes it a test of the documentation (`None`); the
-/// agent named must exist (`ai_agent`, the agent that will work on it).
-///
-/// Called by: `panels/views/evaluation_plan/` (the form of a work unit).
-/// Calls: [`plan_in_planning`], `read_agent`, `read_work_unit`,
-/// `update_work_unit`, `order::check_order`.
-pub fn update_work_unit_parameters(
-    db: &UserDatabase,
-    plan: i64,
-    unit: i64,
-    parameters: &WorkUnitParameters,
-) -> Result<(), PlanError> {
-    let stored = plan_in_planning(db, plan)?;
-
-    ensure!(stored.work_units.contains(&unit), PlanError::Refused("the work unit is not one of the plan".to_owned()));
-
-    if let Some(agent) = parameters.ai_agent {
-        read_agent(db, agent)?;
-    }
-
-    let changed = WorkUnit {
-        dependencies: parameters.dependencies.clone(),
-        input_product_documents: parameters.input_product_documents.clone(),
-        input_functional: if parameters.input_functional.is_empty() {
-            None
-        } else {
-            Some(parameters.input_functional.clone())
-        },
-        ai_agent: parameters.ai_agent,
-        guidance: parameters.guidance.clone(),
-        ..read_work_unit(db, unit)?
-    };
-
-    update_work_unit(db, &changed)?;
-    check_order(db, plan)?;
-
-    Ok(())
-}
-
 /// Reserves a new place of a proof of the laboratory (`name`: "results of
 /// the scan of the ports") for the work unit `unit` of the plan `plan`,
 /// which becomes a functional test. Gives the id of the place.
 ///
 /// Called by: `panels/views/evaluation_plan/` (a proof added to a work unit).
-/// Calls: [`plan_in_planning`], `create_lab_proof`, `read_work_unit`,
+/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `plan_in_planning`, `create_lab_proof`, `read_work_unit`,
 /// `update_work_unit`.
 pub fn add_proof_place(db: &UserDatabase, plan: i64, unit: i64, name: &str) -> Result<i64, PlanError> {
     let stored = plan_in_planning(db, plan)?;
@@ -272,11 +202,10 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::agent::create_agent;
-    use crate::db::models::ai::integration::create_integration;
+    use crate::domain::models::evaluation::work_unit::{WorkUnitParameters, update_work_unit_parameters};
     use crate::panels::logic::evaluation_plan::plans::{add_document_place, create_plan, update_plan};
     use crate::panels::logic::evaluation_plan::standards::import_standard;
-    use crate::test_support::database::{agent, database, integration};
+    use crate::test_support::database::database;
 
     const NIST_SAMPLE: &str = include_str!("../../../../oscal/examples/basic-catalog.json");
 
@@ -339,30 +268,6 @@ mod tests {
         let proof = add_proof_place(&db, plan, second, "Scan of the ports").unwrap();
 
         assert_eq!(read_work_unit(&db, second).unwrap().input_functional, Some(vec![proof]));
-    }
-
-    #[test]
-    fn a_work_unit_names_an_agent_that_exists() {
-        let (_directory, db) = database();
-        let (plan, standard) = plan_with_standard(&db);
-        let unit = add_work_unit(&db, plan, standard, "s1.1.1").unwrap();
-        let integration = create_integration(&db, &integration()).unwrap();
-        let worker = create_agent(&db, &agent(integration)).unwrap();
-        let named = |ai_agent: Option<i64>| WorkUnitParameters {
-            dependencies: Vec::new(),
-            input_product_documents: Vec::new(),
-            input_functional: Vec::new(),
-            ai_agent,
-            guidance: String::new(),
-        };
-
-        update_work_unit_parameters(&db, plan, unit, &named(Some(worker))).unwrap();
-
-        assert_eq!(read_work_unit(&db, unit).unwrap().ai_agent, Some(worker));
-        assert!(matches!(
-            update_work_unit_parameters(&db, plan, unit, &named(Some(worker + 1))),
-            Err(PlanError::Db(_))
-        ));
     }
 
     #[test]

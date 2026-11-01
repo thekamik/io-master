@@ -559,7 +559,7 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
 /// `panels/logic/evaluation/question.rs`: `question_of`;
 /// `panels/logic/evaluation/run.rs`: `units_in_order`;
 /// `panels/logic/evaluation_plan/fill.rs`: `apply_dependencies`,
-/// `dependencies_question`; `panels/logic/evaluation_plan/order.rs`:
+/// `dependencies_question`; `domain/models/evaluation/evaluation_plan.rs`:
 /// `check_order`; `panels/logic/evaluation_plan/plans.rs`: `update_plan`;
 /// `panels/logic/evaluation_plan/work_units.rs`: `add_all_work_units`,
 /// `add_work_unit`, `available_controls`;
@@ -679,7 +679,7 @@ fn check_frozen(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<(), DbE
 ///
 /// Called by: `panels/logic/evaluation/answer.rs`: `apply_assessment`;
 /// `panels/logic/evaluation/results.rs`: `save_results`;
-/// `panels/logic/evaluation_plan/order.rs`: `check_order`;
+/// `domain/models/evaluation/evaluation_plan.rs`: `check_order`;
 /// `panels/logic/evaluation_plan/work_units.rs`: `add_proof_place`,
 /// `update_work_unit_parameters`.
 /// Calls: [`check_lists`], [`plan_of`], [`check_frozen`], [`check_links`],

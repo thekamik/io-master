@@ -11,6 +11,7 @@ io-master/src/
   security/       random bytes from the kernel; no memory dumps of the process
   pdf/            pdfinfo and pdftotext of Poppler, the PDF on their standard input
   db/             storage/: the two database files and their encryption; models/: create, read, update of the models
+  domain/         the rules of the data (models/, a mirror of model/): where a plan is in its life, the order of its work
   ai/             the AI on the models (models/, a mirror of model/): the integration, the journal, the agent, the chat
   session/        the data folder; the user logged in, their open database, the progress of the long work of the AI
   panels/logic/   the work behind each panel, given the open database
@@ -24,10 +25,11 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 |---|---|
 | `model`, `security`, `pdf` | nothing of the program |
 | `db` | `model`, `security` (inside: `models/` uses `storage/`; `storage/` uses only `models/schema.rs`) |
-| `ai` | `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
+| `domain` | `db`, `model` |
+| `ai` | `domain`, `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
 | `session` | `db`, `model` |
-| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `db`, `model`, `security`, `pdf` |
-| `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `db`, `model`, `session` |
+| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `domain`, `db`, `model`, `security`, `pdf` |
+| `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `domain`, `db`, `model`, `session` |
 
 `panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only (`evaluation` uses `evaluation_plan` for the order of the work).
 
@@ -36,6 +38,7 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 ```text
                       model/ai/integration.rs     model/evaluation/work_unit.rs     model/session/progress.rs
 db/models/  (store)   db/models/ai/integration.rs db/models/evaluation/work_unit.rs  (never stored)
+domain/models/ (rules)                            domain/models/evaluation/work_unit.rs
 ai/models/  (the AI)  ai/models/ai/integration/   ai/models/evaluation/work_unit.rs
 ```
 
@@ -60,6 +63,19 @@ storage/ ──UserDatabase / SystemDatabase (the connection, seen only in db/)�
 ```
 
 `models/` holds one file per file of `model/`, with its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; `schema.rs` lists the tables of each database (parted by the database, not by the folder; the order does not matter to SQLite); a list of a model is a table of its own, one row per element with its position (`lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). `storage/` makes the missing tables whenever it opens a database; `storage/encryption/` opens the files with SQLCipher. The knowledge: `models/ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`models/evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
+
+### `domain/`
+
+The rules of the data (user, 2026-11-01: `data_model.md`, "the rules of the data live outside `model/`"), in a mirror of `model/`; `error.rs` (`DomainError`: refused, or a failure of the database), which each panel turns into its own error.
+
+```text
+domain/models/evaluation/
+  evaluation_plan.rs   check_planning, plan_in_planning, evaluation_in_progress (where a plan is in its life);
+                       work_order (Kahn: the order of the work, the cross references), check_order (cross_reference
+                       and blocked written after every change of the work units of a plan)
+  work_unit.rs         WorkUnitParameters, update_work_unit_parameters (the parameters of a work unit in planning,
+                       then check_order)
+```
 
 ### `ai/`
 
@@ -102,7 +118,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 | Panel | `logic/` | `views/` commands |
 |---|---|---|
 | `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
-| `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs`, `order.rs` (Kahn: the order, the cross references, `blocked`), `fill.rs` ("Fill with AI": parameters, dependencies, the preview) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
+| `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs`, `fill.rs` ("Fill with AI": parameters, dependencies, the preview) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | `agent.rs` (an agent made, its changes checked; its knowledge and its question are in `ai/models/ai/agent.rs`), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `evaluations.rs` (an evaluation begun on a copy of a plan with its agent; the agent changed), `inputs.rs` (the documents and proofs given once; whether a file is a PDF told by its first bytes), `question.rs` (the question of a work unit: its JSON, its dependencies, its documents whole or by passages, its proofs), `answer.rs` (the answer read; the quotes checked in the documents; the verdict with the dependencies), `run.rs` (the work units in the order of the work, the preview with the inputs missing, the question prepared), `results.rs` (the results of the evaluator, of author User) | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |

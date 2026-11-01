@@ -12,6 +12,7 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 use crate::ai::error::AiError;
 use crate::db::error::DbError;
+use crate::domain::error::DomainError;
 use crate::panels::logic::agents::error::AgentError;
 use crate::panels::logic::chat::error::ChatError;
 use crate::panels::logic::evaluation::error::EvaluationError;
@@ -45,6 +46,9 @@ pub enum ViewError {
     Ai(AiError),
     /// A database refused or failed.
     Db(DbError),
+    /// A rule of the data refused a change, or could not be checked
+    /// (`domain/`).
+    Domain(DomainError),
     /// What the page sent, or a file the user chose, cannot be taken;
     /// holds the reason.
     Invalid(String),
@@ -92,6 +96,12 @@ impl From<DbError> for ViewError {
     }
 }
 
+impl From<DomainError> for ViewError {
+    fn from(error: DomainError) -> ViewError {
+        ViewError::Domain(error)
+    }
+}
+
 impl From<AccountError> for ViewError {
     fn from(error: AccountError) -> ViewError {
         ViewError::Account(error)
@@ -117,7 +127,13 @@ impl ViewError {
                 "invalid"
             }
             ViewError::NotLoggedIn => "not_logged_in",
-            ViewError::Plan(PlanError::Oscal(_) | PlanError::Refused(_) | PlanError::Db(DbError::Inconsistent(_)))
+            ViewError::Plan(
+                PlanError::Oscal(_)
+                | PlanError::Refused(_)
+                | PlanError::Db(DbError::Inconsistent(_))
+                | PlanError::Domain(DomainError::Refused(_) | DomainError::Db(DbError::Inconsistent(_))),
+            )
+            | ViewError::Domain(DomainError::Refused(_) | DomainError::Db(DbError::Inconsistent(_)))
             | ViewError::Db(DbError::Inconsistent(_))
             | ViewError::Settings(
                 SettingsError::Refused(_) | SettingsError::Ai(_) | SettingsError::Db(DbError::Inconsistent(_)),
@@ -137,16 +153,20 @@ impl ViewError {
                 | EvaluationError::Ai(
                     AiError::NoKey | AiError::Address(_) | AiError::NoQuestion | AiError::TooLong { .. },
                 )
-                | EvaluationError::Db(DbError::Inconsistent(_)),
+                | EvaluationError::Db(DbError::Inconsistent(_))
+                | EvaluationError::Domain(DomainError::Refused(_) | DomainError::Db(DbError::Inconsistent(_))),
             )
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
-            | ViewError::Plan(PlanError::Db(_) | PlanError::Knowledge(_))
+            | ViewError::Plan(PlanError::Db(_) | PlanError::Knowledge(_) | PlanError::Domain(DomainError::Db(_)))
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
             | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))
-            | ViewError::Evaluation(EvaluationError::Ai(_) | EvaluationError::Db(_))
+            | ViewError::Evaluation(
+                EvaluationError::Ai(_) | EvaluationError::Db(_) | EvaluationError::Domain(DomainError::Db(_)),
+            )
+            | ViewError::Domain(DomainError::Db(_))
             | ViewError::Ai(_)
             | ViewError::Db(_) => "failed",
         }
@@ -167,6 +187,7 @@ impl ViewError {
             ViewError::Evaluation(error) => error.to_string(),
             ViewError::Ai(error) => error.to_string(),
             ViewError::Db(error) => error.to_string(),
+            ViewError::Domain(error) => error.to_string(),
             ViewError::Invalid(reason) => reason.clone(),
         }
     }

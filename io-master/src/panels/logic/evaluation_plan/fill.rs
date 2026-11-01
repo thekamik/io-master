@@ -42,13 +42,13 @@ use crate::db::models::evaluation::work_unit::{
     MAX_DEPENDENCIES, MAX_DOCUMENTS, MAX_PROOFS, read_work_unit, read_work_units,
 };
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::models::evaluation::evaluation_plan::check_planning;
+use crate::domain::models::evaluation::work_unit::{WorkUnitParameters, update_work_unit_parameters};
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::work_unit::WorkUnit;
 use crate::panels::logic::evaluation_plan::error::PlanError;
-use crate::panels::logic::evaluation_plan::plans::check_planning;
-use crate::panels::logic::evaluation_plan::work_units::{WorkUnitParameters, update_work_unit_parameters};
 
 /// The longest guidance taken from an answer, in characters.
 const MAX_GUIDANCE: usize = 20_000;
@@ -104,7 +104,7 @@ struct Names {
 ///
 /// Called by: [`fill_units`], [`question_of`], [`apply_parameters`],
 /// [`apply_dependencies`].
-/// Calls: `read_evaluation_plan`, `plans::check_planning`.
+/// Calls: `read_evaluation_plan`, `domain/models/evaluation/evaluation_plan.rs`: `check_planning`.
 fn plan_to_fill(db: &UserDatabase, plan: i64) -> Result<(EvaluationPlan, i64), PlanError> {
     let stored = read_evaluation_plan(db, plan)?;
 

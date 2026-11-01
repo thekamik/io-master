@@ -6,6 +6,7 @@ use std::fmt;
 
 use crate::ai::error::AiError;
 use crate::db::error::DbError;
+use crate::domain::error::DomainError;
 use crate::panels::logic::evaluation_plan::oscal::OscalError;
 
 /// Why a step of the making of a plan was refused or failed.
@@ -20,6 +21,9 @@ pub enum PlanError {
     Db(DbError),
     /// The knowledge of the agent of the planner could not be read.
     Knowledge(AiError),
+    /// A rule of the data refused the change, or could not be checked
+    /// (`domain/`).
+    Domain(DomainError),
 }
 
 impl fmt::Display for PlanError {
@@ -28,6 +32,7 @@ impl fmt::Display for PlanError {
             PlanError::Oscal(error) => write!(formatter, "{error}"),
             PlanError::Refused(reason) => formatter.write_str(reason),
             PlanError::Db(error) => write!(formatter, "{error}"),
+            PlanError::Domain(error) => write!(formatter, "{error}"),
             PlanError::Knowledge(error) => write!(formatter, "{error}"),
         }
     }
@@ -50,5 +55,11 @@ impl From<AiError> for PlanError {
 impl From<DbError> for PlanError {
     fn from(error: DbError) -> PlanError {
         PlanError::Db(error)
+    }
+}
+
+impl From<DomainError> for PlanError {
+    fn from(error: DomainError) -> PlanError {
+        PlanError::Domain(error)
     }
 }

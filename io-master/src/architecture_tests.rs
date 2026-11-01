@@ -12,6 +12,9 @@
 //!        ai/        (models/: the AI on the models, a mirror of model/)
 //!         │
 //!         ▼
+//!      domain/      (models/: the rules of the data, a mirror of model/)
+//!         │
+//!         ▼
 //!        db/        (create, read and update of the models; the database files)
 //!         │
 //!         ▼
@@ -39,18 +42,20 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 14] = [
+const ALLOWED: [(&str, &[&str]); 15] = [
     ("model", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
     ("db", &["model", "security"]),
+    // The rules of the data: they read and write through db/.
+    ("domain", &["db", "model"]),
     // The AI: it reads the integration, its key and the knowledge, and
     // writes the journal. Inside, ai/models/ai/ mirrors model/ai/: the
     // integration (the service, its connection) knows of the other models
     // only the API key, masked in its errors; the journal, the agent and the
     // chat ask through the integration.
-    ("ai", &["db", "model"]),
+    ("ai", &["domain", "db", "model"]),
     ("ai::models::ai::api_key", &["ai::error", "model"]),
     ("ai::models::ai::integration", &["ai::error", "ai::models::ai::api_key", "db", "model"]),
     ("ai::models::ai::journal", &["ai::error", "ai::models::ai::integration", "db", "model"]),
@@ -65,13 +70,29 @@ const ALLOWED: [(&str, &[&str]); 14] = [
     // the checks of an address and a certificate (the settings of the AI),
     // never the connection or a protocol.
     // The sources of the knowledge of an agent are read from PDFs too.
-    ("panels::logic", &[AI_ERROR, AGENT, CHAT, JOURNAL, QUESTION, SENDING, ADDRESS, "db", "model", "security", "pdf"]),
+    (
+        "panels::logic",
+        &[AI_ERROR, AGENT, CHAT, JOURNAL, QUESTION, SENDING, ADDRESS, "domain", "db", "model", "security", "pdf"],
+    ),
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
     // The commands of the page: they do their work with the folders below.
     (
         "panels::views",
-        &["panels::logic", AI_ERROR, AGENT, CHAT, JOURNAL, QUESTION, SENDING, PROGRESS, "db", "model", "session"],
+        &[
+            "panels::logic",
+            AI_ERROR,
+            AGENT,
+            CHAT,
+            JOURNAL,
+            QUESTION,
+            SENDING,
+            PROGRESS,
+            "domain",
+            "db",
+            "model",
+            "session",
+        ],
     ),
 ];
 

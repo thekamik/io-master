@@ -17,6 +17,7 @@
 
 ## Way of working
 
+- **Every function easy to find** (user, 2026-11-01): the errors of a panel are in its own `error.rs`, each variant naming the error of the backend it holds (`EvaluationError::Ai(AiError)`), the conversion written there once (`From`); the call names the function of the backend with its file (`Calls:`). No file of the errors of the whole program.
 - **Concept first, approved by the user, then code.** After each larger stage ask for the approval of the next, unless the user allowed a whole step; short mechanical phases of an approved step run without asking.
 - **Questions to the user are numbered, one short point each**, with a recommendation, so that the user answers by number (user, 2026-10-29).
 - Small steps, each tested on its own; window tests only on a private Xvfb display (`docs/handover.md`), never on the user's screen.
@@ -54,7 +55,7 @@ They bind **our code** (`src/`, `ui/`). The dependencies cannot follow them; the
 1. **Control flow.** No recursion. No `panic!`, `unreachable!`, `todo!`, `unimplemented!` outside the tests. `?` is allowed. A tree is walked with an explicit stack bounded by a constant. In Svelte: no recursive snippets or components.
 2. **Bounded loops.** A `loop` or `while` is written as `for _ in 0..MAX_...` with a named constant. A `for` over a collection is bounded by the limit of that collection, checked when the data entered the program. A stream is read up to a constant number of bytes or events.
 3. **Bounded memory.** Every input has a maximum size checked at the boundary: a file, a text, a JSON document, an answer of the AI, the number of objects. No collection grows without a limit. `Vec::with_capacity` where the size is known.
-4. **Short functions.** At most 60 lines per function, one statement per line.
+4. **Short functions.** Functions as elementary as possible: each does one thing, and the larger work is made of their calls. About 60 lines is the aim, not a hard limit (user, 2026-11-01): the work on the data is complex, and a longer function that reads well is allowed where splitting it would not make it clearer. One statement per line.
 5. **Checks with recovery.** No `assert!` or `debug_assert!` outside the tests. A condition that should never happen is checked with `ensure!(condition, error)` (`checks.rs`), which returns the error. On average two per function, for what the types do not guarantee.
 6. **Smallest scope.** No `static mut`, no global mutable state besides the session (`session/state.rs`).
 7. **Every result handled, every parameter checked.** No `unwrap`, `expect`, `let _ =` on a `Result`, or `.ok()` that drops an error. What comes from the page is checked once at its entry.

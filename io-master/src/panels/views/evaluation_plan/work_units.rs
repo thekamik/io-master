@@ -20,9 +20,9 @@ use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
 use crate::db::models::evaluation::work_unit::{read_work_unit, read_work_units};
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::models::evaluation::work_unit::{WorkUnitParameters, update_work_unit_parameters};
 use crate::panels::logic::evaluation_plan::work_units::{
-    WorkUnitParameters, add_all_work_units, add_proof_place, add_work_unit, available_controls, remove_work_unit,
-    update_work_unit_parameters,
+    add_all_work_units, add_proof_place, add_work_unit, available_controls, remove_work_unit,
 };
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;

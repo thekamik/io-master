@@ -19,12 +19,12 @@ use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::product_document::read_product_document;
 use crate::db::models::evaluation::work_unit::read_work_units;
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::models::evaluation::evaluation_plan::evaluation_in_progress;
+use crate::domain::models::evaluation::evaluation_plan::work_order;
 use crate::model::evaluation::work_unit::{Author, WorkUnit};
 use crate::panels::logic::evaluation::answer::{apply_assessment, read_assessment};
 use crate::panels::logic::evaluation::error::EvaluationError;
-use crate::panels::logic::evaluation::evaluations::evaluation_in_progress;
 use crate::panels::logic::evaluation::question::{assessing_agent, assessment_question};
-use crate::panels::logic::evaluation_plan::order::work_order;
 
 /// What an assessment would ask, counted when the evaluator asks it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -65,7 +65,7 @@ pub fn units_in_order(db: &UserDatabase, evaluation: i64) -> Result<Vec<WorkUnit
 /// a verdict only with `again`.
 ///
 /// Called by: [`preview`].
-/// Calls: `evaluation_in_progress`, [`units_in_order`].
+/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`; [`units_in_order`].
 fn units_to_assess(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Vec<WorkUnit>, EvaluationError> {
     evaluation_in_progress(db, evaluation)?;
 
@@ -125,7 +125,7 @@ fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, Eva
 /// now: its work units, the agents asked, the inputs missing.
 ///
 /// Called by: `panels/views/evaluation/run.rs` (the preview, the start).
-/// Calls: [`units_to_assess`], `evaluation_in_progress`, `assessing_agent`,
+/// Calls: [`units_to_assess`], `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`; `assessing_agent`,
 /// `read_agent`, [`missing_inputs`], [`count`].
 pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Preview, EvaluationError> {
     let units = units_to_assess(db, evaluation, again)?;

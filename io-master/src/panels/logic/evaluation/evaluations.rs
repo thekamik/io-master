@@ -13,9 +13,10 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::db::models::ai::agent::read_agent;
-use crate::db::models::evaluation::evaluation_plan::{create_evaluation, read_evaluation_plan, update_evaluation_plan};
+use crate::db::models::evaluation::evaluation_plan::{create_evaluation, update_evaluation_plan};
 use crate::db::storage::user_database::UserDatabase;
-use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
+use crate::domain::models::evaluation::evaluation_plan::evaluation_in_progress;
+use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::panels::logic::evaluation::error::EvaluationError;
 
 /// The longest product, client or evaluator, in characters.
@@ -45,22 +46,6 @@ fn checked_field(text: &str, what: &str) -> Result<String, EvaluationError> {
     Ok(text.to_owned())
 }
 
-/// The evaluation `id`; refused unless it is being carried out (state
-/// `Evaluation`).
-///
-/// Called by: [`change_agent`]; `inputs.rs` (a document or a proof given).
-/// Calls: `read_evaluation_plan`.
-pub fn evaluation_in_progress(db: &UserDatabase, id: i64) -> Result<EvaluationPlan, EvaluationError> {
-    let evaluation = read_evaluation_plan(db, id)?;
-
-    ensure!(
-        evaluation.state == PlanState::Evaluation,
-        EvaluationError::Refused(format!("{} is no evaluation in progress", evaluation.name))
-    );
-
-    Ok(evaluation)
-}
-
 /// Begins the evaluation of `product` for `client` by `evaluator` on a copy
 /// of the plan `plan`, with the agent `agent` for the work units without an
 /// agent of their own; gives its id.
@@ -87,7 +72,7 @@ pub fn new_evaluation(
 /// without an agent of their own.
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs` (`evaluation_set_agent`).
-/// Calls: [`evaluation_in_progress`], `read_agent`, `update_evaluation_plan`.
+/// Calls: `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`, `read_agent`, `update_evaluation_plan`.
 pub fn change_agent(db: &UserDatabase, evaluation: i64, agent: i64) -> Result<(), EvaluationError> {
     let stored = evaluation_in_progress(db, evaluation)?;
 
@@ -102,6 +87,10 @@ mod tests {
     //! the agent changed; what does not hold together is refused.
 
     use super::*;
+
+    use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
+    use crate::domain::error::DomainError;
+    use crate::model::evaluation::evaluation_plan::PlanState;
 
     use crate::db::models::ai::agent::create_agent;
     use crate::db::models::ai::integration::create_integration;
@@ -132,6 +121,6 @@ mod tests {
 
         change_agent(&db, id, other).unwrap();
         assert_eq!(read_evaluation_plan(&db, id).unwrap().ai_agent, Some(other));
-        assert!(matches!(change_agent(&db, source, other), Err(EvaluationError::Refused(_))));
+        assert!(matches!(change_agent(&db, source, other), Err(EvaluationError::Domain(DomainError::Refused(_)))));
     }
 }
