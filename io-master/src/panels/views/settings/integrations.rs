@@ -154,7 +154,7 @@ pub struct IntegrationFields {
 #[tauri::command]
 pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationView>, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let active = read_settings(db)?.active_integration;
     let mut integrations = Vec::new();
 
@@ -184,7 +184,7 @@ pub fn integration_create(session: State<'_, Session>, fields: IntegrationFields
     let integration = integration_of(fields)?;
     let opened = session.lock()?;
 
-    Ok(add_integration(database(&opened)?, &integration)?)
+    Ok(add_integration(database(opened.as_ref())?, &integration)?)
 }
 
 /// Saves the data of the integration `fields.id`.
@@ -196,7 +196,7 @@ pub fn integration_save(session: State<'_, Session>, fields: IntegrationFields) 
     let integration = integration_of(fields)?;
     let opened = session.lock()?;
 
-    Ok(change_integration(database(&opened)?, &integration)?)
+    Ok(change_integration(database(opened.as_ref())?, &integration)?)
 }
 
 /// Makes the integration `id` the active one.
@@ -207,7 +207,7 @@ pub fn integration_save(session: State<'_, Session>, fields: IntegrationFields) 
 pub fn integration_activate(session: State<'_, Session>, id: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
 
-    Ok(activate_integration(database(&opened)?, id)?)
+    Ok(activate_integration(database(opened.as_ref())?, id)?)
 }
 
 /// Stores the API key of the integration `id`. The key goes in only: no
@@ -219,7 +219,7 @@ pub fn integration_activate(session: State<'_, Session>, id: i64) -> Result<(), 
 pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) -> Result<(), ViewError> {
     let opened = session.lock()?;
 
-    Ok(set_key(database(&opened)?, id, &key)?)
+    Ok(set_key(database(opened.as_ref())?, id, &key)?)
 }
 
 /// Checks the integration `id` with one short question. It has no agent, so
@@ -234,11 +234,11 @@ pub async fn integration_check(session: State<'_, Session>, id: i64) -> Result<C
     let prepared = {
         let opened = session.lock()?;
 
-        check_question(database(&opened)?, id)?
+        check_question(database(opened.as_ref())?, id)?
     };
     let sent = send_whole(&prepared).await;
     let opened = session.lock()?;
-    let answer = record(database(&opened)?, prepared, sent)?;
+    let answer = record(database(opened.as_ref())?, prepared, sent)?;
 
     Ok(CheckView {
         ending: ending_name(answer.ending),

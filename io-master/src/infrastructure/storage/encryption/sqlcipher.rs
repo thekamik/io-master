@@ -1,29 +1,29 @@
 //! Opening and creating encrypted databases.
 //!
 //! Every database of the program is an SQLite file encrypted by
-//! SQLCipher: the whole file, page by page, with AES-256. Without
+//! `SQLCipher`: the whole file, page by page, with AES-256. Without
 //! the key the file is random bytes; it does not even reveal that
 //! it is a database.
 //!
-//! The key is given to SQLCipher as raw bytes (`PRAGMA key =
-//! "x'...'"`), so SQLCipher uses it as it is and skips its own
+//! The key is given to `SQLCipher` as raw bytes (`PRAGMA key =
+//! "x'...'"`), so `SQLCipher` uses it as it is and skips its own
 //! slow derivation of a key from a password: the keys of this
 //! program are random or derived in
 //! `objects/user/user_keys/user_keys_rules/password.rs` already.
 //!
-//! **The parameters in effect** (the defaults of SQLCipher 4, except the
+//! **The parameters in effect** (the defaults of `SQLCipher` 4, except the
 //! three of the memory, which `open()` sets; checked by the test
 //! `the_parameters_of_the_encryption_are_those_described`):
 //!
 //! | Parameter | Value |
 //! |---|---|
-//! | SQLCipher | 4.x community, built into the program (`rusqlite`, feature `bundled-sqlcipher`) |
+//! | `SQLCipher` | 4.x community, built into the program (`rusqlite`, feature `bundled-sqlcipher`) |
 //! | cryptographic provider | OpenSSL of the system |
 //! | cipher | AES-256 in CBC mode, a random IV per page |
 //! | integrity | HMAC-SHA512 per page (`cipher_use_hmac = 1`) |
 //! | page | 4096 bytes; no part of the header left plain |
 //! | derivation of the key | none: the key is raw bytes (PBKDF2-HMAC-SHA512, 256000 rounds, only for a passphrase) |
-//! | memory security of SQLCipher | on (`cipher_memory_security = 1`): the memory it frees is wiped, its keys are locked in RAM (never in the swap) |
+//! | memory security of `SQLCipher` | on (`cipher_memory_security = 1`): the memory it frees is wiped, its keys are locked in RAM (never in the swap) |
 //! | temporary data of SQLite | in memory only (`temp_store = 2`), never in a file beside the database |
 //! | cache of pages | 2 MiB (`cache_size = -2048`): only the pages a query reads are decrypted, and few are kept |
 //!
@@ -276,7 +276,7 @@ mod tests {
         assert_eq!(version, SCHEMA_VERSION);
     }
 
-    /// The value of a `PRAGMA` of SQLCipher.
+    /// The value of a `PRAGMA` of `SQLCipher`.
     fn pragma(connection: &Connection, name: &str) -> String {
         connection.query_row(&format!("PRAGMA {name}"), [], |row| row.get(0)).unwrap()
     }
@@ -288,7 +288,7 @@ mod tests {
 
     /// The parameters of the encryption in effect, as the head of
     /// `sqlcipher.rs` describes them. The program does not set them: they
-    /// are the defaults of SQLCipher 4. A newer SQLCipher that changed a
+    /// are the defaults of `SQLCipher` 4. A newer `SQLCipher` that changed a
     /// default fails here instead of changing the encryption unnoticed.
     #[test]
     fn the_parameters_of_the_encryption_are_those_described() {

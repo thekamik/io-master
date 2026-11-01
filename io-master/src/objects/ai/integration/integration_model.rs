@@ -34,7 +34,7 @@ pub struct Integration {
 /// The way the program speaks with an AI service.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Protocol {
-    /// The chat completions of OpenAI (`/v1/chat/completions`), which
+    /// The chat completions of `OpenAI` (`/v1/chat/completions`), which
     /// most local servers offer as well: Ollama, llama.cpp, vLLM.
     OpenAiChat,
     /// The messages of Anthropic (`/v1/messages`).

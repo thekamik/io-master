@@ -54,7 +54,7 @@ pub struct SourceView {
 #[tauri::command]
 pub fn knowledge_base_list(session: State<'_, Session>) -> Result<Vec<BaseView>, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let mut bases = Vec::new();
 
     for base in read_knowledge_bases(db)? {
@@ -76,7 +76,7 @@ pub fn knowledge_base_create(session: State<'_, Session>, name: String, descript
 
     let opened = session.lock()?;
 
-    Ok(add_base(database(&opened)?, &name, &description)?)
+    Ok(add_base(database(opened.as_ref())?, &name, &description)?)
 }
 
 /// Saves the name and the description of the base `id`.
@@ -94,7 +94,7 @@ pub fn knowledge_base_save(
 
     let opened = session.lock()?;
 
-    Ok(change_base(database(&opened)?, &KnowledgeBase { id, name, description })?)
+    Ok(change_base(database(opened.as_ref())?, &KnowledgeBase { id, name, description })?)
 }
 
 /// The sources of the base `base`, by their names, without their texts.
@@ -106,7 +106,7 @@ pub fn knowledge_source_list(session: State<'_, Session>, base: i64) -> Result<V
     let opened = session.lock()?;
     let mut sources = Vec::new();
 
-    for source in read_sources(database(&opened)?, base)? {
+    for source in read_sources(database(opened.as_ref())?, base)? {
         sources.push(SourceView { id: source.id, name: source.name, characters: source.text.chars().count() });
     }
 
@@ -148,7 +148,7 @@ pub fn knowledge_source_add(app: AppHandle, session: State<'_, Session>, base: i
     };
     let opened = session.lock()?;
 
-    Ok(Some(add_source(database(&opened)?, base, &name, text)?))
+    Ok(Some(add_source(database(opened.as_ref())?, base, &name, text)?))
 }
 
 /// Opens the dialog of the system for a newer file of the source `id` and
@@ -163,7 +163,7 @@ pub fn knowledge_source_replace(app: AppHandle, session: State<'_, Session>, id:
     };
     let opened = session.lock()?;
 
-    replace_source_text(database(&opened)?, id, text)?;
+    replace_source_text(database(opened.as_ref())?, id, text)?;
 
     Ok(true)
 }
@@ -178,7 +178,7 @@ pub fn knowledge_source_rename(session: State<'_, Session>, id: i64, name: Strin
 
     let opened = session.lock()?;
 
-    Ok(rename_source(database(&opened)?, id, &name)?)
+    Ok(rename_source(database(opened.as_ref())?, id, &name)?)
 }
 
 /// The passages of the base `base` that fit `question` best.
@@ -191,5 +191,5 @@ pub fn knowledge_search(session: State<'_, Session>, base: i64, question: String
 
     let opened = session.lock()?;
 
-    Ok(search_base(database(&opened)?, base, &question)?)
+    Ok(search_base(database(opened.as_ref())?, base, &question)?)
 }

@@ -75,7 +75,7 @@ pub fn prepare_shortened(db: &UserDatabase, mut question: Question) -> Result<(P
         match prepare(db, &question) {
             Ok(prepared) => return Ok((prepared, all - question.messages.len())),
             Err(AiError::TooLong { .. } | AiError::TooManyMessages { .. }) if question.messages.len() > 1 => {
-                leave_oldest_out(&mut question)
+                leave_oldest_out(&mut question);
             }
             Err(error) => return Err(error),
         }

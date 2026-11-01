@@ -21,7 +21,7 @@ npm run check               # svelte-check, must be clean
 npm run build               # builds ui/dist (needed before cargo build)
 cargo fmt --check
 cargo build && cargo test   # also the test of the architecture
-cargo clippy --all-targets  # clean but dead_code
+cargo clippy --all-targets  # clean, pedantic included (Cargo.toml)
 ```
 
 Rust from rustup only (two compilers in `PATH` break clippy with E0514; after a change of compiler, `cargo clean` once).

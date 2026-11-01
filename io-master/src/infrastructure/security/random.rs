@@ -9,7 +9,7 @@
 //! - The kernel gathers unpredictable events from the whole
 //!   machine (interrupt timings, devices, the input of the user,
 //!   the random number instructions of the CPU) and turns them
-//!   into random bytes with a cryptographic generator (ChaCha20).
+//!   into random bytes with a cryptographic generator (`ChaCha20`).
 //! - `getrandom` waits only once, right after the machine starts,
 //!   until the generator has gathered enough; after that it never
 //!   waits and never returns weaker bytes. Reading the file

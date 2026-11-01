@@ -1,6 +1,7 @@
 //! The API keys of the integrations (`ApiKey`), in the table
 //! `ai_api_keys` of the encrypted database of the user, apart from the
-//! integrations: create, read, update; never deleted (user, 2026-10-28).
+//! integrations: read and update (the update makes a key that is
+//! missing); never deleted (user, 2026-10-28).
 //!
 //! **A key is bound to the address it was given for**: its origin (the
 //! scheme, the host and the port of the address of its integration) is
@@ -65,7 +66,7 @@ fn origin_of(db: &UserDatabase, integration: i64) -> Result<String, DbError> {
 /// Output: nothing; an error when the key is empty or too long, or the
 /// integration is not stored.
 ///
-/// Called by: [`create_api_key`], [`update_api_key`].
+/// Called by: [`update_api_key`].
 /// Calls: [`origin_of`].
 fn write_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     let text: &str = key.key.as_str();
@@ -82,30 +83,6 @@ fn write_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     )?;
 
     Ok(())
-}
-
-/// Stores the key of an integration that has none, bound to its present
-/// address.
-///
-/// Input: `db`, the open database of the user; `key`, the integration and
-/// its key.
-///
-/// Output: nothing; an error when the integration has a key already, or as
-/// [`write_api_key`].
-///
-/// Called by: nothing yet (`api_key_rules.rs`:
-/// `set_key` gives a key with [`update_api_key`]).
-/// Calls: [`write_api_key`].
-pub fn create_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
-    let count: i64 = db.connection().query_row(
-        "SELECT COUNT(*) FROM ai_api_keys WHERE integration = :integration",
-        named_params! { ":integration": key.integration },
-        |row| row.get(0),
-    )?;
-
-    ensure!(count == 0, DbError::Inconsistent("the integration has a key already".to_owned()));
-
-    write_api_key(db, key)
 }
 
 /// Reads the key of an integration, to put it into the header of a
@@ -172,10 +149,9 @@ mod tests {
 
         assert!(read_api_key(&db, id).unwrap().is_none());
 
-        create_api_key(&db, &key(id, "sk-one")).unwrap();
+        update_api_key(&db, &key(id, "sk-one")).unwrap();
 
         assert_eq!(read_api_key(&db, id).unwrap().unwrap().key.as_str(), "sk-one");
-        assert!(matches!(create_api_key(&db, &key(id, "sk-two")), Err(DbError::Inconsistent(_))));
 
         update_api_key(&db, &key(id, "sk-two")).unwrap();
 
@@ -187,7 +163,7 @@ mod tests {
         let (_directory, db) = database();
         let id = create_integration(&db, &integration()).unwrap();
 
-        create_api_key(&db, &key(id, "sk-one")).unwrap();
+        update_api_key(&db, &key(id, "sk-one")).unwrap();
 
         let moved = crate::objects::ai::integration::integration_model::Integration {
             id,
@@ -198,6 +174,6 @@ mod tests {
         update_integration(&db, &moved).unwrap();
 
         assert!(read_api_key(&db, id).unwrap().is_none());
-        assert!(matches!(create_api_key(&db, &key(id, "")), Err(DbError::Inconsistent(_))));
+        assert!(matches!(update_api_key(&db, &key(id, "")), Err(DbError::Inconsistent(_))));
     }
 }

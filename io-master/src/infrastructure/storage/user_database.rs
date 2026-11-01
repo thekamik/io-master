@@ -6,7 +6,7 @@
 //! journal. The layout changes freely until version 1 (CLAUDE.md): a
 //! database of an older layout is removed and made anew.
 //!
-//! **Protection: encrypted by SQLCipher** (`encryption/sqlcipher.rs`) with
+//! **Protection: encrypted by `SQLCipher`** (`encryption/sqlcipher.rs`) with
 //! the key of the user, unwrapped by the password at the login.
 //!
 //! ```text

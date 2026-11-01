@@ -161,7 +161,7 @@ fn row_of(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> Res
 #[tauri::command]
 pub fn evaluation_unit_list(session: State<'_, Session>, id: i64) -> Result<Vec<UnitRowView>, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let evaluation = read_evaluation_plan(db, id)?;
     let units = units_in_order(db, id)?;
     let mut rows = Vec::with_capacity(units.len());
@@ -267,7 +267,7 @@ fn unit_view(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> 
 #[tauri::command]
 pub fn evaluation_unit_get(session: State<'_, Session>, id: i64, unit: i64) -> Result<UnitView, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let evaluation = read_evaluation_plan(db, id)?;
 
     ensure!(
@@ -345,5 +345,5 @@ pub fn evaluation_unit_save(
     };
     let opened = session.lock()?;
 
-    Ok(save_results(database(&opened)?, id, unit, &results)?)
+    Ok(save_results(database(opened.as_ref())?, id, unit, &results)?)
 }

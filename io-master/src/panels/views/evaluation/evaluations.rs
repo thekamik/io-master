@@ -126,7 +126,7 @@ pub fn evaluation_list(session: State<'_, Session>) -> Result<Vec<EvaluationSumm
     let opened = session.lock()?;
     let mut evaluations = Vec::new();
 
-    for plan in read_evaluation_plans(database(&opened)?)? {
+    for plan in read_evaluation_plans(database(opened.as_ref())?)? {
         if plan.state != PlanState::Plan {
             evaluations.push(summary_of(plan));
         }
@@ -156,7 +156,7 @@ pub fn evaluation_create(
 
     let opened = session.lock()?;
 
-    Ok(new_evaluation(database(&opened)?, plan, [&product, &client, &evaluator], agent)?)
+    Ok(new_evaluation(database(opened.as_ref())?, plan, [&product, &client, &evaluator], agent)?)
 }
 
 /// The places of input of the evaluation `id`, as the page shows them.
@@ -207,7 +207,7 @@ fn input_views(db: &UserDatabase, id: i64) -> Result<(Vec<DocumentInputView>, Ve
 #[tauri::command]
 pub fn evaluation_get(session: State<'_, Session>, id: i64) -> Result<EvaluationView, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let evaluation = read_evaluation_plan(db, id)?;
 
     ensure!(evaluation.state != PlanState::Plan, ViewError::Invalid("a plan in planning is no evaluation".to_owned()));
@@ -231,5 +231,5 @@ pub fn evaluation_get(session: State<'_, Session>, id: i64) -> Result<Evaluation
 pub fn evaluation_set_agent(session: State<'_, Session>, id: i64, agent: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
 
-    Ok(change_agent(database(&opened)?, id, agent)?)
+    Ok(change_agent(database(opened.as_ref())?, id, agent)?)
 }

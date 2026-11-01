@@ -3,7 +3,7 @@
 //! logged in, the user and their database, open. The database is opened
 //! once at the login (`objects/user/user_data/user_data_rules.rs`) and kept here until the logout
 //! or the end of the program; the key that opened it is already wiped,
-//! SQLCipher keeps its own inside the connection.
+//! `SQLCipher` keeps its own inside the connection.
 //!
 //! ```text
 //! the window ──► Session (one, kept by Tauri) ──► user      Mutex ──► None / Some(User)

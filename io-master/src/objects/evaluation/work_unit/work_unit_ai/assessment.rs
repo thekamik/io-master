@@ -72,7 +72,7 @@ fn prepared_question(
     unit: i64,
 ) -> Result<(String, Result<Prepared, String>), AiError> {
     let opened = lock_database(database)?;
-    let db = open_database(&opened)?;
+    let db = open_database(opened.as_ref())?;
     let label = read_work_unit(db, unit)?.label;
 
     Ok((label, prepared_assessment(db, evaluation, unit).map_err(|error| error.to_string())))
@@ -92,7 +92,7 @@ fn written(
 ) -> Result<(Option<Verdict>, Vec<String>), AiError> {
     let (evaluation, unit) = step;
     let opened = lock_database(database)?;
-    let db = open_database(&opened)?;
+    let db = open_database(opened.as_ref())?;
     let answer = record(db, prepared, sent)?;
 
     if let Some(error) = answer.error {

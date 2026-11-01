@@ -1,6 +1,6 @@
 //! The user of the installation (`User`), in the table `users` of the
-//! system database, which is not encrypted: create, read, update; never
-//! deleted (user, 2026-10-28). One Linux account holds one installation
+//! system database, which is not encrypted: create and read; never
+//! changed by a view yet, never deleted (user, 2026-10-28). One Linux account holds one installation
 //! with one user.
 //!
 //! ```text
@@ -38,7 +38,7 @@ pub const SCHEMA: &str = "
 /// Output: nothing when the name is good; otherwise
 /// `DbError::Inconsistent` naming what is wrong ("the sign '/' in a name").
 ///
-/// Called by: [`create_user`], [`update_user`].
+/// Called by: [`create_user`].
 fn check_name(name: &str) -> Result<(), DbError> {
     ensure!(!name.trim().is_empty(), DbError::Inconsistent("a user without a name".to_owned()));
     ensure!(name.chars().count() <= MAX_NAME, DbError::Inconsistent(format!("a name over {MAX_NAME} characters")));
@@ -89,28 +89,9 @@ pub fn create_user(system: &SystemDatabase, user: &User) -> Result<i64, DbError>
 
 /// The model of one row of `users`.
 ///
-/// Called by: [`read_user`], [`read_users`].
+/// Called by: [`read_users`].
 fn user_of(row: &Row<'_>) -> Result<User, DbError> {
     Ok(User { id: row.get("id")?, name: row.get("name")?, created: row.get("created")? })
-}
-
-/// Reads the user `id`.
-///
-/// Input: `system`, the open system database; `id`, the id of the user (1).
-///
-/// Output: the user; `DbError::NoRow` when there is none.
-///
-/// Called by: nothing yet (no view reads one user by its id).
-/// Calls: [`user_of`].
-pub fn read_user(system: &SystemDatabase, id: i64) -> Result<User, DbError> {
-    let connection = system.connection();
-    let mut statement = connection.prepare("SELECT id, name, created FROM users WHERE id = :id")?;
-    let mut rows = statement.query(named_params! { ":id": id })?;
-    let Some(row) = rows.next()? else {
-        return Err(DbError::NoRow { table: "users", id });
-    };
-
-    user_of(row)
 }
 
 /// Reads the users of the installation, to tell the first start from the
@@ -141,34 +122,9 @@ pub fn read_users(system: &SystemDatabase) -> Result<Vec<User>, DbError> {
     Err(DbError::Inconsistent(format!("more than {MAX_USERS} users in the database")))
 }
 
-/// Writes the user `user.id` anew: its name and the time it was made.
-///
-/// Input:
-/// - `system`: the open system database.
-/// - `user`: the user as it is to be kept, its `id` that of a stored user.
-///
-/// Output: nothing; an error when the name is refused ([`check_name`]) or
-/// taken, or `DbError::NoRow` when there is no user `user.id`.
-///
-/// Called by: nothing yet (no view changes the user).
-/// Calls: [`check_name`].
-pub fn update_user(system: &SystemDatabase, user: &User) -> Result<(), DbError> {
-    check_name(&user.name)?;
-
-    let changed = system.connection().execute(
-        "UPDATE users SET name = :name, created = :created WHERE id = :id",
-        named_params! { ":id": user.id, ":name": user.name, ":created": user.created },
-    )?;
-
-    ensure!(changed == 1, DbError::NoRow { table: "users", id: user.id });
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
-    //! Tests of the user: one per installation, read, renamed, its name
-    //! checked.
+    //! Tests of the user: one per installation, read, its name checked.
 
     use super::*;
 
@@ -181,19 +137,13 @@ mod tests {
     }
 
     #[test]
-    fn the_one_user_is_stored_read_and_renamed() {
+    fn the_one_user_is_stored_and_read() {
         let directory = TempDir::new();
         let system = create(directory.path(), &SYSTEM_TABLES).unwrap();
         let id = create_user(&system, &user("Kamil")).unwrap();
-        let mut stored = read_user(&system, id).unwrap();
 
-        assert_eq!(stored, User { id, ..user("Kamil") });
+        assert_eq!(read_users(&system).unwrap(), vec![User { id, ..user("Kamil") }]);
         assert!(matches!(create_user(&system, &user("Anna")), Err(DbError::Inconsistent(_))));
-
-        stored.name = "Kamil K.".to_owned();
-        update_user(&system, &stored).unwrap();
-
-        assert_eq!(read_users(&system).unwrap(), vec![stored]);
     }
 
     #[test]
@@ -206,6 +156,5 @@ mod tests {
         }
 
         assert!(read_users(&system).unwrap().is_empty());
-        assert!(matches!(read_user(&system, 1), Err(DbError::NoRow { .. })));
     }
 }

@@ -156,7 +156,7 @@ fn ending_name(ending: Ending) -> &'static str {
 #[tauri::command]
 pub fn chat_list(session: State<'_, Session>) -> Result<Vec<ChatSummaryView>, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let chats = read_chats(db)?;
     let mut views = Vec::with_capacity(chats.len());
 
@@ -179,7 +179,7 @@ pub fn chat_create(session: State<'_, Session>, title: String, agent: i64) -> Re
 
     let opened = session.lock()?;
 
-    Ok(new_chat(database(&opened)?, &title, agent)?)
+    Ok(new_chat(database(opened.as_ref())?, &title, agent)?)
 }
 
 /// The chat `id` whole.
@@ -189,7 +189,7 @@ pub fn chat_create(session: State<'_, Session>, title: String, agent: i64) -> Re
 #[tauri::command]
 pub fn chat_get(session: State<'_, Session>, id: i64) -> Result<ChatView, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
 
     chat_view(db, read_chat(db, id)?)
 }
@@ -204,7 +204,7 @@ pub fn chat_rename(session: State<'_, Session>, id: i64, title: String) -> Resul
 
     let opened = session.lock()?;
 
-    Ok(rename_chat(database(&opened)?, id, &title)?)
+    Ok(rename_chat(database(opened.as_ref())?, id, &title)?)
 }
 
 /// The question `text` in the chat `chat`, prepared, and written into the
@@ -214,7 +214,7 @@ pub fn chat_rename(session: State<'_, Session>, id: i64, title: String) -> Resul
 /// Calls: `prepared`, `add_question`.
 fn prepared_question(session: &Session, chat: i64, text: &str) -> Result<(Prepared, usize), ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let taken = prepared(db, chat, text)?;
 
     add_question(db, chat, text)?;
@@ -264,7 +264,7 @@ async fn forwarded(session: &Session, prepared: &Prepared, on_piece: &Channel<St
 fn written(session: &Session, chat: (i64, usize), prepared: Prepared, sent: Sent) -> Result<ChatAnswerView, ViewError> {
     let (chat, left_out) = chat;
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let answer = record(db, prepared, sent)?;
     let kept = add_answer(db, chat, &answer)?;
 

@@ -1,4 +1,4 @@
-//! The chat completions of OpenAI (`/v1/chat/completions`), which most
+//! The chat completions of `OpenAI` (`/v1/chat/completions`), which most
 //! local servers offer as well (Ollama, llama.cpp, vLLM): the body of a
 //! question, its header and the reading of the answer while it streams.
 //!
@@ -122,7 +122,7 @@ pub fn read_event(event: &SseEvent, reading: &mut Reading) -> Result<Option<Stri
 
 #[cfg(test)]
 mod tests {
-    //! Tests of the protocol of OpenAI: the body, the reading of a stream.
+    //! Tests of the protocol of `OpenAI`: the body, the reading of a stream.
 
     use super::*;
 

@@ -1,6 +1,7 @@
 //! The OSCAL documents of the standards (`OscalStandardDocument`), in the
-//! table `oscal_standard_documents` of the database of the user: create,
-//! read, update; never deleted (user, 2026-10-28).
+//! table `oscal_standard_documents` of the database of the user: create and
+//! read; a standard is never changed once imported, nor deleted (user,
+//! 2026-10-28).
 //!
 //! ```text
 //! oscal_standard_documents   id, title, doc (the OSCAL JSON), version
@@ -126,34 +127,9 @@ pub fn read_oscal_standard_documents(db: &UserDatabase) -> Result<Vec<OscalStand
     Err(DbError::Inconsistent(format!("more than {MAX_OSCAL_STANDARD_DOCUMENTS} standards in the database")))
 }
 
-/// Writes the standard `document.id` anew.
-///
-/// Input: `db`, the open database of the user; `document`, the standard as
-/// it is to be kept, its `id` that of a stored one.
-///
-/// Output: nothing; `DbError::NoRow` when there is no standard
-/// `document.id`.
-///
-/// Called by: nothing yet (no view changes a standard once imported).
-pub fn update_oscal_standard_document(db: &UserDatabase, document: &OscalStandardDocument) -> Result<(), DbError> {
-    let changed = db.connection().execute(
-        "UPDATE oscal_standard_documents SET title = :title, doc = :doc, version = :version WHERE id = :id",
-        named_params! {
-            ":id": document.id,
-            ":title": document.title,
-            ":doc": document.doc,
-            ":version": document.version,
-        },
-    )?;
-
-    ensure!(changed == 1, DbError::NoRow { table: "oscal_standard_documents", id: document.id });
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
-    //! Tests of the standards: stored, read, changed.
+    //! Tests of the standards: stored and read.
 
     use super::*;
 
@@ -169,16 +145,12 @@ mod tests {
     }
 
     #[test]
-    fn a_standard_is_stored_read_and_changed() {
+    fn a_standard_is_stored_and_read() {
         let (_directory, db) = database();
         let id = create_oscal_standard_document(&db, &cem()).unwrap();
-        let mut read = read_oscal_standard_document(&db, id).unwrap();
+        let read = read_oscal_standard_document(&db, id).unwrap();
 
         assert_eq!(read, OscalStandardDocument { id, ..cem() });
-
-        read.version = "2022 R2".to_owned();
-        update_oscal_standard_document(&db, &read).unwrap();
-
         assert_eq!(read_oscal_standard_documents(&db).unwrap(), vec![read]);
     }
 
@@ -191,9 +163,5 @@ mod tests {
             Err(DbError::Inconsistent(_))
         ));
         assert!(matches!(read_oscal_standard_document(&db, 7), Err(DbError::NoRow { .. })));
-        assert!(matches!(
-            update_oscal_standard_document(&db, &OscalStandardDocument { id: 7, ..cem() }),
-            Err(DbError::NoRow { .. })
-        ));
     }
 }

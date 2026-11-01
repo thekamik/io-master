@@ -83,7 +83,7 @@ pub fn evaluation_assess_preview(
 ) -> Result<AssessPreviewView, ViewError> {
     let opened = session.lock()?;
 
-    Ok(preview_view(preview(database(&opened)?, id, again)?))
+    Ok(preview_view(preview(database(opened.as_ref())?, id, again)?))
 }
 
 /// Assesses every work unit to assess of the evaluation `id` in the order of
@@ -99,7 +99,7 @@ pub async fn evaluation_assess(session: State<'_, Session>, id: i64, again: bool
     let units = {
         let opened = session.lock()?;
 
-        units_ready(database(&opened)?, id, again)?
+        units_ready(database(opened.as_ref())?, id, again)?
     };
     let Some(_work) = session.begin_work(Some(id), units.len())? else {
         return Err(ViewError::Invalid("another work of the AI runs: wait for it or stop it".to_owned()));

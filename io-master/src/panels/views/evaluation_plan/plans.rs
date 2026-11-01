@@ -111,7 +111,7 @@ pub fn plan_list(session: State<'_, Session>) -> Result<Vec<PlanSummaryView>, Vi
     let opened = session.lock()?;
     let mut plans = Vec::new();
 
-    for plan in read_evaluation_plans(database(&opened)?)? {
+    for plan in read_evaluation_plans(database(opened.as_ref())?)? {
         if plan.state == PlanState::Plan {
             plans.push(PlanSummaryView {
                 id: plan.id,
@@ -133,7 +133,7 @@ pub fn plan_list(session: State<'_, Session>) -> Result<Vec<PlanSummaryView>, Vi
 pub fn plan_create(session: State<'_, Session>, name: String, description: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
 
-    Ok(create_plan(database(&opened)?, &name, &description)?)
+    Ok(create_plan(database(opened.as_ref())?, &name, &description)?)
 }
 
 /// The view of the plan `plan`: its data, every standard of the user with
@@ -186,7 +186,7 @@ fn plan_view(db: &UserDatabase, plan: EvaluationPlan) -> Result<PlanView, ViewEr
 #[tauri::command]
 pub fn plan_get(session: State<'_, Session>, id: i64) -> Result<PlanView, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
 
     plan_view(db, read_evaluation_plan(db, id)?)
 }
@@ -219,7 +219,7 @@ pub struct PlanFields {
 #[tauri::command]
 pub fn plan_save(session: State<'_, Session>, fields: PlanFields) -> Result<(), ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let mut possible_verdicts = Vec::with_capacity(fields.verdicts.len());
 
     for verdict in &fields.verdicts {
@@ -248,5 +248,5 @@ pub fn plan_save(session: State<'_, Session>, fields: PlanFields) -> Result<(), 
 pub fn plan_add_document(session: State<'_, Session>, id: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
 
-    Ok(add_document_place(database(&opened)?, id, &name)?)
+    Ok(add_document_place(database(opened.as_ref())?, id, &name)?)
 }

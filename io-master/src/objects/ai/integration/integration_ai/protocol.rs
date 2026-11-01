@@ -25,7 +25,7 @@ use crate::objects::ai_error::AiError;
 const MAX_KEY_HEADERS: usize = 2;
 
 /// Whether the service of `protocol` always needs an API key: a local
-/// server of the chat completions of OpenAI needs none.
+/// server of the chat completions of `OpenAI` needs none.
 ///
 /// Called by: `question.rs`: `prepare`.
 pub fn needs_key(protocol: Protocol) -> bool {
@@ -43,7 +43,7 @@ pub fn needs_key(protocol: Protocol) -> bool {
 /// - `system`: the instructions; empty for none.
 /// - `turns`: the conversation, starting with the user (`turns.rs`).
 /// - `answer_tokens`: the longest answer, at least 1; the chat completions
-///   of OpenAI do not take it.
+///   of `OpenAI` do not take it.
 ///
 /// Output: the body as JSON (`{"model": "llama3.1", "stream": true, ...}`).
 ///

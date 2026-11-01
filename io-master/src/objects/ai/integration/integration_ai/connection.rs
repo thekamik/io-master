@@ -315,10 +315,10 @@ mod tests {
 
             pieces
         });
-        let received = send(request, &sender).await;
+        let outcome = send(request, &sender).await;
 
         drop(sender);
-        (received, collect.await.unwrap())
+        (outcome, collect.await.unwrap())
     }
 
     #[tokio::test]
@@ -448,9 +448,9 @@ mod tests {
         assert_eq!(receiver.recv().await.as_deref(), Some("First"));
         drop(receiver);
 
-        let received = tokio::time::timeout(Duration::from_secs(10), sending).await.unwrap().unwrap();
+        let outcome = tokio::time::timeout(Duration::from_secs(10), sending).await.unwrap().unwrap();
 
-        assert!(received.stopped);
-        assert_eq!(received.reading.text, "First");
+        assert!(outcome.stopped);
+        assert_eq!(outcome.reading.text, "First");
     }
 }

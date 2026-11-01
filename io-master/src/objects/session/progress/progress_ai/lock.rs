@@ -36,7 +36,7 @@ pub fn lock_database(database: &Mutex<Option<UserDatabase>>) -> Result<MutexGuar
 /// out while the work ran.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`, `filling.rs`.
-pub fn open_database(opened: &Option<UserDatabase>) -> Result<&UserDatabase, AiError> {
+pub fn open_database(opened: Option<&UserDatabase>) -> Result<&UserDatabase, AiError> {
     match opened {
         Some(database) => Ok(database),
         None => Err(AiError::Refused("nobody is logged in: the work ends".to_owned())),

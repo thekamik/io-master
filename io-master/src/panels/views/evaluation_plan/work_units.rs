@@ -99,7 +99,7 @@ fn standard_title(db: &UserDatabase, id: i64) -> Result<String, ViewError> {
 #[tauri::command]
 pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<WorkUnitRowView>, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let units = read_work_units(db, plan)?;
     let mut titles: Vec<(i64, String)> = Vec::new();
     let mut rows = Vec::with_capacity(units.len());
@@ -150,7 +150,7 @@ pub fn work_unit_controls(
     let opened = session.lock()?;
     let mut controls = Vec::new();
 
-    for control in available_controls(database(&opened)?, plan, standard)? {
+    for control in available_controls(database(opened.as_ref())?, plan, standard)? {
         controls.push(ControlView {
             oscal_key: control.oscal_key,
             label: control.label,
@@ -175,7 +175,7 @@ pub fn work_unit_add(
 ) -> Result<i64, ViewError> {
     let opened = session.lock()?;
 
-    Ok(add_work_unit(database(&opened)?, plan, standard, &oscal_key)?)
+    Ok(add_work_unit(database(opened.as_ref())?, plan, standard, &oscal_key)?)
 }
 
 /// Adds every control of the standard `standard` the plan `plan` does not
@@ -187,7 +187,7 @@ pub fn work_unit_add(
 pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) -> Result<usize, ViewError> {
     let opened = session.lock()?;
 
-    Ok(add_all_work_units(database(&opened)?, plan, standard)?)
+    Ok(add_all_work_units(database(opened.as_ref())?, plan, standard)?)
 }
 
 /// Removes the work unit `unit` from the plan `plan`.
@@ -198,7 +198,7 @@ pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) 
 pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
 
-    Ok(remove_work_unit(database(&opened)?, plan, unit)?)
+    Ok(remove_work_unit(database(opened.as_ref())?, plan, unit)?)
 }
 
 /// The work unit `unit`, for its form, with the names of its proofs and
@@ -209,7 +209,7 @@ pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Re
 #[tauri::command]
 pub fn work_unit_get(session: State<'_, Session>, unit: i64) -> Result<WorkUnitView, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let stored = read_work_unit(db, unit)?;
     let mut proofs = Vec::new();
     let mut agents = Vec::new();
@@ -271,7 +271,7 @@ pub fn work_unit_save(session: State<'_, Session>, fields: WorkUnitFields) -> Re
         guidance: fields.guidance,
     };
 
-    Ok(update_work_unit_parameters(database(&opened)?, fields.plan, fields.unit, &parameters)?)
+    Ok(update_work_unit_parameters(database(opened.as_ref())?, fields.plan, fields.unit, &parameters)?)
 }
 
 /// Reserves a place of a proof of the laboratory (`name`) for the work unit
@@ -283,5 +283,5 @@ pub fn work_unit_save(session: State<'_, Session>, fields: WorkUnitFields) -> Re
 pub fn work_unit_add_proof(session: State<'_, Session>, plan: i64, unit: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
 
-    Ok(add_proof_place(database(&opened)?, plan, unit, &name)?)
+    Ok(add_proof_place(database(opened.as_ref())?, plan, unit, &name)?)
 }

@@ -87,11 +87,9 @@ impl ViewError {
             ViewError::Account(AccountError::NotInstalled) => "not_installed",
             ViewError::Account(AccountError::AlreadyInstalled) => "already_installed",
             ViewError::Account(AccountError::WrongCredentials) => "wrong_credentials",
-            ViewError::Account(AccountError::PasswordsDiffer | AccountError::WeakPassword(_) | AccountError::Db(_)) => {
-                "invalid"
-            }
             ViewError::NotLoggedIn => "not_logged_in",
-            ViewError::Domain(
+            ViewError::Account(AccountError::PasswordsDiffer | AccountError::WeakPassword(_) | AccountError::Db(_))
+            | ViewError::Domain(
                 DomainError::Refused(_)
                 | DomainError::Oscal(_)
                 | DomainError::Pdf(_)

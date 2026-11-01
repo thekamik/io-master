@@ -58,7 +58,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ### `objects/ai/api_key/api_key_model.rs`: `ApiKey`
 
-- **Stored** (`objects/ai/api_key/api_key_store.rs`): `create_api_key`, `read_api_key`, `update_api_key`
+- **Stored** (`objects/ai/api_key/api_key_store.rs`): `read_api_key`, `update_api_key`
 - **Processed, the rules of the data**:
   - `objects/ai/api_key/api_key_rules.rs`: `has_key`, `set_key`
 - **Processed, the AI**:
@@ -216,7 +216,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ### `objects/evaluation/oscal_standard_document/oscal_standard_document_model.rs`: `OscalStandardDocument`
 
-- **Stored** (`objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`): `create_oscal_standard_document`, `read_oscal_standard_document`, `read_oscal_standard_documents`, `update_oscal_standard_document`
+- **Stored** (`objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`): `create_oscal_standard_document`, `read_oscal_standard_document`, `read_oscal_standard_documents`
 - **Processed, the rules of the data**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `controls_of`
   - `objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `import_standard`
@@ -328,7 +328,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ### `objects/user/program_data/program_data_model.rs`: `Installation`, `Settings`
 
-- **Stored** (`program_data_store.rs`): `create_installation`, `read_installation`, `create_settings`, `read_settings`, `update_settings`
+- **Stored** (`program_data_store.rs`): `create_installation`, `create_settings`, `read_settings`, `update_settings`
 - **Processed, the rules of the data**:
   - `objects/user/user_data/user_data_rules.rs`: `install`, `keys_and_database`
   - `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`, `add_integration`
@@ -343,7 +343,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ### `objects/user/user_data/user_data_model.rs`: `User`
 
-- **Stored** (`user_data_store.rs`): `create_user`, `read_user`, `read_users`, `update_user`
+- **Stored** (`user_data_store.rs`): `create_user`, `read_users`
 - **Processed, the rules of the data**:
   - `objects/user/user_data/user_data_rules.rs`: `install`, `installed_user`, `keys_and_database`, `log_in`
 - **Processed, the session**:

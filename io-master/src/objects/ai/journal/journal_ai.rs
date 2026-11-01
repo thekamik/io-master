@@ -115,7 +115,7 @@ mod tests {
 
     use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::api_key::api_key_model::ApiKey;
-    use crate::objects::ai::api_key::api_key_store::{create_api_key, update_api_key};
+    use crate::objects::ai::api_key::api_key_store::update_api_key;
     use crate::objects::ai::chat::chat_model::{Message, Speaker};
     use crate::objects::ai::integration::integration_ai::question::{Question, prepare};
     use crate::objects::ai::integration::integration_ai::sending::send;
@@ -191,7 +191,7 @@ mod tests {
 
         assert!(matches!(prepare(&db, &question(id, asking, "Hi")), Err(AiError::NoKey)));
 
-        create_api_key(&db, &ApiKey { integration: id, key: Zeroizing::new("sk-secret".to_owned()) }).unwrap();
+        update_api_key(&db, &ApiKey { integration: id, key: Zeroizing::new("sk-secret".to_owned()) }).unwrap();
 
         let answer = ask(&db, &question(id, asking, "Hi")).await.unwrap();
         let entry = read_journal_entry(&db, answer.journal.unwrap()).unwrap();

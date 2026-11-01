@@ -209,7 +209,7 @@ fn files(root: &Path, folder: &str) -> Vec<(String, String)> {
 
             if path.is_dir() {
                 pending.push(path);
-            } else if name.ends_with(".rs") && name != "test_support.rs" {
+            } else if path.extension().is_some_and(|extension| extension == "rs") && name != "test_support.rs" {
                 let shown = path.strip_prefix(root).unwrap_or(&path).display().to_string();
                 found.push((shown, program_part(&fs::read_to_string(&path).unwrap_or_default())));
             }

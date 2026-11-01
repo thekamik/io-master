@@ -65,7 +65,7 @@ pub fn sse(name: &str, data: &Value) -> String {
     if name.is_empty() { format!("data: {data}\n\n") } else { format!("event: {name}\ndata: {data}\n\n") }
 }
 
-/// The events of a whole answer in the protocol of OpenAI, with these
+/// The events of a whole answer in the protocol of `OpenAI`, with these
 /// pieces of text.
 pub fn openai_events(pieces: &[&str]) -> Vec<String> {
     let mut events: Vec<String> = pieces

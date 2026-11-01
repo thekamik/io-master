@@ -94,7 +94,7 @@ pub struct AgentFields {
 #[tauri::command]
 pub fn agent_list(session: State<'_, Session>) -> Result<Vec<AgentSummaryView>, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let mut agents = Vec::new();
 
     for agent in read_agents(db)? {
@@ -121,7 +121,7 @@ pub fn agent_create(session: State<'_, Session>, name: String, integration: i64)
 
     let opened = session.lock()?;
 
-    Ok(new_agent(database(&opened)?, &name, integration)?)
+    Ok(new_agent(database(opened.as_ref())?, &name, integration)?)
 }
 
 /// The agent `id` whole, with every integration and knowledge base to
@@ -132,7 +132,7 @@ pub fn agent_create(session: State<'_, Session>, name: String, integration: i64)
 #[tauri::command]
 pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, ViewError> {
     let opened = session.lock()?;
-    let db = database(&opened)?;
+    let db = database(opened.as_ref())?;
     let agent = read_agent(db, id)?;
     let mut integrations = Vec::new();
     let mut bases = Vec::new();
@@ -208,7 +208,7 @@ pub fn agent_save(session: State<'_, Session>, fields: AgentFields) -> Result<()
     let agent = agent_of(fields)?;
     let opened = session.lock()?;
 
-    Ok(change_agent(database(&opened)?, &agent)?)
+    Ok(change_agent(database(opened.as_ref())?, &agent)?)
 }
 
 /// The knowledge the agent `id` would give with the question `question`:
@@ -223,5 +223,5 @@ pub fn agent_knowledge_test(session: State<'_, Session>, id: i64, question: Stri
 
     let opened = session.lock()?;
 
-    Ok(agent_knowledge(database(&opened)?, id, &question)?)
+    Ok(agent_knowledge(database(opened.as_ref())?, id, &question)?)
 }

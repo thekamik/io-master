@@ -52,7 +52,7 @@ fn prepared_question(
     unit: i64,
 ) -> Result<(String, Result<Prepared, String>), AiError> {
     let opened = lock_database(database)?;
-    let db = open_database(&opened)?;
+    let db = open_database(opened.as_ref())?;
     let label = read_work_unit(db, unit)?.label;
     let question = match task {
         FillTask::Parameters => parameters_question(db, plan, unit),
@@ -93,7 +93,7 @@ fn written(
 ) -> Result<(bool, Vec<String>), AiError> {
     let (task, plan, unit) = step;
     let opened = lock_database(database)?;
-    let db = open_database(&opened)?;
+    let db = open_database(opened.as_ref())?;
     let answer = record(db, prepared, sent)?;
 
     if let Some(error) = answer.error {

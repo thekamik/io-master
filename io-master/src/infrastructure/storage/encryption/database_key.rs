@@ -1,6 +1,6 @@
 //! The key that encrypts a database of the program.
 //!
-//! The key is 32 random bytes (256 bits), the size that SQLCipher
+//! The key is 32 random bytes (256 bits), the size that `SQLCipher`
 //! and AES-256 use; it is created by `generate_key.rs`. It is never
 //! stored as it is: it is stored encrypted with the password of the
 //! evaluator, and a second time with the recovery code

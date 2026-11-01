@@ -50,7 +50,7 @@ async fn fill(session: &Session, task: FillTask, plan: i64) -> Result<(), ViewEr
     let units = {
         let opened = session.lock()?;
 
-        fill_units(database(&opened)?, plan)?
+        fill_units(database(opened.as_ref())?, plan)?
     };
     let Some(_work) = session.begin_work(Some(plan), units.len())? else {
         return Err(ViewError::Invalid("another work of the AI runs: wait for it or stop it".to_owned()));
@@ -90,7 +90,7 @@ pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> R
 #[tauri::command]
 pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillPreviewView, ViewError> {
     let opened = session.lock()?;
-    let preview = fill_preview(database(&opened)?, plan)?;
+    let preview = fill_preview(database(opened.as_ref())?, plan)?;
 
     Ok(FillPreviewView { questions: preview.questions, agent: preview.agent, integration: preview.integration })
 }

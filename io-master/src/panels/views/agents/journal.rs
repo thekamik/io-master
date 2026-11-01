@@ -83,7 +83,7 @@ pub fn agent_journal_list(
     before: Option<i64>,
 ) -> Result<Vec<JournalRowView>, ViewError> {
     let opened = session.lock()?;
-    let entries = read_journal_entries(database(&opened)?, agent, before)?;
+    let entries = read_journal_entries(database(opened.as_ref())?, agent, before)?;
     let mut rows = Vec::with_capacity(entries.len());
 
     for entry in &entries {
@@ -100,7 +100,7 @@ pub fn agent_journal_list(
 #[tauri::command]
 pub fn agent_journal_get(session: State<'_, Session>, id: i64) -> Result<JournalEntryView, ViewError> {
     let opened = session.lock()?;
-    let entry = read_journal_entry(database(&opened)?, id)?;
+    let entry = read_journal_entry(database(opened.as_ref())?, id)?;
 
     Ok(JournalEntryView { row: row_of(&entry), request: entry.request, answer: entry.answer })
 }

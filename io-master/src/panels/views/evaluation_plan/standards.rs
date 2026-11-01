@@ -37,7 +37,7 @@ pub fn standard_list(session: State<'_, Session>) -> Result<Vec<StandardView>, V
     let opened = session.lock()?;
     let mut standards = Vec::new();
 
-    for standard in read_oscal_standard_documents(database(&opened)?)? {
+    for standard in read_oscal_standard_documents(database(opened.as_ref())?)? {
         standards.push(StandardView { id: standard.id, title: standard.title, version: standard.version });
     }
 
@@ -69,5 +69,5 @@ pub fn standard_import(app: AppHandle, session: State<'_, Session>) -> Result<Op
     let text = fs::read_to_string(&path).map_err(|error| ViewError::Invalid(format!("{}: {error}", path.display())))?;
     let opened = session.lock()?;
 
-    Ok(Some(import_standard(database(&opened)?, &text)?))
+    Ok(Some(import_standard(database(opened.as_ref())?, &text)?))
 }

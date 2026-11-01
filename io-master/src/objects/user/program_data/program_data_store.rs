@@ -4,7 +4,7 @@
 //! encrypted database of the user. Never deleted (user, 2026-10-28).
 //!
 //! The installation is made once, at the first start, and never changes:
-//! **create and read only**. The settings are one row: create, read,
+//! **create only** (no view reads it yet). The settings are one row: create, read,
 //! update.
 //!
 //! ```text
@@ -59,31 +59,6 @@ pub fn create_installation(system: &SystemDatabase, installation: &Installation)
     )?;
 
     Ok(())
-}
-
-/// Reads the installation.
-///
-/// Input: `system`, the open system database.
-///
-/// Output: the installation; `None` before the first start has stored it.
-/// `DbError::Corrupt` when its id is not 16 bytes.
-///
-/// Called by: nothing yet (no view shows the installation).
-pub fn read_installation(system: &SystemDatabase) -> Result<Option<Installation>, DbError> {
-    let connection = system.connection();
-    let mut statement = connection.prepare("SELECT id, created FROM installation WHERE one = 1")?;
-    let mut rows = statement.query([])?;
-    let Some(row) = rows.next()? else {
-        return Ok(None);
-    };
-    let id: Vec<u8> = row.get("id")?;
-    let id: [u8; 16] = id.try_into().map_err(|_| DbError::Corrupt {
-        table: "installation",
-        column: "id",
-        value: "not 16 bytes".to_owned(),
-    })?;
-
-    Ok(Some(Installation { id, created: row.get("created")? }))
 }
 
 /// Stores the settings of a new database of the user at the first start
@@ -160,16 +135,13 @@ mod tests {
     use crate::test_support::database::{database, integration};
 
     #[test]
-    fn the_installation_is_stored_once_and_read() {
+    fn the_installation_is_stored_once() {
         let directory = TempDir::new();
         let system = create(directory.path(), &SYSTEM_TABLES).unwrap();
         let installation = Installation { id: [7; 16], created: 1_793_000_000 };
 
-        assert!(read_installation(&system).unwrap().is_none());
-
         create_installation(&system, &installation).unwrap();
 
-        assert_eq!(read_installation(&system).unwrap(), Some(installation.clone()));
         assert!(matches!(create_installation(&system, &installation), Err(DbError::Sql(_))));
         assert!(matches!(
             create_installation(&system, &Installation { id: [0; 16], created: 1 }),

@@ -56,7 +56,7 @@ pub fn evaluation_document_give(
     let content = document_file(&path)?;
     let opened = session.lock()?;
 
-    give_document(database(&opened)?, id, document, content, &version)?;
+    give_document(database(opened.as_ref())?, id, document, content, &version)?;
 
     Ok(true)
 }
@@ -93,5 +93,5 @@ pub fn evaluation_proof_give(
         equipment: Some(equipment),
     };
 
-    Ok(give_proof(database(&opened)?, id, &given)?)
+    Ok(give_proof(database(opened.as_ref())?, id, &given)?)
 }
