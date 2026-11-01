@@ -228,15 +228,15 @@ mod objects {
             pub mod program_data_model;
             pub mod program_data_store;
         }
-        // The user; their account made at the first start, the login.
+        // The user; their account made at the first start, the login, the
+        // recovery with the code, the change of the password, a new code.
         pub mod user_data {
             pub mod user_data_model;
             pub mod user_data_rules;
             pub mod user_data_store;
         }
         // The two copies of the key of the database of the user, wrapped with
-        // the password and with the recovery code (moved unchanged from the
-        // earlier program, audited later).
+        // the password and with the recovery code, and made anew together.
         pub mod user_keys {
             pub mod user_keys_model;
             pub mod user_keys_store;
@@ -244,6 +244,7 @@ mod objects {
                 pub mod password;
                 pub mod recovery;
                 pub mod recovery_code;
+                pub mod renewal;
             }
         }
     }
@@ -271,6 +272,12 @@ mod panels {
         pub mod error;
         pub mod opened;
         pub mod progress;
+        pub mod recovery_code;
+        // panels/views/account/: the change of the password and a new
+        // recovery code.
+        pub mod account {
+            pub mod credentials;
+        }
         // panels/views/agents/: the agents, the knowledge bases and their
         // sources, the journal of an agent.
         pub mod agents {
@@ -377,7 +384,10 @@ fn tauri_startup() -> ExitCode {
             panels::views::program_start::installation::installation_create,
             panels::views::program_start::login::login_get,
             panels::views::program_start::login::login_log_in,
+            panels::views::program_start::login::login_recover,
             panels::views::program_start::login::login_log_out,
+            panels::views::account::credentials::account_change_password,
+            panels::views::account::credentials::account_new_recovery_code,
             panels::views::evaluation_plan::standards::standard_list,
             panels::views::evaluation_plan::standards::standard_import,
             panels::views::evaluation_plan::plans::plan_list,

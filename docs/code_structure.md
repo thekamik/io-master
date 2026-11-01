@@ -149,11 +149,12 @@ objects/user/
   program_data/  program_data_model.rs (Installation, Settings), program_data_store.rs
   user_data/     user_data_model.rs (User), user_data_store.rs,
                  user_data_rules.rs (create_account: the installation, the user, the keys, the databases;
-                 installed_user; log_in; AccountError)
+                 installed_user; log_in; recover: a new password with the recovery code; change_password;
+                 new_recovery_code; AccountError)
   user_keys/     user_keys_model.rs (UserKeys, WrappedKey, RecoveryWrappedKey), user_keys_store.rs,
                  user_keys_rules/ password.rs (the key wrapped with the password: Argon2id, HKDF, AES-256-GCM),
                  recovery.rs (wrapped with the recovery code), recovery_code.rs (RecoveryCode: 160 bits, groups,
-                 check sum)
+                 check sum), renewal.rs (renew_keys: both copies wrapped anew, a new code)
 
 panels ──► agent_ai.rs: agent_question ──► integration_ai/question.rs: prepare ──► integration_ai/sending.rs: send
                                                                    ──► integration_ai/connection.rs ──► the service
@@ -165,11 +166,12 @@ panels ──► agent_ai.rs: agent_question ──► integration_ai/question.r
 
 `session.rs` (`Session`, kept by Tauri, the only global state: the user logged in, their open database and the `Progress` of the long work of the AI, each behind its lock; `begin_work` begins a work when none runs, and the guard it gives marks it ended however it ends).
 
-Each panel has a folder in `views/`, and in `logic/` when it shows something the objects do not give. The logic gets the open database as a parameter and never reaches the session, so it is tested without a window. The commands take what the page sends, check its size, call the objects and the logic and give back a `...View` (serde only here); their error is `panels/views/error.rs` (`{kind, message}`). `opened.rs` gives the open database or "nobody is logged in"; `progress.rs` gives the progress of the last long work on one plan (`ProgressView`), which the page asks for while it runs and when a panel is opened again (`evaluation_assess_progress`, `plan_fill_progress`); each step of a filling or an assessment is written into it (`objects/session/progress/progress_ai/step.rs`: `record_step`); `chat/chats.rs` passes each piece of an answer to the page while it comes, and stops it at once on "Stop". One long work of the AI runs at a time (a filling, an assessment or a question of a chat); the evaluator saves no results while it runs.
+Each panel has a folder in `views/`, and in `logic/` when it shows something the objects do not give. The logic gets the open database as a parameter and never reaches the session, so it is tested without a window. The commands take what the page sends, check its size, call the objects and the logic and give back a `...View` (serde only here); their error is `panels/views/error.rs` (`{kind, message}`). `opened.rs` gives the open database or "nobody is logged in"; `recovery_code.rs` gives a new recovery code to the page once (`RecoveryCodeView`, written from its wiped memory without a plain copy); `progress.rs` gives the progress of the last long work on one plan (`ProgressView`), which the page asks for while it runs and when a panel is opened again (`evaluation_assess_progress`, `plan_fill_progress`); each step of a filling or an assessment is written into it (`objects/session/progress/progress_ai/step.rs`: `record_step`); `chat/chats.rs` passes each piece of an answer to the page while it comes, and stops it at once on "Stop". One long work of the AI runs at a time (a filling, an assessment or a question of a chat); the evaluator saves no results while it runs.
 
 | Panel | `logic/` | `views/` commands |
 |---|---|---|
-| `program_start` | none: the first start and the login are the rules of the user (`objects/user/user_data/user_data_rules.rs`) | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
+| `program_start` | none: the first start, the login and the recovery are the rules of the user (`objects/user/user_data/user_data_rules.rs`) | `installation_create`, `login_get`, `login_log_in`, `login_recover`, `login_log_out` |
+| `account` | none: the change of the password and a new recovery code are the rules of the user (`user_data_rules.rs`) | `account_change_password`, `account_new_recovery_code` |
 | `evaluation_plan` | none: the plan, its work units and the standards are objects (`objects/evaluation/`), "Fill with AI" in `evaluation_plan_ai.rs` | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | none: the agent and the knowledge are objects (`objects/ai/agent/`, `objects/ai/rag/`) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `objects/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |

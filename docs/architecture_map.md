@@ -345,28 +345,35 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`user_data_store.rs`): `create_user`, `read_users`
 - **Processed, the rules of the data**:
-  - `objects/user/user_data/user_data_rules.rs`: `install`, `installed_user`, `keys_and_database`, `log_in`
+  - `objects/user/user_data/user_data_rules.rs`: `install`, `installed_user`, `keys_and_database`, `find_user`, `log_in`, `recover`
 - **Processed, the session**:
-  - `panels/session.rs`: `log_in`
+  - `panels/session.rs`: `log_in`, `user_id`
 - **Commands** (`panels/views/`):
   - `program_start/installation.rs`: `installation_create`
-  - `program_start/login.rs`: `login_get`, `login_log_in`
+  - `program_start/login.rs`: `login_get`, `login_log_in`, `login_recover`
+  - `account/credentials.rs`: `account_change_password`, `account_new_recovery_code`
 - **Shown** (`ui/src/`):
   - `App.svelte` ← `login_get`
   - `views/program_start/InstallationForm.svelte` ← `installation_create`
-  - `views/program_start/LoginForm.svelte` ← `login_log_in`
+  - `views/program_start/LoginForm.svelte` ← `login_log_in`, `login_recover`
+  - `views/account/PasswordForm.svelte` ← `account_change_password`
+  - `views/account/RecoveryCodeForm.svelte` ← `account_new_recovery_code`
 
 ### `objects/user/user_keys/user_keys_model.rs`: `UserKeys`, `WrappedKey`, `RecoveryWrappedKey`
 
 - **Stored** (`user_keys_store.rs`): `create_user_keys`, `read_user_keys`, `update_user_keys`
 - **Processed, the rules of the data**:
-  - `objects/user/user_data/user_data_rules.rs`: `keys_and_database`, `log_in`
+  - `objects/user/user_data/user_data_rules.rs`: `keys_and_database`, `log_in`, `recover`, `open_with_password`
   - `objects/user/user_keys/user_keys_rules/password.rs`: `unwrap`, `wrap`
   - `objects/user/user_keys/user_keys_rules/recovery.rs`: `unwrap`, `wrap`
+  - `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`
 - **Commands** (`panels/views/`):
   - `program_start/installation.rs`: `installation_create`
-  - `program_start/login.rs`: `login_log_in`
+  - `program_start/login.rs`: `login_log_in`, `login_recover`
+  - `account/credentials.rs`: `account_change_password`, `account_new_recovery_code`
 - **Shown** (`ui/src/`):
   - `views/program_start/InstallationForm.svelte` ← `installation_create`
-  - `views/program_start/LoginForm.svelte` ← `login_log_in`
+  - `views/program_start/LoginForm.svelte` ← `login_log_in`, `login_recover`
+  - `views/account/PasswordForm.svelte` ← `account_change_password`
+  - `views/account/RecoveryCodeForm.svelte` ← `account_new_recovery_code`
 

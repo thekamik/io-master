@@ -32,7 +32,7 @@ standards (OSCAL catalogs) ──► plan (work units, their parameters, agents)
 ## 4. The window
 
 - **A desktop window** (Tauri 2, a page in Svelte 5) is the only interface. The page is built into the program and calls a fixed list of commands; **no network port is opened**. The program is started without parameters.
-- One dark theme; the panels in a side bar: **Evaluation plan**, **Evaluation**, **Agents**, **Chat**, **AI settings**.
+- One dark theme; the panels in a side bar: **Evaluation plan**, **Evaluation**, **Agents**, **Chat**, **AI settings**, **Account**.
 
 ## 5. Secrets and encryption
 
@@ -65,7 +65,18 @@ key of the database ┤                                                         
                     └─ recovery code ─────────► HKDF ─► unlocking key 2 ──AES-256-GCM──► copy B ─┘
 ```
 
-At the first start the program makes a **recovery code** (160 random bits, written in groups without 0, O, 1 and I, with a check sum) and wraps the key a second time with it. The code is shown **once**, confirmed by typing one of its groups, and kept outside the computer. A lost password *and* a lost code mean lost data. (The login with the code and the change of the password come back later.)
+At the first start the program makes a **recovery code** (160 random bits, written in groups without 0, O, 1 and I, with a check sum) and wraps the key a second time with it. The code is shown **once**, confirmed by typing one of its groups, and kept outside the computer. A lost password *and* a lost code mean lost data.
+
+```text
+recovery (login screen):   name + code ──recovery::unwrap──► key ── the database opened with it ──┐
+change of the password:    present password ──password::unwrap──► key ───────────────────────────┤
+a new recovery code:       password ──password::unwrap──► key ──────────────────────────────────┤
+                                                                                                  ▼
+                           renewal::renew_keys: copy A (the new or same password) and copy B (a new code)
+                           written over the old ones together ──► the new code, shown once
+```
+
+The key of the database never changes, so the database itself is not touched. A forgotten password is set anew with the code on the login screen; the panel Account changes the password or makes a new code, each with the present password. Every one of the three makes a new code, and the old code opens nothing any more. In the recovery the database is opened with the key before the copies are written, so that a key that does not open it leaves the old copies as they were. A wrong code fails as a wrong name does.
 
 ## 6. The AI
 

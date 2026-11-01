@@ -106,7 +106,8 @@ pub fn create_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), 
 ///
 /// Output: the two copies; `DbError::NoRow` when the user has none.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`, `recover`,
+/// `open_with_password`.
 pub fn read_user_keys(system: &SystemDatabase, user: i64) -> Result<UserKeys, DbError> {
     let connection = system.connection();
     let mut statement = connection.prepare(
@@ -149,8 +150,7 @@ pub fn read_user_keys(system: &SystemDatabase, user: i64) -> Result<UserKeys, Db
 /// Output: nothing; an error when a part is empty ([`check_keys`]), or
 /// `DbError::NoRow` when the user has no keys.
 ///
-/// Called by: nothing yet (the change of the password and a new recovery
-/// code, `docs/todo.md`).
+/// Called by: `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
 /// Calls: [`check_keys`].
 pub fn update_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), DbError> {
     check_keys(keys)?;

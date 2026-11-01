@@ -1,7 +1,7 @@
 <!--
   The component "recovery code": the recovery code of a forgotten password,
-  shown once, after the first start (and later after a change or a recovery
-  of the password). The user confirms that it was written down by typing one
+  shown once, after the first start, a recovery or a change of the password,
+  and a new code asked for in the panel Account. The user confirms that it was written down by typing one
   of its groups; only then can they go on (onconfirmed), and the code is
   forgotten with the component. Presentation only; no command. It is the one
   secret the page ever shows (CLAUDE.md, "State lives in the core").
@@ -9,7 +9,13 @@
 <script lang="ts">
   import type { RecoveryCodeView } from "../../lib/api/program_start";
 
-  let { view, onconfirmed }: { view: RecoveryCodeView; onconfirmed: () => void } = $props();
+  // `heading`: false where the panel around it has the same heading
+  // already (views/account/RecoveryCodeForm.svelte).
+  let {
+    view,
+    onconfirmed,
+    heading = true,
+  }: { view: RecoveryCodeView; onconfirmed: () => void; heading?: boolean } = $props();
 
   const groups = $derived(view.code.split("-"));
   // Which group is asked for: chosen once, at random, so that it is not
@@ -21,7 +27,7 @@
 </script>
 
 <div class="recovery-code">
-  <h3>Your recovery code</h3>
+  {#if heading}<h3>Your recovery code</h3>{/if}
   <p class="note">
     With this code you can set a new password if you forget yours. Write it down or print it and keep it away from
     this computer, for example in the safe of the laboratory. It is shown only now: IO Master cannot show it again.

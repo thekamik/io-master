@@ -1,6 +1,7 @@
 //! The account of the user: the first start (the installation, the user,
-//! the two copies of the key of the database, the recovery code) and the
-//! login. The rules only: the data is written by the stores of
+//! the two copies of the key of the database, the recovery code), the
+//! login, the recovery of a forgotten password with the recovery code, the
+//! change of the password and a new recovery code. The rules only: the data is written by the stores of
 //! `objects/user/`, the keys are wrapped by `user_keys_rules/password.rs` and
 //! `user_keys_rules/recovery.rs`. One Linux account holds one installation with one user
 //! (`docs/architecture.md`, section 3).
@@ -18,6 +19,17 @@
 //!   the user by its name ── its WrappedKey ──password (password::unwrap)──► the key
 //!   users/<id>.v2.db opened with it ── the key wiped
 //!   ◄── the user, the open database
+//!
+//! recover(name, recovery code, new password, repeated)
+//!   the user by its name ── its RecoveryWrappedKey ──code (recovery::unwrap)──► the key
+//!   users/<id>.v2.db opened with it                (first: the key is the right one)
+//!   renewal::renew_keys(key, new password) ──► both copies anew, a new code
+//!   ◄── the user, the open database, the new code (shown once)
+//!
+//! change_password(user, current, new, repeated) / new_recovery_code(user, password)
+//!   its WrappedKey ──current password (password::unwrap)──► the key
+//!   renewal::renew_keys(key, new or same password) ──► both copies anew
+//!   ◄── the new code (shown once); the old code, and an old password, open nothing
 //! ```
 //!
 //! A copy of the key is bound to the id of its user (`binding`), which
@@ -31,6 +43,7 @@ use std::path::Path;
 
 use crate::infrastructure::clock::now;
 use crate::infrastructure::security::random::fill_random;
+use crate::infrastructure::storage::encryption::database_key::DatabaseKey;
 use crate::infrastructure::storage::encryption::generate_key::generate_database_key;
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::system_database::{self, SystemDatabase};
@@ -43,12 +56,13 @@ use crate::objects::user::user_data::user_data_store::{create_user, read_users};
 use crate::objects::user::user_keys::user_keys_model::UserKeys;
 use crate::objects::user::user_keys::user_keys_rules::password::{self, KeyError};
 use crate::objects::user::user_keys::user_keys_rules::recovery::{self, RecoveryError};
-use crate::objects::user::user_keys::user_keys_rules::recovery_code::RecoveryCode;
+use crate::objects::user::user_keys::user_keys_rules::recovery_code::{RecoveryCode, RecoveryCodeError};
+use crate::objects::user::user_keys::user_keys_rules::renewal::{RenewalError, renew_keys};
 use crate::objects::user::user_keys::user_keys_store::{create_user_keys, read_user_keys};
 
-/// What the first start gives: the user, its database (open), and the
-/// recovery code, which the window shows once.
-pub struct NewAccount {
+/// What the first start and the recovery give: the user, its database
+/// (open), and the new recovery code, which the window shows once.
+pub struct OpenedAccount {
     pub user: User,
     pub database: UserDatabase,
     pub code: RecoveryCode,
@@ -65,6 +79,14 @@ pub enum AccountError {
     /// The name or the password is wrong (the two look the same, so that
     /// nobody learns which names exist).
     WrongCredentials,
+    /// The name or the recovery code is wrong (the two look the same).
+    WrongRecovery,
+    /// The password of the user logged in is wrong (the change of the
+    /// password, a new recovery code).
+    WrongPassword,
+    /// The typed text is no recovery code: its length, a character, or a
+    /// typing error the check sum finds.
+    Code(RecoveryCodeError),
     /// The program is installed already: its one user exists.
     AlreadyInstalled,
     /// The program is not installed yet.
@@ -81,6 +103,9 @@ impl fmt::Display for AccountError {
             AccountError::PasswordsDiffer => formatter.write_str("the two passwords differ"),
             AccountError::WeakPassword(reason) => formatter.write_str(reason),
             AccountError::WrongCredentials => formatter.write_str("the name or the password is wrong"),
+            AccountError::WrongRecovery => formatter.write_str("the name or the recovery code is wrong"),
+            AccountError::WrongPassword => formatter.write_str("the password is wrong"),
+            AccountError::Code(error) => write!(formatter, "{error}"),
             AccountError::AlreadyInstalled => formatter.write_str("the program is installed already"),
             AccountError::NotInstalled => formatter.write_str("the program is not installed yet"),
             AccountError::Key(reason) => write!(formatter, "the key of the database: {reason}"),
@@ -112,15 +137,32 @@ impl From<RecoveryError> for AccountError {
     /// A wrong recovery code is a wrong credential.
     fn from(error: RecoveryError) -> AccountError {
         match error {
-            RecoveryError::WrongCode => AccountError::WrongCredentials,
+            RecoveryError::WrongCode => AccountError::WrongRecovery,
             RecoveryError::Damaged | RecoveryError::Failed(_) => AccountError::Key(error.to_string()),
+        }
+    }
+}
+
+impl From<RecoveryCodeError> for AccountError {
+    fn from(error: RecoveryCodeError) -> AccountError {
+        AccountError::Code(error)
+    }
+}
+
+impl From<RenewalError> for AccountError {
+    fn from(error: RenewalError) -> AccountError {
+        match error {
+            RenewalError::Password(error) => error.into(),
+            RenewalError::Recovery(error) => error.into(),
+            RenewalError::Db(error) => error.into(),
         }
     }
 }
 
 /// What a copy of the key is bound to: the id of its user.
 ///
-/// Called by: [`install`], [`log_in`].
+/// Called by: [`keys_and_database`], [`log_in`], [`recover`],
+/// [`open_with_password`], [`change_password`], [`new_recovery_code`].
 fn binding(user: i64) -> Vec<u8> {
     format!("io-master user {user}").into_bytes()
 }
@@ -140,7 +182,7 @@ fn install(
     data_dir: &Path,
     name: &str,
     password: &str,
-) -> (Option<i64>, Result<NewAccount, AccountError>) {
+) -> (Option<i64>, Result<OpenedAccount, AccountError>) {
     let mut id = [0u8; 16];
 
     if let Err(error) = fill_random(&mut id) {
@@ -174,7 +216,7 @@ fn keys_and_database(
     data_dir: &Path,
     user: User,
     password: &str,
-) -> Result<NewAccount, AccountError> {
+) -> Result<OpenedAccount, AccountError> {
     let key = generate_database_key().map_err(|error| AccountError::Key(error.to_string()))?;
     let code = recovery::new_code()?;
     // `password::wrap` is the function of `user_keys_rules/password.rs`;
@@ -191,7 +233,7 @@ fn keys_and_database(
 
     create_settings(&database, &Settings { active_integration: None })?;
 
-    Ok(NewAccount { user, database, code })
+    Ok(OpenedAccount { user, database, code })
 }
 
 /// Removes a file of a first start that failed, so that the first start can
@@ -215,10 +257,15 @@ fn removed(path: &Path, failure: AccountError) -> AccountError {
 /// the open database and the recovery code, which the window shows once.
 /// When it fails half way, the files it made are removed.
 ///
-/// Called by: `panels/views/program_start/installation.rs`.
+/// Called by: `panels/views/program_start/installation.rs`: `installation_create`.
 /// Calls: `password::check_password`, `system_database::create`, [`install`],
 /// [`removed`].
-pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &str) -> Result<NewAccount, AccountError> {
+pub fn create_account(
+    data_dir: &Path,
+    name: &str,
+    password: &str,
+    repeated: &str,
+) -> Result<OpenedAccount, AccountError> {
     ensure!(password == repeated, AccountError::PasswordsDiffer);
     // The module `user_keys_rules/password.rs` checks the password given.
     password::check_password(password)?;
@@ -255,7 +302,7 @@ pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &st
 /// the program is not installed yet, so that the window shows the first
 /// start.
 ///
-/// Called by: `panels/views/program_start/login.rs`.
+/// Called by: `panels/views/program_start/login.rs`: `login_get`.
 /// Calls: `system_database::open`, `read_users`.
 pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
     let system = match system_database::open(data_dir, &SYSTEM_TABLES) {
@@ -267,30 +314,57 @@ pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
     Ok(read_users(&system)?.into_iter().next())
 }
 
+/// Opens the system database of an installed program.
+///
+/// Input: `data_dir`, the data folder of the program.
+///
+/// Output: the open system database; `AccountError::NotInstalled` before
+/// the first start, or an error of the database.
+///
+/// Called by: [`log_in`], [`recover`], [`open_with_password`].
+/// Calls: `infrastructure/storage/system_database.rs`: `open`.
+fn open_installed(data_dir: &Path) -> Result<SystemDatabase, AccountError> {
+    match system_database::open(data_dir, &SYSTEM_TABLES) {
+        Ok(system) => Ok(system),
+        Err(DbError::NotFound(_)) => Err(AccountError::NotInstalled),
+        Err(error) => Err(error.into()),
+    }
+}
+
+/// The user named `name`, whatever its letter case and the spaces around
+/// it ("kamil " finds "Kamil").
+///
+/// Input: `system`, the open system database; `name`, the name as typed.
+///
+/// Output: the user; `None` when no user has that name.
+///
+/// Called by: [`log_in`], [`recover`].
+/// Calls: `objects/user/user_data/user_data_store.rs`: `read_users`.
+fn find_user(system: &SystemDatabase, name: &str) -> Result<Option<User>, AccountError> {
+    let wanted = name.trim().to_lowercase();
+
+    ensure!(!wanted.is_empty(), AccountError::WrongCredentials);
+
+    for user in read_users(system)? {
+        if user.name.to_lowercase() == wanted {
+            return Ok(Some(user));
+        }
+    }
+
+    Ok(None)
+}
+
 /// The login: the user `name` (whatever its letter case) with its
 /// password. Gives the user and its database, opened; the key is wiped
 /// when this function ends. A wrong password and an unknown name fail the
 /// same way.
 ///
-/// Called by: `panels/views/program_start/login.rs`.
-/// Calls: `system_database::open`, `read_users`, `read_user_keys`,
+/// Called by: `panels/views/program_start/login.rs`: `login_log_in`.
+/// Calls: [`open_installed`], [`find_user`], `read_user_keys`,
 /// `password::unwrap`, `user_database::open`.
 pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, UserDatabase), AccountError> {
-    let system = match system_database::open(data_dir, &SYSTEM_TABLES) {
-        Ok(system) => system,
-        Err(DbError::NotFound(_)) => return Err(AccountError::NotInstalled),
-        Err(error) => return Err(error.into()),
-    };
-    let wanted = name.trim().to_lowercase();
-    let mut found = None;
-
-    for user in read_users(&system)? {
-        if user.name.to_lowercase() == wanted {
-            found = Some(user);
-        }
-    }
-
-    let Some(user) = found else {
+    let system = open_installed(data_dir)?;
+    let Some(user) = find_user(&system, name)? else {
         return Err(AccountError::WrongCredentials);
     };
     let keys = read_user_keys(&system, user.id)?;
@@ -302,10 +376,142 @@ pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, User
     Ok((user, database))
 }
 
+/// The recovery of a forgotten password: the recovery code of the user
+/// `name` opens the key of their database, which is then wrapped anew with
+/// the new password and a new recovery code. Gives the user, their database
+/// (open) and the new code, which the window shows once; the old code and
+/// the forgotten password open nothing any more. A wrong code and an
+/// unknown name fail the same way.
+///
+/// Input:
+/// - `data_dir`: the data folder of the program.
+/// - `name`: the name of the user, as typed ("kamil").
+/// - `typed`: the recovery code as typed, the letter case, spaces and dashes
+///   aside ("abcde-fghjk-...").
+/// - `password`, `repeated`: the new password, given twice.
+///
+/// Output: the user, the open database and the new code; an error when the
+/// passwords differ or are weak, the code is mistyped
+/// (`AccountError::Code`), or the name or the code is wrong
+/// (`AccountError::WrongRecovery`).
+///
+/// Called by: `panels/views/program_start/login.rs`: `login_recover`.
+/// Calls: `password::check_password`, `RecoveryCode::parse`, [`open_installed`],
+/// [`find_user`], `read_user_keys`, `recovery::unwrap`, `user_database::open`,
+/// `renewal::renew_keys`.
+pub fn recover(
+    data_dir: &Path,
+    name: &str,
+    typed: &str,
+    password: &str,
+    repeated: &str,
+) -> Result<OpenedAccount, AccountError> {
+    ensure!(password == repeated, AccountError::PasswordsDiffer);
+    password::check_password(password)?;
+
+    let code = RecoveryCode::parse(typed)?;
+    let system = open_installed(data_dir)?;
+    let Some(user) = find_user(&system, name)? else {
+        return Err(AccountError::WrongRecovery);
+    };
+    let keys = read_user_keys(&system, user.id)?;
+    let key = recovery::unwrap(&keys.recovery, &code, &binding(user.id))?;
+    // The database is opened before the copies are written anew: a key that
+    // does not open it (a damaged file) leaves the old copies as they were.
+    let database = user_database::open(data_dir, user.id, &key, &USER_TABLES)?;
+    let code = renew_keys(&system, user.id, &key, password, &binding(user.id))?;
+
+    Ok(OpenedAccount { user, database, code })
+}
+
+/// Opens the key of the database of the user `user` with their password,
+/// for a change made while they are logged in.
+///
+/// Input: `data_dir`, the data folder; `user`, the id of the user logged
+/// in (1); `password`, their present password.
+///
+/// Output: the open system database and the key; `AccountError::WrongPassword`
+/// when the password does not open it.
+///
+/// Called by: [`change_password`], [`new_recovery_code`].
+/// Calls: [`open_installed`], `read_user_keys`, `password::unwrap`.
+fn open_with_password(
+    data_dir: &Path,
+    user: i64,
+    password: &str,
+) -> Result<(SystemDatabase, DatabaseKey), AccountError> {
+    ensure!(user > 0, AccountError::Key("no user is named".to_owned()));
+
+    let system = open_installed(data_dir)?;
+    let keys = read_user_keys(&system, user)?;
+    // A wrong password here is told as it is: the user is logged in, so
+    // there is no name to keep secret.
+    let key = match password::unwrap(&keys.password, password, &binding(user)) {
+        Ok(key) => key,
+        Err(KeyError::WrongPassword) => return Err(AccountError::WrongPassword),
+        Err(error) => return Err(error.into()),
+    };
+
+    Ok((system, key))
+}
+
+/// Changes the password of the user `user`, logged in: their present
+/// password opens the key of their database, which is wrapped anew with
+/// the new password and a new recovery code. Gives the new code, which the
+/// window shows once; the old password and the old code open nothing any
+/// more.
+///
+/// Input: `data_dir`, the data folder; `user`, the id of the user logged
+/// in (1); `current`, their present password; `password`, `repeated`, the
+/// new one given twice.
+///
+/// Output: the new recovery code; an error when the new passwords differ
+/// or are weak, or the present one is wrong (`AccountError::WrongPassword`).
+///
+/// Called by: `panels/views/account/credentials.rs`: `account_change_password`.
+/// Calls: `password::check_password`, [`open_with_password`],
+/// `renewal::renew_keys`.
+pub fn change_password(
+    data_dir: &Path,
+    user: i64,
+    current: &str,
+    password: &str,
+    repeated: &str,
+) -> Result<RecoveryCode, AccountError> {
+    ensure!(password == repeated, AccountError::PasswordsDiffer);
+    password::check_password(password)?;
+
+    let (system, key) = open_with_password(data_dir, user, current)?;
+
+    Ok(renew_keys(&system, user, &key, password, &binding(user))?)
+}
+
+/// Makes a new recovery code for the user `user`, logged in, when the old
+/// one is lost or may have been seen: their password opens the key, which
+/// is wrapped anew with the same password and the new code. Gives the new
+/// code, which the window shows once; the old one opens nothing any more.
+///
+/// Input: `data_dir`, the data folder; `user`, the id of the user logged
+/// in (1); `password`, their password.
+///
+/// Output: the new recovery code; `AccountError::WrongPassword` when the
+/// password is wrong.
+///
+/// Called by: `panels/views/account/credentials.rs`: `account_new_recovery_code`.
+/// Calls: [`open_with_password`], `renewal::renew_keys`.
+pub fn new_recovery_code(data_dir: &Path, user: i64, password: &str) -> Result<RecoveryCode, AccountError> {
+    ensure!(!password.is_empty(), AccountError::WrongPassword);
+
+    let (system, key) = open_with_password(data_dir, user, password)?;
+
+    Ok(renew_keys(&system, user, &key, password, &binding(user))?)
+}
+
 #[cfg(test)]
 mod tests {
-    //! Tests of the account: the first start, the login, the checks, and a
-    //! first start that fails half way leaving nothing behind.
+    //! Tests of the account: the first start, the login, the checks, a
+    //! first start that fails half way leaving nothing behind, the recovery
+    //! with the code, the change of the password and a new code.
 
     use super::*;
 
@@ -366,5 +572,93 @@ mod tests {
         assert!(installed_user(directory.path()).unwrap().is_none());
 
         create_account(directory.path(), "Kamil", PASSWORD, PASSWORD).unwrap();
+    }
+
+    const NEW_PASSWORD: &str = "another long password";
+
+    #[test]
+    fn the_recovery_code_sets_a_new_password_and_is_replaced() {
+        let directory = TempDir::new();
+        let created = create_account(directory.path(), "Kamil", PASSWORD, PASSWORD).unwrap();
+        // Typed carelessly: small letters, spaces instead of dashes.
+        let typed = created.code.to_text().to_lowercase().replace('-', " ");
+        let recovered = recover(directory.path(), " kamil", &typed, NEW_PASSWORD, NEW_PASSWORD).unwrap();
+
+        assert_eq!(recovered.user, created.user);
+        assert_ne!(recovered.code.to_text(), created.code.to_text());
+        assert!(log_in(directory.path(), "Kamil", NEW_PASSWORD).is_ok());
+        assert!(matches!(log_in(directory.path(), "Kamil", PASSWORD), Err(AccountError::WrongCredentials)));
+        assert!(matches!(
+            recover(directory.path(), "Kamil", &typed, NEW_PASSWORD, NEW_PASSWORD),
+            Err(AccountError::WrongRecovery)
+        ));
+        assert!(
+            recover(directory.path(), "Kamil", &recovered.code.to_text(), PASSWORD, PASSWORD).is_ok(),
+            "the new code works"
+        );
+    }
+
+    #[test]
+    fn a_wrong_name_a_mistyped_code_and_differing_passwords_are_refused() {
+        let directory = TempDir::new();
+        let created = create_account(directory.path(), "Kamil", PASSWORD, PASSWORD).unwrap();
+        let code = created.code.to_text();
+
+        assert!(matches!(
+            recover(directory.path(), "Anna", &code, NEW_PASSWORD, NEW_PASSWORD),
+            Err(AccountError::WrongRecovery)
+        ));
+        assert!(matches!(
+            recover(directory.path(), "Kamil", "ABCDE", NEW_PASSWORD, NEW_PASSWORD),
+            Err(AccountError::Code(RecoveryCodeError::Length))
+        ));
+        assert!(matches!(
+            recover(directory.path(), "Kamil", &code, NEW_PASSWORD, "something else!"),
+            Err(AccountError::PasswordsDiffer)
+        ));
+        assert!(log_in(directory.path(), "Kamil", PASSWORD).is_ok(), "nothing changed");
+    }
+
+    #[test]
+    fn a_change_of_the_password_replaces_the_password_and_the_code() {
+        let directory = TempDir::new();
+        let created = create_account(directory.path(), "Kamil", PASSWORD, PASSWORD).unwrap();
+        let id = created.user.id;
+
+        assert!(matches!(
+            change_password(directory.path(), id, "a wrong password", NEW_PASSWORD, NEW_PASSWORD),
+            Err(AccountError::WrongPassword)
+        ));
+
+        let code = change_password(directory.path(), id, PASSWORD, NEW_PASSWORD, NEW_PASSWORD).unwrap();
+
+        assert!(log_in(directory.path(), "Kamil", NEW_PASSWORD).is_ok());
+        assert!(matches!(log_in(directory.path(), "Kamil", PASSWORD), Err(AccountError::WrongCredentials)));
+        assert!(matches!(
+            recover(directory.path(), "Kamil", &created.code.to_text(), PASSWORD, PASSWORD),
+            Err(AccountError::WrongRecovery)
+        ));
+        assert!(recover(directory.path(), "Kamil", &code.to_text(), PASSWORD, PASSWORD).is_ok());
+    }
+
+    #[test]
+    fn a_new_recovery_code_keeps_the_password() {
+        let directory = TempDir::new();
+        let created = create_account(directory.path(), "Kamil", PASSWORD, PASSWORD).unwrap();
+        let id = created.user.id;
+
+        assert!(matches!(
+            new_recovery_code(directory.path(), id, "a wrong password"),
+            Err(AccountError::WrongPassword)
+        ));
+
+        let code = new_recovery_code(directory.path(), id, PASSWORD).unwrap();
+
+        assert!(log_in(directory.path(), "Kamil", PASSWORD).is_ok());
+        assert!(matches!(
+            recover(directory.path(), "Kamil", &created.code.to_text(), NEW_PASSWORD, NEW_PASSWORD),
+            Err(AccountError::WrongRecovery)
+        ));
+        assert!(recover(directory.path(), "Kamil", &code.to_text(), NEW_PASSWORD, NEW_PASSWORD).is_ok());
     }
 }

@@ -64,8 +64,8 @@ impl std::error::Error for RecoveryError {}
 
 /// A new recovery code: 160 random bits from the kernel.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs` (the account made, the password
-/// changed or recovered, a new code asked for).
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database` (the account
+/// made); `renewal.rs`: `renew_keys` (the password changed or recovered, a new code asked for).
 /// Calls: `security::random::fill_random`.
 pub fn new_code() -> Result<RecoveryCode, RecoveryError> {
     let mut bytes = Zeroizing::new([0u8; CODE_BYTES]);
@@ -93,7 +93,8 @@ fn recovery_key(code: &RecoveryCode, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>,
 /// Wraps the key of a database with a recovery code. `binding` ties the
 /// copy to its account, as in `keys::wrap`.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`;
+/// `renewal.rs`: `renew_keys`.
 /// Calls: `fill_random`, [`recovery_key`], AES-256-GCM.
 pub fn wrap(key: &DatabaseKey, code: &RecoveryCode, binding: &[u8]) -> Result<RecoveryWrappedKey, RecoveryError> {
     ensure!(!binding.is_empty(), RecoveryError::Failed("a copy of a key needs its account".to_owned()));
@@ -120,7 +121,7 @@ pub fn wrap(key: &DatabaseKey, code: &RecoveryCode, binding: &[u8]) -> Result<Re
 /// Opens the key of a database with a recovery code. Fails with
 /// [`RecoveryError::WrongCode`] when the code (or `binding`) does not fit.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs` (`recover`).
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `recover`.
 /// Calls: [`recovery_key`], AES-256-GCM.
 pub fn unwrap(wrapped: &RecoveryWrappedKey, code: &RecoveryCode, binding: &[u8]) -> Result<DatabaseKey, RecoveryError> {
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| RecoveryError::Damaged)?;

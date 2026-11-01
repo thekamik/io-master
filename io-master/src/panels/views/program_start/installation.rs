@@ -8,20 +8,13 @@
 //!     program_start::create_account ──► Session::log_in ──► the recovery code, once
 //! ```
 
-use serde::Serialize;
 use tauri::State;
 use zeroize::Zeroizing;
 
 use crate::objects::user::user_data::user_data_rules::create_account;
 use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
-
-/// The recovery code, as the page shows it: seven groups of five
-/// characters ("ABCDE-FGHJK-...").
-#[derive(Serialize)]
-pub struct RecoveryCodeView {
-    code: String,
-}
+use crate::panels::views::recovery_code::RecoveryCodeView;
 
 /// Makes the installation and its one user, logs them in, and gives the
 /// recovery code. Run apart from the window (`async`): wrapping the key
@@ -29,7 +22,8 @@ pub struct RecoveryCodeView {
 /// are wiped from memory when the command ends.
 ///
 /// Called by: `InstallationForm.svelte`, "Install".
-/// Calls: `program_start::access::create_account`, `Session::log_in`.
+/// Calls: `objects/user/user_data/user_data_rules.rs`: `create_account`;
+/// `Session::log_in`; `panels/views/recovery_code.rs`: `RecoveryCodeView::new`.
 #[tauri::command(async)]
 pub fn installation_create(
     session: State<'_, Session>,
@@ -40,9 +34,9 @@ pub fn installation_create(
     let password = Zeroizing::new(password);
     let password_repeated = Zeroizing::new(password_repeated);
     let created = create_account(session.data_folder(), &name, &password, &password_repeated)?;
-    let code = created.code.to_text();
+    let view = RecoveryCodeView::new(&created.code);
 
     session.log_in(created.user, created.database)?;
 
-    Ok(RecoveryCodeView { code: code.as_str().to_owned() })
+    Ok(view)
 }

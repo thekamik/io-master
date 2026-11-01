@@ -4,8 +4,8 @@
   src/panels/views/program_start/login.rs), which Rust keeps. It reads that state
   at the start and again whenever an element says it changed it (installed,
   logged in, logged out). The user logged in sees the frame: the panels in
-  the side bar (the evaluation plan, the evaluation, the agents, the chat and the
-  AI settings) and their name with "Log out". Which panel is shown
+  the side bar (the evaluation plan, the evaluation, the agents, the chat, the
+  AI settings and the account) and their name with "Log out". Which panel is shown
   is presentation only: it stays in the page.
 -->
 <script lang="ts">
@@ -13,6 +13,7 @@
 
   import { sentence } from "./lib/api/errors";
   import { loginGet, loginLogOut, type ProgramView } from "./lib/api/program_start";
+  import Account from "./views/account/Account.svelte";
   import Agents from "./views/agents/Agents.svelte";
   import Chats from "./views/chat/Chats.svelte";
   import Evaluations from "./views/evaluation/Evaluations.svelte";
@@ -24,7 +25,7 @@
   /** The state of the program; null until it is read. */
   let program: ProgramView | null = $state(null);
   let problem = $state("");
-  let panel: "evaluation_plan" | "evaluation" | "agents" | "chat" | "settings" = $state("evaluation_plan");
+  let panel: "evaluation_plan" | "evaluation" | "agents" | "chat" | "settings" | "account" = $state("evaluation_plan");
 
   async function reload() {
     problem = "";
@@ -83,6 +84,9 @@
       <button type="button" class="nav-item" class:active={panel === "settings"} onclick={() => (panel = "settings")}>
         AI settings
       </button>
+      <button type="button" class="nav-item" class:active={panel === "account"} onclick={() => (panel = "account")}>
+        Account
+      </button>
 
       <div class="user">
         <span class="who">{program.loggedIn}</span>
@@ -93,6 +97,8 @@
     <main>
       {#if panel === "settings"}
         <Settings />
+      {:else if panel === "account"}
+        <Account />
       {:else if panel === "evaluation"}
         <Evaluations />
       {:else if panel === "agents"}

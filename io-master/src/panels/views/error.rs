@@ -86,9 +86,16 @@ impl ViewError {
         match self {
             ViewError::Account(AccountError::NotInstalled) => "not_installed",
             ViewError::Account(AccountError::AlreadyInstalled) => "already_installed",
-            ViewError::Account(AccountError::WrongCredentials) => "wrong_credentials",
+            ViewError::Account(
+                AccountError::WrongCredentials | AccountError::WrongRecovery | AccountError::WrongPassword,
+            ) => "wrong_credentials",
             ViewError::NotLoggedIn => "not_logged_in",
-            ViewError::Account(AccountError::PasswordsDiffer | AccountError::WeakPassword(_) | AccountError::Db(_))
+            ViewError::Account(
+                AccountError::PasswordsDiffer
+                | AccountError::WeakPassword(_)
+                | AccountError::Code(_)
+                | AccountError::Db(_),
+            )
             | ViewError::Domain(
                 DomainError::Refused(_)
                 | DomainError::Oscal(_)

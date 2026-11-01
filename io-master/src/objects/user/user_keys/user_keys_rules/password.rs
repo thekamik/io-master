@@ -98,7 +98,8 @@ impl std::error::Error for KeyError {}
 /// else is demanded, as NIST recommends: length protects better
 /// than forced special characters.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`: `create_account`; [`wrap`].
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `create_account`, `recover`,
+/// `change_password`; [`wrap`].
 pub fn check_password(password: &str) -> Result<(), KeyError> {
     let length = password.chars().count();
 
@@ -149,7 +150,8 @@ fn unlocking_key(
 /// name): an encrypted key copied to another account does not open
 /// there.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`;
+/// `renewal.rs`: `renew_keys`.
 /// Calls: [`check_password`], `infrastructure/security/random.rs`: `fill_random`, [`unlocking_key`].
 pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<WrappedKey, KeyError> {
     check_password(password)?;
@@ -184,7 +186,7 @@ pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<Wrapped
 /// [`KeyError::WrongPassword`] when it does not fit, or when `binding`
 /// is not the one used by [`wrap`].
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`, `open_with_password`.
 /// Calls: [`unlocking_key`], `infrastructure/storage/encryption/database_key.rs`: `DatabaseKey::fill_with`.
 pub fn unwrap(wrapped: &WrappedKey, password: &str, binding: &[u8]) -> Result<DatabaseKey, KeyError> {
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| KeyError::Damaged)?;

@@ -5,7 +5,6 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 ## The rebuild: the parts to come back
 
 - **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then); the report itself.
-- **The login with the recovery code**, the change of the password and a new recovery code.
 
 ## Before the release
 

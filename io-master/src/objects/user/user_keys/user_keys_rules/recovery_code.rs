@@ -95,7 +95,7 @@ impl RecoveryCode {
 
     /// The code as a person reads it: seven groups of five characters.
     ///
-    /// Called by: `panels/views/program_start/installation.rs`, to show it once.
+    /// Called by: `panels/views/recovery_code.rs`: `RecoveryCodeView::new`, to show it once.
     /// Calls: [`symbols`], [`group`].
     pub fn to_text(&self) -> Zeroizing<String> {
         group(&symbols(&self.bytes))
@@ -103,8 +103,8 @@ impl RecoveryCode {
 
     /// Reads a typed code: the letter case, spaces and dashes aside.
     ///
-    /// Called by: the recovery of a forgotten password, when the code comes
-    /// from the page (`objects/user/user_data/user_data_rules.rs`, to come).
+    /// Called by: `objects/user/user_data/user_data_rules.rs`: `recover`, when
+    /// the code comes from the page.
     /// Calls: [`value_of`], [`symbols`].
     pub fn parse(typed: &str) -> Result<RecoveryCode, RecoveryCodeError> {
         ensure!(typed.len() <= TYPED_MAX, RecoveryCodeError::Length);

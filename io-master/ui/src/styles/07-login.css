@@ -62,8 +62,14 @@ main.login fieldset label.choice:has(input:checked) {
     box-shadow: var(--focus);
 }
 
+/* "I do not remember my password" and its way back, under the form. */
+main.login button.link {
+    justify-content: center;
+    margin-top: 0.6rem;
+}
+
 /* The recovery code, shown once (components/recovery_code/): after the
-   setup and the recovery here, and on the page User. */
+   setup and the recovery here, and in the panel Account. */
 .recovery-code .code {
     margin: 0.8rem 0;
     padding: 0.8rem;

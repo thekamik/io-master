@@ -98,10 +98,21 @@ impl Session {
         Ok(user.as_ref().map(|user| user.name.clone()))
     }
 
+    /// The id of the user logged in (`Some(1)`); `None` when nobody is.
+    ///
+    /// Called by: `panels/views/account/credentials.rs`: `account_change_password`,
+    /// `account_new_recovery_code`.
+    pub fn user_id(&self) -> Result<Option<i64>, SessionBroken> {
+        let user = self.user.lock().map_err(|_| SessionBroken)?;
+
+        Ok(user.as_ref().map(|user| user.id))
+    }
+
     /// Keeps `user` and their open `database` as the session; a session
     /// open before is closed.
     ///
-    /// Called by: `panels/views/program_start/installation.rs`, `panels/views/program_start/login.rs`.
+    /// Called by: `panels/views/program_start/installation.rs`: `installation_create`;
+    /// `panels/views/program_start/login.rs`: `login_log_in`, `login_recover`.
     /// Calls: [`Session::lock`].
     pub fn log_in(&self, user: User, database: UserDatabase) -> Result<(), SessionBroken> {
         // The database first, then the user, the order of log_out reversed:
