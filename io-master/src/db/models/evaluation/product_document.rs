@@ -96,11 +96,11 @@ pub(in crate::db) fn insert_product_document(
 /// `DbError::NoRow` when there is none.
 ///
 /// Called by: [`update_product_document`]; `evaluation_plan.rs`:
-/// `copied_places`; `ai/models/evaluation/work_unit/assessment_answer.rs`: `checked_quotes`;
+/// `copied_places`; `domain/models/evaluation/work_unit/results.rs`: `quotes_found`;
 /// `domain/models/evaluation/product_document.rs`: `give_document`;
 /// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `documents_text`, `unit_json`;
-/// `panels/logic/evaluation/results.rs`: `check_quotes`;
+/// `domain/models/evaluation/work_unit/results.rs`: `check_quotes`;
 /// `ai/models/evaluation/evaluation_plan.rs`: `missing_inputs`;
 /// `ai/models/evaluation/work_unit/proposal.rs`: `names_of`;
 /// `panels/views/evaluation/work_units.rs`: `needs_of`;
@@ -221,7 +221,7 @@ pub fn update_product_document(
 ///
 /// Output: the text; empty while the file is not given.
 ///
-/// Called by: `ai/models/evaluation/work_unit/assessment_answer.rs`: `checked_quotes`;
+/// Called by: `domain/models/evaluation/work_unit/results.rs`: `quotes_found`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `documents_text`.
 pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError> {
     let mut statement = db.connection().prepare(

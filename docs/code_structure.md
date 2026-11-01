@@ -84,6 +84,8 @@ domain/models/evaluation/
                              add_all_work_units (from the controls of a standard of the plan), remove_work_unit
   work_unit/
     parameters.rs            WorkUnitParameters, update_work_unit_parameters (then check_order); add_proof_place
+    results.rs               Results, save_results (the results of the evaluator, of author User); quotes_found
+                             (a quote word for word in its document, for the evaluator and the AI alike)
   product_document.rs        document_file (.pdf, .txt, .md within its limit), document_text, give_document
   lab_proof.rs               give_proof (its whole record)
   oscal_standard_document.rs import_standard; check_catalog (the JSON schema of NIST, built in), catalog_controls
@@ -146,7 +148,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 | `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
 | `evaluation_plan` | none: the rules are in `domain/models/evaluation/`, "Fill with AI" in `ai/models/evaluation/` | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | `agent.rs` (an agent made, its changes checked; its knowledge and its question are in `ai/models/ai/agent.rs`), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
-| `evaluation` | `inputs.rs` (every place of input with the work units that need it), `results.rs` (the results of the evaluator, of author User); the evaluation begun and its inputs given are in `domain/models/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
+| `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `domain/models/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |
 

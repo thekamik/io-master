@@ -5,8 +5,8 @@
 //! read_assessment ──► Assessment: the verdict, the findings, analysis, vulnerability notes, notes, the quotes
 //! apply_assessment:
 //!   the verdict      one of the plan, else the answer is not taken
-//!   each quote       of a document of the work unit, found in its text word for word (the spaces passed over):
-//!                    kept as a Quote; otherwise written into the notes
+//!   each quote       of a document of the work unit, found in its text word for word (the spaces passed over;
+//!                    domain/.../work_unit/results.rs: quotes_found): kept as a Quote; otherwise written into the notes
 //!   the dependencies the verdict is the worst of its own and theirs (Fail, Inconclusive, Pass);
 //!                    each one that did not pass written into the findings
 //!   ──► update_work_unit, author Ai
@@ -14,17 +14,18 @@
 //!
 //! A quote is only a fragment of a document of the product (user,
 //! 2026-10-30): the contribution of the manufacturer is assessed; whether it
-//! stands in the document is checked here, never taken from the AI (P5).
+//! stands in the document is checked by the rule of the data, never taken
+//! from the AI (P5).
 
 use crate::ai::error::AiError;
 use serde_json::Value;
 
 use crate::ai::models::evaluation::work_unit::assessment_question::verdict_name;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
-use crate::db::models::evaluation::product_document::{read_document_text, read_product_document};
 use crate::db::models::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
 use crate::db::storage::user_database::UserDatabase;
-use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
+use crate::domain::models::evaluation::work_unit::results::quotes_found;
+use crate::model::evaluation::work_unit::{Author, Verdict, WorkUnit};
 
 /// The longest text of a result taken from an answer, in characters.
 const MAX_RESULT: usize = 100_000;
@@ -99,52 +100,6 @@ pub fn read_assessment(answer: &str) -> Result<Assessment, AiError> {
         notes: text_of(&value, "notes")?,
         quotes,
     })
-}
-
-/// `text` with every run of spaces, tabs and line ends made one space, so
-/// that a quote is found however the lines of its document were broken.
-///
-/// Called by: [`checked_quotes`].
-fn spaced(text: &str) -> String {
-    text.split_whitespace().collect::<Vec<&str>>().join(" ")
-}
-
-/// The quotes `proposed` that stand word for word in the documents of the
-/// work unit `unit`, as quotes; and a note for each that does not.
-///
-/// Called by: [`apply_assessment`], [`check_quote`].
-/// Calls: `read_product_document`, `read_document_text`, [`spaced`].
-fn checked_quotes(
-    db: &UserDatabase,
-    unit: &WorkUnit,
-    proposed: &[(String, String)],
-) -> Result<(Vec<Quote>, Vec<String>), AiError> {
-    let mut texts = Vec::with_capacity(unit.input_product_documents.len());
-
-    for id in &unit.input_product_documents {
-        texts.push((*id, read_product_document(db, *id)?.name, spaced(&read_document_text(db, *id)?)));
-    }
-
-    let mut quotes = Vec::with_capacity(proposed.len());
-    let mut notes = Vec::new();
-
-    for (name, text) in proposed {
-        let wanted = spaced(text);
-        let mut found = None;
-
-        for (id, document, content) in &texts {
-            if document.trim().eq_ignore_ascii_case(name) && content.contains(&wanted) {
-                found = Some(*id);
-            }
-        }
-
-        match found {
-            Some(product_document) => quotes.push(Quote { product_document, text: text.clone() }),
-            None => notes.push(format!("The AI quoted a text not found in {name}: \"{text}\"")),
-        }
-    }
-
-    Ok((quotes, notes))
 }
 
 /// The verdict of its name, if the plan knows it.
@@ -234,7 +189,8 @@ fn joined(first: &str, more: &[String]) -> String {
 ///
 /// Called by: `assessment.rs`: `assessed`.
 /// Calls: `read_evaluation_plan`, `read_work_unit`, [`verdict_of`],
-/// [`checked_quotes`], [`with_dependencies`], [`joined`], `update_work_unit`.
+/// `domain/models/evaluation/work_unit/results.rs`: `quotes_found`;
+/// [`with_dependencies`], [`joined`], `update_work_unit`.
 pub fn apply_assessment(
     db: &UserDatabase,
     evaluation: i64,
@@ -252,14 +208,20 @@ pub fn apply_assessment(
     let Some(own) = verdict_of(&assessment.verdict, &stored.possible_verdicts) else {
         return Err(AiError::Refused(format!("the verdict \"{}\" is none of the plan", assessment.verdict)));
     };
-    let (quotes, left_out) = checked_quotes(db, &this, &assessment.quotes)?;
+    let quotes = quotes_found(db, &this, &assessment.quotes)?;
+    let mut left_out = Vec::with_capacity(quotes.missing.len());
+
+    for (name, text) in &quotes.missing {
+        left_out.push(format!("The AI quoted a text not found in {name}: \"{text}\""));
+    }
+
     let (verdict, dependency_lines) = with_dependencies(db, &this, own)?;
     let assessed = WorkUnit {
         findings: joined(&assessment.findings, &dependency_lines),
         analysis: assessment.analysis.clone(),
         vulnerability_notes: assessment.vulnerability_notes.clone(),
         notes: joined(&assessment.notes, &left_out),
-        quotes,
+        quotes: quotes.found,
         verdict: Some(verdict),
         author: Some(Author::Ai),
         ..this
@@ -268,18 +230,6 @@ pub fn apply_assessment(
     update_work_unit(db, &assessed)?;
 
     Ok(left_out)
-}
-
-/// Whether the quote `text` of the document `document` stands word for word
-/// in it, for the work unit `unit`: the check of a quote the evaluator writes
-/// (user, 2026-10-30), as of those of the AI.
-///
-/// Called by: `results.rs` (the results saved by the evaluator).
-/// Calls: [`checked_quotes`].
-pub fn check_quote(db: &UserDatabase, unit: &WorkUnit, document: &str, text: &str) -> Result<bool, AiError> {
-    let (quotes, _) = checked_quotes(db, unit, &[(document.to_owned(), text.to_owned())])?;
-
-    Ok(!quotes.is_empty())
 }
 
 #[cfg(test)]
@@ -317,7 +267,6 @@ mod tests {
         assert_eq!(left_out.len(), 2);
         assert!(stored.notes.contains("not found in ST: \"The TOE is a firewall.\""));
         assert!(stored.notes.contains("not found in IXIT"));
-        assert!(check_quote(&db, &stored, "st", "Its TSF filters\npackets.").unwrap());
     }
 
     #[test]

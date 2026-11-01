@@ -49,7 +49,7 @@ pub fn checked_text(text: &str, what: &str, limit: usize) -> Result<String, Doma
 /// Output: nothing; `DomainError::Refused` ("the findings over 100000
 /// characters").
 ///
-/// Called by: `panels/logic/evaluation/results.rs`: `save_results`.
+/// Called by: `domain/models/evaluation/work_unit/results.rs`: `save_results`.
 pub fn check_length(text: &str, what: &str, limit: usize) -> Result<(), DomainError> {
     ensure!(text.chars().count() <= limit, DomainError::Refused(format!("{what} over {limit} characters")));
 

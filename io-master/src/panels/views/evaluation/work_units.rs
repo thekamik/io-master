@@ -22,10 +22,10 @@ use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_
 use crate::db::models::evaluation::product_document::read_product_document;
 use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::models::evaluation::work_unit::results::{Results, save_results};
 use crate::model::ai::journal::Ending;
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
-use crate::panels::logic::evaluation::results::{Results, save_results};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;

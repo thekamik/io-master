@@ -149,32 +149,14 @@ impl ViewError {
                 )
                 | ChatError::Db(DbError::Inconsistent(_)),
             )
-            | ViewError::Evaluation(
-                EvaluationError::Refused(_)
-                | EvaluationError::Ai(
-                    AiError::NoKey
-                    | AiError::Address(_)
-                    | AiError::NoQuestion
-                    | AiError::TooLong { .. }
-                    | AiError::TooManyMessages { .. },
-                )
-                | EvaluationError::Db(DbError::Inconsistent(_))
-                | EvaluationError::Domain(
-                    DomainError::Refused(_)
-                    | DomainError::Oscal(_)
-                    | DomainError::Pdf(_)
-                    | DomainError::Db(DbError::Inconsistent(_)),
-                ),
-            )
+            | ViewError::Evaluation(EvaluationError::Db(DbError::Inconsistent(_)))
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
             | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))
-            | ViewError::Evaluation(
-                EvaluationError::Ai(_) | EvaluationError::Db(_) | EvaluationError::Domain(DomainError::Db(_)),
-            )
+            | ViewError::Evaluation(EvaluationError::Db(_))
             | ViewError::Domain(DomainError::Db(_))
             | ViewError::Ai(_)
             | ViewError::Db(_) => "failed",

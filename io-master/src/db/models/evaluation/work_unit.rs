@@ -522,7 +522,7 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
 /// Called by: [`read_work_units`], [`check_frozen`];
 /// `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`,
 /// `with_dependencies`; `ai/models/evaluation/work_unit/assessment_question.rs`:
-/// `assessment_question`; `panels/logic/evaluation/results.rs`:
+/// `assessment_question`; `domain/models/evaluation/work_unit/results.rs`:
 /// `save_results`; `ai/models/evaluation/work_unit/proposal.rs`:
 /// `apply_dependencies`, `apply_parameters`, `dependencies_question`,
 /// `parameters_question`; `domain/models/evaluation/work_unit/parameters.rs`:
@@ -679,7 +679,7 @@ fn check_frozen(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<(), DbE
 /// `unit.id`; nothing is then written.
 ///
 /// Called by: `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`;
-/// `panels/logic/evaluation/results.rs`: `save_results`;
+/// `domain/models/evaluation/work_unit/results.rs`: `save_results`;
 /// `domain/models/evaluation/evaluation_plan/order.rs`: `check_order`;
 /// `domain/models/evaluation/work_unit/parameters.rs`: `add_proof_place`,
 /// `update_work_unit_parameters`.

@@ -145,9 +145,11 @@ mod domain {
             pub mod lab_proof;
             pub mod oscal_standard_document;
             pub mod product_document;
-            // work_unit/: the parameters the planner gives a work unit.
+            // work_unit/: the parameters the planner gives a work unit; the
+            // results of the evaluator and the check of a quote.
             pub mod work_unit {
                 pub mod parameters;
+                pub mod results;
             }
         }
     }
@@ -247,7 +249,6 @@ mod panels {
         pub mod evaluation {
             pub mod error;
             pub mod inputs;
-            pub mod results;
         }
         // panels/logic/program_start/: the first start, the login and the
         // recovery of a forgotten password; the password and the recovery
