@@ -97,6 +97,8 @@ impl std::error::Error for KeyError {}
 /// Checks the rules of a password: 12 to 1024 characters. Nothing
 /// else is demanded, as NIST recommends: length protects better
 /// than forced special characters.
+///
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `create_account`; [`wrap`].
 pub fn check_password(password: &str) -> Result<(), KeyError> {
     let length = password.chars().count();
 
@@ -111,7 +113,10 @@ pub fn check_password(password: &str) -> Result<(), KeyError> {
     Ok(())
 }
 
-/// Derives the unlocking key from a password.
+/// Derives the unlocking key from a password: Argon2id of the password
+/// with `salt`, `memory_kib` and `iterations`, then HKDF.
+///
+/// Called by: [`wrap`], [`unwrap`].
 fn unlocking_key(
     password: &str,
     salt: &[u8],
@@ -143,6 +148,9 @@ fn unlocking_key(
 /// `binding` ties the result to one account (for example its
 /// name): an encrypted key copied to another account does not open
 /// there.
+///
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`.
+/// Calls: [`check_password`], `infrastructure/security/random.rs`: `fill_random`, [`unlocking_key`].
 pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<WrappedKey, KeyError> {
     check_password(password)?;
 
@@ -175,6 +183,9 @@ pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<Wrapped
 /// Opens the key of a database with the password. Fails with
 /// [`KeyError::WrongPassword`] when it does not fit, or when `binding`
 /// is not the one used by [`wrap`].
+///
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`.
+/// Calls: [`unlocking_key`], `infrastructure/storage/encryption/database_key.rs`: `DatabaseKey::fill_with`.
 pub fn unwrap(wrapped: &WrappedKey, password: &str, binding: &[u8]) -> Result<DatabaseKey, KeyError> {
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| KeyError::Damaged)?;
     let tag: [u8; TAG_LENGTH] = wrapped.tag.as_slice().try_into().map_err(|_| KeyError::Damaged)?;

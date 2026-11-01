@@ -352,6 +352,8 @@ fn main() -> ExitCode {
 /// port is opened. It may call only the commands listed in
 /// `tauri::generate_handler!` below, in `build.rs` and in
 /// `capabilities/default.json`; the three lists name the same commands.
+///
+/// Called by: [`main`].
 fn tauri_startup() -> ExitCode {
     let Some(data_folder) = default_data_folder() else {
         eprintln!("Error: the data folder of IO Master cannot be found: neither XDG_DATA_HOME nor HOME is set.");
