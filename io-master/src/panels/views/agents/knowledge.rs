@@ -23,9 +23,9 @@ use crate::objects::ai::rag::rag_rules::{
     add_base, add_source, change_base, rename_source, replace_source_text, search_base, source_text,
 };
 use crate::objects::ai::rag::rag_store::{read_knowledge_bases, read_sources};
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// The longest name, description or question from the page, in bytes.
 const MAX_FIELD: usize = 8192;

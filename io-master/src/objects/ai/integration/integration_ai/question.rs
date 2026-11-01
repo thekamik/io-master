@@ -4,7 +4,7 @@
 //! fits into the context of the model beside its answer.
 //!
 //! ```text
-//! Question ──► prepare ──► Prepared ──► sending.rs: send ──► Sent ──► ../journal.rs: record ──► Answer
+//! Question ──► prepare ──► Prepared ──► sending.rs: send ──► Sent ──► journal_ai.rs: record ──► Answer
 //!               ├► read_integration, read_api_key       (the integration and its key)
 //!               ├► check_address, turns, check_size      (refused, never shortened)
 //!               └► protocol.rs: body                     (the body of the request)
@@ -101,9 +101,9 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// program sends to, or the protocol needs a key the integration has not.
 ///
 /// Called by: `objects/ai/chat/chat_ai.rs`: `prepare_shortened`;
-/// `ai/models/evaluation/work_unit/assessment.rs`: `prepared_assessment`;
+/// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_assessment`;
 /// `panels/logic/settings/integrations.rs`: `check_question`;
-/// `ai/models/evaluation/work_unit/filling.rs`: `prepared_question`; under the
+/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`; under the
 /// lock of the session.
 /// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
 /// `objects/ai/api_key/api_key_store.rs`: `read_api_key`; `address.rs`:

@@ -70,7 +70,7 @@ the window    the models and    what belongs to no object: the database files an
 
 **Where a new function goes:** with the model it works on, in the file of its role. A function is never a universal helper shared by several models.
 
-The code is being moved into this layout step by step (`docs/todo.md`); until then, the models not yet moved keep the folders `model/` (the structures), `db/models/` (the stores), `domain/models/` (the rules) and `ai/models/` (the AI). `io-master/src/main.rs` is the map of every module; `io-master/src/architecture_tests.rs` checks the direction of the dependencies and that SQL is only in the stores. The rules of the code ("The Power of 10", adapted to Rust) are in `CLAUDE.md`. More: `docs/architecture.md` (what and why), `docs/data_model.md` (the models), `docs/code_structure.md` (where everything is), `docs/architecture_map.md` (each model from the database to the window).
+`io-master/src/main.rs` is the map of every module; `io-master/src/architecture_tests.rs` checks the direction of the dependencies and that SQL is only in the stores. The rules of the code ("The Power of 10", adapted to Rust) are in `CLAUDE.md`. More: `docs/architecture.md` (what and why), `docs/data_model.md` (the models), `docs/code_structure.md` (where everything is), `docs/architecture_map.md` (each model from the database to the window).
 
 ## Dependencies
 
@@ -108,7 +108,7 @@ The system packages are in **Requirements** above; Poppler (`pdfinfo`, `pdftotex
 
 ```text
 io-master/          the program (Rust, Tauri 2 + Svelte 5)
-  src/              infrastructure/, objects/, panels/ (and, until they move, model/, db/, domain/, ai/, session/)
+  src/              infrastructure/, objects/, panels/
   ui/               the page of the window, a separate project
   oscal/            the JSON schemas of OSCAL 1.2.3 and example documents of NIST
 docs/

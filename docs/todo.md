@@ -9,11 +9,7 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 ## Three groups: `objects/`, `panels/`, `infrastructure/` (user, 2026-11-01)
 
-The code is moved to the layout of `CLAUDE.md` ("The window and the layers"), one step at a time, each built, tested and committed on its own and checked by the user before the next; the files keep their content but for their paths (`git mv`), and `README.md`, `code_structure.md`, `architecture_map.md`, `data_model.md` and `review.md` change with each step:
-
-1. `objects/ai/`: the rest of it, in two steps: `agent` and `rag`; then `chat` (with `panels/logic/settings/`). Done: `integration` (`integration_ai/`), `api_key`, `journal`, `objects/ai_error.rs`.
-2. `objects/evaluation/` and `objects/session/` (`ai/lock.rs` with `Progress`).
-3. `panels/session.rs` (`session/state.rs`); `architecture_tests.rs` checking the three groups and the roles of the files.
+- **`panels/logic/settings/`**: its work (an integration checked and changed, the active one, its API key, the question that checks it) is no presentation and belongs to the objects (`integration_rules.rs`, `api_key_rules.rs`, `integration_ai/`); its error `SettingsError` holds both a refusal and an `AiError` (`check_address`), so its move asks how the error is parted. To agree with the user.
 
 ## Before the release
 
@@ -24,7 +20,7 @@ The code is moved to the layout of `CLAUDE.md` ("The window and the layers"), on
 
 ## Reminders
 
-- **The parts of a control beyond its statement and guidance** (2026-11-01): the catalog of ETSI TS 103 701 (`testing_documents/`) has no part `guidance`; its parts `test-units`, `assessment-method` and `assignment-of-verdict` are kept in the stored catalog but reach no work unit (`domain/models/evaluation/oscal_standard_document.rs`: `control_of` takes only `statement` and `guidance`). To decide whether and how a work unit shows them.
+- **The parts of a control beyond its statement and guidance** (2026-11-01): the catalog of ETSI TS 103 701 (`testing_documents/`) has no part `guidance`; its parts `test-units`, `assessment-method` and `assignment-of-verdict` are kept in the stored catalog but reach no work unit (`objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `control_of` takes only `statement` and `guidance`). To decide whether and how a work unit shows them.
 
 - **The reading of a whole plan, measured** (2026-10-31): `read_work_units` reads each work unit apart, five queries each (about 4000 for the CEM), every query parsed anew (`prepare`). To measure first; then `prepare_cached`, or each list read once for the whole plan.
 - **`IdList`** (2026-10-31): a constant per list of ids (its table, its columns, its limit) instead of three statements of SQL at its callers (`infrastructure/storage/lists.rs`); put off while the comments read well.

@@ -1,6 +1,5 @@
 //! The tables of each database. Each `SCHEMA` is written in the store of
-//! its model (`<object>_store.rs`; until they move into `objects/`, the files
-//! of `db/models/`); this file only lists them. The caller that opens a
+//! its model (`<object>_store.rs`); this file only lists them. The caller that opens a
 //! database gives its list to `infrastructure/storage/`, which makes the
 //! missing tables, and so knows no model itself.
 //!
@@ -17,13 +16,17 @@
 //!   (the first start, the login) ──create / open(data_dir, ..., tables)──► infrastructure/storage/
 //! ```
 
-use crate::db::models::evaluation::{evaluation_plan, lab_proof, oscal_standard_document, product_document, work_unit};
 use crate::objects::ai::agent::agent_store;
 use crate::objects::ai::api_key::api_key_store;
 use crate::objects::ai::chat::chat_store;
 use crate::objects::ai::integration::integration_store;
 use crate::objects::ai::journal::journal_store;
 use crate::objects::ai::rag::rag_store;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_store;
+use crate::objects::evaluation::lab_proof::lab_proof_store;
+use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store;
+use crate::objects::evaluation::product_document::product_document_store;
+use crate::objects::evaluation::work_unit::work_unit_store;
 use crate::objects::user::program_data::program_data_store;
 use crate::objects::user::user_data::user_data_store;
 use crate::objects::user::user_keys::user_keys_store;
@@ -37,12 +40,12 @@ pub const USER_TABLES: [&str; 12] = [
     integration_store::SCHEMA,
     journal_store::SCHEMA,
     rag_store::SCHEMA,
-    // db/models/evaluation/
-    evaluation_plan::SCHEMA,
-    lab_proof::SCHEMA,
-    oscal_standard_document::SCHEMA,
-    product_document::SCHEMA,
-    work_unit::SCHEMA,
+    // objects/evaluation/
+    evaluation_plan_store::SCHEMA,
+    lab_proof_store::SCHEMA,
+    oscal_standard_document_store::SCHEMA,
+    product_document_store::SCHEMA,
+    work_unit_store::SCHEMA,
     // objects/user/: the settings only (the installation is in the system database)
     program_data_store::SCHEMA,
 ];

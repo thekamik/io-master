@@ -4,7 +4,7 @@
 //! window are not held up by a long answer.
 //!
 //! ```text
-//! question.rs: prepare ──► Prepared ──► send ──► Sent ──► ../journal.rs: record
+//! question.rs: prepare ──► Prepared ──► send ──► Sent ──► journal_ai.rs: record
 //!                                  └──► send_whole (the pieces drained: the answer awaited whole)
 //! ```
 //!
@@ -40,8 +40,8 @@ pub async fn send(prepared: &Prepared, pieces: &mpsc::Sender<String>) -> Sent {
 /// caller that wants the whole answer at once. Uses no database.
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_check`;
-/// `ai/models/evaluation/work_unit/filling.rs`: `fill_work_unit`;
-/// `ai/models/evaluation/work_unit/assessment.rs`: `assess_work_unit`; the
+/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `fill_work_unit`;
+/// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assess_work_unit`; the
 /// lock of the session released.
 /// Calls: [`send`].
 pub async fn send_whole(prepared: &Prepared) -> Sent {

@@ -10,7 +10,7 @@
 //! PlanFill.svelte ──plan_fill_preview(plan)──► fill_preview: the questions counted now ──► FillPreviewView
 //!                 ──plan_fill_parameters(plan)───┐
 //!                 ──plan_fill_dependencies(plan)─┴► fill: fill_units, Session::begin_work, then
-//!                     ai/models/evaluation/evaluation_plan.rs: fill_plan (each work unit filled, its step
+//!                     evaluation_plan_ai.rs: fill_plan (each work unit filled, its step
 //!                     written into the progress)
 //!                 ──plan_fill_progress(plan)──► progress_of ──► ProgressView
 //!                 ──plan_fill_stop()──► the session asked to stop: the filling ends after its present step
@@ -23,12 +23,12 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::ai::models::evaluation::evaluation_plan::{fill_plan, fill_preview, fill_units};
-use crate::ai::models::evaluation::work_unit::filling::FillTask;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_ai::{fill_plan, fill_preview, fill_units};
+use crate::objects::evaluation::work_unit::work_unit_ai::filling::FillTask;
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::panels::views::progress::{ProgressView, progress_of};
-use crate::session::state::Session;
 
 /// What a filling would ask, counted when the planner asks it.
 #[derive(Serialize)]
@@ -44,7 +44,7 @@ pub struct FillPreviewView {
 /// the planner.
 ///
 /// Called by: [`plan_fill_parameters`], [`plan_fill_dependencies`].
-/// Calls: `ai/models/evaluation/evaluation_plan.rs`: `fill_units`,
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_units`,
 /// `fill_plan`; `Session::begin_work`, `Session::locks`.
 async fn fill(session: &Session, task: FillTask, plan: i64) -> Result<(), ViewError> {
     let units = {
@@ -86,7 +86,7 @@ pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> R
 /// planner.
 ///
 /// Called by: `PlanFill.svelte`, before a filling starts.
-/// Calls: `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`.
 #[tauri::command]
 pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillPreviewView, ViewError> {
     let opened = session.lock()?;

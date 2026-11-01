@@ -17,7 +17,7 @@ pub struct Agent {
     /// Its instructions: who it is and how it answers.
     pub instructions: String,
 
-    /// The knowledge bases it searches (`KnowledgeBase` of `rag.rs`).
+    /// The knowledge bases it searches (`KnowledgeBase` of `objects/ai/rag/rag_model.rs`).
     pub knowledge_bases: Vec<i64>,
 
     /// Its glossary, used to widen a search in its knowledge bases.

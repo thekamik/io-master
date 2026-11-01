@@ -13,11 +13,8 @@
 //! no file name reaches a command line, and a PDF that comes from an
 //! imported document is never written to the disk unencrypted.
 //!
-//! A standard has hundreds of pages, so the caller reads the text in
-//! parts of [`PART`] pages ([`text_of_pages`]): after every part it
-//! reports the progress and can stop the work (CLAUDE.md, "Long
-//! operations report progress", "Operations can be cancelled";
-//! `views/converter/standard_documents/load.rs`).
+//! A PDF may have hundreds of pages, so [`text`] reads it in parts of
+//! [`PART`] pages ([`text_of_pages`]), each part one call of `pdftotext`.
 
 use std::fmt;
 use std::io::Write;
@@ -166,7 +163,7 @@ pub fn text_of_pages(pdf: &[u8], first: u32, last: u32) -> Result<Vec<String>, P
 /// pages parted by an empty line.
 ///
 /// Called by: `objects/ai/rag/rag_rules.rs`: `source_text` (a source);
-/// `domain/models/evaluation/product_document.rs`: `document_text` (a
+/// `objects/evaluation/product_document/product_document_rules.rs`: `document_text` (a
 /// document of the product).
 /// Calls: [`info`], [`text_of_pages`].
 pub fn text(pdf: &[u8]) -> Result<String, PdfError> {
@@ -196,7 +193,7 @@ pub fn text(pdf: &[u8]) -> Result<String, PdfError> {
 #[cfg(test)]
 mod tests {
     //! Unit tests of `poppler.rs`, with small PDFs made by
-    //! `test_support/standards.rs` and the real tools of Poppler.
+    //! `test_support/pdf.rs` and the real tools of Poppler.
 
     use super::*;
 

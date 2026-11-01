@@ -2,7 +2,7 @@
 //! the two copies of the key of the database, the recovery code) and the
 //! login. The rules only: the data is written by the stores of
 //! `objects/user/`, the keys are wrapped by `user_keys_rules/password.rs` and
-//! `recovery.rs`. One Linux account holds one installation with one user
+//! `user_keys_rules/recovery.rs`. One Linux account holds one installation with one user
 //! (`docs/architecture.md`, section 3).
 //!
 //! ```text

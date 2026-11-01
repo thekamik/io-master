@@ -3,22 +3,26 @@
 //! an evaluation whose inputs are not given yet; a plan in planning to fill
 //! with the AI.
 
-use crate::db::models::evaluation::evaluation_plan::{
-    create_evaluation, create_evaluation_plan, read_evaluation_plan, update_evaluation_plan,
-};
-use crate::db::models::evaluation::lab_proof::create_lab_proof;
-use crate::db::models::evaluation::product_document::{read_product_document, update_product_document};
-use crate::db::models::evaluation::work_unit::{create_work_unit, read_work_units, update_work_unit};
-use crate::domain::models::evaluation::evaluation_plan::planning::{add_document_place, create_plan, update_plan};
-use crate::domain::models::evaluation::evaluation_plan::work_units::add_all_work_units;
-use crate::domain::models::evaluation::oscal_standard_document::import_standard;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::evaluation::evaluation_plan::EvaluationPlan;
-use crate::model::evaluation::lab_proof::LabProof;
-use crate::model::evaluation::product_document::ProductDocument;
-use crate::model::evaluation::work_unit::WorkUnit;
 use crate::objects::ai::agent::agent_store::create_agent;
 use crate::objects::ai::integration::integration_store::create_integration;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::EvaluationPlan;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::planning::{
+    add_document_place, create_plan, update_plan,
+};
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::work_units::add_all_work_units;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::{
+    create_evaluation, create_evaluation_plan, read_evaluation_plan, update_evaluation_plan,
+};
+use crate::objects::evaluation::lab_proof::lab_proof_model::LabProof;
+use crate::objects::evaluation::lab_proof::lab_proof_store::create_lab_proof;
+use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_rules::import_standard;
+use crate::objects::evaluation::product_document::product_document_model::ProductDocument;
+use crate::objects::evaluation::product_document::product_document_store::{
+    read_product_document, update_product_document,
+};
+use crate::objects::evaluation::work_unit::work_unit_model::WorkUnit;
+use crate::objects::evaluation::work_unit::work_unit_store::{create_work_unit, read_work_units, update_work_unit};
 use crate::test_support::database::{agent, integration, plan, unit};
 
 /// The text of the ST of the evaluation.

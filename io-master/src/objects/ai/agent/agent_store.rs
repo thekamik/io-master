@@ -219,12 +219,12 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 /// Output: the agent; `DbError::NoRow` when there is none.
 ///
 /// Called by: [`read_agents`], [`update_agent`]; `objects/ai/agent/agent_ai.rs`:
-/// `agent_knowledge`, `agent_question`; `ai/models/evaluation/evaluation_plan.rs`:
+/// `agent_knowledge`, `agent_question`; `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`:
 /// `preview`, `fill_preview`; `objects/ai/agent/agent_rules.rs`: `checked`,
 /// `change_agent`; `objects/ai/chat/chat_rules.rs`: `new_chat`;
-/// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `change_agent`,
-/// `new_evaluation`; `domain/models/evaluation/evaluation_plan/planning.rs`:
-/// `update_plan`; `domain/models/evaluation/work_unit/parameters.rs`:
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`,
+/// `new_evaluation`; `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
+/// `update_plan`; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
 /// `update_work_unit_parameters`; `panels/views/agents/agent.rs`: `agent_get`;
 /// `panels/views/chat/chats.rs`: `agent_name`;
 /// `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`.
@@ -256,7 +256,7 @@ pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
 /// Output: the agents, ordered by name; an error when the table holds more
 /// than [`MAX_AGENTS`] (a database the program did not write).
 ///
-/// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `names_of`;
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`;
 /// `panels/views/agents/agent.rs`: `agent_list`;
 /// `panels/views/evaluation/evaluations.rs`: `evaluation_get`;
 /// `panels/views/evaluation_plan/plans.rs`: `plan_view`;

@@ -26,9 +26,9 @@ use crate::objects::user::program_data::program_data_store::read_settings;
 use crate::panels::logic::settings::integrations::{
     activate_integration, add_integration, change_integration, check_question, has_key, set_key,
 };
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// The longest text of a field of an integration from the page (a name, an
 /// address, a model), in bytes.

@@ -53,7 +53,7 @@ impl SystemDatabase {
         Ok(SystemDatabase { connection })
     }
 
-    /// The connection, for SQL. **Only `db/models/` reaches it**: checked by
+    /// The connection, for SQL. **Only the stores reach it**: checked by
     /// `architecture_tests.rs` (`the_sql_is_only_in_the_store`), since the
     /// models in the databases are no longer below this folder.
     ///

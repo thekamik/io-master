@@ -10,10 +10,10 @@
 
 use serde::Serialize;
 
-use crate::ai::models::evaluation::work_unit::assessment_question::verdict_name;
-use crate::model::session::progress::Progress;
+use crate::objects::evaluation::work_unit::work_unit_ai::assessment_question::verdict_name;
+use crate::objects::session::progress::progress_model::Progress;
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
-use crate::session::state::Session;
 
 /// A work unit not taken, or taken with notes, as the page shows it.
 #[derive(Serialize)]

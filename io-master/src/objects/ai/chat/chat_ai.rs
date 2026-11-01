@@ -7,7 +7,7 @@
 //! ```text
 //! chat_question ──► the instructions of the agent
 //!                   + the knowledge of the agent that fits the question (RAG)
-//!                   + every message of the chat and the question ──► Question (integration/question.rs)
+//!                   + every message of the chat and the question ──► Question (integration_ai/question.rs)
 //! prepared      ──► prepare_shortened: prepare; the oldest messages left out until the question fits
 //! add_answer    ──► the answer written into the chat; a stopped or cut one with a mark,
 //!                   a failed one not at all (its reason is in the journal of the agent)
@@ -187,7 +187,6 @@ mod tests {
 
     use super::*;
 
-    use crate::domain::error::DomainError;
     use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::chat::chat_model::Chat;
     use crate::objects::ai::chat::chat_rules::{add_question, new_chat};
@@ -196,6 +195,7 @@ mod tests {
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
     use crate::objects::ai::rag::rag_store::{create_knowledge_base, create_source};
+    use crate::objects::error::DomainError;
     use crate::test_support::database::{agent, database, integration};
 
     fn answer(text: &str, ending: Ending) -> Answer {

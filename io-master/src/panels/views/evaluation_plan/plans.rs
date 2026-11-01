@@ -14,17 +14,19 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::models::evaluation::evaluation_plan::{read_evaluation_plan, read_evaluation_plans};
-use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_documents;
-use crate::db::models::evaluation::product_document::read_product_document;
-use crate::domain::models::evaluation::evaluation_plan::planning::{add_document_place, create_plan, update_plan};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
-use crate::model::evaluation::work_unit::Verdict;
 use crate::objects::ai::agent::agent_store::read_agents;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::planning::{
+    add_document_place, create_plan, update_plan,
+};
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::{read_evaluation_plan, read_evaluation_plans};
+use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::read_oscal_standard_documents;
+use crate::objects::evaluation::product_document::product_document_store::read_product_document;
+use crate::objects::evaluation::work_unit::work_unit_model::Verdict;
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// A plan in planning, as the list shows it.
 #[derive(Serialize)]
@@ -126,7 +128,7 @@ pub fn plan_list(session: State<'_, Session>) -> Result<Vec<PlanSummaryView>, Vi
 /// Makes a new plan in planning. Gives its id.
 ///
 /// Called by: `EvaluationPlan.svelte`, "New plan".
-/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `create_plan`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`.
 #[tauri::command]
 pub fn plan_create(session: State<'_, Session>, name: String, description: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
@@ -194,7 +196,7 @@ pub fn plan_get(session: State<'_, Session>, id: i64) -> Result<PlanView, ViewEr
 /// its planner.
 ///
 /// Called by: `PlanForm.svelte`, "Save".
-/// Calls: `read_evaluation_plan`; `domain/models/evaluation/evaluation_plan/planning.rs`:
+/// Calls: `read_evaluation_plan`; `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
 /// `update_plan`.
 #[tauri::command]
 #[allow(
@@ -236,7 +238,7 @@ pub fn plan_save(
 /// plan `id`. Gives the id of the place.
 ///
 /// Called by: `PlanForm.svelte`, "Add a document".
-/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `add_document_place`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`.
 #[tauri::command]
 pub fn plan_add_document(session: State<'_, Session>, id: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;

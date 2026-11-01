@@ -4,7 +4,7 @@
 //! and opens a window. All configuration is made in the window.
 //!
 //! **The program is being rebuilt (user, 2026-10-28)** on the new models
-//! (`model/`) and their database (`db/`). The earlier program, with its
+//! (`objects/`, each with its store, its rules and its AI). The earlier program, with its
 //! views, its AI layer and its login, is kept at the commit `0797e85` as a
 //! reference; its parts come back here one by one, rewritten on the new
 //! models (`docs/handover.md`).
@@ -63,115 +63,18 @@ mod infrastructure {
     }
 }
 
-// model/: the data of the program as it is kept in the databases, one
-// structure per kind of data, fields only (docs/data_model.md).
-mod model {
-    // model/evaluation/: the plan of an evaluation, its work units, the
-    // standards, the documents of the product and the proofs of the
-    // laboratory.
-    pub mod evaluation {
-        pub mod evaluation_plan;
-        pub mod lab_proof;
-        pub mod oscal_standard_document;
-        pub mod product_document;
-        pub mod work_unit;
-    }
-    // model/session/: helper models, never kept in a database (user,
-    // 2026-11-01): the progress of the long work of the AI.
-    pub mod session {
-        pub mod progress;
-    }
-}
-
-// db/: the models of model/ in the databases of infrastructure/storage/.
-mod db {
-    // db/models/: create, read and update of the models of model/, one file
-    // per file of model/, no delete (user, 2026-10-28); the tables of each
-    // database in their order.
-    pub mod models {
-        // db/models/evaluation/: the plans, their work units, the standards,
-        // the documents of the product, the proofs of the laboratory.
-        pub mod evaluation {
-            pub mod evaluation_plan;
-            pub mod lab_proof;
-            pub mod oscal_standard_document;
-            pub mod product_document;
-            pub mod work_unit;
-        }
-    }
-}
-
-// domain/: the rules of the data (user, 2026-11-01): where a plan is in its
-// life, the order of its work, the parameters of a work unit; a mirror of
-// model/, as db/models/ and ai/models/; error.rs is its error.
-mod domain {
-    pub mod error;
-    // The one rule of a text the user gives: trimmed, within its limit.
-    pub mod text;
-    pub mod models {
-        // domain/models/evaluation/: the rules of a plan, of its work units
-        // and of its standards.
-        pub mod evaluation {
-            // evaluation_plan/: the life of a plan and its data, the plan in
-            // evaluation, the order of its work, its work units as its children.
-            pub mod evaluation_plan {
-                pub mod evaluation;
-                pub mod order;
-                pub mod planning;
-                pub mod work_units;
-            }
-            pub mod lab_proof;
-            pub mod oscal_standard_document;
-            pub mod product_document;
-            // work_unit/: the parameters the planner gives a work unit; the
-            // results of the evaluator and the check of a quote.
-            pub mod work_unit {
-                pub mod parameters;
-                pub mod results;
-            }
-        }
-    }
-}
-
-// ai/: the core of the program that talks with the AI (user, 2026-11-01):
-// the functions of the AI on the models, in a mirror of model/, as db/models/
-// holds their functions in the database; their error is objects/ai_error.rs.
-mod ai {
-    // The locks of the session as a long work of the AI takes them.
-    pub mod lock;
-    pub mod models {
-        // ai/models/evaluation/: the AI on a plan and its work units: the
-        // assessment of an evaluation and "Fill with AI", the loops over the
-        // work units in evaluation_plan.rs, the work on one work unit in
-        // work_unit/.
-        pub mod evaluation {
-            pub mod evaluation_plan;
-            pub mod work_unit {
-                pub mod assessment;
-                pub mod assessment_answer;
-                pub mod assessment_question;
-                pub mod filling;
-                pub mod proposal;
-            }
-        }
-        // ai/models/session/: the AI on the helper models of model/session/:
-        // the steps of a long work written into its progress.
-        pub mod session {
-            pub mod progress;
-        }
-    }
-}
-
 // objects/: every model with the functions that work on it, a folder per
 // object, its files named by the object and their role (user, 2026-11-01):
 // <object>_model.rs (the structure), <object>_store.rs (create, read,
 // update), <object>_rules.rs (the rules of the data), <object>_ai.rs (the
-// work of the AI); a big role becomes a folder of the same name. The models
-// still in model/, db/, domain/ and ai/ come here step by step
-// (docs/todo.md).
+// work of the AI); a big role becomes a folder of the same name.
 mod objects {
     // AiError, the error of every work of the AI.
     pub mod ai_error;
+    // DomainError, the error of the rules of the data.
+    pub mod error;
+    // The one rule of a text the user gives: trimmed, within its limit.
+    pub mod text;
     // The tables of each database, given to infrastructure/storage/ when a
     // database is opened.
     pub mod schema;
@@ -238,6 +141,77 @@ mod objects {
             pub mod rag_store;
         }
     }
+    // objects/evaluation/: the plan of an evaluation and its work units, the
+    // standards, the documents of the product and the proofs of the
+    // laboratory.
+    pub mod evaluation {
+        // The plan of an evaluation: its life and its data, the plan in
+        // evaluation (a copy for one product), the order of its work, its work
+        // units as its children; the loops of the AI over them (the assessment
+        // of an evaluation, "Fill with AI").
+        pub mod evaluation_plan {
+            pub mod evaluation_plan_ai;
+            pub mod evaluation_plan_model;
+            pub mod evaluation_plan_store;
+            pub mod evaluation_plan_rules {
+                pub mod evaluation;
+                pub mod order;
+                pub mod planning;
+                pub mod work_units;
+            }
+        }
+        // A proof of the laboratory: the record of a test, given once.
+        pub mod lab_proof {
+            pub mod lab_proof_model;
+            pub mod lab_proof_rules;
+            pub mod lab_proof_store;
+        }
+        // A standard as an OSCAL catalog: imported, checked against the schema
+        // of NIST, its controls read.
+        pub mod oscal_standard_document {
+            pub mod oscal_standard_document_model;
+            pub mod oscal_standard_document_rules;
+            pub mod oscal_standard_document_store;
+        }
+        // A document of the product: its file given once, its text cut into
+        // passages and indexed.
+        pub mod product_document {
+            pub mod product_document_model;
+            pub mod product_document_rules;
+            pub mod product_document_store;
+        }
+        // A work unit: the parameters the planner gives it, the results of the
+        // evaluator and the check of a quote; the work of the AI on it (its
+        // assessment, its filling).
+        pub mod work_unit {
+            pub mod work_unit_model;
+            pub mod work_unit_store;
+            pub mod work_unit_rules {
+                pub mod parameters;
+                pub mod results;
+            }
+            pub mod work_unit_ai {
+                pub mod assessment;
+                pub mod assessment_answer;
+                pub mod assessment_question;
+                pub mod filling;
+                pub mod proposal;
+            }
+        }
+    }
+    // objects/session/: helper models, never kept in a database (user,
+    // 2026-11-01).
+    pub mod session {
+        // The progress of the long work of the AI: a step written into it; the
+        // locks of the session as a long work takes them.
+        pub mod progress {
+            pub mod progress_model;
+            pub mod progress_ai {
+                pub mod lock;
+                pub mod step;
+            }
+        }
+    }
     // objects/user/: the user, the installation and the settings, the keys of
     // the user; the first start and the login.
     pub mod user {
@@ -267,22 +241,19 @@ mod objects {
     }
 }
 
-// session/: what every command of the window shares: the data folder, and
-// the user logged in with their open database (the only global state).
-mod session {
-    pub mod state;
-}
-
 // panels/: the panels of the window (user, 2026-10-28), each in two layers
 // with the same folders: views/ (only the commands the page calls, and
 // their error) and logic/ (the work behind them, not called by the page; it
 // gets the open database as a parameter and never reaches the session).
 mod panels {
+    // What every command of the window shares: the data folder, and the user
+    // logged in with their open database (the only global state).
+    pub mod session;
     pub mod logic {
         // panels/logic/evaluation/: the evaluations: a plan copied for one
         // product with its agent, the documents and proofs given, the
         // results of the evaluator (the assessment by the AI is in
-        // ai/models/evaluation/).
+        // objects/evaluation/).
         pub mod evaluation {
             pub mod error;
             pub mod inputs;
@@ -352,7 +323,7 @@ mod architecture_tests;
 use std::process::ExitCode;
 
 use infrastructure::data_folder::default_data_folder;
-use session::state::Session;
+use panels::session::Session;
 use tauri::{Manager, RunEvent};
 
 /// Starts the program: refuses parameters, then opens the window.

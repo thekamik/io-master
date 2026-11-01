@@ -12,12 +12,12 @@
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::domain::models::evaluation::lab_proof::give_proof;
-use crate::domain::models::evaluation::product_document::{document_file, give_document};
-use crate::model::evaluation::lab_proof::LabProof;
+use crate::objects::evaluation::lab_proof::lab_proof_model::LabProof;
+use crate::objects::evaluation::lab_proof::lab_proof_rules::give_proof;
+use crate::objects::evaluation::product_document::product_document_rules::{document_file, give_document};
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// The longest version, tester or equipment from the page, in bytes (the
 /// logic checks the characters).

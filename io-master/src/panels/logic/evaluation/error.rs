@@ -1,6 +1,7 @@
 //! The error of the panel of the evaluation: what it shows could not be
 //! read from the database. The rules of an evaluation refuse in
-//! `domain/` (`DomainError`), its assessment in `ai/` (`AiError`).
+//! `objects/evaluation/` (`DomainError`), its assessment there too
+//! (`AiError`).
 
 use std::fmt;
 

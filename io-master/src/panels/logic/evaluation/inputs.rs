@@ -1,22 +1,22 @@
 //! The inputs of an evaluation as the panel shows them (user, 2026-10-30):
 //! every place of a document of the product and of a proof of the
 //! laboratory, given or not, with how many work units need it. Giving them
-//! is a rule of the data (`domain/models/evaluation/product_document.rs`,
-//! `lab_proof.rs`).
+//! is a rule of the data (`objects/evaluation/product_document/product_document_rules.rs`,
+//! `objects/evaluation/lab_proof/lab_proof_rules.rs`).
 //!
 //! ```text
 //! inputs ──► every place, whether it is given, how many work units need it
 //! ```
 
-use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
-use crate::db::models::evaluation::lab_proof::read_lab_proof;
-use crate::db::models::evaluation::product_document::read_product_document;
-use crate::db::models::evaluation::work_unit::read_work_units;
-use crate::domain::models::evaluation::evaluation_plan::evaluation::needed_proofs;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::evaluation::lab_proof::LabProof;
-use crate::model::evaluation::product_document::ProductDocument;
-use crate::model::evaluation::work_unit::WorkUnit;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::needed_proofs;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::read_evaluation_plan;
+use crate::objects::evaluation::lab_proof::lab_proof_model::LabProof;
+use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
+use crate::objects::evaluation::product_document::product_document_model::ProductDocument;
+use crate::objects::evaluation::product_document::product_document_store::read_product_document;
+use crate::objects::evaluation::work_unit::work_unit_model::WorkUnit;
+use crate::objects::evaluation::work_unit::work_unit_store::read_work_units;
 use crate::panels::logic::evaluation::error::EvaluationError;
 
 /// A place of an input and how many work units of the evaluation need it.
@@ -58,11 +58,11 @@ fn needing(units: &[WorkUnit], id: i64, document: bool) -> usize {
 /// units need it.
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs` (`evaluation_get`).
-/// Calls: `db/models/evaluation/evaluation_plan.rs`: `read_evaluation_plan`;
-/// `db/models/evaluation/work_unit.rs`: `read_work_units`;
-/// `db/models/evaluation/product_document.rs`: `read_product_document`;
-/// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `needed_proofs`;
-/// `db/models/evaluation/lab_proof.rs`: `read_lab_proof`; [`needing`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
+/// `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `needed_proofs`;
+/// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`needing`].
 pub fn inputs(db: &UserDatabase, evaluation: i64) -> Result<Inputs, EvaluationError> {
     let stored = read_evaluation_plan(db, evaluation)?;
     let units = read_work_units(db, evaluation)?;

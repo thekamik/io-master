@@ -1,6 +1,6 @@
 //! The error of every function on a database (`infrastructure/storage/`,
-//! `db/models/`): why a database could not be used. The functions return
-//! the models of `model/` and this error;
+//! the stores of the objects): why a database could not be used. The
+//! functions return the models and this error;
 //! the window tells its kinds apart.
 
 use std::fmt;

@@ -11,8 +11,8 @@ use std::fmt;
 
 use serde_json::Value;
 
-use crate::domain::error::DomainError;
 use crate::infrastructure::storage::error::DbError;
+use crate::objects::error::DomainError;
 
 /// The longest explanation taken from an answer, in characters.
 const EXPLANATION_LENGTH: usize = 300;
@@ -62,7 +62,7 @@ pub enum AiError {
     /// written into the journal.
     Db(DbError),
     /// A rule of the data refused the work, or could not be checked
-    /// (`domain/`).
+    /// (the rules of an object, `objects/error.rs`).
     Domain(DomainError),
 }
 

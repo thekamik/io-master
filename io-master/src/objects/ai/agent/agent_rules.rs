@@ -8,13 +8,13 @@
 //! limits. It is changed freely: when its answers are not good enough, its
 //! knowledge or its instructions are made better.
 
-use crate::domain::error::DomainError;
-use crate::domain::text::checked_text;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
 use crate::objects::ai::agent::agent_store::{MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent};
 use crate::objects::ai::integration::integration_store::read_integration;
 use crate::objects::ai::rag::rag_store::{MAX_BASES, MAX_FOUND, read_knowledge_base};
+use crate::objects::error::DomainError;
+use crate::objects::text::checked_text;
 
 /// The longest name of an agent, in characters.
 const MAX_NAME: usize = 100;
@@ -107,7 +107,7 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Do
 /// knowledge bases that exist, each base once, limits in their ranges.
 ///
 /// Called by: [`new_agent`], [`change_agent`].
-/// Calls: `domain/text.rs`: `checked_text`; `objects/ai/integration/integration_store.rs`:
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/integration/integration_store.rs`:
 /// `read_integration`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`;
 /// [`checked_glossary`].
 fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {

@@ -126,8 +126,8 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
 /// `prepare`). An error when the agent cannot be read, or there is no
 /// message.
 ///
-/// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `question_of`;
-/// `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`;
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `question_of`;
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`;
 /// `objects/ai/chat/chat_ai.rs`: `chat_question`.
 /// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`agent_knowledge`].
 pub fn agent_question(

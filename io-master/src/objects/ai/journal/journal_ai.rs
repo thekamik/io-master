@@ -4,7 +4,7 @@
 //! an integration) is not kept: it is no part of an evaluation.
 //!
 //! ```text
-//! integration/question.rs: prepare ──► Prepared ──► integration/sending.rs: send ──► Sent ──► record ──► Answer
+//! integration_ai/question.rs: prepare ──► Prepared ──► integration_ai/sending.rs: send ──► Sent ──► record ──► Answer
 //!                                                                                             └► create_journal_entry (with an agent)
 //! ```
 //!
@@ -74,8 +74,8 @@ fn write_entry(db: &UserDatabase, prepared: Prepared, agent: i64, answer: &Answe
 /// answer to a question without an agent is not kept.
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_check`;
-/// `ai/models/evaluation/work_unit/filling.rs`: `written`;
-/// `ai/models/evaluation/work_unit/assessment.rs`: `written`;
+/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `written`;
+/// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `written`;
 /// `panels/views/chat/chats.rs`: `written`; under the lock of the session.
 /// Calls: [`write_entry`].
 pub fn record(db: &UserDatabase, prepared: Prepared, sent: Sent) -> Result<Answer, AiError> {

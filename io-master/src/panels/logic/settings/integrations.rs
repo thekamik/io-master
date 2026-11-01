@@ -131,7 +131,7 @@ pub fn set_key(db: &UserDatabase, id: i64, key: &str) -> Result<(), SettingsErro
 }
 
 /// Whether the integration `id` has a key for its present address. The key
-/// itself never leaves `db/` and `ai/`.
+/// itself never leaves the stores and the AI of the integration.
 ///
 /// Called by: `panels/views/settings/integrations.rs` (the list).
 /// Calls: `read_api_key`.

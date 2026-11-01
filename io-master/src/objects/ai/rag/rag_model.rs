@@ -11,12 +11,12 @@
 //!
 //! The model is only the text. Its index (the text cut into passages of
 //! a bounded length, searched by FTS5 of SQLite) is made from it by
-//! `db/` whenever the text is stored, and made again when it changes:
+//! `rag_store.rs` whenever the text is stored, and made again when it changes:
 //! it is no data of its own, as the index of a table is none.
 //!
 //! ```text
 //! Agent "ADV" ──┐
-//!               ├──► KnowledgeBase ◄── Source (knowledge_base) ──text──► the index of its passages (db/)
+//!               ├──► KnowledgeBase ◄── Source (knowledge_base) ──text──► the index of its passages (rag_store.rs)
 //! Agent "ATE" ──┘
 //! ```
 

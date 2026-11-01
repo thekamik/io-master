@@ -12,15 +12,15 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::models::evaluation::evaluation_plan::{read_evaluation_plan, read_evaluation_plans};
-use crate::domain::models::evaluation::evaluation_plan::evaluation::{change_agent, new_evaluation};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::objects::ai::agent::agent_store::read_agents;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::{change_agent, new_evaluation};
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::{read_evaluation_plan, read_evaluation_plans};
 use crate::panels::logic::evaluation::inputs::inputs;
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// The longest product, client or evaluator from the page, in bytes (the
 /// logic checks the characters).

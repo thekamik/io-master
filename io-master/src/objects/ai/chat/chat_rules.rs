@@ -10,13 +10,13 @@
 //! add_question           ──► the question written into the chat, once objects/ai/chat/chat_ai.rs: prepared took it
 //! ```
 
-use crate::domain::error::DomainError;
-use crate::domain::text::checked_text;
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_store::read_agent;
 use crate::objects::ai::chat::chat_model::{Chat, Message, Speaker};
 use crate::objects::ai::chat::chat_store::{create_chat, create_message, read_chat, update_chat};
+use crate::objects::error::DomainError;
+use crate::objects::text::checked_text;
 
 /// The longest title of a chat, in characters.
 const MAX_TITLE: usize = 200;
@@ -27,7 +27,7 @@ pub const MAX_QUESTION: usize = 20_000;
 /// Makes a new chat with the agent `agent`, without messages; gives its id.
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_create`.
-/// Calls: `domain/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`: `read_agent`;
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`: `read_agent`;
 /// `objects/ai/chat/chat_store.rs`: `create_chat`.
 pub fn new_chat(db: &UserDatabase, title: &str, agent: i64) -> Result<i64, DomainError> {
     let title = checked_text(title, "the title of the chat", MAX_TITLE)?;
@@ -41,7 +41,7 @@ pub fn new_chat(db: &UserDatabase, title: &str, agent: i64) -> Result<i64, Domai
 /// stay as they were.
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_rename`.
-/// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`, `update_chat`; `domain/text.rs`:
+/// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`, `update_chat`; `objects/text.rs`:
 /// `checked_text`.
 pub fn rename_chat(db: &UserDatabase, chat: i64, title: &str) -> Result<(), DomainError> {
     let mut stored = read_chat(db, chat)?;
@@ -55,7 +55,7 @@ pub fn rename_chat(db: &UserDatabase, chat: i64, title: &str) -> Result<(), Doma
 /// [`MAX_QUESTION`].
 ///
 /// Called by: [`add_question`]; `objects/ai/chat/chat_ai.rs`: `chat_question`.
-/// Calls: `domain/text.rs`: `checked_text`.
+/// Calls: `objects/text.rs`: `checked_text`.
 pub fn checked_question(text: &str) -> Result<String, DomainError> {
     checked_text(text, "the question", MAX_QUESTION)
 }

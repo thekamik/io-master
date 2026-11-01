@@ -31,7 +31,7 @@ const DIRECTORY: &str = "users";
 
 /// The open database of the user: the connection, unlocked with the key.
 /// Held by the session while the user is logged in; every function of
-/// `db/models/` on the data of the user takes it.
+/// the stores (`<object>_store.rs`) on the data of the user takes it.
 #[derive(Debug)]
 pub struct UserDatabase {
     connection: Connection,
@@ -57,13 +57,13 @@ impl UserDatabase {
         Ok(UserDatabase { connection })
     }
 
-    /// The connection, for SQL. **Only `db/models/` reaches it**
+    /// The connection, for SQL. **Only the stores reach it**
     /// (CLAUDE.md, "The database"): checked by `architecture_tests.rs`
     /// (`the_sql_is_only_in_the_store`), since the models in the databases
     /// are no longer below this folder.
     ///
     /// Called by: every function of the stores that runs SQL on the data of
-    /// the user: `objects/ai/*/<object>_store.rs`, `db/models/evaluation/`,
+    /// the user: `objects/ai/*/<object>_store.rs`, `objects/evaluation/*/<object>_store.rs`,
     /// `objects/user/program_data/program_data_store.rs` (the settings).
     pub fn connection(&self) -> &Connection {
         &self.connection

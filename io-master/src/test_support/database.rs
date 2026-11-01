@@ -1,18 +1,18 @@
-//! Help for the tests of `db/`: a new database of the user in a temporary
+//! Help for the tests of the stores: a new database of the user in a temporary
 //! folder, removed with it; a plan, a work unit, an integration and an
 //! agent to store in it.
 
-use crate::db::models::evaluation::oscal_standard_document::create_oscal_standard_document;
-use crate::db::models::evaluation::product_document::create_product_document;
 use crate::infrastructure::security::random::fill_random;
 use crate::infrastructure::storage::encryption::database_key::DatabaseKey;
 use crate::infrastructure::storage::user_database::{self, UserDatabase};
-use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
-use crate::model::evaluation::oscal_standard_document::OscalStandardDocument;
-use crate::model::evaluation::product_document::ProductDocument;
-use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
 use crate::objects::ai::agent::agent_model::Agent;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
+use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_model::OscalStandardDocument;
+use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::create_oscal_standard_document;
+use crate::objects::evaluation::product_document::product_document_model::ProductDocument;
+use crate::objects::evaluation::product_document::product_document_store::create_product_document;
+use crate::objects::evaluation::work_unit::work_unit_model::{Verdict, WorkUnit};
 use crate::objects::schema::USER_TABLES;
 use crate::test_support::TempDir;
 

@@ -1,11 +1,11 @@
 # IO Master: the data model
 
-The models of `io-master/src/model/` and of `io-master/src/objects/` (`<object>_model.rs`, user 2026-11-01: brought there step by step), agreed with the user model by model, and their tables in `db/` and in the stores of the objects (`users/<id>.v2.db`; `User`, `Installation` and `UserKeys` in the system database `system.v2.db`). **A model is changed only with the user's consent** (`CLAUDE.md`).
+The models of `io-master/src/objects/` (`<object>_model.rs`, user 2026-11-01), agreed with the user model by model, and their tables in the stores of the objects (`<object>_store.rs`) (`users/<id>.v2.db`; `User`, `Installation` and `UserKeys` in the system database `system.v2.db`). **A model is changed only with the user's consent** (`CLAUDE.md`).
 
 ## 1. The rules of a model (user, 2026-10-28)
 
-- **A model is a structure that represents the data kept in the database**: fields only, each commented, no functions. The rules of the data (checks, the order of the work) live outside `model/`.
-- **A helper model is never kept in a database** (user, 2026-11-01: helper models are as needed as the stored ones): `model/session/`, the data the program shares with the page while it runs. It has no table and no create, read or update in `db/`, and says so at its head; otherwise it follows the same rules.
+- **A model is a structure that represents the data kept in the database**: fields only, each commented, no functions. The rules of the data (checks, the order of the work) live outside the model, in the rules of its object (`<object>_rules.rs`).
+- **A helper model is never kept in a database** (user, 2026-11-01: helper models are as needed as the stored ones): `objects/session/`, the data the program shares with the page while it runs. It has no table and no store, and says so at its head; otherwise it follows the same rules.
 - **Objects are named by their id in the database** (`i64`), never by a text.
 - **One piece of information has one place.** What can be computed from the data is not stored beside it (no field of the kind of a work unit: `input_functional` tells it; no hash of a file: it is computed from the file).
 - **Several plans, one table.** The work units of all plans are rows of one table, each naming its plan; no table is made while the program runs.
@@ -14,14 +14,14 @@ The models of `io-master/src/model/` and of `io-master/src/objects/` (`<object>_
 ## 2. The models and their links
 
 ```text
-model/evaluation/                                   objects/ai/
-─────────────────                                   ───────────
+objects/evaluation/                                 objects/ai/
+───────────────────                                 ───────────
 EvaluationPlan                                      Integration ◄── ApiKey (integration)
   ├── oscal_documents ──────► OscalStandardDocument      ▲
   ├── product_documents ────► ProductDocument            │ integration
   └── work_units ───► WorkUnit                         Agent ──knowledge_bases──► KnowledgeBase ◄── Source
         WorkUnit                                         ▲                                       (knowledge_base)
-          ├── reference ────► OscalStandardDocument       │                                       text ──► index (db/)
+          ├── reference ────► OscalStandardDocument       │                                       text ──► index (rag_store.rs)
           ├── dependencies ─► WorkUnit (same plan)        │
           ├── input_product_documents ─► ProductDocument  │
           ├── input_functional ────────► LabProof          │
@@ -34,19 +34,19 @@ objects/user/
 User, Installation (system database, not encrypted)   Settings (active_integration ──► Integration)
 ```
 
-### 2.1 `model/evaluation/`
+### 2.1 `objects/evaluation/`
 
 | Model | File | Fields | Table |
 |---|---|---|---|
-| `EvaluationPlan` | `evaluation_plan.rs` | id, name, description, state, source_plan, product, client, evaluator, started, oscal_documents, product_documents, possible_verdicts, work_units, blocked, ai_agent | `evaluation_plans` (lists: `evaluation_plan_standards`, `_documents`, `_verdicts`) |
-| `PlanState` | `evaluation_plan.rs` | Plan, Evaluation, Report | (a column) |
-| `WorkUnit` | `work_unit.rs` | id, reference, label, oscal_key, requirement, guidance, dependencies, cross_reference, input_product_documents, input_functional, ai_agent, findings, analysis, vulnerability_notes, notes, quotes, verdict, author | `work_units` (lists: `work_unit_dependencies`, `_documents`, `_proofs`, `_quotes`) |
-| `Quote` | `work_unit.rs` | product_document, text | `work_unit_quotes` |
-| `Verdict` | `work_unit.rs` | Pass, Fail, Inconclusive | (a column) |
-| `Author` | `work_unit.rs` | Ai, User | (a column) |
-| `OscalStandardDocument` | `oscal_standard_document.rs` | id, title, doc, version | `oscal_standard_documents` |
-| `ProductDocument` | `product_document.rs` | id, name, content, version | `product_documents` |
-| `LabProof` | `lab_proof.rs` | id, name, proof, performed, tester, equipment | `lab_proofs` |
+| `EvaluationPlan` | `evaluation_plan/evaluation_plan_model.rs` | id, name, description, state, source_plan, product, client, evaluator, started, oscal_documents, product_documents, possible_verdicts, work_units, blocked, ai_agent | `evaluation_plans` (lists: `evaluation_plan_standards`, `_documents`, `_verdicts`) |
+| `PlanState` | `evaluation_plan/evaluation_plan_model.rs` | Plan, Evaluation, Report | (a column) |
+| `WorkUnit` | `work_unit/work_unit_model.rs` | id, reference, label, oscal_key, requirement, guidance, dependencies, cross_reference, input_product_documents, input_functional, ai_agent, findings, analysis, vulnerability_notes, notes, quotes, verdict, author | `work_units` (lists: `work_unit_dependencies`, `_documents`, `_proofs`, `_quotes`) |
+| `Quote` | `work_unit/work_unit_model.rs` | product_document, text | `work_unit_quotes` |
+| `Verdict` | `work_unit/work_unit_model.rs` | Pass, Fail, Inconclusive | (a column) |
+| `Author` | `work_unit/work_unit_model.rs` | Ai, User | (a column) |
+| `OscalStandardDocument` | `oscal_standard_document/oscal_standard_document_model.rs` | id, title, doc, version | `oscal_standard_documents` |
+| `ProductDocument` | `product_document/product_document_model.rs` | id, name, content, version | `product_documents` |
+| `LabProof` | `lab_proof/lab_proof_model.rs` | id, name, proof, performed, tester, equipment | `lab_proofs` |
 
 ### 2.2 `objects/ai/`
 
@@ -76,12 +76,12 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `WrappedKey` | `user_keys/user_keys_model.rs` | salt, memory_kib, iterations, nonce, ciphertext, tag | (columns of `user_keys`) |
 | `RecoveryWrappedKey` | `user_keys/user_keys_model.rs` | salt, nonce, ciphertext, tag | (columns of `user_keys`) |
 
-### 2.4 `model/session/` (helper models, never kept)
+### 2.4 `objects/session/` (helper models, never kept)
 
 | Model | File | Fields | Kept |
 |---|---|---|---|
-| `Progress` | `progress.rs` | running, stop, evaluation_plan, total, assessed, failed, label, last_verdict, problems | by the session (`session/state.rs`), while the program runs |
-| `Problem` | `progress.rs` | label, notes | (in `Progress`) |
+| `Progress` | `progress/progress_model.rs` | running, stop, evaluation_plan, total, assessed, failed, label, last_verdict, problems | by the session (`panels/session.rs`), while the program runs |
+| `Problem` | `progress/progress_model.rs` | label, notes | (in `Progress`) |
 
 `Progress` is the state of the long work of the AI ("Fill with AI", the assessment of an evaluation, a question of a chat): one runs at a time; `evaluation_plan` names the plan or the evaluation it works on, so that the panel of that plan shows its bar, also when it is opened again while the work runs, and its summary when it ended; `problems` keeps the newest 200 work units not taken or taken with notes.
 
@@ -104,7 +104,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 - **The planning of a work unit of an evaluation is never changed** (user, 2026-10-30): once its plan is no more in planning, the database refuses a change of any field but its results (`findings`, `analysis`, `vulnerability_notes`, `notes`, `quotes`, `verdict`, `author`), so that what it was assessed against, its documents and proofs among it, stays as it was planned.
 - **The text of a document of the product** is read from its file when it is given (a PDF through Poppler) and kept as an index of passages beside it (no model): the question of a work unit and the check of its quotes read it there, never the file again.
 - **A document of the product or a proof of the laboratory is frozen once it is given** (user, 2026-10-30): the database refuses any change of a `ProductDocument` that has its file, or of a `LabProof` that has its text. What a work unit was assessed against, and what its quotes are checked in, never changes; a wrong file is mended by a new evaluation.
-- **The order of the work** comes from the same function (Kahn's algorithm, without recursion): a work unit comes after all its dependencies, otherwise in the order of the plan. What Kahn's algorithm leaves depends on a cycle; the same algorithm backward on it leaves only the work units of the cycles themselves, which are the cross references (a work unit that only depends on a cycle is not marked). The function is `domain/models/evaluation/evaluation_plan/order.rs` (user, 2026-10-29: not a part of `db/`; 2026-11-01: in `domain/`, the rules of the data), called after every change of the work units of a plan; the copy of a plan into an evaluation is refused while the plan is blocked or a work unit is marked.
+- **The order of the work** comes from the same function (Kahn's algorithm, without recursion): a work unit comes after all its dependencies, otherwise in the order of the plan. What Kahn's algorithm leaves depends on a cycle; the same algorithm backward on it leaves only the work units of the cycles themselves, which are the cross references (a work unit that only depends on a cycle is not marked). The function is `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs` (user, 2026-10-29: not a part of the store; 2026-11-01: the rules of the plan), called after every change of the work units of a plan; the copy of a plan into an evaluation is refused while the plan is blocked or a work unit is marked.
 - **A work unit is removed** only from a plan in planning (`delete_work_unit`, user 2026-10-29), with the dependencies of the others on it.
 - **A new work unit** is made from a control of a standard of its plan: its label, its key, the text of its statement (the requirement) and of its guidance; no documents, proofs or agent yet, which the planner gives, by hand or through the agent of the planner ("Fill with AI"). A work unit becomes a functional test when it gets a proof of the laboratory.
 
@@ -121,7 +121,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 - **An integration** is where the program sends its questions: the address, the model, the protocol (the chat completions of OpenAI, which most local servers offer, or the messages of Anthropic), the trusted CA certificate, and the size of the context of the model: a question that does not fit is refused before it is sent, never shortened in silence. **Its API key** is kept apart, only in the encrypted database, never printed (no `Debug`) and never copied (no `Clone`).
 - **An agent** is a layer of knowledge (RAG) over the model of an integration (user, 2026-10-29): it names the one integration that answers its questions (one integration serves many agents), its instructions, its knowledge bases (shared with other agents), its glossary and its limits. It is made in its own panel, changed when its answers are not good enough, and named by the work units it works on (one agent may serve several). In an evaluation the question of a work unit goes through its agent: the agent adds its knowledge as the context, and the answer comes back to the work unit.
-- **The knowledge (RAG)** is a search before the question, not a training of the model. A knowledge base is a folder of sources, shared by the agents that name it; a source is one text (an earlier evaluation, a note). Whenever a text is stored, `db/` cuts it into passages of a bounded length and indexes them (FTS5); at a question the passages of the bases of the agent that fit it best are given to the model with the question; the common words of English ("is", "the", "shall") are passed over in the search. The passages are an index, made again from the text, not a model.
+- **The knowledge (RAG)** is a search before the question, not a training of the model. A knowledge base is a folder of sources, shared by the agents that name it; a source is one text (an earlier evaluation, a note). Whenever a text is stored, its store (`rag_store.rs`) cuts it into passages of a bounded length and indexes them (FTS5); at a question the passages of the bases of the agent that fit it best are given to the model with the question; the common words of English ("is", "the", "shall") are passed over in the search. The passages are an index, made again from the text, not a model.
 - **A chat** is the place where the user talks with an agent they choose (user, 2026-10-30): the model of its integration answers, with the knowledge of the agent found for each question (looked for with the question and the question of the user before it). A chat always names its agent; it is never removed, its title may be changed. **A long chat is shortened** (user, 2026-10-30: a chat is no part of an evaluation): when a question does not fit into the context of the model, its oldest messages are left out of it (never the instructions, the knowledge or the question), the page is told how many, and the chat keeps them all. An answer stopped, cut or refused is kept with a mark after its text ("[stopped]", "[cut]", "[refused]"); a failed one is not kept in the chat, its reason is in the journal of the agent.
 - **The journal of the AI** keeps every question of an agent and its answer, only ever added to, with the work unit it was asked for: every result of the AI can be traced to what it rests on. **Each agent has its own journal**, the entries that name it (user, 2026-10-29): every entry names its agent by its id. A question without an agent (the check of an integration) is not kept: it is no part of an evaluation. The integration and the model are kept by their names, so that an entry stays as it was.
 

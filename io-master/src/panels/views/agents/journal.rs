@@ -12,9 +12,9 @@ use tauri::State;
 
 use crate::objects::ai::journal::journal_model::{Ending, JournalEntry};
 use crate::objects::ai::journal::journal_store::{read_journal_entries, read_journal_entry};
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// An entry of the journal, as its list shows it.
 #[derive(Serialize)]

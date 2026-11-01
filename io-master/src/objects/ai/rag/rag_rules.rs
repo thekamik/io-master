@@ -6,14 +6,12 @@
 //!
 //! ```text
 //! a file ──► source_text: .txt, .md as UTF-8; .pdf through infrastructure/pdf/poppler.rs, by parts of pages
-//!        ──► add_source / replace_source_text ──► db/ cuts the text into passages and indexes them
+//!        ──► add_source / replace_source_text ──► rag_store.rs cuts the text into passages and indexes them
 //! ```
 
 use std::fs;
 use std::path::Path;
 
-use crate::domain::error::DomainError;
-use crate::domain::text::checked_text;
 use crate::infrastructure::pdf::poppler::{self, MAX_FILE};
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
@@ -21,6 +19,8 @@ use crate::objects::ai::rag::rag_store::{
     MAX_BASES, MAX_FOUND, MAX_SOURCE_CHARS, MAX_SOURCES, create_knowledge_base, create_source, read_knowledge_base,
     read_knowledge_bases, read_passages, read_source, read_sources, update_knowledge_base, update_source,
 };
+use crate::objects::error::DomainError;
+use crate::objects::text::checked_text;
 
 /// The longest name of a base or a source, in characters.
 const MAX_NAME: usize = 200;
@@ -35,7 +35,7 @@ const MAX_TEXT_FILE: u64 = 64 * 1024 * 1024;
 /// Makes a new knowledge base; gives its id.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_base_create`.
-/// Calls: `domain/text.rs`: `checked_text`, `read_knowledge_bases`, `create_knowledge_base`.
+/// Calls: `objects/text.rs`: `checked_text`, `read_knowledge_bases`, `create_knowledge_base`.
 pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64, DomainError> {
     let name = checked_text(name, "the name of the base", MAX_NAME)?;
 
@@ -51,7 +51,7 @@ pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64,
 /// Writes the name and the description of the base `base.id` anew.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_base_save`.
-/// Calls: `domain/text.rs`: `checked_text`, `read_knowledge_base`, `update_knowledge_base`.
+/// Calls: `objects/text.rs`: `checked_text`, `read_knowledge_base`, `update_knowledge_base`.
 pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), DomainError> {
     let name = checked_text(&base.name, "the name of the base", MAX_NAME)?;
 
@@ -104,7 +104,7 @@ pub fn source_text(path: &Path) -> Result<String, DomainError> {
 /// gives its id. The database indexes its passages.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_add`.
-/// Calls: `domain/text.rs`: `checked_text`, `read_sources`, `create_source`.
+/// Calls: `objects/text.rs`: `checked_text`, `read_sources`, `create_source`.
 pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Result<i64, DomainError> {
     let name = checked_text(name, "the name of the source", MAX_NAME)?;
 
@@ -131,7 +131,7 @@ pub fn replace_source_text(db: &UserDatabase, id: i64, text: String) -> Result<(
 /// Changes the name of the source `id`.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_rename`.
-/// Calls: `domain/text.rs`: `checked_text`, `read_source`, `update_source`.
+/// Calls: `objects/text.rs`: `checked_text`, `read_source`, `update_source`.
 pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), DomainError> {
     let name = checked_text(name, "the name of the source", MAX_NAME)?;
     let source = read_source(db, id)?;

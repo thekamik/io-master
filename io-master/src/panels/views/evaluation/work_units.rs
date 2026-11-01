@@ -12,23 +12,23 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::ai::models::evaluation::evaluation_plan::units_in_order;
-use crate::ai::models::evaluation::work_unit::assessment_question::{assessing_agent, verdict_name};
-use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
-use crate::db::models::evaluation::lab_proof::read_lab_proof;
-use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
-use crate::db::models::evaluation::product_document::read_product_document;
-use crate::db::models::evaluation::work_unit::read_work_unit;
-use crate::domain::models::evaluation::work_unit::results::{Results, save_results};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::evaluation::evaluation_plan::EvaluationPlan;
-use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
 use crate::objects::ai::agent::agent_store::read_agent;
 use crate::objects::ai::journal::journal_model::Ending;
 use crate::objects::ai::journal::journal_store::read_latest_journal_entry;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_ai::units_in_order;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::EvaluationPlan;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::read_evaluation_plan;
+use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
+use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::read_oscal_standard_document;
+use crate::objects::evaluation::product_document::product_document_store::read_product_document;
+use crate::objects::evaluation::work_unit::work_unit_ai::assessment_question::{assessing_agent, verdict_name};
+use crate::objects::evaluation::work_unit::work_unit_model::{Author, Quote, Verdict, WorkUnit};
+use crate::objects::evaluation::work_unit::work_unit_rules::results::{Results, save_results};
+use crate::objects::evaluation::work_unit::work_unit_store::read_work_unit;
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// The longest text of the results from the page, in bytes (the logic
 /// checks the characters).

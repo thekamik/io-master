@@ -13,8 +13,8 @@ use tauri::State;
 use zeroize::Zeroizing;
 
 use crate::objects::user::user_data::user_data_rules::create_account;
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
-use crate::session::state::Session;
 
 /// The recovery code, as the page shows it: seven groups of five
 /// characters ("ABCDE-FGHJK-...").

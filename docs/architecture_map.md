@@ -1,16 +1,16 @@
 # IO Master: the map of the architecture
 
-Where each model of `io-master/src/model/` and `io-master/src/objects/` is stored, processed, reached by a command of the page and shown (user, 2026-11-01): a list, model by model, so that every flow of the data can be followed from the model to the window and nothing is missed. It changes in the same commit as the code; a graphical map may come later from it.
+Where each model of `io-master/src/objects/` is stored, processed, reached by a command of the page and shown (user, 2026-11-01): a list, model by model, so that every flow of the data can be followed from the model to the window and nothing is missed. It changes in the same commit as the code; a graphical map may come later from it.
 
 ```text
-model/  ──► db/models/ (stored) ──► domain/models/, ai/models/, session/, panels/logic/ (processed)
-        ──► panels/views/ (the commands of the page) ──► ui/src/ (the components that show it)
+<object>_model.rs ──► <object>_store.rs (stored) ──► <object>_rules.rs, <object>_ai.rs, panels/session.rs,
+                      panels/logic/ (processed) ──► panels/views/ (the commands of the page) ──► ui/src/ (shown)
 ```
 
 How it is read:
 
-- **Stored**: the functions of `db/models/`, or of the store of the object (`<object>_store.rs`), that create, read and update the model.
-- **Processed**: the functions that call them or take the model itself, by concern: the rules of the data (`domain/`, or the rules of an object, `<object>_rules.rs`), the AI (`ai/`), the session, and the panels not yet brought to the grid (`panels/logic/`).
+- **Stored**: the functions of the store of the object (`<object>_store.rs`) that create, read and update the model.
+- **Processed**: the functions that call them or take the model itself, by role: the rules of the data (`<object>_rules.rs`), the AI (`<object>_ai.rs`), the session (`panels/session.rs`), and what a panel shows (`panels/logic/`).
 - **Commands**: the commands of `panels/views/` that reach the model within three calls.
 - **Shown**: the components of the page that call those commands (`ui/src/lib/api/` names each function as its command).
 
@@ -24,13 +24,13 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the rules of the data**:
   - `objects/ai/agent/agent_rules.rs`: `change_agent`, `checked`, `checked_glossary`, `new_agent`
   - `objects/ai/chat/chat_rules.rs`: `new_chat`
-  - `domain/models/evaluation/evaluation_plan/evaluation.rs`: `change_agent`, `new_evaluation`
-  - `domain/models/evaluation/evaluation_plan/planning.rs`: `update_plan`
-  - `domain/models/evaluation/work_unit/parameters.rs`: `update_work_unit_parameters`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`, `new_evaluation`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `update_plan`
+  - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`
 - **Processed, the AI**:
   - `objects/ai/agent/agent_ai.rs`: `agent_knowledge`, `agent_question`, `widened`
-  - `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`, `preview`
-  - `ai/models/evaluation/work_unit/proposal.rs`: `names_of`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`, `preview`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`
 - **Commands** (`panels/views/`):
   - `agents/agent.rs`: `agent_list`, `agent_create`, `agent_get`, `agent_save`, `agent_knowledge_test`
   - `chat/chats.rs`: `chat_list`, `chat_create`, `chat_get`
@@ -39,7 +39,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/work_units.rs`: `evaluation_unit_list`, `evaluation_unit_get`
   - `evaluation_plan/fill.rs`: `plan_fill_preview`
   - `evaluation_plan/plans.rs`: `plan_get`, `plan_save`
-  - `evaluation_plan/work_units.rs`: `work_unit_get`, `work_unit_save`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_get`, `work_unit_save`
 - **Shown** (`ui/src/`):
   - `views/agents/AgentEditor.svelte` ← `agent_get`, `agent_save`, `agent_knowledge_test`
   - `views/agents/AgentList.svelte` ← `agent_list`, `agent_create`
@@ -82,8 +82,8 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/ai/integration/integration_ai/openai.rs`: `body`
   - `objects/ai/integration/integration_ai/question.rs`: `prepare`
   - `objects/ai/integration/integration_ai/turns.rs`: `turns`
-  - `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`
-  - `ai/models/evaluation/work_unit/proposal.rs`: `question_of`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `question_of`
 - **Processed, the panels (`panels/logic/`)**:
   - `panels/logic/settings/integrations.rs`: `check_question`
 - **Commands** (`panels/views/`):
@@ -103,7 +103,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`
   - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`
   - `objects/ai/integration/integration_ai/question.rs`: `answer_tokens`, `check_size`, `prepare`
-  - `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`
 - **Processed, the panels (`panels/logic/`)**:
   - `panels/logic/settings/integrations.rs`: `activate_integration`, `add_integration`, `change_integration`, `checked`, `set_key`
 - **Commands** (`panels/views/`):
@@ -155,18 +155,18 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/agents/BaseEditor.svelte` ← `knowledge_base_list`, `knowledge_base_save`, `knowledge_source_list`, `knowledge_source_add`, `knowledge_source_replace`, `knowledge_source_rename`, `knowledge_search`
   - `views/agents/KnowledgeBases.svelte` ← `knowledge_base_list`, `knowledge_base_create`
 
-### `model/evaluation/evaluation_plan.rs`: `EvaluationPlan`, `PlanState`
+### `objects/evaluation/evaluation_plan/evaluation_plan_model.rs`: `EvaluationPlan`, `PlanState`
 
-- **Stored** (`db/models/evaluation/evaluation_plan.rs`): `create_evaluation_plan`, `read_evaluation_plan`, `read_evaluation_plans`, `update_evaluation_plan`, `create_evaluation`
+- **Stored** (`objects/evaluation/evaluation_plan/evaluation_plan_store.rs`): `create_evaluation_plan`, `read_evaluation_plan`, `read_evaluation_plans`, `update_evaluation_plan`, `create_evaluation`
 - **Processed, the rules of the data**:
-  - `domain/models/evaluation/evaluation_plan/evaluation.rs`: `change_agent`, `evaluation_in_progress`, `new_evaluation`
-  - `domain/models/evaluation/evaluation_plan/order.rs`: `check_order`
-  - `domain/models/evaluation/evaluation_plan/planning.rs`: `add_document_place`, `check_planning`, `create_plan`, `plan_in_planning`, `plan_to_fill`, `update_plan`
-  - `domain/models/evaluation/evaluation_plan/work_units.rs`: `available_controls`, `controls_of`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`, `evaluation_in_progress`, `new_evaluation`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`, `check_planning`, `create_plan`, `plan_in_planning`, `plan_to_fill`, `update_plan`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `available_controls`, `controls_of`
 - **Processed, the AI**:
-  - `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`
-  - `ai/models/evaluation/work_unit/assessment_question.rs`: `assessing_agent`, `assessment_question`, `question_of`
-  - `ai/models/evaluation/work_unit/proposal.rs`: `names_of`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`, `assessment_question`, `question_of`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`
 - **Processed, the panels (`panels/logic/`)**:
   - `panels/logic/evaluation/inputs.rs`: `inputs`
 - **Commands** (`panels/views/`):
@@ -176,7 +176,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/work_units.rs`: `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save`
   - `evaluation_plan/fill.rs`: `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`
   - `evaluation_plan/plans.rs`: `plan_list`, `plan_create`, `plan_get`, `plan_save`, `plan_add_document`
-  - `evaluation_plan/work_units.rs`: `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_save`, `work_unit_add_proof`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_save`, `work_unit_add_proof`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
@@ -190,16 +190,16 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlansTab.svelte` ← `plan_list`, `plan_create`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`, `work_unit_save`, `work_unit_add_proof`
 
-### `model/evaluation/lab_proof.rs`: `LabProof`
+### `objects/evaluation/lab_proof/lab_proof_model.rs`: `LabProof`
 
-- **Stored** (`db/models/evaluation/lab_proof.rs`): `create_lab_proof`, `read_lab_proof`, `update_lab_proof`
+- **Stored** (`objects/evaluation/lab_proof/lab_proof_store.rs`): `create_lab_proof`, `read_lab_proof`, `update_lab_proof`
 - **Processed, the rules of the data**:
-  - `domain/models/evaluation/lab_proof.rs`: `give_proof`
-  - `domain/models/evaluation/work_unit/parameters.rs`: `add_proof_place`
+  - `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`
+  - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`
 - **Processed, the AI**:
-  - `ai/models/evaluation/evaluation_plan.rs`: `missing_inputs`
-  - `ai/models/evaluation/work_unit/assessment_question.rs`: `proofs_text`, `unit_json`
-  - `ai/models/evaluation/work_unit/proposal.rs`: `chosen_proofs`, `current_parameters`, `proof_named`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `proofs_text`, `unit_json`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `chosen_proofs`, `current_parameters`, `proof_named`
 - **Processed, the panels (`panels/logic/`)**:
   - `panels/logic/evaluation/inputs.rs`: `inputs`
 - **Commands** (`panels/views/`):
@@ -207,7 +207,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/inputs.rs`: `evaluation_proof_give`
   - `evaluation/run.rs`: `evaluation_assess_preview`, `evaluation_assess`
   - `evaluation/work_units.rs`: `evaluation_unit_get`
-  - `evaluation_plan/work_units.rs`: `work_unit_get`, `work_unit_add_proof`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_get`, `work_unit_add_proof`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
@@ -215,20 +215,20 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation/Evaluations.svelte` ← `evaluation_create`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `work_unit_get`, `work_unit_add_proof`
 
-### `model/evaluation/oscal_standard_document.rs`: `OscalStandardDocument`
+### `objects/evaluation/oscal_standard_document/oscal_standard_document_model.rs`: `OscalStandardDocument`
 
-- **Stored** (`db/models/evaluation/oscal_standard_document.rs`): `create_oscal_standard_document`, `read_oscal_standard_document`, `read_oscal_standard_documents`, `update_oscal_standard_document`
+- **Stored** (`objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`): `create_oscal_standard_document`, `read_oscal_standard_document`, `read_oscal_standard_documents`, `update_oscal_standard_document`
 - **Processed, the rules of the data**:
-  - `domain/models/evaluation/evaluation_plan/work_units.rs`: `controls_of`
-  - `domain/models/evaluation/oscal_standard_document.rs`: `import_standard`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `controls_of`
+  - `objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `import_standard`
 - **Processed, the AI**:
-  - `ai/models/evaluation/work_unit/assessment_question.rs`: `unit_json`
-  - `ai/models/evaluation/work_unit/proposal.rs`: `parameters_question`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `unit_json`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `parameters_question`
 - **Commands** (`panels/views/`):
   - `evaluation/work_units.rs`: `evaluation_unit_get`
   - `evaluation_plan/plans.rs`: `plan_get`
   - `evaluation_plan/standards.rs`: `standard_list`, `standard_import`
-  - `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationUnit.svelte` ← `evaluation_unit_get`
   - `views/evaluation_plan/PlanEditor.svelte` ← `plan_get`
@@ -237,17 +237,17 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/StandardsTab.svelte` ← `standard_list`, `standard_import`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`, `work_unit_list`
 
-### `model/evaluation/product_document.rs`: `ProductDocument`
+### `objects/evaluation/product_document/product_document_model.rs`: `ProductDocument`
 
-- **Stored** (`db/models/evaluation/product_document.rs`): `create_product_document`, `read_product_document`, `update_product_document`, `read_document_text`, `read_document_passages`
+- **Stored** (`objects/evaluation/product_document/product_document_store.rs`): `create_product_document`, `read_product_document`, `update_product_document`, `read_document_text`, `read_document_passages`
 - **Processed, the rules of the data**:
-  - `domain/models/evaluation/evaluation_plan/planning.rs`: `add_document_place`
-  - `domain/models/evaluation/product_document.rs`: `give_document`
-  - `domain/models/evaluation/work_unit/results.rs`: `check_quotes`, `quotes_found`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`
+  - `objects/evaluation/product_document/product_document_rules.rs`: `give_document`
+  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes`, `quotes_found`
 - **Processed, the AI**:
-  - `ai/models/evaluation/evaluation_plan.rs`: `missing_inputs`
-  - `ai/models/evaluation/work_unit/assessment_question.rs`: `documents_text`, `unit_json`
-  - `ai/models/evaluation/work_unit/proposal.rs`: `names_of`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`, `unit_json`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`
 - **Processed, the panels (`panels/logic/`)**:
   - `panels/logic/evaluation/inputs.rs`: `inputs`
 - **Commands** (`panels/views/`):
@@ -266,25 +266,25 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlanWorkUnits.svelte` ← `plan_get`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`
 
-### `model/evaluation/work_unit.rs`: `WorkUnit`, `Verdict`, `Author`, `Quote`
+### `objects/evaluation/work_unit/work_unit_model.rs`: `WorkUnit`, `Verdict`, `Author`, `Quote`
 
-- **Stored** (`db/models/evaluation/work_unit.rs`): `create_work_unit`, `read_work_unit`, `read_work_units`, `update_work_unit`, `delete_work_unit`
+- **Stored** (`objects/evaluation/work_unit/work_unit_store.rs`): `create_work_unit`, `read_work_unit`, `read_work_units`, `update_work_unit`, `delete_work_unit`
 - **Processed, the rules of the data**:
-  - `domain/models/evaluation/evaluation_plan/evaluation.rs`: `needed_proofs`
-  - `domain/models/evaluation/evaluation_plan/order.rs`: `check_order`, `links`, `taken_in_order`, `unit_at`, `work_order`
-  - `domain/models/evaluation/evaluation_plan/planning.rs`: `create_plan`, `update_plan`
-  - `domain/models/evaluation/evaluation_plan/work_units.rs`: `add_all_work_units`, `add_work_unit`, `available_controls`, `holds`, `remove_work_unit`, `unit_of`
-  - `domain/models/evaluation/lab_proof.rs`: `give_proof`
-  - `domain/models/evaluation/work_unit/parameters.rs`: `add_proof_place`, `update_work_unit_parameters`
-  - `domain/models/evaluation/work_unit/results.rs`: `check_quote`, `check_quotes`, `quotes_found`, `save_results`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `needed_proofs`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`, `links`, `taken_in_order`, `unit_at`, `work_order`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`, `update_plan`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_all_work_units`, `add_work_unit`, `available_controls`, `holds`, `remove_work_unit`, `unit_of`
+  - `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`
+  - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`, `update_work_unit_parameters`
+  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quote`, `check_quotes`, `quotes_found`, `save_results`
 - **Processed, the AI**:
-  - `ai/models/evaluation/evaluation_plan.rs`: `missing_inputs`, `units_in_order`, `units_to_assess`
-  - `ai/models/evaluation/work_unit/assessment.rs`: `assess_work_unit`, `prepared_question`, `written`
-  - `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`, `badness`, `verdict_of`, `with_dependencies`
-  - `ai/models/evaluation/work_unit/assessment_question.rs`: `assessing_agent`, `assessment_question`, `dependencies_text`, `documents_text`, `label_of`, `proofs_text`, `question_of`, `unit_json`, `verdict_name`
-  - `ai/models/evaluation/work_unit/filling.rs`: `prepared_question`
-  - `ai/models/evaluation/work_unit/proposal.rs`: `apply_dependencies`, `apply_parameters`, `chosen_proofs`, `current_parameters`, `dependencies_question`, `labels`, `parameters_question`, `proof_named`, `question_of`, `summary`
-  - `ai/models/session/progress.rs`: `record_step`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`, `units_in_order`, `units_to_assess`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assess_work_unit`, `prepared_question`, `written`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`, `badness`, `verdict_of`, `with_dependencies`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`, `assessment_question`, `dependencies_text`, `documents_text`, `label_of`, `proofs_text`, `question_of`, `unit_json`, `verdict_name`
+  - `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `apply_dependencies`, `apply_parameters`, `chosen_proofs`, `current_parameters`, `dependencies_question`, `labels`, `parameters_question`, `proof_named`, `question_of`, `summary`
+  - `objects/session/progress/progress_ai/step.rs`: `record_step`
 - **Processed, the panels (`panels/logic/`)**:
   - `panels/logic/evaluation/inputs.rs`: `inputs`, `needing`
 - **Commands** (`panels/views/`):
@@ -294,7 +294,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/work_units.rs`: `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save`
   - `evaluation_plan/fill.rs`: `plan_fill_parameters`, `plan_fill_dependencies`
   - `evaluation_plan/plans.rs`: `plan_create`, `plan_get`, `plan_save`
-  - `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
@@ -307,15 +307,15 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlansTab.svelte` ← `plan_create`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`, `work_unit_list`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`
 
-### `model/session/progress.rs`: `Progress`, `Problem`
+### `objects/session/progress/progress_model.rs`: `Progress`, `Problem`
 
 - **Stored**: never (a helper model, `docs/data_model.md`)
 - **Processed, the AI**:
-  - `ai/lock.rs`: `lock_progress`
-  - `ai/models/evaluation/evaluation_plan.rs`: `assess_evaluation`, `fill_plan`
-  - `ai/models/session/progress.rs`: `record_step`
+  - `objects/session/progress/progress_ai/lock.rs`: `lock_progress`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `assess_evaluation`, `fill_plan`
+  - `objects/session/progress/progress_ai/step.rs`: `record_step`
 - **Processed, the session**:
-  - `session/state.rs`: `begin_work`, `locks`, `new`, `progress`
+  - `panels/session.rs`: `begin_work`, `locks`, `new`, `progress`
 - **Commands** (`panels/views/`):
   - `chat/chats.rs`: `chat_ask`, `chat_stop`
   - `evaluation/run.rs`: `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`
@@ -349,7 +349,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the rules of the data**:
   - `objects/user/user_data/user_data_rules.rs`: `install`, `installed_user`, `keys_and_database`, `log_in`
 - **Processed, the session**:
-  - `session/state.rs`: `log_in`
+  - `panels/session.rs`: `log_in`
 - **Commands** (`panels/views/`):
   - `program_start/installation.rs`: `installation_create`
   - `program_start/login.rs`: `login_get`, `login_log_in`

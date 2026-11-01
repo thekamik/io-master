@@ -10,13 +10,13 @@
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
-use crate::domain::error::DomainError;
 use crate::infrastructure::storage::error::DbError;
 use crate::objects::ai_error::AiError;
+use crate::objects::error::DomainError;
 use crate::objects::user::user_data::user_data_rules::AccountError;
 use crate::panels::logic::evaluation::error::EvaluationError;
 use crate::panels::logic::settings::error::SettingsError;
-use crate::session::state::SessionBroken;
+use crate::panels::session::SessionBroken;
 
 /// Why a command failed.
 #[derive(Debug)]
@@ -38,7 +38,7 @@ pub enum ViewError {
     /// A database refused or failed.
     Db(DbError),
     /// A rule of the data refused a change, or could not be checked
-    /// (`domain/`).
+    /// (the rules of an object, `objects/error.rs`).
     Domain(DomainError),
     /// What the page sent, or a file the user chose, cannot be taken;
     /// holds the reason.

@@ -95,7 +95,7 @@ impl RecoveryCode {
 
     /// The code as a person reads it: seven groups of five characters.
     ///
-    /// Called by: `components/recovery_code/view.rs`, to show it once.
+    /// Called by: `panels/views/program_start/installation.rs`, to show it once.
     /// Calls: [`symbols`], [`group`].
     pub fn to_text(&self) -> Zeroizing<String> {
         group(&symbols(&self.bytes))

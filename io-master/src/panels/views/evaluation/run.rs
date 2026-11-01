@@ -7,7 +7,7 @@
 //! ```text
 //! EvaluationRun.svelte ──evaluation_assess_preview(id, again)─► preview ──► AssessPreviewView
 //!                      ──evaluation_assess(id, again)─► units_ready (refused while an input is missing),
-//!                          Session::begin_work, then ai/models/evaluation/evaluation_plan.rs:
+//!                          Session::begin_work, then objects/evaluation/evaluation_plan/evaluation_plan_ai.rs:
 //!                          assess_evaluation (each work unit assessed, its step written into the progress)
 //!                      ──evaluation_assess_progress(id)────► progress_of ──► ProgressView
 //!                      ──evaluation_assess_stop()──────────► the assessment ends after its present work unit
@@ -20,11 +20,13 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::ai::models::evaluation::evaluation_plan::{Preview, assess_evaluation, preview, units_ready};
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_ai::{
+    Preview, assess_evaluation, preview, units_ready,
+};
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::panels::views::progress::{ProgressView, progress_of};
-use crate::session::state::Session;
 
 /// A name and how many questions or work units it counts.
 #[derive(Serialize)]
@@ -72,7 +74,7 @@ fn preview_view(found: Preview) -> AssessPreviewView {
 /// `again` the work units of the AI assessed already too.
 ///
 /// Called by: `EvaluationUnits.svelte`, before an assessment starts.
-/// Calls: `ai/models/evaluation/evaluation_plan.rs`: `preview`; [`preview_view`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `preview`; [`preview_view`].
 #[tauri::command]
 pub fn evaluation_assess_preview(
     session: State<'_, Session>,
@@ -90,7 +92,7 @@ pub fn evaluation_assess_preview(
 /// another work of the AI runs, or an input is missing.
 ///
 /// Called by: `EvaluationRun.svelte`, "Start".
-/// Calls: `ai/models/evaluation/evaluation_plan.rs`: `units_ready`,
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `units_ready`,
 /// `assess_evaluation`; `Session::begin_work`, `Session::locks`.
 #[tauri::command]
 pub async fn evaluation_assess(session: State<'_, Session>, id: i64, again: bool) -> Result<(), ViewError> {

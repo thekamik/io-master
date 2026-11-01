@@ -36,9 +36,9 @@ use crate::objects::ai::integration::integration_ai::question::Prepared;
 use crate::objects::ai::integration::integration_ai::sending::{Sent, send};
 use crate::objects::ai::journal::journal_ai::record;
 use crate::objects::ai::journal::journal_model::Ending;
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// The longest title from the page, in bytes (the logic checks the
 /// characters).

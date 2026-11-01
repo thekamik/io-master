@@ -18,9 +18,9 @@ use crate::objects::ai::agent::agent_rules::{MAX_INSTRUCTIONS, change_agent, new
 use crate::objects::ai::agent::agent_store::{read_agent, read_agents};
 use crate::objects::ai::integration::integration_store::{read_integration, read_integrations};
 use crate::objects::ai::rag::rag_store::read_knowledge_bases;
+use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
-use crate::session::state::Session;
 
 /// The longest name or question from the page, in bytes.
 const MAX_FIELD: usize = 4096;

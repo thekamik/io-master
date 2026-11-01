@@ -191,10 +191,10 @@ pub fn update_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<
 /// in paragraphs of 1000 → `["<paragraphs 1 and 2>", "<paragraph 3>",
 /// "<paragraph 4>"]`); none for an empty text.
 ///
-/// Called by: [`write_passages`]; `evaluation/product_document.rs`:
+/// Called by: [`write_passages`]; `objects/evaluation/product_document/product_document_store.rs`:
 /// `write_passages` (the index of a document of the product).
 /// Calls: [`push_passage`].
-pub(crate) fn passages(text: &str) -> Vec<String> {
+pub(in crate::objects) fn passages(text: &str) -> Vec<String> {
     let mut passages = Vec::new();
     let mut current = String::new();
 
@@ -451,9 +451,9 @@ pub fn update_source(db: &UserDatabase, source: &Source) -> Result<(), DbError> 
 /// Output: the query (`"\"TSF\" OR \"TOE\""`), at most `MAX_WORDS` words;
 /// `None` for a question without such words.
 ///
-/// Called by: [`read_passages`]; `evaluation/product_document.rs`:
+/// Called by: [`read_passages`]; `objects/evaluation/product_document/product_document_store.rs`:
 /// `read_document_passages` (the search in the documents of the product).
-pub(crate) fn query_of(question: &str) -> Option<String> {
+pub(in crate::objects) fn query_of(question: &str) -> Option<String> {
     let mut words = Vec::new();
 
     // The closure tells `split` where a word ends: at every sign that is no
