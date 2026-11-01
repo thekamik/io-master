@@ -6,7 +6,7 @@
 //! - the address is `https://`, or `http://` only on this computer (a local
 //!   model); TLS 1.3 or newer, the certificate verified against the trusted
 //!   certificates of the system, or only against the CA certificate of the
-//!   integration (`address.rs`, [`http_client`]);
+//!   integration (`integration_rules/address.rs`, [`http_client`]);
 //! - redirects are never followed, so the key and the conversation go to
 //!   the address of the integration and nowhere else;
 //! - proxies of the environment (`HTTPS_PROXY`) are not used;
@@ -33,11 +33,11 @@ use tokio::sync::mpsc;
 use zeroize::Zeroizing;
 
 use crate::objects::ai::api_key::api_key_ai::masked;
-use crate::objects::ai::integration::integration_ai::address::{certificates, check_address};
 use crate::objects::ai::integration::integration_ai::protocol::{key_headers, read_event};
 use crate::objects::ai::integration::integration_ai::reading::Reading;
 use crate::objects::ai::integration::integration_ai::sse::SseDecoder;
 use crate::objects::ai::integration::integration_model::Protocol;
+use crate::objects::ai::integration::integration_rules::address::{certificates, check_address};
 use crate::objects::ai_error::{AiError, from_status};
 
 /// How long a connection may take to open.
@@ -119,7 +119,7 @@ pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received 
 /// The work of [`send`]; gives whether the caller stopped the answer.
 ///
 /// Called by: [`send`].
-/// Calls: `address.rs`: `check_address`; [`http_client`], [`post`],
+/// Calls: `integration_rules/address.rs`: `check_address`; [`http_client`], [`post`],
 /// [`read_error`], [`read_stream`].
 async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mut Reading) -> Result<bool, AiError> {
     check_address(&request.url)?;
@@ -153,7 +153,7 @@ async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mu
 /// own, and the program asks few questions.
 ///
 /// Called by: [`exchange`].
-/// Calls: `address.rs`: `certificates`.
+/// Calls: `integration_rules/address.rs`: `certificates`.
 fn http_client(request: &Request) -> Result<Client, AiError> {
     let mut builder = Client::builder()
         .https_only(request.url.starts_with("https://"))
@@ -283,6 +283,8 @@ mod tests {
 
     use super::*;
 
+    use crate::objects::error::DomainError;
+
     use serde_json::json;
 
     use crate::objects::ai::api_key::api_key_ai::MASK;
@@ -364,7 +366,7 @@ mod tests {
         let remote = Request { url: "http://example.com/v1/chat/completions".to_owned(), ..local };
         let (received, _) = send_collecting(&remote).await;
 
-        assert!(matches!(received.error, Some(AiError::Address(_))));
+        assert!(matches!(received.error, Some(AiError::Domain(DomainError::Refused(_)))));
     }
 
     #[tokio::test]

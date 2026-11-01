@@ -3,6 +3,7 @@
 //! key (`objects/ai_error.rs`).
 
 use crate::objects::ai_error::AiError;
+use crate::objects::error::DomainError;
 
 /// What stands in place of the key where a text could hold it.
 pub const MASK: &str = "••••••••";
@@ -33,6 +34,9 @@ pub(in crate::objects::ai) fn masked(error: AiError, key: Option<&str>) -> AiErr
         AiError::NoConnection(text) => AiError::NoConnection(mask(text, key)),
         AiError::UnexpectedAnswer(text) => AiError::UnexpectedAnswer(mask(text, key)),
         AiError::Refused(text) => AiError::Refused(mask(text, key)),
+        // A refusal of a rule may repeat what it refused, an address with
+        // the key in it among them (`integration_rules/address.rs`).
+        AiError::Domain(DomainError::Refused(text)) => AiError::Domain(DomainError::Refused(mask(text, key))),
         other @ (AiError::NoKey
         | AiError::NoQuestion
         | AiError::TooLong { .. }
@@ -57,5 +61,9 @@ mod tests {
             matches!(masked(AiError::Reported("sk-1".to_owned()), None), AiError::Reported(text) if text == "sk-1")
         );
         assert!(matches!(masked(AiError::Reported("x".to_owned()), Some("")), AiError::Reported(text) if text == "x"));
+        let refused = AiError::Domain(DomainError::Refused("the address https://x/?k=sk-1".to_owned()));
+        let shown = masked(refused, Some("sk-1"));
+
+        assert!(matches!(shown, AiError::Domain(DomainError::Refused(text)) if !text.contains("sk-1")));
     }
 }

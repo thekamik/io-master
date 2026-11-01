@@ -45,12 +45,28 @@ const ALLOWED: [(&str, &[&str]); 11] = [
     ("objects", &["infrastructure"]),
     // The API key of an integration: its store checks the integration it is
     // bound to.
-    ("objects::ai::api_key", &[AI_ERROR, INTEGRATION_MODEL, INTEGRATION_STORE, "infrastructure::storage"]),
+    (
+        "objects::ai::api_key",
+        &[AI_ERROR, "objects::error", INTEGRATION_MODEL, INTEGRATION_STORE, "infrastructure::storage"],
+    ),
     // The integration (the service, its connection) knows of the other
     // objects only the API key, masked in its errors, the model of the
-    // journal (how an answer ended, `Ending`) and the model of a chat (the
-    // messages of a question, `Message`, `Speaker`).
-    ("objects::ai::integration", &[AI_ERROR, "objects::ai::api_key", CHAT_MODEL, JOURNAL_MODEL, "infrastructure"]),
+    // journal (how an answer ended, `Ending`), the model of a chat (the
+    // messages of a question, `Message`, `Speaker`) and the settings of the
+    // user (the active integration); its rules refuse with the error of the
+    // rules.
+    (
+        "objects::ai::integration",
+        &[
+            AI_ERROR,
+            "objects::error",
+            "objects::ai::api_key",
+            CHAT_MODEL,
+            JOURNAL_MODEL,
+            "objects::user::program_data",
+            "infrastructure",
+        ],
+    ),
     // The session: the user logged in, their open database, the progress
     // of the long work of the AI.
     ("panels::session", &["objects::user", "objects::session", "infrastructure"]),
@@ -64,7 +80,7 @@ const ALLOWED: [(&str, &[&str]); 11] = [
 /// What of `objects/` and `infrastructure/` the panels may use: every object,
 /// but of the AI of the integration only its question, its sending and the
 /// check of an address, never the connection or a protocol.
-const PANELS_SEE: [&str; 18] = [
+const PANELS_SEE: [&str; 19] = [
     AI_ERROR,
     "objects::error",
     "objects::text",
@@ -78,7 +94,8 @@ const PANELS_SEE: [&str; 18] = [
     INTEGRATION_STORE,
     "objects::ai::integration::integration_ai::question",
     "objects::ai::integration::integration_ai::sending",
-    "objects::ai::integration::integration_ai::address",
+    "objects::ai::integration::integration_ai::check",
+    "objects::ai::integration::integration_rules",
     "objects::evaluation",
     "objects::session",
     "objects::user",
@@ -87,7 +104,7 @@ const PANELS_SEE: [&str; 18] = [
 
 /// What the commands of the page may use: what the panels see, the session
 /// and the work of the panels.
-const PANELS_SEE_AND_THE_SESSION: [&str; 20] = [
+const PANELS_SEE_AND_THE_SESSION: [&str; 21] = [
     PANELS_SEE[0],
     PANELS_SEE[1],
     PANELS_SEE[2],
@@ -106,6 +123,7 @@ const PANELS_SEE_AND_THE_SESSION: [&str; 20] = [
     PANELS_SEE[15],
     PANELS_SEE[16],
     PANELS_SEE[17],
+    PANELS_SEE[18],
     "panels::session",
     "panels::logic",
 ];

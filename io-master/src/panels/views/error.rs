@@ -15,7 +15,6 @@ use crate::objects::ai_error::AiError;
 use crate::objects::error::DomainError;
 use crate::objects::user::user_data::user_data_rules::AccountError;
 use crate::panels::logic::evaluation::error::EvaluationError;
-use crate::panels::logic::settings::error::SettingsError;
 use crate::panels::session::SessionBroken;
 
 /// Why a command failed.
@@ -28,8 +27,6 @@ pub enum ViewError {
     Session,
     /// Nobody is logged in: the page shows the login again.
     NotLoggedIn,
-    /// The settings of the AI refused a change, or failed.
-    Settings(SettingsError),
     /// The panel of the evaluation refused a change, or failed.
     Evaluation(EvaluationError),
     /// The way to the AI refused a question before it was sent, or failed
@@ -48,12 +45,6 @@ pub enum ViewError {
 impl From<EvaluationError> for ViewError {
     fn from(error: EvaluationError) -> ViewError {
         ViewError::Evaluation(error)
-    }
-}
-
-impl From<SettingsError> for ViewError {
-    fn from(error: SettingsError) -> ViewError {
-        ViewError::Settings(error)
     }
 }
 
@@ -107,9 +98,6 @@ impl ViewError {
                 | DomainError::Db(DbError::Inconsistent(_)),
             )
             | ViewError::Db(DbError::Inconsistent(_))
-            | ViewError::Settings(
-                SettingsError::Refused(_) | SettingsError::Ai(_) | SettingsError::Db(DbError::Inconsistent(_)),
-            )
             | ViewError::Ai(
                 AiError::NoKey
                 | AiError::Address(_)
@@ -123,7 +111,6 @@ impl ViewError {
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
-            | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Evaluation(EvaluationError::Db(_))
             | ViewError::Domain(DomainError::Db(_))
             | ViewError::Ai(_)
@@ -139,7 +126,6 @@ impl ViewError {
             ViewError::Account(error) => error.to_string(),
             ViewError::Session => "the session of the window failed: start the program again".to_owned(),
             ViewError::NotLoggedIn => "nobody is logged in".to_owned(),
-            ViewError::Settings(error) => error.to_string(),
             ViewError::Evaluation(error) => error.to_string(),
             ViewError::Ai(error) => error.to_string(),
             ViewError::Db(error) => error.to_string(),

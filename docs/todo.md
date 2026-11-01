@@ -7,10 +7,6 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 - **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then); the report itself.
 - **The login with the recovery code**, the change of the password and a new recovery code.
 
-## Three groups: `objects/`, `panels/`, `infrastructure/` (user, 2026-11-01)
-
-- **`panels/logic/settings/`**: its work (an integration checked and changed, the active one, its API key, the question that checks it) is no presentation and belongs to the objects (`integration_rules.rs`, `api_key_rules.rs`, `integration_ai/`); its error `SettingsError` holds both a refusal and an `AiError` (`check_address`), so its move asks how the error is parted. To agree with the user.
-
 ## Before the release
 
 - The review of the code by the user, file by file (`review.md`); the functional hardening: a limit of failed logins, a full disk, a damaged database, the limits of the inputs measured on real documents.

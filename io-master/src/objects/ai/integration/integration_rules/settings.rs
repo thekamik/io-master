@@ -1,25 +1,20 @@
 //! The integrations with AI services, as the settings of the AI change
-//! them: a new one, its data changed, the active one, its API key, the
-//! question that checks it.
+//! them: a new one, its data changed, the active one. Its API key is a rule
+//! of the key (`objects/ai/api_key/api_key_rules.rs`), the question that
+//! checks it the AI of the integration (`integration_ai/check.rs`).
 //!
 //! An integration is checked before it is stored: its address is one the
 //! program sends to (`https://`, or `http://` on this computer), its CA
-//! certificate is one the connection can use. The first integration made
-//! becomes the active one.
-
-use zeroize::Zeroizing;
+//! certificate is one the connection can use (`address.rs`). The first
+//! integration made becomes the active one.
 
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::ai::api_key::api_key_model::ApiKey;
-use crate::objects::ai::api_key::api_key_store::{MAX_KEY, read_api_key, update_api_key};
-use crate::objects::ai::chat::chat_model::{Message, Speaker};
-use crate::objects::ai::integration::integration_ai::address::{check_address, check_certificate};
-use crate::objects::ai::integration::integration_ai::question::{Prepared, Question, prepare};
 use crate::objects::ai::integration::integration_model::Integration;
+use crate::objects::ai::integration::integration_rules::address::{check_address, check_certificate};
 use crate::objects::ai::integration::integration_store::{create_integration, read_integration, update_integration};
+use crate::objects::error::DomainError;
 use crate::objects::user::program_data::program_data_model::Settings;
 use crate::objects::user::program_data::program_data_store::{read_settings, update_settings};
-use crate::panels::logic::settings::error::SettingsError;
 
 /// The longest name of an integration, in characters.
 const MAX_NAME: usize = 100;
@@ -28,25 +23,22 @@ const MAX_NAME: usize = 100;
 /// question.
 const MIN_CONTEXT: u32 = 512;
 
-/// The question that checks an integration.
-const CHECK_QUESTION: &str = "Reply with the word OK.";
-
 /// The integration with its text trimmed, checked: a name, an address the
 /// program sends to, a model, a context, a CA certificate the connection can
 /// use (an empty one is none).
 ///
 /// Called by: [`add_integration`], [`change_integration`].
-/// Calls: `check_address`, `check_certificate`.
-fn checked(integration: &Integration) -> Result<Integration, SettingsError> {
+/// Calls: `address.rs`: `check_address`, `check_certificate`.
+fn checked(integration: &Integration) -> Result<Integration, DomainError> {
     let name = integration.name.trim();
     let certificate = integration.ca_certificate.as_deref().unwrap_or_default().trim();
 
-    ensure!(!name.is_empty(), SettingsError::Refused("an integration without a name".to_owned()));
-    ensure!(name.chars().count() <= MAX_NAME, SettingsError::Refused(format!("a name over {MAX_NAME} characters")));
-    ensure!(!integration.model.trim().is_empty(), SettingsError::Refused("an integration without a model".to_owned()));
+    ensure!(!name.is_empty(), DomainError::Refused("an integration without a name".to_owned()));
+    ensure!(name.chars().count() <= MAX_NAME, DomainError::Refused(format!("a name over {MAX_NAME} characters")));
+    ensure!(!integration.model.trim().is_empty(), DomainError::Refused("an integration without a model".to_owned()));
     ensure!(
         integration.context_size >= MIN_CONTEXT,
-        SettingsError::Refused(format!("a context of fewer than {MIN_CONTEXT} tokens"))
+        DomainError::Refused(format!("a context of fewer than {MIN_CONTEXT} tokens"))
     );
     check_address(integration.url.trim())?;
 
@@ -71,8 +63,8 @@ fn checked(integration: &Integration) -> Result<Integration, SettingsError> {
 /// Called by: `panels/views/settings/integrations.rs` (a new integration).
 /// Calls: [`checked`], `create_integration`, `read_settings`,
 /// `update_settings`.
-pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i64, SettingsError> {
-    ensure!(integration.id == 0, SettingsError::Refused("a new integration has an id already".to_owned()));
+pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i64, DomainError> {
+    ensure!(integration.id == 0, DomainError::Refused("a new integration has an id already".to_owned()));
 
     let id = create_integration(db, &checked(integration)?)?;
 
@@ -89,7 +81,7 @@ pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i
 /// Called by: `panels/views/settings/integrations.rs` (an integration
 /// saved).
 /// Calls: `read_integration`, [`checked`], `update_integration`.
-pub fn change_integration(db: &UserDatabase, integration: &Integration) -> Result<(), SettingsError> {
+pub fn change_integration(db: &UserDatabase, integration: &Integration) -> Result<(), DomainError> {
     read_integration(db, integration.id)?;
 
     Ok(update_integration(db, &checked(integration)?)?)
@@ -100,73 +92,19 @@ pub fn change_integration(db: &UserDatabase, integration: &Integration) -> Resul
 ///
 /// Called by: `panels/views/settings/integrations.rs`.
 /// Calls: `read_integration`, `update_settings`.
-pub fn activate_integration(db: &UserDatabase, id: i64) -> Result<(), SettingsError> {
+pub fn activate_integration(db: &UserDatabase, id: i64) -> Result<(), DomainError> {
     read_integration(db, id)?;
 
     Ok(update_settings(db, &Settings { active_integration: Some(id) })?)
 }
 
-/// Stores the API key of the integration `id`, bound to its present
-/// address; a key it had is replaced. The key is trimmed: a key pasted with
-/// a line break is the same key.
-///
-/// Called by: `panels/views/settings/integrations.rs` (a key entered).
-/// Calls: `read_integration`, `update_api_key`.
-pub fn set_key(db: &UserDatabase, id: i64, key: &str) -> Result<(), SettingsError> {
-    let key = key.trim();
-
-    ensure!(!key.is_empty(), SettingsError::Refused("an empty API key".to_owned()));
-    ensure!(key.len() <= MAX_KEY, SettingsError::Refused(format!("an API key over {MAX_KEY} characters")));
-
-    for character in key.chars() {
-        ensure!(
-            character.is_ascii_graphic(),
-            SettingsError::Refused("an API key with spaces or characters a header cannot carry".to_owned())
-        );
-    }
-
-    read_integration(db, id)?;
-
-    Ok(update_api_key(db, &ApiKey { integration: id, key: Zeroizing::new(key.to_owned()) })?)
-}
-
-/// Whether the integration `id` has a key for its present address. The key
-/// itself never leaves the stores and the AI of the integration.
-///
-/// Called by: `panels/views/settings/integrations.rs` (the list).
-/// Calls: `read_api_key`.
-pub fn has_key(db: &UserDatabase, id: i64) -> Result<bool, SettingsError> {
-    Ok(read_api_key(db, id)?.is_some())
-}
-
-/// The question that checks the integration `id`, prepared: one short
-/// message, no instructions, no agent, so it is not kept in a journal
-/// (`objects/ai/journal/journal_ai.rs`: `record`).
-///
-/// Called by: `panels/views/settings/integrations.rs` (the check).
-/// Calls: `prepare`.
-pub fn check_question(db: &UserDatabase, id: i64) -> Result<Prepared, SettingsError> {
-    let question = Question {
-        integration: id,
-        agent: None,
-        work_unit: None,
-        system: String::new(),
-        messages: vec![Message { speaker: Speaker::User, text: CHECK_QUESTION.to_owned(), time: 0 }],
-    };
-
-    Ok(prepare(db, &question)?)
-}
-
 #[cfg(test)]
 mod tests {
-    //! Tests of the integrations: checked, the first one active, the key
-    //! stored and replaced.
+    //! Tests of the integrations: checked, the first one active.
 
     use super::*;
 
-    use crate::infrastructure::storage::user_database::UserDatabase;
     use crate::objects::ai::integration::integration_model::Protocol;
-    use crate::objects::ai_error::AiError;
     use crate::objects::user::program_data::program_data_store::create_settings;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};
@@ -204,27 +142,14 @@ mod tests {
         let plain = Integration { url: "http://example.com/v1/chat/completions".to_owned(), ..integration() };
         let foreign = Integration { ca_certificate: Some("no PEM".to_owned()), ..integration() };
 
-        assert!(matches!(add_integration(&db, &plain), Err(SettingsError::Ai(AiError::Address(_)))));
-        assert!(matches!(add_integration(&db, &foreign), Err(SettingsError::Ai(AiError::Address(_)))));
+        let refused_address = add_integration(&db, &plain);
+        let refused_certificate = add_integration(&db, &foreign);
+
+        assert!(matches!(refused_address, Err(DomainError::Refused(reason)) if reason.starts_with("the address")));
+        assert!(matches!(refused_certificate, Err(DomainError::Refused(reason)) if reason.contains("CA certificate")));
         assert!(matches!(
             add_integration(&db, &Integration { name: " ".to_owned(), ..integration() }),
-            Err(SettingsError::Refused(_))
+            Err(DomainError::Refused(_))
         ));
-    }
-
-    #[test]
-    fn a_key_is_stored_trimmed_and_replaced_and_never_given_back() {
-        let (_directory, db) = database_with_settings();
-        let id = add_integration(&db, &integration()).unwrap();
-
-        assert!(!has_key(&db, id).unwrap());
-
-        set_key(&db, id, " sk-first\n").unwrap();
-        set_key(&db, id, "sk-second").unwrap();
-
-        assert!(has_key(&db, id).unwrap());
-        assert_eq!(read_api_key(&db, id).unwrap().unwrap().key.as_str(), "sk-second");
-        assert!(matches!(set_key(&db, id, "  "), Err(SettingsError::Refused(_))));
-        assert!(matches!(set_key(&db, id, "sk with space"), Err(SettingsError::Refused(_))));
     }
 }

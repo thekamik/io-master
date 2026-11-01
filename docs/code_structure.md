@@ -22,10 +22,10 @@ io-master/ui/      the page (Svelte 5, TypeScript strict), a separate project
 | `infrastructure::clock`, `::data_folder`, `::security`, `::pdf` | nothing of the program |
 | `infrastructure::storage` | `infrastructure::security` (a new key of a database made of random bytes) |
 | `objects` | `infrastructure`; inside, the roles one way (below) |
-| `objects::ai::integration` | of the other objects only the API key, the model of the journal (`Ending`) and the model of a chat (`Message`, `Speaker`) |
-| `objects::ai::api_key` | the model and the store of the integration it is bound to |
+| `objects::ai::integration` | of the other objects only the API key, the model of the journal (`Ending`), the model of a chat (`Message`, `Speaker`), the settings of the user (the active integration) and the error of the rules |
+| `objects::ai::api_key` | the model and the store of the integration it is bound to, the error of the rules |
 | `panels::session` | `objects::user`, `objects::session`, `infrastructure` |
-| `panels::logic` | every object, but of the AI of the integration only `question.rs`, `sending.rs`, `address.rs`; `infrastructure` |
+| `panels::logic` | every object, but of the AI of the integration only `question.rs`, `sending.rs`, `check.rs`; `infrastructure` |
 | `panels::views` | what `panels::logic` may use, `panels::logic`, `panels::session` |
 
 **The roles of an object go one way** (`the_roles_of_an_object_go_one_way`): a file uses only the roles at or below its own, `model ◄── store ◄── rules ◄── ai`, also between objects; `objects/schema.rs` serves as a store, `objects/error.rs` and `objects/text.rs` as rules, `objects/ai_error.rs` as the AI.
@@ -71,18 +71,22 @@ A big role becomes a folder of the same name (`user_keys_rules/`, `integration_a
 
 **The errors.** `objects/error.rs` (`DomainError`: refused, a document that is no OSCAL catalog, a PDF whose text cannot be read, or a failure of the database) is the error of the rules, which each panel turns into its own error; `objects/ai_error.rs` (`AiError`) the error of every work of the AI; `objects/text.rs` (`checked_text`, `check_length`) the one rule of a text the user gives.
 
-The integration knows of the other objects only the API key (masked in its errors), the model of the journal and the model of a chat; the journal, the agent and the chat ask through it; the panels see of it only `question.rs`, `sending.rs`, `address.rs`, its model and its store, never the connection or a protocol. Their fields read by the journal alone (`Prepared`, `Sent`) are visible only in `objects/ai/` (`pub(in crate::objects::ai)`).
+The integration knows of the other objects only the API key (masked in its errors), the model of the journal and the model of a chat; the journal, the agent and the chat ask through it; the panels see of it its model, its store and its rules, and of its AI only `question.rs`, `sending.rs` and `check.rs`, never the connection or a protocol. An address or a CA certificate is refused by its rules (`DomainError::Refused`, "the address of the integration: ...") both when it is saved and before a question is sent. Their fields read by the journal alone (`Prepared`, `Sent`) are visible only in `objects/ai/` (`pub(in crate::objects::ai)`).
 
 ```text
 objects/
   schema.rs, error.rs, ai_error.rs, text.rs
 objects/ai/
   integration/   integration_model.rs (Integration, Protocol), integration_store.rs,
-                 integration_ai/ (the service that answers):
+                 integration_rules/ address.rs (the address and the CA certificate the program sends to),
+                 settings.rs (checked, add_integration, change_integration, activate_integration: the first one
+                 active),
+                 integration_ai/ (the service that answers): check.rs (check_question: the question that checks
+                 an integration, kept in no journal);
                    question.rs: Question, prepare ──► Prepared (the request, the names for the journal; the size and
                    the number of messages checked)
                    sending.rs:  send ──► Sent (the answer streamed, no database); send_whole (awaited whole)
-                   address.rs (the address and the CA certificate checked), connection.rs (TLS 1.3, no redirect, no
+                   connection.rs (TLS 1.3, the address and the CA certificate checked again, no redirect, no
                    proxy, the stream read, every input bounded); protocol.rs, the one place that chooses the protocol
                    (needs_key, body, key_headers, read_event) ──► openai.rs, anthropic.rs (the body, the key header,
                    one event read); sse.rs (events from pieces of any size), turns.rs (alternating turns starting
@@ -97,7 +101,8 @@ objects/ai/
                  chat_ai.rs (chat_question with the knowledge of its agent, prepared: its oldest messages left out
                  until it fits; add_answer: the answer written into the chat with its mark)
   api_key/       api_key_model.rs (ApiKey), api_key_store.rs (bound to the origin of its integration),
-                 api_key_ai.rs (the key masked in every text taken from an answer)
+                 api_key_rules.rs (set_key: trimmed, a header can carry it; has_key),
+                 api_key_ai.rs (the key masked in every text taken from an answer and in a refusal of a rule)
   journal/       journal_model.rs (JournalEntry, Ending), journal_store.rs,
                  journal_ai.rs (record ──► Answer: the journal of the agent written before the answer is given)
   rag/           rag_model.rs (KnowledgeBase, Source), rag_store.rs,
@@ -169,7 +174,7 @@ Each panel has a folder in `views/`, and in `logic/` when it shows something the
 | `agents` | none: the agent and the knowledge are objects (`objects/ai/agent/`, `objects/ai/rag/`) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `objects/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | none: the chat is an object (`objects/ai/chat/`) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
-| `settings` | `integrations.rs` (an integration checked, its key, the question that checks it; to be brought to the objects, `todo.md`) | `integration_*` |
+| `settings` | none: the integration and its key are objects (`integration_rules/settings.rs`, `api_key_rules.rs`, `integration_ai/check.rs`) | `integration_*` |
 
 A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `capabilities/default.json`; its function on the page is in `ui/src/lib/api/<panel>.ts`, named as the command.
 

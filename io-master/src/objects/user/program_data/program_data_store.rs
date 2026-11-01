@@ -112,7 +112,7 @@ pub fn create_settings(db: &UserDatabase, settings: &Settings) -> Result<(), DbE
 /// Output: the settings (`Settings { active_integration: Some(2) }`);
 /// `DbError::NoRow` when they were never stored.
 ///
-/// Called by: `panels/logic/settings/integrations.rs`: `add_integration`;
+/// Called by: `objects/ai/integration/integration_rules/settings.rs`: `add_integration`;
 /// `panels/views/settings/integrations.rs`: `integration_list`.
 pub fn read_settings(db: &UserDatabase) -> Result<Settings, DbError> {
     let connection = db.connection();
@@ -133,7 +133,7 @@ pub fn read_settings(db: &UserDatabase) -> Result<Settings, DbError> {
 /// Output: nothing; an error when the integration is not stored (foreign
 /// key), or `DbError::NoRow` when the settings were never stored.
 ///
-/// Called by: `panels/logic/settings/integrations.rs`: `add_integration` (the
+/// Called by: `objects/ai/integration/integration_rules/settings.rs`: `add_integration` (the
 /// first integration becomes the default one), `activate_integration`.
 pub fn update_settings(db: &UserDatabase, settings: &Settings) -> Result<(), DbError> {
     let changed = db.connection().execute(

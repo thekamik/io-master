@@ -96,6 +96,7 @@ mod objects {
         pub mod api_key {
             pub mod api_key_ai;
             pub mod api_key_model;
+            pub mod api_key_rules;
             pub mod api_key_store;
         }
         // The chat of the user with an agent: its rules, its question
@@ -113,9 +114,16 @@ mod objects {
         pub mod integration {
             pub mod integration_model;
             pub mod integration_store;
-            pub mod integration_ai {
+            // What an integration must be: the address and the CA
+            // certificate the program sends to, the integrations as the
+            // settings of the AI change them.
+            pub mod integration_rules {
                 pub mod address;
+                pub mod settings;
+            }
+            pub mod integration_ai {
                 pub mod anthropic;
+                pub mod check;
                 pub mod connection;
                 pub mod openai;
                 pub mod protocol;
@@ -257,12 +265,6 @@ mod panels {
         pub mod evaluation {
             pub mod error;
             pub mod inputs;
-        }
-        // panels/logic/settings/: the settings of the AI: the integrations,
-        // their keys and the question that checks them.
-        pub mod settings {
-            pub mod error;
-            pub mod integrations;
         }
     }
     pub mod views {

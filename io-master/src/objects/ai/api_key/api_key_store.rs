@@ -93,7 +93,7 @@ fn write_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
 /// Output: nothing; an error when the integration has a key already, or as
 /// [`write_api_key`].
 ///
-/// Called by: nothing yet (`panels/logic/settings/integrations.rs`:
+/// Called by: nothing yet (`api_key_rules.rs`:
 /// `set_key` gives a key with [`update_api_key`]).
 /// Calls: [`write_api_key`].
 pub fn create_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
@@ -118,7 +118,7 @@ pub fn create_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
 /// changed since the key was given, so that a key is never sent to another
 /// service.
 ///
-/// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`; `panels/logic/settings/integrations.rs`:
+/// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`; `api_key_rules.rs`:
 /// `has_key`.
 /// Calls: [`origin_of`].
 pub fn read_api_key(db: &UserDatabase, integration: i64) -> Result<Option<ApiKey>, DbError> {
@@ -146,7 +146,7 @@ pub fn read_api_key(db: &UserDatabase, integration: i64) -> Result<Option<ApiKey
 ///
 /// Output: nothing; an error as [`write_api_key`].
 ///
-/// Called by: `panels/logic/settings/integrations.rs`: `set_key`.
+/// Called by: `api_key_rules.rs`: `set_key`.
 /// Calls: [`write_api_key`].
 pub fn update_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
     write_api_key(db, key)

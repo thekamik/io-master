@@ -21,11 +21,11 @@ use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::api_key::api_key_store::read_api_key;
 use crate::objects::ai::chat::chat_model::{Message, Speaker};
-use crate::objects::ai::integration::integration_ai::address::check_address;
 use crate::objects::ai::integration::integration_ai::connection::Request;
 use crate::objects::ai::integration::integration_ai::protocol::{body, needs_key};
 use crate::objects::ai::integration::integration_ai::turns::{Turn, turns};
 use crate::objects::ai::integration::integration_model::Integration;
+use crate::objects::ai::integration::integration_rules::address::check_address;
 use crate::objects::ai::integration::integration_store::read_integration;
 use crate::objects::ai_error::AiError;
 
@@ -102,11 +102,11 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 ///
 /// Called by: `objects/ai/chat/chat_ai.rs`: `prepare_shortened`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_assessment`;
-/// `panels/logic/settings/integrations.rs`: `check_question`;
+/// `check.rs`: `check_question`;
 /// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`; under the
 /// lock of the session.
 /// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
-/// `objects/ai/api_key/api_key_store.rs`: `read_api_key`; `address.rs`:
+/// `objects/ai/api_key/api_key_store.rs`: `read_api_key`; `integration_rules/address.rs`:
 /// `check_address`; `turns.rs`: `turns`; [`check_size`];
 /// `protocol.rs`: `needs_key`, `body`; `infrastructure/clock.rs`: `now`.
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {

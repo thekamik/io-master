@@ -17,15 +17,17 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use crate::objects::ai::api_key::api_key_rules::{has_key, set_key};
+use crate::objects::ai::integration::integration_ai::check::check_question;
 use crate::objects::ai::integration::integration_ai::sending::send_whole;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
+use crate::objects::ai::integration::integration_rules::settings::{
+    activate_integration, add_integration, change_integration,
+};
 use crate::objects::ai::integration::integration_store::read_integrations;
 use crate::objects::ai::journal::journal_ai::record;
 use crate::objects::ai::journal::journal_model::Ending;
 use crate::objects::user::program_data::program_data_store::read_settings;
-use crate::panels::logic::settings::integrations::{
-    activate_integration, add_integration, change_integration, check_question, has_key, set_key,
-};
 use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;

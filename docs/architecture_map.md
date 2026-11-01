@@ -59,10 +59,10 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 ### `objects/ai/api_key/api_key_model.rs`: `ApiKey`
 
 - **Stored** (`objects/ai/api_key/api_key_store.rs`): `create_api_key`, `read_api_key`, `update_api_key`
+- **Processed, the rules of the data**:
+  - `objects/ai/api_key/api_key_rules.rs`: `has_key`, `set_key`
 - **Processed, the AI**:
   - `objects/ai/integration/integration_ai/question.rs`: `prepare`
-- **Processed, the panels (`panels/logic/`)**:
-  - `panels/logic/settings/integrations.rs`: `has_key`, `set_key`
 - **Commands** (`panels/views/`):
   - `settings/integrations.rs`: `integration_list`, `integration_set_key`, `integration_check`
 - **Shown** (`ui/src/`):
@@ -84,8 +84,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/ai/integration/integration_ai/turns.rs`: `turns`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`
   - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `question_of`
-- **Processed, the panels (`panels/logic/`)**:
-  - `panels/logic/settings/integrations.rs`: `check_question`
+  - `objects/ai/integration/integration_ai/check.rs`: `check_question`
 - **Commands** (`panels/views/`):
   - `chat/chats.rs`: `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask`
   - `settings/integrations.rs`: `integration_check`
@@ -99,13 +98,13 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Stored** (`objects/ai/integration/integration_store.rs`): `create_integration`, `read_integration`, `read_integrations`, `update_integration`
 - **Processed, the rules of the data**:
   - `objects/ai/agent/agent_rules.rs`: `checked`, `new_agent`
+  - `objects/ai/api_key/api_key_rules.rs`: `set_key`
+  - `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`, `add_integration`, `change_integration`, `checked`
 - **Processed, the AI**:
   - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`
   - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`
   - `objects/ai/integration/integration_ai/question.rs`: `answer_tokens`, `check_size`, `prepare`
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`
-- **Processed, the panels (`panels/logic/`)**:
-  - `panels/logic/settings/integrations.rs`: `activate_integration`, `add_integration`, `change_integration`, `checked`, `set_key`
 - **Commands** (`panels/views/`):
   - `agents/agent.rs`: `agent_list`, `agent_create`, `agent_get`, `agent_save`
   - `evaluation_plan/fill.rs`: `plan_fill_preview`
@@ -332,8 +331,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Stored** (`program_data_store.rs`): `create_installation`, `read_installation`, `create_settings`, `read_settings`, `update_settings`
 - **Processed, the rules of the data**:
   - `objects/user/user_data/user_data_rules.rs`: `install`, `keys_and_database`
-- **Processed, the panels (`panels/logic/`)**:
-  - `panels/logic/settings/integrations.rs`: `activate_integration`, `add_integration`
+  - `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`, `add_integration`
 - **Commands** (`panels/views/`):
   - `program_start/installation.rs`: `installation_create`
   - `settings/integrations.rs`: `integration_list`, `integration_create`, `integration_activate`
