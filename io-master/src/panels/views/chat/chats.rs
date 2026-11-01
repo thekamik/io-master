@@ -26,15 +26,16 @@ use tauri::State;
 use tauri::ipc::Channel;
 use tokio::sync::mpsc;
 
+use crate::ai::models::ai::chat::{add_answer, prepared};
 use crate::ai::models::ai::integration::question::Prepared;
 use crate::ai::models::ai::integration::sending::{Sent, send};
 use crate::ai::models::ai::journal::record;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::chat::{read_chat, read_chats};
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::models::ai::chat::{MAX_QUESTION, add_question, new_chat, rename_chat};
 use crate::model::ai::chat::{Chat, Message, Speaker};
 use crate::model::ai::journal::Ending;
-use crate::panels::logic::chat::chats::{MAX_QUESTION, add_answer, add_question, new_chat, prepared, rename_chat};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;

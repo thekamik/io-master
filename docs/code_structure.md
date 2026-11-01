@@ -74,6 +74,7 @@ The rules of the data (user, 2026-11-01: `data_model.md`, "the rules of the data
 domain/models/ai/
   agent.rs                   new_agent (the default instructions and limits), change_agent; checked (a name,
                              an integration and bases that exist, limits in their ranges, the glossary)
+  chat.rs                    new_chat, rename_chat, checked_question, add_question
   rag.rs                     add_base, change_base; source_text (.txt, .md, .pdf within its limit), add_source,
                              replace_source_text, rename_source; search_base (the test of a base)
 domain/models/evaluation/
@@ -118,7 +119,8 @@ ai/
     journal.rs          JournalEntry: record ──► Answer (the journal of the agent written before the answer is given)
     agent.rs            Agent: the passages of its bases that fit a question (its glossary, its limits);
                         agent_question (its instructions, the task, its knowledge, the messages ──► Question)
-    chat.rs             Chat: a question prepared with its oldest messages left out until it fits
+    chat.rs             Chat: the question of a chat with the knowledge of its agent (chat_question, prepared: its oldest
+                        messages left out until it fits); the answer written into the chat with its mark (add_answer)
   models/evaluation/
     evaluation_plan.rs  EvaluationPlan: the work units to assess (units_ready, the preview) and to fill (fill_units,
                         fill_preview); the loops assess_evaluation and fill_plan, a step per work unit, each written
@@ -154,7 +156,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 | `evaluation_plan` | none: the rules are in `domain/models/evaluation/`, "Fill with AI" in `ai/models/evaluation/` | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | none: the rules of an agent and of the knowledge are in `domain/models/ai/`, its knowledge and its question in `ai/models/ai/agent.rs` | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `domain/models/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
-| `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
+| `chat` | none: the rules of a chat are in `domain/models/ai/chat.rs`, its question and its answer in `ai/models/ai/chat.rs` | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |
 
 A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `capabilities/default.json`; its function on the page is in `ui/src/lib/api/<panel>.ts`, named as the command.

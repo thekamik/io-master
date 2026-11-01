@@ -62,7 +62,19 @@ const ALLOWED: [(&str, &[&str]); 19] = [
     ("ai::models::ai::integration", &["ai::error", "ai::models::ai::api_key", "clock", "db", "model"]),
     ("ai::models::ai::journal", &["ai::error", "ai::models::ai::integration", "db", "model"]),
     ("ai::models::ai::agent", &["ai::error", "ai::models::ai::integration", "db", "model"]),
-    ("ai::models::ai::chat", &["ai::error", "ai::models::ai::integration", "db", "model"]),
+    (
+        "ai::models::ai::chat",
+        &[
+            "ai::error",
+            "ai::models::ai::agent",
+            "ai::models::ai::integration",
+            "ai::models::ai::journal",
+            "clock",
+            "domain",
+            "db",
+            "model",
+        ],
+    ),
     // The locks of the session as a long work takes them.
     ("ai::lock", &["ai::error", "db", "model"]),
     // The AI on a plan: the loops over its work units (evaluation_plan.rs)

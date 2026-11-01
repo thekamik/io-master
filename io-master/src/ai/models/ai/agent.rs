@@ -128,7 +128,7 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
 ///
 /// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `question_of`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`;
-/// `panels/logic/chat/chats.rs`: `chat_question`.
+/// `chat.rs`: `chat_question`.
 /// Calls: `db/models/ai/agent.rs`: `read_agent`; [`agent_knowledge`].
 pub fn agent_question(
     db: &UserDatabase,

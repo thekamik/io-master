@@ -218,16 +218,15 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 ///
 /// Output: the agent; `DbError::NoRow` when there is none.
 ///
-/// Called by: [`read_agents`]; `domain/models/ai/agent.rs`:
-/// `agent_knowledge`, `change_agent`; `panels/logic/chat/chats.rs`:
-/// `chat_question`, `new_chat`; `domain/models/evaluation/evaluation_plan/evaluation.rs`:
-/// `change_agent`, `new_evaluation`; `ai/models/evaluation/work_unit/assessment_question.rs`:
-/// `question_of`; `ai/models/evaluation/evaluation_plan.rs`: `preview`;
-/// `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`; `ai/models/evaluation/work_unit/proposal.rs`: `question_of`;
-/// `domain/models/evaluation/evaluation_plan/planning.rs`: `update_plan`;
-/// `domain/models/evaluation/work_unit/parameters.rs`:
-/// `update_work_unit_parameters`; `panels/views/agents/agent.rs`:
-/// `agent_get`; `panels/views/chat/chats.rs`: `agent_name`;
+/// Called by: [`read_agents`], [`update_agent`]; `ai/models/ai/agent.rs`:
+/// `agent_knowledge`, `agent_question`; `ai/models/evaluation/evaluation_plan.rs`:
+/// `preview`, `fill_preview`; `domain/models/ai/agent.rs`: `checked`,
+/// `change_agent`; `domain/models/ai/chat.rs`: `new_chat`;
+/// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `change_agent`,
+/// `new_evaluation`; `domain/models/evaluation/evaluation_plan/planning.rs`:
+/// `update_plan`; `domain/models/evaluation/work_unit/parameters.rs`:
+/// `update_work_unit_parameters`; `panels/views/agents/agent.rs`: `agent_get`;
+/// `panels/views/chat/chats.rs`: `agent_name`;
 /// `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`.
 /// Calls: [`agent_of`], `lists.rs`: `read_id_list`, [`read_glossary`].
 pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {

@@ -9,7 +9,7 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 ## Models × concerns (user, 2026-11-01)
 
-The whole program is brought, step by step, to the grid of `code_structure.md`, section 1: what `panels/logic/` holds that is no presentation moves into the concern that mirrors `model/` (done: the AI, the panels `evaluation_plan`, `evaluation` and `agents`; next panel by panel: `chat`, `settings`, `program_start`, each step agreed with the user).
+The whole program is brought, step by step, to the grid of `code_structure.md`, section 1: what `panels/logic/` holds that is no presentation moves into the concern that mirrors `model/` (done: the AI, the panels `evaluation_plan`, `evaluation`, `agents` and `chat`; next panel by panel: `settings`, `program_start`, each step agreed with the user).
 
 ## Before the release
 

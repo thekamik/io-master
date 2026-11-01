@@ -100,7 +100,7 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// fits. Refused when there is nothing to ask, the address is not one the
 /// program sends to, or the protocol needs a key the integration has not.
 ///
-/// Called by: `panels/logic/chat/chats.rs`: `prepared`;
+/// Called by: `ai/models/ai/chat.rs`: `prepare_shortened`;
 /// `ai/models/evaluation/work_unit/assessment.rs`: `prepared_assessment`;
 /// `panels/logic/settings/integrations.rs`: `check_question`;
 /// `ai/models/evaluation/work_unit/filling.rs`: `prepared_question`; under the

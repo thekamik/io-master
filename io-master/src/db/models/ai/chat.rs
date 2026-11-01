@@ -112,7 +112,7 @@ fn insert_message(connection: &Connection, chat: i64, message: &Message) -> Resu
 /// when its agent or work unit is not stored (foreign key); nothing is then
 /// written.
 ///
-/// Called by: `panels/logic/chat/chats.rs`: `new_chat`.
+/// Called by: `domain/models/ai/chat.rs`: `new_chat`.
 /// Calls: [`insert_message`].
 pub fn create_chat(db: &UserDatabase, chat: &Chat) -> Result<i64, DbError> {
     ensure!(chat.id == 0, DbError::Inconsistent("a new chat has an id already".to_owned()));
@@ -151,7 +151,8 @@ pub fn create_chat(db: &UserDatabase, chat: &Chat) -> Result<i64, DbError> {
 /// Output: nothing; an error when the message is empty, or as
 /// [`insert_message`].
 ///
-/// Called by: `panels/logic/chat/chats.rs`: `add_question`, `add_answer`.
+/// Called by: `domain/models/ai/chat.rs`: `add_question`; `ai/models/ai/chat.rs`:
+/// `add_answer`.
 /// Calls: [`insert_message`].
 pub fn create_message(db: &UserDatabase, chat: i64, message: &Message) -> Result<(), DbError> {
     ensure!(!message.text.is_empty(), DbError::Inconsistent("an empty message".to_owned()));
@@ -206,8 +207,9 @@ fn chat_of(row: &Row<'_>) -> Result<Chat, DbError> {
 ///
 /// Output: the chat; `DbError::NoRow` when there is none.
 ///
-/// Called by: [`read_chats`]; `panels/logic/chat/chats.rs`: `chat_question`,
-/// `rename_chat`; `panels/views/chat/chats.rs`: `chat_get`.
+/// Called by: [`read_chats`]; `ai/models/ai/chat.rs`: `chat_question`;
+/// `domain/models/ai/chat.rs`: `rename_chat`; `panels/views/chat/chats.rs`:
+/// `chat_get`.
 /// Calls: [`chat_of`], [`read_messages`].
 pub fn read_chat(db: &UserDatabase, id: i64) -> Result<Chat, DbError> {
     let connection = db.connection();
@@ -257,7 +259,7 @@ pub fn read_chats(db: &UserDatabase) -> Result<Vec<Chat>, DbError> {
 /// Output: nothing; an error when its agent or work unit is not stored, or
 /// `DbError::NoRow` when there is no chat `chat.id`.
 ///
-/// Called by: `panels/logic/chat/chats.rs`: `rename_chat`.
+/// Called by: `domain/models/ai/chat.rs`: `rename_chat`.
 pub fn update_chat(db: &UserDatabase, chat: &Chat) -> Result<(), DbError> {
     let changed = db.connection().execute(
         "UPDATE chats SET title = :title, agent = :agent, work_unit = :work_unit WHERE id = :id",

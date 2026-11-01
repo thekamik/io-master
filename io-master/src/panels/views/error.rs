@@ -13,7 +13,6 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use crate::ai::error::AiError;
 use crate::db::error::DbError;
 use crate::domain::error::DomainError;
-use crate::panels::logic::chat::error::ChatError;
 use crate::panels::logic::evaluation::error::EvaluationError;
 use crate::panels::logic::program_start::access::AccountError;
 use crate::panels::logic::settings::error::SettingsError;
@@ -31,8 +30,6 @@ pub enum ViewError {
     NotLoggedIn,
     /// The settings of the AI refused a change, or failed.
     Settings(SettingsError),
-    /// The panel of the chat refused a chat or a question, or failed.
-    Chat(ChatError),
     /// The panel of the evaluation refused a change, or failed.
     Evaluation(EvaluationError),
     /// The way to the AI refused a question before it was sent, or failed
@@ -46,12 +43,6 @@ pub enum ViewError {
     /// What the page sent, or a file the user chose, cannot be taken;
     /// holds the reason.
     Invalid(String),
-}
-
-impl From<ChatError> for ViewError {
-    fn from(error: ChatError) -> ViewError {
-        ViewError::Chat(error)
-    }
 }
 
 impl From<EvaluationError> for ViewError {
@@ -124,25 +115,15 @@ impl ViewError {
                 | AiError::Address(_)
                 | AiError::NoQuestion
                 | AiError::TooLong { .. }
-                | AiError::TooManyMessages { .. },
-            )
-            | ViewError::Chat(
-                ChatError::Refused(_)
-                | ChatError::Ai(
-                    AiError::NoKey
-                    | AiError::Address(_)
-                    | AiError::NoQuestion
-                    | AiError::TooLong { .. }
-                    | AiError::TooManyMessages { .. },
-                )
-                | ChatError::Db(DbError::Inconsistent(_)),
+                | AiError::TooManyMessages { .. }
+                | AiError::Refused(_)
+                | AiError::Domain(DomainError::Refused(_)),
             )
             | ViewError::Evaluation(EvaluationError::Db(DbError::Inconsistent(_)))
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
             | ViewError::Settings(SettingsError::Db(_))
-            | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))
             | ViewError::Evaluation(EvaluationError::Db(_))
             | ViewError::Domain(DomainError::Db(_))
             | ViewError::Ai(_)
@@ -159,7 +140,6 @@ impl ViewError {
             ViewError::Session => "the session of the window failed: start the program again".to_owned(),
             ViewError::NotLoggedIn => "nobody is logged in".to_owned(),
             ViewError::Settings(error) => error.to_string(),
-            ViewError::Chat(error) => error.to_string(),
             ViewError::Evaluation(error) => error.to_string(),
             ViewError::Ai(error) => error.to_string(),
             ViewError::Db(error) => error.to_string(),

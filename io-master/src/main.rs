@@ -131,9 +131,11 @@ mod domain {
     // The one rule of a text the user gives: trimmed, within its limit.
     pub mod text;
     pub mod models {
-        // domain/models/ai/: the rules of an agent and of the knowledge.
+        // domain/models/ai/: the rules of an agent, of a chat and of the
+        // knowledge.
         pub mod ai {
             pub mod agent;
+            pub mod chat;
             pub mod rag;
         }
         // domain/models/evaluation/: the rules of a plan, of its work units
@@ -233,12 +235,6 @@ mod session {
 // gets the open database as a parameter and never reaches the session).
 mod panels {
     pub mod logic {
-        // panels/logic/chat/: the chats with an agent: made and renamed, the
-        // question of the user with the knowledge of the agent, the answer kept.
-        pub mod chat {
-            pub mod chats;
-            pub mod error;
-        }
         // panels/logic/evaluation/: the evaluations: a plan copied for one
         // product with its agent, the documents and proofs given, the
         // results of the evaluator (the assessment by the AI is in

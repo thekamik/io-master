@@ -27,7 +27,8 @@ impl std::error::Error for ClockError {}
 /// before 1970.
 ///
 /// Called by: `ai/models/ai/integration/question.rs`: `prepare`;
-/// `panels/logic/chat/chats.rs`: `add_question`, `add_answer`;
+/// `domain/models/ai/chat.rs`: `add_question`; `ai/models/ai/chat.rs`:
+/// `add_answer`;
 /// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `new_evaluation`;
 /// `panels/logic/program_start/access.rs`: `install`.
 pub fn now() -> Result<i64, ClockError> {
