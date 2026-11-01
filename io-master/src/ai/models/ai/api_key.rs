@@ -36,6 +36,7 @@ pub(in crate::ai::models::ai) fn masked(error: AiError, key: Option<&str>) -> Ai
         other @ (AiError::NoKey
         | AiError::NoQuestion
         | AiError::TooLong { .. }
+        | AiError::TooManyMessages { .. }
         | AiError::Db(_)
         | AiError::Domain(_)) => other,
     }

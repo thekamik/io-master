@@ -7,6 +7,7 @@
 ```text
 io-master/src/
   checks.rs       ensure!, the check with recovery (rule 5), known in the whole program
+  clock.rs        now(): the time of the computer, as every time written into the databases is read
   model/          the data as kept in the databases: structures, fields only (data_model.md)
   security/       random bytes from the kernel; no memory dumps of the process
   pdf/            pdfinfo and pdftotext of Poppler, the PDF on their standard input
@@ -23,12 +24,12 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 
 | Folder | May use |
 |---|---|
-| `model`, `security`, `pdf` | nothing of the program |
+| `model`, `security`, `pdf`, `clock` | nothing of the program |
 | `db` | `model`, `security` (inside: `models/` uses `storage/`; `storage/` uses only `models/schema.rs`) |
 | `domain` | `db`, `model` |
-| `ai` | `domain`, `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
+| `ai` | `clock`, `domain`, `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
 | `session` | `db`, `model` |
-| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `domain`, `db`, `model`, `security`, `pdf` |
+| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `clock`, `domain`, `db`, `model`, `security`, `pdf` |
 | `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `domain`, `db`, `model`, `session` |
 
 `panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only (`evaluation` uses `evaluation_plan` for the order of the work).
@@ -86,11 +87,13 @@ ai/
   error.rs              AiError
   models/ai/
     integration/        Integration, the service that answers
-                        question.rs: Question, prepare ──► Prepared (the integration, its key, the body; the size checked)
+                        question.rs: Question, prepare ──► Prepared (the request, the names for the journal; the size
+                        and the number of messages checked)
                         sending.rs:  send ──► Sent (the answer streamed, no database); send_whole (awaited whole)
                         address.rs (the address and the CA certificate checked), connection.rs (TLS 1.3, no
-                        redirect, no proxy, the stream read, every input bounded), openai.rs, anthropic.rs (the body,
-                        the key header, one event read), sse.rs (events from pieces of any size), turns.rs
+                        redirect, no proxy, the stream read, every input bounded); protocol.rs, the one place that
+                        chooses the protocol (needs_key, body, key_headers, read_event) ──► openai.rs, anthropic.rs
+                        (the body, the key header, one event read); sse.rs (events from pieces of any size), turns.rs
                         (alternating turns starting with the user), reading.rs (the answer read so far)
     api_key.rs          ApiKey: the key masked in every text taken from an answer
     journal.rs          JournalEntry: record ──► Answer (the journal of the agent written before the answer is given)
@@ -112,6 +115,7 @@ ai/
 
 panels ──► agent.rs: agent_question ──► integration/question.rs: prepare ──► integration/sending.rs: send
                                                                    ──► integration/connection.rs ──► the service
+                                                                       (integration/protocol.rs: the protocol chosen)
        ──► journal.rs: record ──► db (the journal of the agent)
 ```
 

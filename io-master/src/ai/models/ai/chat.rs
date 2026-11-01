@@ -50,12 +50,14 @@ pub fn prepare_shortened(db: &UserDatabase, mut question: Question) -> Result<(P
     for _ in 0..=MAX_MESSAGES {
         match prepare(db, &question) {
             Ok(prepared) => return Ok((prepared, all - question.messages.len())),
-            Err(AiError::TooLong { .. }) if question.messages.len() > 1 => leave_oldest_out(&mut question),
+            Err(AiError::TooLong { .. } | AiError::TooManyMessages { .. }) if question.messages.len() > 1 => {
+                leave_oldest_out(&mut question)
+            }
             Err(error) => return Err(error),
         }
     }
 
-    Err(AiError::TooLong { estimated: u64::MAX, room: 0 })
+    Err(AiError::TooManyMessages { count: all, max: MAX_MESSAGES })
 }
 
 #[cfg(test)]

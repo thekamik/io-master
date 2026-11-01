@@ -15,7 +15,7 @@ A file that changes after its approval goes back to "to review", with a note of 
 | `io-master/src/model/` (every file) | 2026-10-31 | But `model/session/progress.rs`, new on 2026-11-01 (agreed field by field in the chat), to review. |
 | `io-master/src/db/error.rs` | 2026-10-31 | |
 | `io-master/src/db/storage/user_database.rs`, `system_database.rs` | 2026-10-31 | `encryption/` apart, reviewed later. |
-| `io-master/src/db/models/` (every file) | 2026-10-31 | |
+| `io-master/src/db/models/` (every file) | 2026-10-31 | Only the comments `Called by:` changed on 2026-11-01, to name the new places of the callers; the change approved. |
 
 ## Reviewed later by decision
 

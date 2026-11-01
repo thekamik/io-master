@@ -7,7 +7,7 @@
 //! Question ──► prepare ──► Prepared ──► sending.rs: send ──► Sent ──► ../journal.rs: record ──► Answer
 //!               ├► read_integration, read_api_key       (the integration and its key)
 //!               ├► check_address, turns, check_size      (refused, never shortened)
-//!               └► openai::body / anthropic::body        (the body of the request)
+//!               └► protocol.rs: body                     (the body of the request)
 //! ```
 //!
 //! The steps are apart because the database is not used while the answer
@@ -15,20 +15,19 @@
 //! database) only for `prepare` and `record`, so that the other commands
 //! of the window are not held up by a long answer.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use zeroize::Zeroizing;
 
 use crate::ai::error::AiError;
 use crate::ai::models::ai::integration::address::check_address;
 use crate::ai::models::ai::integration::connection::Request;
+use crate::ai::models::ai::integration::protocol::{body, needs_key};
 use crate::ai::models::ai::integration::turns::{Turn, turns};
-use crate::ai::models::ai::integration::{anthropic, openai};
+use crate::clock::now;
 use crate::db::models::ai::api_key::read_api_key;
 use crate::db::models::ai::integration::read_integration;
 use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
-use crate::model::ai::integration::{Integration, Protocol};
+use crate::model::ai::integration::Integration;
 
 /// The longest answer asked for, in tokens: a fourth of the context of the
 /// model, at most this.
@@ -60,22 +59,13 @@ pub struct Question {
 /// A question ready to be sent, with what its entry of the journal needs.
 pub struct Prepared {
     pub(in crate::ai::models::ai) request: Request,
-    pub(in crate::ai::models::ai) integration: Integration,
+    /// The name of the integration asked ("Ollama"), for the journal.
+    pub(in crate::ai::models::ai) integration_name: String,
+    /// The model asked, for an answer that does not name its own.
+    pub(in crate::ai::models::ai) model: String,
     pub(in crate::ai::models::ai) agent: Option<i64>,
     pub(in crate::ai::models::ai) work_unit: Option<i64>,
     pub(in crate::ai::models::ai) time: i64,
-}
-
-/// The time now, in seconds since 1970 (UTC).
-///
-/// Called by: [`prepare`].
-fn now() -> Result<i64, AiError> {
-    let seconds = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| AiError::UnexpectedAnswer(format!("the clock: {error}")))?
-        .as_secs();
-
-    i64::try_from(seconds).map_err(|error| AiError::UnexpectedAnswer(format!("the clock: {error}")))
 }
 
 /// The longest answer asked of the integration: a fourth of its context,
@@ -118,9 +108,12 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// Calls: `db/models/ai/integration.rs`: `read_integration`;
 /// `db/models/ai/api_key.rs`: `read_api_key`; `address.rs`:
 /// `check_address`; `turns.rs`: `turns`; [`check_size`];
-/// `openai.rs`: `body`; `anthropic.rs`: `body`.
+/// `protocol.rs`: `needs_key`, `body`; `clock.rs`: `now`.
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
-    ensure!(question.messages.len() <= MAX_MESSAGES, AiError::TooLong { estimated: u64::MAX, room: 0 });
+    ensure!(
+        question.messages.len() <= MAX_MESSAGES,
+        AiError::TooManyMessages { count: question.messages.len(), max: MAX_MESSAGES }
+    );
 
     let turns = turns(&question.messages);
 
@@ -132,24 +125,27 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
 
     let key = read_api_key(db, integration.id)?;
 
-    ensure!(key.is_some() || integration.protocol == Protocol::OpenAiChat, AiError::NoKey);
+    ensure!(key.is_some() || !needs_key(integration.protocol), AiError::NoKey);
     check_size(&integration, &question.system, &turns)?;
 
-    let body = match integration.protocol {
-        Protocol::OpenAiChat => openai::body(&integration.model, &question.system, &turns),
-        Protocol::AnthropicMessages => {
-            anthropic::body(&integration.model, &question.system, &turns, answer_tokens(&integration))
-        }
-    };
+    let time = now().map_err(|error| AiError::Refused(error.to_string()))?;
+    let body = body(integration.protocol, &integration.model, &question.system, &turns, answer_tokens(&integration));
     let request = Request {
-        url: integration.url.clone(),
-        ca_certificate: integration.ca_certificate.clone(),
+        url: integration.url,
+        ca_certificate: integration.ca_certificate,
         protocol: integration.protocol,
         key: key.map(|key| Zeroizing::new(key.key.as_str().to_owned())),
         body: body.to_string(),
     };
 
-    Ok(Prepared { request, integration, agent: question.agent, work_unit: question.work_unit, time: now()? })
+    Ok(Prepared {
+        request,
+        integration_name: integration.name,
+        model: integration.model,
+        agent: question.agent,
+        work_unit: question.work_unit,
+        time,
+    })
 }
 
 #[cfg(test)]
@@ -189,5 +185,12 @@ mod tests {
 
         nothing.messages.push(Message { speaker: Speaker::Ai, text: "an answer".to_owned(), time: 0 });
         assert!(matches!(prepare(&db, &nothing), Err(AiError::NoQuestion)));
+        let mut many = question(id, "x");
+
+        many.messages = vec![Message { speaker: Speaker::User, text: "x".to_owned(), time: 0 }; MAX_MESSAGES + 1];
+        assert!(matches!(
+            prepare(&db, &many),
+            Err(AiError::TooManyMessages { count, max: MAX_MESSAGES }) if count == MAX_MESSAGES + 1
+        ));
     }
 }

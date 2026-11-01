@@ -10,8 +10,7 @@
 //! The plan stays as it was; a blocked plan, or one with a cross reference,
 //! is refused by `db/`.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
+use crate::clock::now;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::evaluation_plan::{create_evaluation, update_evaluation_plan};
 use crate::db::storage::user_database::UserDatabase;
@@ -21,18 +20,6 @@ use crate::panels::logic::evaluation::error::EvaluationError;
 
 /// The longest product, client or evaluator, in characters.
 const MAX_FIELD: usize = 200;
-
-/// The time now, in seconds since 1970 (UTC).
-///
-/// Called by: [`new_evaluation`].
-fn now() -> Result<i64, EvaluationError> {
-    let seconds = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| EvaluationError::Refused(format!("the clock: {error}")))?
-        .as_secs();
-
-    i64::try_from(seconds).map_err(|error| EvaluationError::Refused(format!("the clock: {error}")))
-}
 
 /// The text `text` trimmed; refused when it is empty or over [`MAX_FIELD`].
 ///
@@ -51,7 +38,7 @@ fn checked_field(text: &str, what: &str) -> Result<String, EvaluationError> {
 /// agent of their own; gives its id.
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs` (`evaluation_create`).
-/// Calls: [`checked_field`], `read_agent`, [`now`], `create_evaluation`.
+/// Calls: [`checked_field`], `read_agent`, `clock.rs`: `now`, `create_evaluation`.
 pub fn new_evaluation(
     db: &UserDatabase,
     plan: i64,
@@ -65,7 +52,15 @@ pub fn new_evaluation(
 
     read_agent(db, agent)?;
 
-    Ok(create_evaluation(db, plan, &product, &client, &evaluator, now()?, Some(agent))?)
+    Ok(create_evaluation(
+        db,
+        plan,
+        &product,
+        &client,
+        &evaluator,
+        now().map_err(|error| EvaluationError::Refused(error.to_string()))?,
+        Some(agent),
+    )?)
 }
 
 /// Gives the evaluation `evaluation` the agent `agent` for its work units

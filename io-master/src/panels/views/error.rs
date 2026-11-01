@@ -138,20 +138,36 @@ impl ViewError {
             | ViewError::Settings(
                 SettingsError::Refused(_) | SettingsError::Ai(_) | SettingsError::Db(DbError::Inconsistent(_)),
             )
-            | ViewError::Ai(AiError::NoKey | AiError::Address(_) | AiError::NoQuestion | AiError::TooLong { .. })
+            | ViewError::Ai(
+                AiError::NoKey
+                | AiError::Address(_)
+                | AiError::NoQuestion
+                | AiError::TooLong { .. }
+                | AiError::TooManyMessages { .. },
+            )
             | ViewError::Agent(
                 AgentError::Refused(_) | AgentError::Pdf(_) | AgentError::Db(DbError::Inconsistent(_)),
             )
             | ViewError::Chat(
                 ChatError::Refused(_)
-                | ChatError::Ai(AiError::NoKey | AiError::Address(_) | AiError::NoQuestion | AiError::TooLong { .. })
+                | ChatError::Ai(
+                    AiError::NoKey
+                    | AiError::Address(_)
+                    | AiError::NoQuestion
+                    | AiError::TooLong { .. }
+                    | AiError::TooManyMessages { .. },
+                )
                 | ChatError::Db(DbError::Inconsistent(_)),
             )
             | ViewError::Evaluation(
                 EvaluationError::Refused(_)
                 | EvaluationError::Pdf(_)
                 | EvaluationError::Ai(
-                    AiError::NoKey | AiError::Address(_) | AiError::NoQuestion | AiError::TooLong { .. },
+                    AiError::NoKey
+                    | AiError::Address(_)
+                    | AiError::NoQuestion
+                    | AiError::TooLong { .. }
+                    | AiError::TooManyMessages { .. },
                 )
                 | EvaluationError::Db(DbError::Inconsistent(_))
                 | EvaluationError::Domain(DomainError::Refused(_) | DomainError::Db(DbError::Inconsistent(_))),

@@ -25,12 +25,11 @@
 //! the knowledge or the question; the page is told how many. The chat keeps
 //! them all, and the journal of the agent keeps the question as it was sent.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use crate::ai::models::ai::agent::agent_question;
 use crate::ai::models::ai::chat::prepare_shortened;
 use crate::ai::models::ai::integration::question::{Prepared, Question};
 use crate::ai::models::ai::journal::Answer;
+use crate::clock::now;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::chat::{MAX_MESSAGES, create_chat, create_message, read_chat, update_chat};
 use crate::db::storage::user_database::UserDatabase;
@@ -48,18 +47,6 @@ pub const MAX_QUESTION: usize = 20_000;
 const STOPPED: &str = "[stopped]";
 const CUT: &str = "[cut]";
 const REFUSED: &str = "[refused]";
-
-/// The time now, in seconds since 1970 (UTC).
-///
-/// Called by: [`add_question`], [`add_answer`].
-fn now() -> Result<i64, ChatError> {
-    let seconds = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| ChatError::Refused(format!("the clock: {error}")))?
-        .as_secs();
-
-    i64::try_from(seconds).map_err(|error| ChatError::Refused(format!("the clock: {error}")))
-}
 
 /// The title trimmed; refused when it is empty or over [`MAX_TITLE`].
 ///
@@ -172,9 +159,13 @@ pub fn prepared(db: &UserDatabase, chat: i64, text: &str) -> Result<(Prepared, u
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_ask`, once the question is
 /// prepared).
-/// Calls: [`checked_question`], [`now`], `create_message`.
+/// Calls: [`checked_question`], `clock.rs`: `now`, `create_message`.
 pub fn add_question(db: &UserDatabase, chat: i64, text: &str) -> Result<(), ChatError> {
-    let message = Message { speaker: Speaker::User, text: checked_question(text)?, time: now()? };
+    let message = Message {
+        speaker: Speaker::User,
+        text: checked_question(text)?,
+        time: now().map_err(|error| ChatError::Refused(error.to_string()))?,
+    };
 
     Ok(create_message(db, chat, &message)?)
 }
@@ -206,12 +197,13 @@ fn kept_text(answer: &Answer) -> Option<String> {
 /// [`kept_text`] keeps it; gives the message written, `None` when none was.
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_ask`, after `ai/models/ai/journal.rs`: `record`).
-/// Calls: [`kept_text`], [`now`], `create_message`.
+/// Calls: [`kept_text`], `clock.rs`: `now`, `create_message`.
 pub fn add_answer(db: &UserDatabase, chat: i64, answer: &Answer) -> Result<Option<Message>, ChatError> {
     let Some(text) = kept_text(answer) else {
         return Ok(None);
     };
-    let message = Message { speaker: Speaker::Ai, text, time: now()? };
+    let message =
+        Message { speaker: Speaker::Ai, text, time: now().map_err(|error| ChatError::Refused(error.to_string()))? };
 
     create_message(db, chat, &message)?;
 

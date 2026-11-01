@@ -31,7 +31,7 @@ const VERSION: &str = "2026-10-21";
 /// The body of a question: the instructions in the field `system`, the
 /// turns in `messages`, the answer at most `answer_tokens` long.
 ///
-/// Called by: `question.rs`: `prepare`.
+/// Called by: `protocol.rs`: `body`.
 pub fn body(model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Value {
     let mut messages = Vec::with_capacity(turns.len());
 
@@ -53,7 +53,7 @@ pub fn body(model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Va
 
 /// The headers of the key and of the version of the API.
 ///
-/// Called by: `connection.rs` (the request).
+/// Called by: `protocol.rs`: `key_headers`.
 pub fn key_headers(key: &str) -> [(&'static str, Zeroizing<String>); 2] {
     [("x-api-key", Zeroizing::new(key.to_owned())), ("anthropic-version", Zeroizing::new(VERSION.to_owned()))]
 }
@@ -83,7 +83,7 @@ fn tokens(value: Option<&Value>) -> Option<u32> {
 /// Reads one event of the answer into `reading`; gives the piece of text it
 /// carried, if any. An error the service reports is an error.
 ///
-/// Called by: `connection.rs` (every event of the stream).
+/// Called by: `protocol.rs`: `read_event` (every event of the stream).
 /// Calls: [`ending_of`], [`tokens`].
 pub fn read_event(event: &SseEvent, reading: &mut Reading) -> Result<Option<String>, AiError> {
     let value: Value = serde_json::from_str(&event.data)

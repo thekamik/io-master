@@ -32,6 +32,9 @@ pub enum AiError {
     /// The question does not fit into the context of the model; it is
     /// refused before it is sent, never shortened in silence.
     TooLong { estimated: u64, room: u64 },
+    /// The question has more messages than one question may have; refused
+    /// before its size is estimated.
+    TooManyMessages { count: usize, max: usize },
     /// The service does not accept the API key (HTTP 401 or 403).
     KeyRejected(String),
     /// The service has no such endpoint or model (HTTP 404).
@@ -73,6 +76,9 @@ impl fmt::Display for AiError {
                 formatter,
                 "the question has about {estimated} tokens and the model takes {room} besides its answer"
             ),
+            AiError::TooManyMessages { count, max } => {
+                write!(formatter, "the question has {count} messages and one question takes at most {max}")
+            }
             AiError::KeyRejected(message) => write!(formatter, "the AI service does not accept the API key: {message}"),
             AiError::NotFound(message) => write!(formatter, "the AI service has no such endpoint or model: {message}"),
             AiError::LimitReached(message) => {

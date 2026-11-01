@@ -14,6 +14,10 @@
 #[macro_use]
 mod checks;
 
+// The time of the computer, as every time written into the databases is
+// read (clock.rs), below every folder.
+mod clock;
+
 // ── The map of the program ──────────────────────────────────────────
 // Every folder of the program, in the order of its layers from the bottom
 // up: a folder uses only the folders above it in this list
@@ -157,12 +161,13 @@ mod ai {
             // ai/models/ai/integration/: the integration, the service that
             // answers: the question prepared and sent, the address checked,
             // the connection over TLS 1.3, the body and the stream of each
-            // protocol.
+            // protocol, chosen in one place (protocol.rs).
             pub mod integration {
                 pub mod address;
                 pub mod anthropic;
                 pub mod connection;
                 pub mod openai;
+                pub mod protocol;
                 pub mod question;
                 pub mod reading;
                 pub mod sending;

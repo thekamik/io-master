@@ -18,7 +18,7 @@
 //!        db/        (create, read and update of the models; the database files)
 //!         │
 //!         ▼
-//!   model/, security/, pdf/     (nothing of the program)
+//!   model/, security/, pdf/, clock.rs     (nothing of the program)
 //! ```
 //!
 //! **The program is being rebuilt (2026-10-28)**: the folders above `db/`
@@ -42,8 +42,10 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 18] = [
+const ALLOWED: [(&str, &[&str]); 19] = [
     ("model", &[]),
+    // The time of the computer: nothing of the program.
+    ("clock", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
@@ -55,9 +57,9 @@ const ALLOWED: [(&str, &[&str]); 18] = [
     // integration (the service, its connection) knows of the other models
     // only the API key, masked in its errors; the journal, the agent and the
     // chat ask through the integration.
-    ("ai", &["domain", "db", "model"]),
+    ("ai", &["clock", "domain", "db", "model"]),
     ("ai::models::ai::api_key", &["ai::error", "model"]),
-    ("ai::models::ai::integration", &["ai::error", "ai::models::ai::api_key", "db", "model"]),
+    ("ai::models::ai::integration", &["ai::error", "ai::models::ai::api_key", "clock", "db", "model"]),
     ("ai::models::ai::journal", &["ai::error", "ai::models::ai::integration", "db", "model"]),
     ("ai::models::ai::agent", &["ai::error", "ai::models::ai::integration", "db", "model"]),
     ("ai::models::ai::chat", &["ai::error", "ai::models::ai::integration", "db", "model"]),
@@ -90,6 +92,7 @@ const ALLOWED: [(&str, &[&str]); 18] = [
             SENDING,
             ADDRESS,
             ASSESSMENT_ANSWER,
+            "clock",
             "domain",
             "db",
             "model",

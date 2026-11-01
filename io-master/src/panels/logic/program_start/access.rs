@@ -27,8 +27,8 @@ use std::fmt;
 use std::fs::{self, DirBuilder};
 use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::clock::now;
 use crate::db::error::DbError;
 use crate::db::models::user::program_data::{create_installation, create_settings};
 use crate::db::models::user::user_data::{create_user, read_users};
@@ -123,25 +123,14 @@ fn binding(user: i64) -> Vec<u8> {
     format!("io-master user {user}").into_bytes()
 }
 
-/// The time now, in seconds since 1970 (UTC).
-///
-/// Called by: [`install`].
-fn now() -> Result<i64, AccountError> {
-    let seconds = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_err(|error| AccountError::Key(format!("the clock: {error}")))?
-        .as_secs();
-
-    i64::try_from(seconds).map_err(|error| AccountError::Key(format!("the clock: {error}")))
-}
-
 /// Writes the installation, the user and the two copies of the key into
 /// the new system database, and makes the database of the user. Gives the
 /// id of the user (also when it fails after the user was written, so that
 /// its database file can be removed), and the result.
 ///
 /// Called by: [`create_account`].
-/// Calls: `create_installation`, `create_user`, `generate_database_key`,
+/// Calls: `security/random.rs`: `fill_random`; `clock.rs`: `now`;
+/// `create_installation`, `create_user`, `generate_database_key`,
 /// `keys::wrap`, `recovery::new_code`, `recovery::wrap`, `create_user_keys`,
 /// `user_database::create`, `create_settings`.
 fn install(
@@ -158,7 +147,7 @@ fn install(
 
     let created = match now() {
         Ok(created) => created,
-        Err(error) => return (None, Err(error)),
+        Err(error) => return (None, Err(AccountError::Key(error.to_string()))),
     };
 
     if let Err(error) = create_installation(system, &Installation { id, created }) {

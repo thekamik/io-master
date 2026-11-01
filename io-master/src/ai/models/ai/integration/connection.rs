@@ -19,7 +19,7 @@
 //!
 //! ```text
 //! send ──► exchange ──► http_client, the POST ──► an answer that is no success ──► read_error ──► AiError
-//!                                              └► read_stream ──► SseDecoder ──► read_event (openai.rs, anthropic.rs)
+//!                                              └► read_stream ──► SseDecoder ──► protocol.rs: read_event
 //!                                                                                  └► the pieces, into the channel
 //! ```
 
@@ -35,9 +35,9 @@ use zeroize::Zeroizing;
 use crate::ai::error::{AiError, from_status};
 use crate::ai::models::ai::api_key::masked;
 use crate::ai::models::ai::integration::address::{certificates, check_address};
+use crate::ai::models::ai::integration::protocol::{key_headers, read_event};
 use crate::ai::models::ai::integration::reading::Reading;
-use crate::ai::models::ai::integration::sse::{SseDecoder, SseEvent};
-use crate::ai::models::ai::integration::{anthropic, openai};
+use crate::ai::models::ai::integration::sse::SseDecoder;
 use crate::model::ai::integration::Protocol;
 
 /// How long a connection may take to open.
@@ -177,16 +177,9 @@ fn http_client(request: &Request) -> Result<Client, AiError> {
 /// stays out of any debug output of the library) and its body.
 ///
 /// Called by: [`exchange`].
+/// Calls: `protocol.rs`: `key_headers`.
 async fn post(client: &Client, request: &Request) -> Result<Response, AiError> {
-    let mut headers: Vec<(&'static str, Zeroizing<String>)> = Vec::with_capacity(2);
-
-    match (request.protocol, request.key.as_deref()) {
-        (Protocol::OpenAiChat, Some(key)) => headers.push(openai::key_header(key)),
-        (Protocol::OpenAiChat, None) => {}
-        (Protocol::AnthropicMessages, Some(key)) => headers.extend(anthropic::key_headers(key)),
-        (Protocol::AnthropicMessages, None) => return Err(AiError::NoKey),
-    }
-
+    let headers = key_headers(request.protocol, request.key.as_deref().map(String::as_str))?;
     let mut builder = client.post(&request.url).header("content-type", "application/json");
 
     for (name, value) in &headers {
@@ -200,20 +193,10 @@ async fn post(client: &Client, request: &Request) -> Result<Response, AiError> {
     builder.body(request.body.clone()).send().await.map_err(|error| AiError::NoConnection(explain(&error)))
 }
 
-/// Reads one event of the answer with the reader of its protocol.
-///
-/// Called by: [`read_stream`].
-fn read_event(protocol: Protocol, event: &SseEvent, reading: &mut Reading) -> Result<Option<String>, AiError> {
-    match protocol {
-        Protocol::OpenAiChat => openai::read_event(event, reading),
-        Protocol::AnthropicMessages => anthropic::read_event(event, reading),
-    }
-}
-
 /// Reads a streamed answer up to its end, passing each piece of text on.
 ///
 /// Called by: [`exchange`].
-/// Calls: `SseDecoder::push`, [`read_event`].
+/// Calls: `SseDecoder::push`; `protocol.rs`: `read_event`.
 async fn read_stream(
     response: &mut Response,
     protocol: Protocol,

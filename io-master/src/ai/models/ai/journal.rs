@@ -56,7 +56,7 @@ fn write_entry(db: &UserDatabase, prepared: Prepared, agent: i64, answer: &Answe
     let entry = JournalEntry {
         id: 0,
         time: prepared.time,
-        integration: prepared.integration.name,
+        integration: prepared.integration_name,
         model: answer.model.clone(),
         agent,
         work_unit: prepared.work_unit,
@@ -89,7 +89,7 @@ pub fn record(db: &UserDatabase, prepared: Prepared, sent: Sent) -> Result<Answe
     let mut answer = Answer {
         journal: None,
         text: reading.text,
-        model: reading.model.unwrap_or_else(|| prepared.integration.model.clone()),
+        model: reading.model.unwrap_or_else(|| prepared.model.clone()),
         ending,
         error: received.error,
         input_tokens: reading.input_tokens,

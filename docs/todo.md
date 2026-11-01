@@ -11,12 +11,6 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 The whole program is brought, step by step, to the grid of `code_structure.md`, section 1: what `panels/logic/` holds that is no presentation moves into the concern that mirrors `model/` (the AI first, below; then the rest of `panels/logic/`, panel by panel, each step agreed with the user).
 
-## The AI in the mirror of the models (user, 2026-11-01)
-
-`ai/models/` mirrors `model/`; the steps agreed, in this order, each with its commit:
-
-- One place that chooses the protocol of an integration (today the body, the key header and the reading of an event each choose it); `now()` written once; a question of too many messages refused with an error of its own, not `TooLong`; `Prepared` without a copy of the whole integration.
-
 ## Before the release
 
 - The review of the code by the user, file by file (`review.md`); the functional hardening: a limit of failed logins, a full disk, a damaged database, the limits of the inputs measured on real documents.
