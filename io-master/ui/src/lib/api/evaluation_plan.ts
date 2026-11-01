@@ -3,7 +3,9 @@
 // `plan_get`. The types mirror the views of those files; a change there
 // needs the same change here.
 
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
+
+import type { ProgressView } from "./progress";
 
 /** A standard (standards.rs, StandardView). */
 export interface StandardView {
@@ -181,22 +183,6 @@ export function workUnitAddProof(plan: number, unit: number, name: string): Prom
   return invoke("work_unit_add_proof", { plan, unit, name });
 }
 
-/** One step of "Fill with AI" (fill.rs, FillStepView). */
-export interface FillStepView {
-  number: number;
-  total: number;
-  label: string;
-  filled: boolean;
-  notes: string[];
-}
-
-/** How "Fill with AI" ended (fill.rs, FillSummaryView). */
-export interface FillSummaryView {
-  filled: number;
-  failed: number;
-  stopped: boolean;
-}
-
 /** What a filling would ask, counted now (fill.rs, FillPreviewView). */
 export interface FillPreviewView {
   questions: number;
@@ -213,18 +199,16 @@ export function planFillPreview(plan: number): Promise<FillPreviewView> {
 export type FillTask = "parameters" | "dependencies";
 
 /** Fills every work unit of a plan with the agent of its planner: every
- * parameter but the dependencies, or the dependencies only; `onstep` gets
- * each step as it ends. Called by PlanFill.svelte. */
-export function planFill(
-  task: FillTask,
-  plan: number,
-  onstep: (step: FillStepView) => void,
-): Promise<FillSummaryView> {
-  const onStep = new Channel<FillStepView>();
+ * parameter but the dependencies, or the dependencies only; ends when the
+ * filling ends. Its steps are read with planFillProgress. Called by PlanFill.svelte. */
+export function planFill(task: FillTask, plan: number): Promise<void> {
+  return invoke(task === "parameters" ? "plan_fill_parameters" : "plan_fill_dependencies", { plan });
+}
 
-  onStep.onmessage = onstep;
-
-  return invoke(task === "parameters" ? "plan_fill_parameters" : "plan_fill_dependencies", { plan, onStep });
+/** The progress of the last filling of a plan; null when there was none
+ * since the start of the program. Called by PlanFill.svelte. */
+export function planFillProgress(plan: number): Promise<ProgressView | null> {
+  return invoke("plan_fill_progress", { plan });
 }
 
 /** Asks the filling to stop after its present work unit. Called by PlanFill.svelte. */

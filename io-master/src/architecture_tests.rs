@@ -39,7 +39,7 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 13] = [
+const ALLOWED: [(&str, &[&str]); 14] = [
     ("model", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
@@ -56,6 +56,8 @@ const ALLOWED: [(&str, &[&str]); 13] = [
     ("ai::models::ai::journal", &["ai::error", "ai::models::ai::integration", "db", "model"]),
     ("ai::models::ai::agent", &["ai::error", "ai::models::ai::integration", "db", "model"]),
     ("ai::models::ai::chat", &["ai::error", "ai::models::ai::integration", "db", "model"]),
+    // The progress of a long work: a helper model, no database.
+    ("ai::models::session::progress", &["model"]),
     // The work behind the panels, one folder per panel; a panel may use
     // another (in one direction: evaluation uses evaluation_plan, never the
     // other way). It gets the open database as a parameter and never reaches
@@ -67,7 +69,10 @@ const ALLOWED: [(&str, &[&str]); 13] = [
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
     // The commands of the page: they do their work with the folders below.
-    ("panels::views", &["panels::logic", AI_ERROR, AGENT, CHAT, JOURNAL, QUESTION, SENDING, "db", "model", "session"]),
+    (
+        "panels::views",
+        &["panels::logic", AI_ERROR, AGENT, CHAT, JOURNAL, QUESTION, SENDING, PROGRESS, "db", "model", "session"],
+    ),
 ];
 
 /// The parts of `ai/` the panels may use, named once for both layers.
@@ -78,6 +83,7 @@ const JOURNAL: &str = "ai::models::ai::journal";
 const QUESTION: &str = "ai::models::ai::integration::question";
 const SENDING: &str = "ai::models::ai::integration::sending";
 const ADDRESS: &str = "ai::models::ai::integration::address";
+const PROGRESS: &str = "ai::models::session::progress";
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:
 /// names joined by `::`, a list in braces cut off).

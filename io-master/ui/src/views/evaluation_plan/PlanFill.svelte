@@ -6,8 +6,10 @@
   order, over what was there; two buttons, two tasks (user, 2026-10-29):
   the parameters, then the dependencies, when every work unit is described.
   A dependency that closes a cycle is written and its work units turn red in
-  the list: the planner decides. Each step is shown as it ends; "Stop" ends
-  the filling after its present work unit. Before a filling starts, the
+  the list: the planner decides. The progress is asked for while the
+  filling runs, and when the editor is opened again (plan_fill_progress), so
+  that a filling that runs shows its bar after the planner left the panel
+  (user, 2026-11-01); "Stop" ends the filling after its present work unit. Before a filling starts, the
   planner confirms it: how many questions go to which integration, counted
   by the program when the button is pressed (plan_fill_preview). Tells the
   editor after the
@@ -18,29 +20,60 @@
   import {
     planFill,
     planFillPreview,
+    planFillProgress,
     planFillStop,
     type FillPreviewView,
-    type FillStepView,
-    type FillSummaryView,
     type FillTask,
     type PlanView,
   } from "../../lib/api/evaluation_plan";
+  import { PROGRESS_INTERVAL, type ProgressView } from "../../lib/api/progress";
 
   let { plan, view, onchanged }: { plan: number; view: PlanView | null; onchanged: () => void } = $props();
 
-  /** The most steps kept on the page: the newest. */
-  const SHOWN = 200;
-
-  let running: FillTask | null = $state(null);
+  /** The task started from this page while its command runs; null otherwise. */
+  let started: FillTask | null = $state(null);
   /** The task the planner is asked to confirm, and what it would ask. */
   let asked: { task: FillTask; preview: FillPreviewView } | null = $state(null);
-  let stopping = $state(false);
-  let last: FillStepView | null = $state(null);
-  let steps: FillStepView[] = $state([]);
-  let summary: FillSummaryView | null = $state(null);
+  /** The progress of the last filling of this plan; null when there was none. */
+  let progress = $state<ProgressView | null>(null);
   let problem = $state("");
 
   let agent = $derived(view?.agents.find((one) => one.id === view?.aiAgent)?.name ?? null);
+  let running = $derived(started !== null || (progress?.running ?? false));
+  let gone = $derived(progress === null ? 0 : progress.assessed + progress.failed);
+
+  /** Reads the progress; tells the editor when a filling has just ended. */
+  async function refresh() {
+    try {
+      const next = await planFillProgress(plan);
+
+      // Read after the await, so that the effect that calls refresh does
+      // not depend on the progress it writes.
+      if (progress?.running && !next?.running) {
+        onchanged();
+      }
+
+      progress = next;
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
+
+  // The progress when the editor is shown, or shows another plan.
+  $effect(() => {
+    void refresh();
+  });
+
+  // While a filling runs, its progress is asked for again and again.
+  $effect(() => {
+    if (!running) {
+      return;
+    }
+
+    const timer = setInterval(() => void refresh(), PROGRESS_INTERVAL);
+
+    return () => clearInterval(timer);
+  });
 
   /** Counts what the task would ask, now, and asks the planner to confirm. */
   async function confirm(task: FillTask) {
@@ -57,33 +90,23 @@
   async function fill(task: FillTask) {
     asked = null;
     problem = "";
-    summary = null;
-    steps = [];
-    last = null;
-    running = task;
-    stopping = false;
+    started = task;
 
     try {
-      summary = await planFill(task, plan, (step) => {
-        last = step;
-
-        if (!step.filled || step.notes.length > 0) {
-          steps = [step, ...steps].slice(0, SHOWN);
-        }
-      });
+      await planFill(task, plan);
     } catch (error) {
       problem = sentence(error);
     } finally {
-      running = null;
+      started = null;
+      await refresh();
       onchanged();
     }
   }
 
   async function stop() {
-    stopping = true;
-
     try {
       await planFillStop();
+      await refresh();
     } catch (error) {
       problem = sentence(error);
     }
@@ -101,14 +124,16 @@
       dependency that closes a cycle turns its work units red: correct them in their editor.
     </p>
     <p class="buttons">
-      <button type="button" disabled={running !== null} onclick={() => confirm("parameters")}>
-        {running === "parameters" ? "Filling the parameters…" : "Fill parameters"}
+      <button type="button" disabled={running} onclick={() => confirm("parameters")}>
+        {started === "parameters" ? "Filling the parameters…" : "Fill parameters"}
       </button>
-      <button type="button" disabled={running !== null} onclick={() => confirm("dependencies")}>
-        {running === "dependencies" ? "Filling the dependencies…" : "Fill dependencies"}
+      <button type="button" disabled={running} onclick={() => confirm("dependencies")}>
+        {started === "dependencies" ? "Filling the dependencies…" : "Fill dependencies"}
       </button>
-      {#if running !== null}
-        <button type="button" class="ghost" disabled={stopping} onclick={stop}>{stopping ? "Stopping…" : "Stop"}</button>
+      {#if running}
+        <button type="button" class="ghost" disabled={progress?.stopping} onclick={stop}>
+          {progress?.stopping ? "Stopping…" : "Stop"}
+        </button>
       {/if}
     </p>
   {/if}
@@ -127,23 +152,24 @@
     </div>
   {/if}
 
-  {#if last}
+  {#if progress !== null && running}
     <p>
-      {last.number} of {last.total}: {last.label}
-      <progress max={last.total} value={last.number}></progress>
+      {#if progress.label}{gone} of {progress.total}: {progress.label}{:else}The filling begins…{/if}
+      <progress max={progress.total} value={gone}></progress>
     </p>
-  {/if}
-  {#if summary}
-    <p class={summary.failed > 0 ? "problem" : "done"}>
-      {summary.filled} filled, {summary.failed} not filled{summary.stopped ? ", stopped" : ""}.
+  {:else if progress !== null}
+    <p class={progress.failed > 0 ? "problem" : "done"}>
+      {progress.assessed} filled, {progress.failed} not filled{progress.stopping && gone < progress.total
+        ? ", stopped"
+        : ""}.
     </p>
   {/if}
   {#if problem}<p class="problem">{problem}</p>{/if}
 
-  {#each steps as step (step.number)}
+  {#each progress?.problems ?? [] as one, index (index)}
     <div class="step">
-      <span class="badge" class:danger={!step.filled} class:warning={step.filled}>{step.label}</span>
-      {step.notes.join("; ")}
+      <span class="badge warning">{one.label}</span>
+      {one.notes.join("; ")}
     </div>
   {/each}
 </section>

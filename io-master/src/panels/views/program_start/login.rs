@@ -30,11 +30,11 @@ pub struct ProgramView {
 /// logged in.
 ///
 /// Called by: `App.svelte`, when the window opens and after every change.
-/// Calls: `program_start::access::installed_user`, `Session::lock`.
+/// Calls: `program_start::access::installed_user`, `Session::user_name`.
 #[tauri::command]
 pub fn login_get(session: State<'_, Session>) -> Result<ProgramView, ViewError> {
     let installed = installed_user(session.data_folder())?.is_some();
-    let logged_in = session.lock()?.as_ref().map(|opened| opened.user.name.clone());
+    let logged_in = session.user_name()?;
 
     Ok(ProgramView { installed, logged_in })
 }

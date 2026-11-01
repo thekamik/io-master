@@ -1,16 +1,18 @@
 //! The assessment of an evaluation by the AI, as the page calls it (user,
 //! 2026-10-30): every work unit in the order of the work, one after the
-//! other, without the evaluator. The page sees each step as it ends and may
-//! stop the assessment.
+//! other, without the evaluator. Each step is written into the progress of
+//! the session, which the page asks for (`evaluation_assess_progress`), also
+//! when the panel is opened again; the evaluator may stop the assessment.
 //!
 //! ```text
 //! EvaluationUnits.svelte ──evaluation_assess_preview(id, again)─► preview ──► AssessPreviewView
-//!                        ──evaluation_assess(id, again, on_step)─► preview (refused while an input is missing),
+//!                        ──evaluation_assess(id, again)─► preview (refused while an input is missing),
 //!                            then for each work unit:
 //!                            (the lock of the session held)  prepared_assessment
 //!                            (released)                      sending::send_whole
 //!                            (held)                          journal::record (the journal of the agent), assessed
-//!                            ──on_step──► AssessStepView
+//!                            ──record_step──► the progress (the work unit, its verdict, the notes)
+//!                        ──evaluation_assess_progress(id)────► progress_of ──► ProgressView
 //!                        ──evaluation_assess_stop()──────────► the assessment ends after its present work unit
 //! ```
 //!
@@ -20,16 +22,17 @@
 
 use serde::Serialize;
 use tauri::State;
-use tauri::ipc::Channel;
 
 use crate::ai::models::ai::integration::question::Prepared;
 use crate::ai::models::ai::integration::sending::{Sent, send_whole};
 use crate::ai::models::ai::journal::record;
+use crate::ai::models::session::progress::record_step;
 use crate::db::models::evaluation::work_unit::read_work_unit;
-use crate::panels::logic::evaluation::question::verdict_name;
+use crate::model::evaluation::work_unit::Verdict;
 use crate::panels::logic::evaluation::run::{Preview, assessed, prepared_assessment, preview};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
+use crate::panels::views::progress::{ProgressView, progress_of};
 use crate::session::state::Session;
 
 /// A name and how many questions or work units it counts.
@@ -47,30 +50,6 @@ pub struct AssessPreviewView {
     /// The documents and proofs needed and not given: the assessment does
     /// not start while there is one.
     missing: Vec<CountView>,
-}
-
-/// One step of an assessment, as the page shows it.
-#[derive(Serialize)]
-pub struct AssessStepView {
-    /// The place of the work unit in the assessment, from 1, and how many
-    /// there are.
-    number: usize,
-    total: usize,
-    label: String,
-    /// "pass", "fail", "inconclusive"; `None` when it was not assessed, and
-    /// `notes` tell why.
-    verdict: Option<&'static str>,
-    /// What was not taken from the answer, or why it was not assessed.
-    notes: Vec<String>,
-}
-
-/// How an assessment ended.
-#[derive(Serialize)]
-pub struct AssessSummaryView {
-    assessed: usize,
-    failed: usize,
-    /// The user stopped it before its end.
-    stopped: bool,
 }
 
 /// The counts of `counted` as the page shows them.
@@ -141,7 +120,7 @@ fn written(
     step: (i64, i64),
     prepared: Prepared,
     sent: Sent,
-) -> Result<(Option<&'static str>, Vec<String>), ViewError> {
+) -> Result<(Option<Verdict>, Vec<String>), ViewError> {
     let (evaluation, unit) = step;
     let opened = session.lock()?;
     let db = database(&opened)?;
@@ -152,7 +131,7 @@ fn written(
     }
 
     Ok(match assessed(db, evaluation, unit, &answer.text) {
-        Ok(notes) => (read_work_unit(db, unit)?.verdict.map(verdict_name), notes),
+        Ok(notes) => (read_work_unit(db, unit)?.verdict, notes),
         Err(error) => (None, vec![error.to_string()]),
     })
 }
@@ -166,7 +145,7 @@ async fn assess_step(
     session: &Session,
     evaluation: i64,
     unit: i64,
-) -> Result<(String, Option<&'static str>, Vec<String>), ViewError> {
+) -> Result<(String, Option<Verdict>, Vec<String>), ViewError> {
     let (label, prepared) = prepared_question(session, evaluation, unit)?;
     let prepared = match prepared {
         Ok(prepared) => prepared,
@@ -201,45 +180,43 @@ fn units_ready(session: &Session, evaluation: i64, again: bool) -> Result<Vec<i6
 }
 
 /// Assesses every work unit to assess of the evaluation `id` in the order of
-/// the work, telling the page each step through `on_step`; with `again` the
-/// work units of the AI assessed already too. Refused while another work of
-/// the AI runs, or an input is missing.
+/// the work, writing each step into the progress of the session; with
+/// `again` the work units of the AI assessed already too. Refused while
+/// another work of the AI runs, or an input is missing.
 ///
-/// Called by: `EvaluationUnits.svelte`, "Assess with AI", "Assess again".
-/// Calls: `Session::begin_work`, [`units_ready`], [`assess_step`].
+/// Called by: `EvaluationRun.svelte`, "Start".
+/// Calls: [`units_ready`], `Session::begin_work`, [`assess_step`],
+/// `ai/models/session/progress.rs`: `record_step`.
 #[tauri::command]
-pub async fn evaluation_assess(
-    session: State<'_, Session>,
-    id: i64,
-    again: bool,
-    on_step: Channel<AssessStepView>,
-) -> Result<AssessSummaryView, ViewError> {
-    let Some(_work) = session.begin_work() else {
+pub async fn evaluation_assess(session: State<'_, Session>, id: i64, again: bool) -> Result<(), ViewError> {
+    let units = units_ready(&session, id, again)?;
+    let Some(_work) = session.begin_work(Some(id), units.len())? else {
         return Err(ViewError::Invalid("another work of the AI runs: wait for it or stop it".to_owned()));
     };
-    let units = units_ready(&session, id, again)?;
-    let mut summary = AssessSummaryView { assessed: 0, failed: 0, stopped: false };
 
-    for (index, unit) in units.iter().enumerate() {
-        if session.stop_requested() {
-            summary.stopped = true;
+    for unit in &units {
+        if session.stop_requested()? {
             break;
         }
 
         let (label, verdict, notes) = assess_step(&session, id, *unit).await?;
 
-        if verdict.is_some() {
-            summary.assessed += 1;
-        } else {
-            summary.failed += 1;
-        }
-
-        on_step
-            .send(AssessStepView { number: index + 1, total: units.len(), label, verdict, notes })
-            .map_err(|error| ViewError::Invalid(format!("the page does not listen: {error}")))?;
+        record_step(&mut *session.progress()?, label, verdict.is_some(), verdict, notes);
     }
 
-    Ok(summary)
+    Ok(())
+}
+
+/// The progress of the last assessment of the evaluation `id`: while it
+/// runs, and its summary once it ended; `None` when there was none since
+/// the start of the program.
+///
+/// Called by: `EvaluationRun.svelte`, while an assessment runs and when it
+/// is shown.
+/// Calls: `progress.rs`: `progress_of`.
+#[tauri::command]
+pub fn evaluation_assess_progress(session: State<'_, Session>, id: i64) -> Result<Option<ProgressView>, ViewError> {
+    progress_of(&session, id)
 }
 
 /// Asks the assessment that runs to stop after its present work unit.
@@ -247,6 +224,6 @@ pub async fn evaluation_assess(
 /// Called by: `EvaluationUnits.svelte`, "Stop".
 /// Calls: `Session::request_stop`.
 #[tauri::command]
-pub fn evaluation_assess_stop(session: State<'_, Session>) {
-    session.request_stop();
+pub fn evaluation_assess_stop(session: State<'_, Session>) -> Result<(), ViewError> {
+    Ok(session.request_stop()?)
 }

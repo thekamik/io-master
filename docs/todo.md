@@ -4,7 +4,7 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 ## The rebuild: the parts to come back
 
-- **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then); the report itself; an assessment that keeps running when the evaluator leaves the evaluation on the page (today the page loses its progress, the work goes on).
+- **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then); the report itself.
 - **The login with the recovery code**, the change of the password and a new recovery code.
 
 ## Models × concerns (user, 2026-11-01)
@@ -15,8 +15,7 @@ The whole program is brought, step by step, to the grid of `code_structure.md`, 
 
 `ai/models/` mirrors `model/`; the steps agreed, in this order, each with its commit:
 
-- **`model/session/progress.rs`**: `Progress`, the state of a long work of the AI shared by the program and the page: whether it runs, whether it was asked to stop, how many done of how many, the work unit now; whether the running work is an assessment of an evaluation (the panel then shows its bar when it is opened again). **A helper model, never kept in a database**: no table, no create, read or update, said so at its head. The session holds it in place of its flags `working` and `stop`; the page asks for it (`ai_work_progress`) instead of a channel of steps. The open database of the user behind its lock becomes a type of `db/storage/` (`SharedDatabase`), so that a loop of `ai/` takes it for its short steps and releases it while the AI answers.
-- **`ai/models/evaluation/`**: `evaluation_plan.rs` the loops (the assessment of an evaluation, "Fill with AI"), over the work units of the plan in the order of the work; `work_unit.rs` the work on one work unit (`assess_work_unit`: the question, the answer read, the quotes checked, the verdict with the dependencies; the parameters and the dependencies proposed).
+- **`ai/models/evaluation/`**: `evaluation_plan.rs` the loops (given the lock of the open database, `&Mutex<Option<UserDatabase>>`, and of the progress, `&Mutex<Progress>`, of the session) (the assessment of an evaluation, "Fill with AI"), over the work units of the plan in the order of the work; `work_unit.rs` the work on one work unit (`assess_work_unit`: the question, the answer read, the quotes checked, the verdict with the dependencies; the parameters and the dependencies proposed).
 - One place that chooses the protocol of an integration (today the body, the key header and the reading of an event each choose it); `now()` written once; a question of too many messages refused with an error of its own, not `TooLong`; `Prepared` without a copy of the whole integration.
 
 ## Before the release

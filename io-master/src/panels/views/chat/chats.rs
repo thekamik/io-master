@@ -240,7 +240,8 @@ async fn forwarded(session: &Session, prepared: &Prepared, on_piece: &Channel<St
                     Some(piece) => on_piece.send(piece).is_ok(),
                     None => false,
                 },
-                _ = stop_check.tick() => !session.stop_requested(),
+                // A broken session stops the answer as "Stop" does.
+                _ = stop_check.tick() => matches!(session.stop_requested(), Ok(false)),
             };
 
             if !go_on {
@@ -290,7 +291,7 @@ pub async fn chat_ask(
 ) -> Result<ChatAnswerView, ViewError> {
     ensure!(text.len() <= 4 * MAX_QUESTION, ViewError::Invalid("the question is too long".to_owned()));
 
-    let Some(_work) = session.begin_work() else {
+    let Some(_work) = session.begin_work(None, 0)? else {
         return Err(ViewError::Invalid("another work of the AI runs: wait for it or stop it".to_owned()));
     };
     let (prepared, left_out) = prepared_question(&session, chat, &text)?;
@@ -304,8 +305,8 @@ pub async fn chat_ask(
 /// Called by: `Conversation.svelte`, "Stop".
 /// Calls: `Session::request_stop`.
 #[tauri::command]
-pub fn chat_stop(session: State<'_, Session>) {
-    session.request_stop();
+pub fn chat_stop(session: State<'_, Session>) -> Result<(), ViewError> {
+    Ok(session.request_stop()?)
 }
 
 #[cfg(test)]
@@ -387,7 +388,7 @@ mod tests {
         let (channel, got) = page();
         let stopping = async {
             tokio::time::sleep(Duration::from_millis(500)).await;
-            session.request_stop();
+            session.request_stop().unwrap();
         };
         let forwarding = tokio::time::timeout(Duration::from_secs(10), forwarded(&session, &question, &channel));
         let (sent, ()) = tokio::join!(forwarding, stopping);

@@ -5,6 +5,7 @@ The models of `io-master/src/model/`, agreed with the user model by model, and t
 ## 1. The rules of a model (user, 2026-10-28)
 
 - **A model is a structure that represents the data kept in the database**: fields only, each commented, no functions. The rules of the data (checks, the order of the work) live outside `model/`.
+- **A helper model is never kept in a database** (user, 2026-11-01: helper models are as needed as the stored ones): `model/session/`, the data the program shares with the page while it runs. It has no table and no create, read or update in `db/`, and says so at its head; otherwise it follows the same rules.
 - **Objects are named by their id in the database** (`i64`), never by a text.
 - **One piece of information has one place.** What can be computed from the data is not stored beside it (no field of the kind of a work unit: `input_functional` tells it; no hash of a file: it is computed from the file).
 - **Several plans, one table.** The work units of all plans are rows of one table, each naming its plan; no table is made while the program runs.
@@ -74,6 +75,15 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `UserKeys` | `user_keys.rs` | user, password (`WrappedKey`), recovery (`RecoveryWrappedKey`) | `user_keys` (`system.v2.db`) |
 | `WrappedKey` | `user_keys.rs` | salt, memory_kib, iterations, nonce, ciphertext, tag | (columns of `user_keys`) |
 | `RecoveryWrappedKey` | `user_keys.rs` | salt, nonce, ciphertext, tag | (columns of `user_keys`) |
+
+### 2.4 `model/session/` (helper models, never kept)
+
+| Model | File | Fields | Kept |
+|---|---|---|---|
+| `Progress` | `progress.rs` | running, stop, evaluation_plan, total, assessed, failed, label, last_verdict, problems | by the session (`session/state.rs`), while the program runs |
+| `Problem` | `progress.rs` | label, notes | (in `Progress`) |
+
+`Progress` is the state of the long work of the AI ("Fill with AI", the assessment of an evaluation, a question of a chat): one runs at a time; `evaluation_plan` names the plan or the evaluation it works on, so that the panel of that plan shows its bar, also when it is opened again while the work runs, and its summary when it ended; `problems` keeps the newest 200 work units not taken or taken with notes.
 
 ## 3. The evaluation plan
 

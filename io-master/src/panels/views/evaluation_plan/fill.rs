@@ -2,17 +2,20 @@
 //! the planner fills every work unit of the plan, one after the other; two
 //! commands, two tasks, each started by the planner on its own: the
 //! parameters, then the dependencies (when the work units are described).
-//! The page sees each step as it ends and may stop the filling.
+//! Each step is written into the progress of the session, which the page
+//! asks for (`plan_fill_progress`), also when the panel is opened again; the
+//! planner may stop the filling.
 //!
 //! ```text
 //! PlanFill.svelte ──plan_fill_preview(plan)──► fill_preview: the questions counted now ──► FillPreviewView
-//!                 ──plan_fill_parameters(plan, on_step)───┐
-//!                 ──plan_fill_dependencies(plan, on_step)─┴► fill: fill_units, then for each work unit:
+//!                 ──plan_fill_parameters(plan)───┐
+//!                 ──plan_fill_dependencies(plan)─┴► fill: fill_units, then for each work unit:
 //!                     (the lock of the session held)  the question of the task, question::prepare
 //!                     (released)                      sending::send_whole
 //!                     (held)                          journal::record (the journal of the agent),
 //!                                                     the answer read and written by the task
-//!                     ──on_step──► FillStepView (the work unit, filled or not, the notes)
+//!                     ──record_step──► the progress (the work unit, filled or not, the notes)
+//!                 ──plan_fill_progress(plan)──► progress_of ──► ProgressView
 //!                 ──plan_fill_stop()──► the session asked to stop: the filling ends after its present step
 //! ```
 //!
@@ -22,11 +25,11 @@
 
 use serde::Serialize;
 use tauri::State;
-use tauri::ipc::Channel;
 
 use crate::ai::models::ai::integration::question::{Prepared, prepare};
 use crate::ai::models::ai::integration::sending::{Sent, send_whole};
 use crate::ai::models::ai::journal::record;
+use crate::ai::models::session::progress::record_step;
 use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::db::storage::user_database::UserDatabase;
 use crate::panels::logic::evaluation_plan::error::PlanError;
@@ -36,22 +39,8 @@ use crate::panels::logic::evaluation_plan::fill::{
 };
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
+use crate::panels::views::progress::{ProgressView, progress_of};
 use crate::session::state::Session;
-
-/// One step of a filling, as the page shows it.
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FillStepView {
-    /// The place of the work unit in the plan, from 1, and how many there
-    /// are.
-    number: usize,
-    total: usize,
-    label: String,
-    /// The work unit was filled; otherwise `notes` tell why it was not.
-    filled: bool,
-    /// What was left out of the answer, or why the work unit was not filled.
-    notes: Vec<String>,
-}
 
 /// What a filling would ask, counted when the planner asks it.
 #[derive(Serialize)]
@@ -59,15 +48,6 @@ pub struct FillPreviewView {
     questions: usize,
     agent: String,
     integration: String,
-}
-
-/// How a filling ended.
-#[derive(Serialize)]
-pub struct FillSummaryView {
-    filled: usize,
-    failed: usize,
-    /// The user stopped it before its end.
-    stopped: bool,
 }
 
 /// The task of a filling.
@@ -166,30 +146,25 @@ async fn fill_step(session: &Session, task: Task, plan: i64, unit: i64) -> Resul
 }
 
 /// Fills every work unit of the plan `plan` in its order with the task
-/// `task`, telling the page each step through `on_step`. Refused while
-/// another filling runs, or when the plan has no agent of the planner.
+/// `task`, writing each step into the progress of the session. Refused
+/// while another long work of the AI runs, or when the plan has no agent of
+/// the planner.
 ///
 /// Called by: [`plan_fill_parameters`], [`plan_fill_dependencies`].
-/// Calls: `Session::begin_work`, `fill_units`, [`fill_step`].
-async fn fill(
-    session: &Session,
-    task: Task,
-    plan: i64,
-    on_step: &Channel<FillStepView>,
-) -> Result<FillSummaryView, ViewError> {
-    let Some(_work) = session.begin_work() else {
-        return Err(ViewError::Invalid("a filling runs already".to_owned()));
-    };
+/// Calls: `fill_units`, `Session::begin_work`, [`fill_step`],
+/// `ai/models/session/progress.rs`: `record_step`.
+async fn fill(session: &Session, task: Task, plan: i64) -> Result<(), ViewError> {
     let units = {
         let opened = session.lock()?;
 
         fill_units(database(&opened)?, plan)?
     };
-    let mut summary = FillSummaryView { filled: 0, failed: 0, stopped: false };
+    let Some(_work) = session.begin_work(Some(plan), units.len())? else {
+        return Err(ViewError::Invalid("another work of the AI runs: wait for it or stop it".to_owned()));
+    };
 
-    for (index, unit) in units.iter().enumerate() {
-        if session.stop_requested() {
-            summary.stopped = true;
+    for unit in &units {
+        if session.stop_requested()? {
             break;
         }
 
@@ -199,18 +174,10 @@ async fn fill(
             Outcome::Failed(reason) => (false, vec![reason]),
         };
 
-        if filled {
-            summary.filled += 1;
-        } else {
-            summary.failed += 1;
-        }
-
-        on_step
-            .send(FillStepView { number: index + 1, total: units.len(), label, filled, notes })
-            .map_err(|error| ViewError::Invalid(format!("the page does not listen: {error}")))?;
+        record_step(&mut *session.progress()?, label, filled, None, notes);
     }
 
-    Ok(summary)
+    Ok(())
 }
 
 /// Fills every parameter but the dependencies of every work unit of the
@@ -219,12 +186,8 @@ async fn fill(
 /// Called by: `PlanFill.svelte`, "Fill parameters".
 /// Calls: [`fill`].
 #[tauri::command]
-pub async fn plan_fill_parameters(
-    session: State<'_, Session>,
-    plan: i64,
-    on_step: Channel<FillStepView>,
-) -> Result<FillSummaryView, ViewError> {
-    fill(&session, Task::Parameters, plan, &on_step).await
+pub async fn plan_fill_parameters(session: State<'_, Session>, plan: i64) -> Result<(), ViewError> {
+    fill(&session, Task::Parameters, plan).await
 }
 
 /// Fills the dependencies of every work unit of the plan `plan`, over what
@@ -234,12 +197,8 @@ pub async fn plan_fill_parameters(
 /// Called by: `PlanFill.svelte`, "Fill dependencies".
 /// Calls: [`fill`].
 #[tauri::command]
-pub async fn plan_fill_dependencies(
-    session: State<'_, Session>,
-    plan: i64,
-    on_step: Channel<FillStepView>,
-) -> Result<FillSummaryView, ViewError> {
-    fill(&session, Task::Dependencies, plan, &on_step).await
+pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> Result<(), ViewError> {
+    fill(&session, Task::Dependencies, plan).await
 }
 
 /// What a filling of the plan `plan` would ask, counted now: the number of
@@ -256,11 +215,22 @@ pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillP
     Ok(FillPreviewView { questions: preview.questions, agent: preview.agent, integration: preview.integration })
 }
 
+/// The progress of the last filling of the plan `plan`: while it runs, and
+/// its summary once it ended; `None` when there was none since the start
+/// of the program.
+///
+/// Called by: `PlanFill.svelte`, while a filling runs and when it is shown.
+/// Calls: `progress.rs`: `progress_of`.
+#[tauri::command]
+pub fn plan_fill_progress(session: State<'_, Session>, plan: i64) -> Result<Option<ProgressView>, ViewError> {
+    progress_of(&session, plan)
+}
+
 /// Asks the filling that runs to stop after its present work unit.
 ///
 /// Called by: `PlanFill.svelte`, "Stop".
 /// Calls: `Session::request_stop`.
 #[tauri::command]
-pub fn plan_fill_stop(session: State<'_, Session>) {
-    session.request_stop();
+pub fn plan_fill_stop(session: State<'_, Session>) -> Result<(), ViewError> {
+    Ok(session.request_stop()?)
 }

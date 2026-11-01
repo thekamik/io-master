@@ -12,7 +12,7 @@ io-master/src/
   pdf/            pdfinfo and pdftotext of Poppler, the PDF on their standard input
   db/             storage/: the two database files and their encryption; models/: create, read, update of the models
   ai/             the AI on the models (models/, a mirror of model/): the integration, the journal, the agent, the chat
-  session/        the data folder; the user logged in with their open database; a long work and its stop
+  session/        the data folder; the user logged in, their open database, the progress of the long work of the AI
   panels/logic/   the work behind each panel, given the open database
   panels/views/   the commands the page calls
 io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
@@ -81,6 +81,8 @@ ai/
     agent.rs            Agent: the passages of its bases that fit a question (its glossary, its limits);
                         agent_question (its instructions, the task, its knowledge, the messages ──► Question)
     chat.rs             Chat: a question prepared with its oldest messages left out until it fits
+  models/session/
+    progress.rs         Progress (a helper model): a step of a long work written into it (record_step)
 
 panels ──► agent.rs: agent_question ──► integration/question.rs: prepare ──► integration/sending.rs: send
                                                                    ──► integration/connection.rs ──► the service
@@ -91,18 +93,18 @@ The integration knows of the other models only the API key (masked in its errors
 
 ### `session/`
 
-`data_folder.rs` (where the data is) and `state.rs` (`Session`, kept by Tauri: the user logged in with their open database behind a lock, the only global state; whether a long work of the AI runs and whether it was asked to stop).
+`data_folder.rs` (where the data is) and `state.rs` (`Session`, kept by Tauri, the only global state: the user logged in, their open database and the `Progress` of the long work of the AI (`model/session/progress.rs`), each behind its lock; `begin_work` begins a work when none runs, and the guard it gives marks it ended however it ends).
 
 ### `panels/`
 
-Each panel has a folder in both layers. The logic gets the open database as a parameter and never reaches the session, so it is tested without a window. The commands take what the page sends, check its size, call the logic and give back a `...View` (serde only here); their error is `panels/views/error.rs` (`{kind, message}`). `opened.rs` gives the open database or "nobody is logged in"; `chat/chats.rs` passes each piece of an answer to the page while it comes, and stops it at once on "Stop". One long work of the AI runs at a time (a filling, an assessment or a question of a chat); the evaluator saves no results while it runs.
+Each panel has a folder in both layers. The logic gets the open database as a parameter and never reaches the session, so it is tested without a window. The commands take what the page sends, check its size, call the logic and give back a `...View` (serde only here); their error is `panels/views/error.rs` (`{kind, message}`). `opened.rs` gives the open database or "nobody is logged in"; `progress.rs` gives the progress of the last long work on one plan (`ProgressView`), which the page asks for while it runs and when a panel is opened again (`evaluation_assess_progress`, `plan_fill_progress`); each step of a filling or an assessment is written into it (`ai/models/session/progress.rs`: `record_step`); `chat/chats.rs` passes each piece of an answer to the page while it comes, and stops it at once on "Stop". One long work of the AI runs at a time (a filling, an assessment or a question of a chat); the evaluator saves no results while it runs.
 
 | Panel | `logic/` | `views/` commands |
 |---|---|---|
 | `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
-| `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs`, `order.rs` (Kahn: the order, the cross references, `blocked`), `fill.rs` ("Fill with AI": parameters, dependencies, the preview) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_stop` |
+| `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs`, `order.rs` (Kahn: the order, the cross references, `blocked`), `fill.rs` ("Fill with AI": parameters, dependencies, the preview) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | `agent.rs` (an agent made, its changes checked; its knowledge and its question are in `ai/models/ai/agent.rs`), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
-| `evaluation` | `evaluations.rs` (an evaluation begun on a copy of a plan with its agent; the agent changed), `inputs.rs` (the documents and proofs given once; whether a file is a PDF told by its first bytes), `question.rs` (the question of a work unit: its JSON, its dependencies, its documents whole or by passages, its proofs), `answer.rs` (the answer read; the quotes checked in the documents; the verdict with the dependencies), `run.rs` (the work units in the order of the work, the preview with the inputs missing, the question prepared), `results.rs` (the results of the evaluator, of author User) | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
+| `evaluation` | `evaluations.rs` (an evaluation begun on a copy of a plan with its agent; the agent changed), `inputs.rs` (the documents and proofs given once; whether a file is a PDF told by its first bytes), `question.rs` (the question of a work unit: its JSON, its dependencies, its documents whole or by passages, its proofs), `answer.rs` (the answer read; the quotes checked in the documents; the verdict with the dependencies), `run.rs` (the work units in the order of the work, the preview with the inputs missing, the question prepared), `results.rs` (the results of the evaluator, of author User) | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |
 
@@ -110,7 +112,7 @@ A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `c
 
 ### `ui/`
 
-`App.svelte` (the first start, the login, or the frame with the side bar), `views/<panel>/` (the screens of each panel; which screen is shown stays in the page), `components/` (used in more than one place: `recovery_code`, `save_status`), `lib/api/` (one function per command, `errors.ts`), `styles/` (the sheets, one dark theme).
+`App.svelte` (the first start, the login, or the frame with the side bar), `views/<panel>/` (the screens of each panel; which screen is shown stays in the page), `components/` (used in more than one place: `recovery_code`, `save_status`), `lib/api/` (one function per command, `errors.ts`, `progress.ts`: the type of the progress the panels ask for), `styles/` (the sheets, one dark theme).
 
 ## 3. Conventions
 

@@ -3,7 +3,9 @@
 // `evaluation_get`. The types mirror the views of those files; a change
 // there needs the same change here.
 
-import { Channel, invoke } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
+
+import type { ProgressView } from "./progress";
 
 /** An evaluation in the list (evaluations.rs, EvaluationSummaryView). */
 export interface EvaluationSummaryView {
@@ -116,23 +118,6 @@ export interface AssessPreviewView {
   missing: CountView[];
 }
 
-/** One step of an assessment (run.rs, AssessStepView). */
-export interface AssessStepView {
-  number: number;
-  total: number;
-  label: string;
-  /** null when it was not assessed; the notes tell why. */
-  verdict: VerdictName | null;
-  notes: string[];
-}
-
-/** How an assessment ended (run.rs, AssessSummaryView). */
-export interface AssessSummaryView {
-  assessed: number;
-  failed: number;
-  stopped: boolean;
-}
-
 /** A work unit in the list of an evaluation (work_units.rs, UnitRowView). */
 export interface UnitRowView {
   id: number;
@@ -205,18 +190,16 @@ export function evaluationAssessPreview(id: number, again: boolean): Promise<Ass
   return invoke("evaluation_assess_preview", { id, again });
 }
 
-/** Assesses the work units with the AI; `onstep` gets each step as it ends.
- * Called by EvaluationRun.svelte. */
-export function evaluationAssess(
-  id: number,
-  again: boolean,
-  onstep: (step: AssessStepView) => void,
-): Promise<AssessSummaryView> {
-  const onStep = new Channel<AssessStepView>();
+/** Assesses the work units with the AI; ends when the assessment ends. Its
+ * steps are read with evaluationAssessProgress. Called by EvaluationRun.svelte. */
+export function evaluationAssess(id: number, again: boolean): Promise<void> {
+  return invoke("evaluation_assess", { id, again });
+}
 
-  onStep.onmessage = onstep;
-
-  return invoke("evaluation_assess", { id, again, onStep });
+/** The progress of the last assessment of an evaluation; null when there was
+ * none since the start of the program. Called by EvaluationRun.svelte. */
+export function evaluationAssessProgress(id: number): Promise<ProgressView | null> {
+  return invoke("evaluation_assess_progress", { id });
 }
 
 /** Asks the assessment to stop after its present work unit. Called by EvaluationRun.svelte. */

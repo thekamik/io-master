@@ -12,7 +12,7 @@ A file that changes after its approval goes back to "to review", with a note of 
 | File | Approved | Notes |
 |---|---|---|
 | `io-master/src/db/models/lists.rs` | 2026-10-31 | The pilot of the pattern of the comments (`CLAUDE.md`, "Comments"). |
-| `io-master/src/model/` (every file) | 2026-10-31 | |
+| `io-master/src/model/` (every file) | 2026-10-31 | But `model/session/progress.rs`, new on 2026-11-01 (agreed field by field in the chat), to review. |
 | `io-master/src/db/error.rs` | 2026-10-31 | |
 | `io-master/src/db/storage/user_database.rs`, `system_database.rs` | 2026-10-31 | `encryption/` apart, reviewed later. |
 | `io-master/src/db/models/` (every file) | 2026-10-31 | |

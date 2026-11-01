@@ -310,7 +310,7 @@ pub struct ResultsFields {
 /// the evaluator and the AI never write at once (user, 2026-10-30).
 ///
 /// Called by: `EvaluationUnit.svelte`, "Save".
-/// Calls: `Session::begin_work`, [`verdict_of`], `save_results`.
+/// Calls: `Session::is_working`, [`verdict_of`], `save_results`.
 #[tauri::command]
 pub fn evaluation_unit_save(
     session: State<'_, Session>,
@@ -327,9 +327,8 @@ pub fn evaluation_unit_save(
 
     ensure!(size <= MAX_RESULTS_BYTES, ViewError::Invalid("the results are too long".to_owned()));
 
-    let Some(_work) = session.begin_work() else {
-        return Err(ViewError::Invalid("the AI is working: save when it has ended".to_owned()));
-    };
+    ensure!(!session.is_working()?, ViewError::Invalid("the AI is working: save when it has ended".to_owned()));
+
     let mut quotes = Vec::with_capacity(fields.quotes.len());
 
     for quote in fields.quotes {

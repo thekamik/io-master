@@ -6,33 +6,70 @@
   over the work units with a verdict, "Assess again" assesses anew those of
   the AI; those of the evaluator never. Before it starts, the evaluator
   confirms how many questions go to which agents; a document or a proof
-  missing is named and the assessment cannot start. Each step is told as it
-  ends (onstep, so that the list is read again); "Stop" ends it after its
-  present work unit.
+  missing is named and the assessment cannot start. The progress is asked
+  for while the assessment runs, and when the panel is opened again
+  (evaluation_assess_progress), so that an assessment that runs shows its bar
+  after the evaluator left the panel (user, 2026-11-01); each step gone
+  through is told (onstep, so that the list is read again). "Stop" ends it
+  after its present work unit.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import {
     evaluationAssess,
     evaluationAssessPreview,
+    evaluationAssessProgress,
     evaluationAssessStop,
     type AssessPreviewView,
-    type AssessStepView,
-    type AssessSummaryView,
   } from "../../lib/api/evaluation";
+  import { PROGRESS_INTERVAL, type ProgressView } from "../../lib/api/progress";
 
   let { evaluation, onstep }: { evaluation: number; onstep: () => void } = $props();
 
-  /** The most steps with notes kept on the page: the newest. */
-  const SHOWN = 200;
-
   let asked: { again: boolean; preview: AssessPreviewView } | null = $state(null);
-  let running = $state(false);
-  let stopping = $state(false);
-  let last: AssessStepView | null = $state(null);
-  let steps: AssessStepView[] = $state([]);
-  let summary: AssessSummaryView | null = $state(null);
+  /** The command of an assessment started from this page runs. */
+  let started = $state(false);
+  /** The progress of the last assessment of this evaluation; null when there was none. */
+  let progress = $state<ProgressView | null>(null);
   let problem = $state("");
+
+  let running = $derived(started || (progress?.running ?? false));
+  let gone = $derived(progress === null ? 0 : progress.assessed + progress.failed);
+
+  /** Reads the progress; tells the editor when a work unit was gone through. */
+  async function refresh() {
+    try {
+      const next = await evaluationAssessProgress(evaluation);
+      // Read after the await, so that the effect that calls refresh does
+      // not depend on the progress it writes.
+      const before = progress === null ? 0 : progress.assessed + progress.failed;
+      const after = next === null ? 0 : next.assessed + next.failed;
+
+      progress = next;
+
+      if (after !== before) {
+        onstep();
+      }
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
+
+  // The progress when the panel is shown, or shows another evaluation.
+  $effect(() => {
+    void refresh();
+  });
+
+  // While an assessment runs, its progress is asked for again and again.
+  $effect(() => {
+    if (!running) {
+      return;
+    }
+
+    const timer = setInterval(() => void refresh(), PROGRESS_INTERVAL);
+
+    return () => clearInterval(timer);
+  });
 
   /** Counts what the assessment would ask, now, and asks the evaluator to confirm. */
   async function confirm(again: boolean) {
@@ -49,35 +86,23 @@
   async function assess(again: boolean) {
     asked = null;
     problem = "";
-    summary = null;
-    steps = [];
-    last = null;
-    running = true;
-    stopping = false;
+    started = true;
 
     try {
-      summary = await evaluationAssess(evaluation, again, (step) => {
-        last = step;
-
-        if (step.verdict === null || step.notes.length > 0) {
-          steps = [step, ...steps].slice(0, SHOWN);
-        }
-
-        onstep();
-      });
+      await evaluationAssess(evaluation, again);
     } catch (error) {
       problem = sentence(error);
     } finally {
-      running = false;
+      started = false;
+      await refresh();
       onstep();
     }
   }
 
   async function stop() {
-    stopping = true;
-
     try {
       await evaluationAssessStop();
+      await refresh();
     } catch (error) {
       problem = sentence(error);
     }
@@ -91,13 +116,16 @@
 
   {#if running}
     <p>
-      {#if last !== null}
-        {last.number} of {last.total}: {last.label} · {last.verdict ?? "not assessed"}
+      {#if progress !== null && progress.label}
+        {gone} of {progress.total}: {progress.label} · {progress.lastVerdict ?? "not assessed"}
       {:else}
         The first work unit is being assessed…
       {/if}
-      <button type="button" class="ghost" disabled={stopping} onclick={stop}>{stopping ? "Stopping…" : "Stop"}</button>
+      <button type="button" class="ghost" disabled={progress?.stopping} onclick={stop}>
+        {progress?.stopping ? "Stopping…" : "Stop"}
+      </button>
     </p>
+    {#if progress !== null}<progress max={progress.total} value={gone}></progress>{/if}
   {:else if asked !== null}
     {@const preview = asked.preview}
     {#if preview.missing.length > 0}
@@ -132,18 +160,20 @@
     </p>
   {/if}
 
-  {#if summary !== null}
+  {#if progress !== null && !running}
     <p class="note">
-      {summary.assessed} assessed, {summary.failed} not assessed{summary.stopped ? ", stopped" : ""}.
+      {progress.assessed} assessed, {progress.failed} not assessed{progress.stopping && gone < progress.total
+        ? ", stopped"
+        : ""}.
     </p>
   {/if}
 
-  {#if steps.length > 0}
+  {#if progress !== null && progress.problems.length > 0}
     <details>
-      <summary>What was not taken or not assessed ({steps.length})</summary>
+      <summary>What was not taken or not assessed ({progress.problems.length})</summary>
       <ul class="steps">
-        {#each steps as step (step.number)}
-          <li><strong>{step.label}</strong>: {step.notes.join("; ")}</li>
+        {#each progress.problems as one, index (index)}
+          <li><strong>{one.label}</strong>: {one.notes.join("; ")}</li>
         {/each}
       </ul>
     </details>
@@ -151,6 +181,10 @@
 </section>
 
 <style>
+  progress {
+    width: 100%;
+  }
+
   ul.steps {
     max-height: 16rem;
     overflow-y: auto;

@@ -44,6 +44,11 @@ mod model {
         pub mod product_document;
         pub mod work_unit;
     }
+    // model/session/: helper models, never kept in a database (user,
+    // 2026-11-01): the progress of the long work of the AI.
+    pub mod session {
+        pub mod progress;
+    }
     // model/user/: the user and the settings of the program.
     pub mod user {
         pub mod program_data;
@@ -149,6 +154,11 @@ mod ai {
                 pub mod turns;
             }
         }
+        // ai/models/session/: the AI on the helper models of model/session/:
+        // the steps of a long work written into its progress.
+        pub mod session {
+            pub mod progress;
+        }
     }
 }
 
@@ -225,6 +235,7 @@ mod panels {
     pub mod views {
         pub mod error;
         pub mod opened;
+        pub mod progress;
         // panels/views/agents/: the agents, the knowledge bases and their
         // sources, the journal of an agent.
         pub mod agents {
@@ -355,6 +366,7 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation_plan::fill::plan_fill_preview,
             panels::views::evaluation_plan::fill::plan_fill_parameters,
             panels::views::evaluation_plan::fill::plan_fill_dependencies,
+            panels::views::evaluation_plan::fill::plan_fill_progress,
             panels::views::evaluation_plan::fill::plan_fill_stop,
             panels::views::evaluation::evaluations::evaluation_list,
             panels::views::evaluation::evaluations::evaluation_create,
@@ -364,6 +376,7 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation::inputs::evaluation_proof_give,
             panels::views::evaluation::run::evaluation_assess_preview,
             panels::views::evaluation::run::evaluation_assess,
+            panels::views::evaluation::run::evaluation_assess_progress,
             panels::views::evaluation::run::evaluation_assess_stop,
             panels::views::evaluation::work_units::evaluation_unit_list,
             panels::views::evaluation::work_units::evaluation_unit_get,
