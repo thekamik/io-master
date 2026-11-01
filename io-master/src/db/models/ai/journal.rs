@@ -17,8 +17,8 @@
 
 use rusqlite::{Row, named_params};
 
-use crate::db::error::DbError;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::journal::{Ending, JournalEntry};
 
 /// The most entries read at once: one page of the journal.

@@ -28,13 +28,15 @@ use std::fs::{self, DirBuilder};
 use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
 
-use crate::clock::now;
-use crate::db::error::DbError;
+use crate::db::models::schema::{SYSTEM_TABLES, USER_TABLES};
 use crate::db::models::user::program_data::{create_installation, create_settings};
 use crate::db::models::user::user_data::{create_user, read_users};
 use crate::db::models::user::user_keys::{create_user_keys, read_user_keys};
-use crate::db::storage::system_database::{self, SystemDatabase};
-use crate::db::storage::user_database::{self, UserDatabase};
+use crate::infrastructure::clock::now;
+use crate::infrastructure::security::random::fill_random;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::system_database::{self, SystemDatabase};
+use crate::infrastructure::storage::user_database::{self, UserDatabase};
 use crate::model::user::program_data::{Installation, Settings};
 use crate::model::user::user_data::User;
 use crate::model::user::user_keys::UserKeys;
@@ -42,7 +44,6 @@ use crate::panels::logic::program_start::generate_key::generate_database_key;
 use crate::panels::logic::program_start::keys::{self, KeyError};
 use crate::panels::logic::program_start::recovery::{self, RecoveryError};
 use crate::panels::logic::program_start::recovery_code::RecoveryCode;
-use crate::security::random::fill_random;
 
 /// What the first start gives: the user, its database (open), and the
 /// recovery code, which the window shows once.
@@ -129,7 +130,7 @@ fn binding(user: i64) -> Vec<u8> {
 /// its database file can be removed), and the result.
 ///
 /// Called by: [`create_account`].
-/// Calls: `security/random.rs`: `fill_random`; `clock.rs`: `now`;
+/// Calls: `infrastructure/security/random.rs`: `fill_random`; `infrastructure/clock.rs`: `now`;
 /// `create_installation`, `create_user`, `generate_database_key`,
 /// `keys::wrap`, `recovery::new_code`, `recovery::wrap`, `create_user_keys`,
 /// `user_database::create`, `create_settings`.
@@ -183,7 +184,7 @@ fn keys_and_database(
 
     create_user_keys(system, &keys)?;
 
-    let database = user_database::create(data_dir, user.id, &key)?;
+    let database = user_database::create(data_dir, user.id, &key, &USER_TABLES)?;
 
     create_settings(&database, &Settings { active_integration: None })?;
 
@@ -224,7 +225,7 @@ pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &st
         .create(data_dir)
         .map_err(|error| AccountError::Key(format!("the data folder {}: {error}", data_dir.display())))?;
 
-    let system = match system_database::create(data_dir) {
+    let system = match system_database::create(data_dir, &SYSTEM_TABLES) {
         Ok(system) => system,
         Err(DbError::Exists(_)) => return Err(AccountError::AlreadyInstalled),
         Err(error) => return Err(error.into()),
@@ -253,7 +254,7 @@ pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &st
 /// Called by: `panels/views/program_start/login.rs`.
 /// Calls: `system_database::open`, `read_users`.
 pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
-    let system = match system_database::open(data_dir) {
+    let system = match system_database::open(data_dir, &SYSTEM_TABLES) {
         Ok(system) => system,
         Err(DbError::NotFound(_)) => return Ok(None),
         Err(error) => return Err(error.into()),
@@ -271,7 +272,7 @@ pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
 /// Calls: `system_database::open`, `read_users`, `read_user_keys`,
 /// `keys::unwrap`, `user_database::open`.
 pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, UserDatabase), AccountError> {
-    let system = match system_database::open(data_dir) {
+    let system = match system_database::open(data_dir, &SYSTEM_TABLES) {
         Ok(system) => system,
         Err(DbError::NotFound(_)) => return Err(AccountError::NotInstalled),
         Err(error) => return Err(error.into()),
@@ -290,7 +291,7 @@ pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, User
     };
     let keys = read_user_keys(&system, user.id)?;
     let key = keys::unwrap(&keys.password, password, &binding(user.id))?;
-    let database = user_database::open(data_dir, user.id, &key)?;
+    let database = user_database::open(data_dir, user.id, &key, &USER_TABLES)?;
 
     Ok((user, database))
 }

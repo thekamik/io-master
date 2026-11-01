@@ -15,8 +15,8 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::error::DbError;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::rag::{KnowledgeBase, Source};
 
 /// The most knowledge bases, and sources of one base.

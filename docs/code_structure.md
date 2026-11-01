@@ -7,15 +7,18 @@
 ```text
 io-master/src/
   checks.rs       ensure!, the check with recovery (rule 5), known in the whole program
-  clock.rs        now(): the time of the computer, as every time written into the databases is read
+  infrastructure/ what belongs to no object and no panel, and knows no object:
+    clock.rs      now(): the time of the computer, as every time written into the databases is read
+    data_folder.rs where the data is ($XDG_DATA_HOME/io-master)
+    security/     random bytes from the kernel; no memory dumps of the process
+    pdf/          pdfinfo and pdftotext of Poppler, the PDF on their standard input
+    storage/      the two database files and their encryption, the lists of ids, DbError
   model/          the data as kept in the databases: structures, fields only (data_model.md)
-  security/       random bytes from the kernel; no memory dumps of the process
-  pdf/            pdfinfo and pdftotext of Poppler, the PDF on their standard input
-  db/             storage/: the two database files and their encryption; models/: create, read, update of the models
+  db/             models/: create, read, update of the models
   domain/         the rules of the data (models/, a mirror of model/): a plan made and changed, its work units, its order,
                   the standards imported
   ai/             the AI on the models (models/, a mirror of model/): the integration, the journal, the agent, the chat
-  session/        the data folder; the user logged in, their open database, the progress of the long work of the AI
+  session/        the user logged in, their open database, the progress of the long work of the AI
   panels/logic/   the work behind each panel, given the open database
   panels/views/   the commands the page calls
 io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
@@ -25,13 +28,15 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 
 | Folder | May use |
 |---|---|
-| `model`, `security`, `pdf`, `clock` | nothing of the program |
-| `db` | `model`, `security` (inside: `models/` uses `storage/`; `storage/` uses only `models/schema.rs`) |
-| `domain` | `db`, `model` |
-| `ai` | `clock`, `domain`, `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
-| `session` | `db`, `model` |
-| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `clock`, `domain`, `db`, `model`, `security`, `pdf` |
-| `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `domain`, `db`, `model`, `session` |
+| `model`, `infrastructure::clock`, `::data_folder`, `::security`, `::pdf`, `::storage` | nothing of the program (each part of `infrastructure` only itself) |
+| `db` | `infrastructure::storage`, `model` |
+| `domain` | `infrastructure` (`clock`, `pdf`, `storage`), `db`, `model` |
+| `ai` | `infrastructure` (`clock`, `storage`), `domain`, `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
+| `session` | `infrastructure::storage`, `db`, `model` |
+| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `infrastructure`, `domain`, `db`, `model` |
+| `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `infrastructure::storage`, `domain`, `db`, `model`, `session` |
+
+**SQL only in the store**: `rusqlite` and the connection of an open database (`.connection()`) appear only in `infrastructure/storage/` and `db/models/`, checked by `architecture_tests.rs` (`the_sql_is_only_in_the_store`), since the models in the databases are not below the folder of the database files.
 
 `panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only; a panel whose work is all rules of the data has no folder in `panels/logic/` (`evaluation_plan`: its views call `domain/` and `ai/` alone).
 
@@ -48,23 +53,25 @@ The whole program is brought to it step by step (`todo.md`); `panels/logic/` kee
 
 ## 2. The folders
 
-### `db/`
+### `infrastructure/`
 
-Two parts (user, 2026-10-31), and `error.rs` (`DbError`), the error of both:
+What belongs to no object and no panel, and knows no object (user, 2026-11-01): `clock.rs`, `data_folder.rs`, `security/` (`random.rs`, `process.rs`), `pdf/` (`poppler.rs`), and the database files:
 
 ```text
-db/
-  error.rs       DbError
-  storage/       the database files: user_database.rs (users/<id>.v2.db, SQLCipher), system_database.rs
-                 (system.v2.db, not encrypted): where each is, made, opened; connection.rs: what both do
-                 with a connection just opened (the wait for a busy database, the tables); encryption/
-  models/        the models in them: ai/, evaluation/, user/ (the mirror of model/), schema.rs, lists.rs
+infrastructure/storage/
+  error.rs       DbError, the error of every function on a database
+  user_database.rs (users/<id>.v2.db, SQLCipher), system_database.rs (system.v2.db, not encrypted): where each
+                 is, made, opened; connection.rs: what both do with a connection just opened (the wait for a
+                 busy database, the tables given by the caller); lists.rs: a list of ids as rows of its own table
+  encryption/    the key of the database files and SQLCipher
 
-models/<area>/<model>.rs ──SCHEMA──► models/schema.rs ──USER_TABLES / SYSTEM_TABLES──► storage/
-storage/ ──UserDatabase / SystemDatabase (the connection, seen only in db/)──► models/<area>/<model>.rs
+db/models/<area>/<model>.rs ──SCHEMA──► db/models/schema.rs ──USER_TABLES / SYSTEM_TABLES──► access.rs
+access.rs ──create / open(data_dir, ..., tables)──► storage/ ──UserDatabase / SystemDatabase──► db/models/
 ```
 
-`models/` holds one file per file of `model/`, with its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; `schema.rs` lists the tables of each database (parted by the database, not by the folder; the order does not matter to SQLite); a list of a model is a table of its own, one row per element with its position (`lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). `storage/` makes the missing tables whenever it opens a database; `storage/encryption/` opens the files with SQLCipher. The knowledge: `models/ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`models/evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
+### `db/`
+
+`db/models/` holds one file per file of `model/`, with its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; `schema.rs` lists the tables of each database (parted by the database, not by the folder; the order does not matter to SQLite); a list of a model is a table of its own, one row per element with its position (`infrastructure/storage/lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). `infrastructure/storage/` makes the missing tables whenever it opens a database; its `encryption/` opens the files with SQLCipher. The knowledge: `models/ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`models/evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
 
 ### `domain/`
 
@@ -144,7 +151,7 @@ The integration knows of the other models only the API key (masked in its errors
 
 ### `session/`
 
-`data_folder.rs` (where the data is) and `state.rs` (`Session`, kept by Tauri, the only global state: the user logged in, their open database and the `Progress` of the long work of the AI (`model/session/progress.rs`), each behind its lock; `begin_work` begins a work when none runs, and the guard it gives marks it ended however it ends).
+`state.rs` (`Session`, kept by Tauri, the only global state: the user logged in, their open database and the `Progress` of the long work of the AI (`model/session/progress.rs`), each behind its lock; `begin_work` begins a work when none runs, and the guard it gives marks it ended however it ends).
 
 ### `panels/`
 

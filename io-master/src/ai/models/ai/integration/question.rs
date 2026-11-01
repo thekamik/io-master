@@ -22,10 +22,10 @@ use crate::ai::models::ai::integration::address::check_address;
 use crate::ai::models::ai::integration::connection::Request;
 use crate::ai::models::ai::integration::protocol::{body, needs_key};
 use crate::ai::models::ai::integration::turns::{Turn, turns};
-use crate::clock::now;
 use crate::db::models::ai::api_key::read_api_key;
 use crate::db::models::ai::integration::read_integration;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::clock::now;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::ai::integration::Integration;
 
@@ -108,7 +108,7 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// Calls: `db/models/ai/integration.rs`: `read_integration`;
 /// `db/models/ai/api_key.rs`: `read_api_key`; `address.rs`:
 /// `check_address`; `turns.rs`: `turns`; [`check_size`];
-/// `protocol.rs`: `needs_key`, `body`; `clock.rs`: `now`.
+/// `protocol.rs`: `needs_key`, `body`; `infrastructure/clock.rs`: `now`.
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
     ensure!(
         question.messages.len() <= MAX_MESSAGES,

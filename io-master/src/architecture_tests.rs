@@ -15,10 +15,11 @@
 //!      domain/      (models/: the rules of the data, a mirror of model/)
 //!         │
 //!         ▼
-//!        db/        (create, read and update of the models; the database files)
+//!        db/        (create, read and update of the models)
 //!         │
 //!         ▼
-//!   model/, security/, pdf/, clock.rs     (nothing of the program)
+//!   model/                                (nothing of the program)
+//!   infrastructure/  (storage/, security/, pdf/, clock.rs, data_folder.rs: no object)
 //! ```
 //!
 //! **The program is being rebuilt (2026-10-28)**: the folders above `db/`
@@ -42,26 +43,36 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 19] = [
+const ALLOWED: [(&str, &[&str]); 21] = [
     ("model", &[]),
-    // The time of the computer: nothing of the program.
-    ("clock", &[]),
-    ("security", &[]),
-    // Reading PDFs with Poppler: another program, nothing of ours.
-    ("pdf", &[]),
-    ("db", &["model", "security"]),
+    // infrastructure/: what belongs to no object and no panel, and knows
+    // no object (user, 2026-11-01). The time of the computer, the data
+    // folder, random bytes and the protection of the process, PDFs read
+    // with Poppler (another program), the database files.
+    ("infrastructure::clock", &[]),
+    ("infrastructure::data_folder", &[]),
+    ("infrastructure::security", &[]),
+    ("infrastructure::pdf", &[]),
+    ("infrastructure::storage", &[]),
+    ("db", &["infrastructure::storage", "model"]),
     // The rules of the data: they read and write through db/.
-    ("domain", &["clock", "db", "model", "pdf"]),
+    ("domain", &["infrastructure::clock", "infrastructure::pdf", "infrastructure::storage", "db", "model"]),
     // The AI: it reads the integration, its key and the knowledge, and
     // writes the journal. Inside, ai/models/ai/ mirrors model/ai/: the
     // integration (the service, its connection) knows of the other models
     // only the API key, masked in its errors; the journal, the agent and the
     // chat ask through the integration.
-    ("ai", &["clock", "domain", "db", "model"]),
+    ("ai", &["infrastructure::clock", "domain", "db", "infrastructure::storage", "model"]),
     ("ai::models::ai::api_key", &["ai::error", "model"]),
-    ("ai::models::ai::integration", &["ai::error", "ai::models::ai::api_key", "clock", "db", "model"]),
-    ("ai::models::ai::journal", &["ai::error", "ai::models::ai::integration", "db", "model"]),
-    ("ai::models::ai::agent", &["ai::error", "ai::models::ai::integration", "db", "model"]),
+    (
+        "ai::models::ai::integration",
+        &["ai::error", "ai::models::ai::api_key", "infrastructure::clock", "db", "infrastructure::storage", "model"],
+    ),
+    (
+        "ai::models::ai::journal",
+        &["ai::error", "ai::models::ai::integration", "db", "infrastructure::storage", "model"],
+    ),
+    ("ai::models::ai::agent", &["ai::error", "ai::models::ai::integration", "db", "infrastructure::storage", "model"]),
     (
         "ai::models::ai::chat",
         &[
@@ -69,20 +80,33 @@ const ALLOWED: [(&str, &[&str]); 19] = [
             "ai::models::ai::agent",
             "ai::models::ai::integration",
             "ai::models::ai::journal",
-            "clock",
+            "infrastructure::clock",
             "domain",
             "db",
+            "infrastructure::storage",
             "model",
         ],
     ),
     // The locks of the session as a long work takes them.
-    ("ai::lock", &["ai::error", "db", "model"]),
+    ("ai::lock", &["ai::error", "db", "infrastructure::storage", "model"]),
     // The AI on a plan: the loops over its work units (evaluation_plan.rs)
     // use the work on one work unit (work_unit/), never the other way.
-    ("ai::models::evaluation::work_unit", &["ai::error", "ai::lock", "ai::models::ai", "domain", "db", "model"]),
+    (
+        "ai::models::evaluation::work_unit",
+        &["ai::error", "ai::lock", "ai::models::ai", "domain", "db", "infrastructure::storage", "model"],
+    ),
     (
         "ai::models::evaluation::evaluation_plan",
-        &["ai::error", "ai::lock", "ai::models::evaluation::work_unit", "ai::models::session", "domain", "db", "model"],
+        &[
+            "ai::error",
+            "ai::lock",
+            "ai::models::evaluation::work_unit",
+            "ai::models::session",
+            "domain",
+            "db",
+            "infrastructure::storage",
+            "model",
+        ],
     ),
     // The progress of a long work: a helper model, no database.
     ("ai::models::session::progress", &["model"]),
@@ -103,16 +127,17 @@ const ALLOWED: [(&str, &[&str]); 19] = [
             SENDING,
             ADDRESS,
             ASSESSMENT_ANSWER,
-            "clock",
+            "infrastructure::clock",
             "domain",
             "db",
+            "infrastructure::storage",
             "model",
-            "security",
-            "pdf",
+            "infrastructure::security",
+            "infrastructure::pdf",
         ],
     ),
     // The session: the user logged in and their open database.
-    ("session", &["db", "model"]),
+    ("session", &["db", "infrastructure::storage", "model"]),
     // The commands of the page: they do their work with the folders below.
     (
         "panels::views",
@@ -130,6 +155,7 @@ const ALLOWED: [(&str, &[&str]); 19] = [
             FILLING,
             "domain",
             "db",
+            "infrastructure::storage",
             "model",
             "session",
         ],
@@ -259,6 +285,37 @@ fn every_folder_uses_only_the_folders_below_it() {
     broken.sort();
     broken.dedup();
     assert!(broken.is_empty(), "uses against the direction of the dependencies:\n{}", broken.join("\n"));
+}
+
+/// The folders where SQL may be written: the database files and the
+/// models in them (CLAUDE.md, "The database").
+const SQL_FOLDERS: [&str; 2] = ["infrastructure/storage/", "db/models/"];
+
+/// The signs of SQL in a file: the library of SQLite, and the connection
+/// of an open database.
+const SQL_SIGNS: [&str; 2] = ["rusqlite", ".connection()"];
+
+#[test]
+fn the_sql_is_only_in_the_store() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+    let mut broken = Vec::new();
+
+    for (file, text) in all_rust_files(&root) {
+        let text = program_part(&text);
+
+        // The files of tests name the signs of SQL to look for them.
+        if FILES_OF_TESTS.contains(&file.as_str()) || SQL_FOLDERS.iter().any(|folder| file.starts_with(folder)) {
+            continue;
+        }
+
+        for sign in SQL_SIGNS {
+            if text.contains(sign) {
+                broken.push(format!("{file}: {sign}"));
+            }
+        }
+    }
+
+    assert!(broken.is_empty(), "SQL outside the store:\n{}", broken.join("\n"));
 }
 
 /// Every `.rs` file under `root`.

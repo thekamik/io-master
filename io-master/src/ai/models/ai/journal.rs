@@ -14,7 +14,7 @@ use crate::ai::error::AiError;
 use crate::ai::models::ai::integration::question::Prepared;
 use crate::ai::models::ai::integration::sending::Sent;
 use crate::db::models::ai::journal::create_journal_entry;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::journal::{Ending, JournalEntry};
 
 /// The answer, written into the journal of its agent.

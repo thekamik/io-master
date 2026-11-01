@@ -14,9 +14,9 @@
 
 use rusqlite::named_params;
 
-use crate::db::error::DbError;
-use crate::db::storage::system_database::SystemDatabase;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::system_database::SystemDatabase;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::user::program_data::{Installation, Settings};
 
 /// The table of the installation, made when it is missing
@@ -154,14 +154,15 @@ mod tests {
     use super::*;
 
     use crate::db::models::ai::integration::create_integration;
-    use crate::db::storage::system_database::create;
+    use crate::db::models::schema::SYSTEM_TABLES;
+    use crate::infrastructure::storage::system_database::create;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};
 
     #[test]
     fn the_installation_is_stored_once_and_read() {
         let directory = TempDir::new();
-        let system = create(directory.path()).unwrap();
+        let system = create(directory.path(), &SYSTEM_TABLES).unwrap();
         let installation = Installation { id: [7; 16], created: 1_793_000_000 };
 
         assert!(read_installation(&system).unwrap().is_none());

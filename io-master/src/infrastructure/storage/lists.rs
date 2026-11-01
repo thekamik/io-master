@@ -36,7 +36,7 @@
 
 use rusqlite::{Connection, named_params};
 
-use crate::db::error::DbError;
+use crate::infrastructure::storage::error::DbError;
 
 /// The position of an element of a list, as a number of SQL.
 ///
@@ -45,10 +45,10 @@ use crate::db::error::DbError;
 /// Output: the same number as `i64` (`2` → `2`); an error for an index SQL
 /// cannot hold, which no list within its limit reaches.
 ///
-/// Called by: `ai/agent.rs`: `write_lists`; `evaluation/evaluation_plan.rs`:
-/// `write_lists`, `order_work_units`; `evaluation/work_unit.rs`:
+/// Called by: `db/models/ai/agent.rs`: `write_lists`; `db/models/evaluation/evaluation_plan.rs`:
+/// `write_lists`, `order_work_units`; `db/models/evaluation/work_unit.rs`:
 /// `write_lists`; this file: [`write_id_list`].
-pub(in crate::db) fn position(index: usize) -> Result<i64, DbError> {
+pub fn position(index: usize) -> Result<i64, DbError> {
     i64::try_from(index).map_err(|error| DbError::Inconsistent(error.to_string()))
 }
 
@@ -62,10 +62,10 @@ pub(in crate::db) fn position(index: usize) -> Result<i64, DbError> {
 /// Output: nothing when the list fits; otherwise the error "more than
 /// `max` `what`".
 ///
-/// Called by: `ai/agent.rs`: `check_agent`; `evaluation/evaluation_plan.rs`:
-/// `check_plan`; `evaluation/work_unit.rs`: `check_lists`,
+/// Called by: `db/models/ai/agent.rs`: `check_agent`; `db/models/evaluation/evaluation_plan.rs`:
+/// `check_plan`; `db/models/evaluation/work_unit.rs`: `check_lists`,
 /// `write_dependencies`.
-pub(in crate::db) fn check_length(length: usize, max: usize, what: &str) -> Result<(), DbError> {
+pub fn check_length(length: usize, max: usize, what: &str) -> Result<(), DbError> {
     ensure!(length <= max, DbError::Inconsistent(format!("more than {max} {what}")));
 
     Ok(())
@@ -86,16 +86,11 @@ pub(in crate::db) fn check_length(length: usize, max: usize, what: &str) -> Resu
 /// Output: the ids in the order the SELECT gives them (`[12, 15]`); an
 /// error when the owner has more than `max` rows.
 ///
-/// Called by: `ai/agent.rs`: `read_agent`; `evaluation/evaluation_plan.rs`:
+/// Called by: `db/models/ai/agent.rs`: `read_agent`; `db/models/evaluation/evaluation_plan.rs`:
 /// `read_lists`, `order_work_units` (the work units of a plan, read from
-/// `work_units`); `evaluation/work_unit.rs`: `read_lists`, `check_links`,
+/// `work_units`); `db/models/evaluation/work_unit.rs`: `read_lists`, `check_links`,
 /// `read_work_units`.
-pub(in crate::db) fn read_id_list(
-    connection: &Connection,
-    sql: &str,
-    owner: i64,
-    max: usize,
-) -> Result<Vec<i64>, DbError> {
+pub fn read_id_list(connection: &Connection, sql: &str, owner: i64, max: usize) -> Result<Vec<i64>, DbError> {
     ensure!(sql.contains(":owner"), DbError::Inconsistent("a list read without its owner".to_owned()));
 
     // The rows of the owner, in the order the SELECT gives them.
@@ -137,11 +132,11 @@ pub(in crate::db) fn read_id_list(
 /// An error of SQLite when an id names no object (a foreign key) or comes
 /// twice (`UNIQUE`); the transaction of the caller then writes nothing.
 ///
-/// Called by: `ai/agent.rs`: `write_lists`; `evaluation/evaluation_plan.rs`:
-/// `write_lists`; `evaluation/work_unit.rs`: `write_lists`,
+/// Called by: `db/models/ai/agent.rs`: `write_lists`; `db/models/evaluation/evaluation_plan.rs`:
+/// `write_lists`; `db/models/evaluation/work_unit.rs`: `write_lists`,
 /// `write_dependencies`.
 /// Calls: [`position`].
-pub(in crate::db) fn write_id_list(
+pub fn write_id_list(
     connection: &Connection,
     delete: &str,
     insert: &str,

@@ -23,8 +23,8 @@ use serde_json::Value;
 use crate::ai::models::evaluation::work_unit::assessment_question::verdict_name;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::models::evaluation::work_unit::results::quotes_found;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, Verdict, WorkUnit};
 
 /// The longest text of a result taken from an answer, in characters.

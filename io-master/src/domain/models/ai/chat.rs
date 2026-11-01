@@ -10,12 +10,12 @@
 //! add_question           ──► the question written into the chat, once ai/models/ai/chat.rs: prepared took it
 //! ```
 
-use crate::clock::now;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::chat::{create_chat, create_message, read_chat, update_chat};
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
 use crate::domain::text::checked_text;
+use crate::infrastructure::clock::now;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
 
 /// The longest title of a chat, in characters.
@@ -65,7 +65,7 @@ pub fn checked_question(text: &str) -> Result<String, DomainError> {
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_ask`, once the question is
 /// prepared).
-/// Calls: [`checked_question`]; `clock.rs`: `now`; `db/models/ai/chat.rs`:
+/// Calls: [`checked_question`]; `infrastructure/clock.rs`: `now`; `db/models/ai/chat.rs`:
 /// `create_message`.
 pub fn add_question(db: &UserDatabase, chat: i64, text: &str) -> Result<(), DomainError> {
     let message = Message {

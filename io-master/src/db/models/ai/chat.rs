@@ -11,8 +11,8 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::error::DbError;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
 
 /// The most chats of the user, and messages of one chat.

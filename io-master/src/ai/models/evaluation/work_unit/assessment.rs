@@ -24,7 +24,7 @@ use crate::ai::models::ai::journal::record;
 use crate::ai::models::evaluation::work_unit::assessment_answer::{apply_assessment, read_assessment};
 use crate::ai::models::evaluation::work_unit::assessment_question::assessment_question;
 use crate::db::models::evaluation::work_unit::read_work_unit;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::Verdict;
 
 /// The question of the work unit `unit`, prepared: with its documents whole,

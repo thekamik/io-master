@@ -15,7 +15,7 @@ use crate::ai::error::AiError;
 use crate::ai::models::ai::integration::question::Question;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::rag::{MAX_FOUND, read_passages};
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::agent::GlossaryEntry;
 use crate::model::ai::chat::Message;
 

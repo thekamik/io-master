@@ -14,15 +14,53 @@
 #[macro_use]
 mod checks;
 
-// The time of the computer, as every time written into the databases is
-// read (clock.rs), below every folder.
-mod clock;
-
 // ── The map of the program ──────────────────────────────────────────
 // Every folder of the program, in the order of its layers from the bottom
 // up: a folder uses only the folders above it in this list
 // (docs/code_structure.md, section 1; checked by architecture_tests.rs).
 // Every module is written here; there is no mod.rs.
+
+// infrastructure/: what belongs to no object and no panel, and knows no
+// object (user, 2026-11-01): the database files and their encryption, random
+// bytes and the protection of the process, PDFs read with Poppler, the clock,
+// the data folder.
+mod infrastructure {
+    // The time of the computer, as every time written into the databases
+    // is read.
+    pub mod clock;
+    // Where the data of the program is: $XDG_DATA_HOME/io-master.
+    pub mod data_folder;
+    // infrastructure/pdf/: reading PDFs with the tools of Poppler (pdfinfo,
+    // pdftotext): the only place where the program starts another program on
+    // a document of the evaluator, kept in one folder for the audit.
+    pub mod pdf {
+        pub mod poppler;
+    }
+    // infrastructure/security/: random numbers from the system, and the
+    // protection of the memory of the process.
+    pub mod security {
+        pub mod process;
+        pub mod random;
+    }
+    // infrastructure/storage/: the two database files (system.v2.db,
+    // users/<id>.v2.db): where they are, made, opened, their tables made from
+    // the list given by their caller; the help for the lists of a model; their
+    // encryption; DbError, the error of every function on a database.
+    pub mod storage {
+        pub mod connection;
+        pub mod error;
+        pub mod lists;
+        pub mod system_database;
+        pub mod user_database;
+        // infrastructure/storage/encryption/: the key of the database files
+        // and SQLCipher; moved unchanged from the earlier program, audited
+        // later.
+        pub mod encryption {
+            pub mod database_key;
+            pub mod sqlcipher;
+        }
+    }
+}
 
 // model/: the data of the program as it is kept in the databases, one
 // structure per kind of data, fields only (docs/data_model.md).
@@ -61,38 +99,12 @@ mod model {
     }
 }
 
-// security/: the building blocks of protection: random numbers from the
-// system, and the protection of the memory of the process. The encryption
-// of the databases is in db/storage/encryption/.
-mod security {
-    pub mod process;
-    pub mod random;
-}
-
-// db/: the databases of the program in two parts (user, 2026-10-31):
-// storage/ (the database files) and models/ (the models of model/ in them);
-// error.rs is the error of both.
+// db/: the models of model/ in the databases of infrastructure/storage/.
 mod db {
-    pub mod error;
-    // db/storage/: the two database files (system.v2.db, users/<id>.v2.db):
-    // where they are, made, opened, their tables made; their encryption.
-    // It knows no model, only the list of the tables (models/schema.rs).
-    pub mod storage {
-        pub mod connection;
-        pub mod system_database;
-        pub mod user_database;
-        // db/storage/encryption/: the key of the database files and
-        // SQLCipher; moved unchanged from the earlier program, audited later.
-        pub mod encryption {
-            pub mod database_key;
-            pub mod sqlcipher;
-        }
-    }
     // db/models/: create, read and update of the models of model/, one file
     // per file of model/, no delete (user, 2026-10-28); the tables of each
-    // database in their order, and the help for the lists of a model.
+    // database in their order.
     pub mod models {
-        pub mod lists;
         pub mod schema;
         // db/models/ai/: the integrations and their keys, the knowledge
         // (RAG) and its index, the agents, the chats, the journal of the AI.
@@ -225,7 +237,6 @@ mod ai {
 // session/: what every command of the window shares: the data folder, and
 // the user logged in with their open database (the only global state).
 mod session {
-    pub mod data_folder;
     pub mod state;
 }
 
@@ -307,13 +318,6 @@ mod panels {
     }
 }
 
-// pdf/: reading PDFs with the tools of Poppler (pdfinfo, pdftotext): the only
-// place where the program starts another program on a document of the
-// evaluator, kept in one folder for the audit. It uses nothing of the program.
-mod pdf {
-    pub mod poppler;
-}
-
 // Help for the tests: temporary folders, a new database with its data.
 #[cfg(test)]
 mod test_support;
@@ -325,7 +329,7 @@ mod architecture_tests;
 
 use std::process::ExitCode;
 
-use session::data_folder::default_data_folder;
+use infrastructure::data_folder::default_data_folder;
 use session::state::Session;
 use tauri::{Manager, RunEvent};
 
@@ -360,8 +364,8 @@ fn tauri_startup() -> ExitCode {
     };
 
     // The decrypted data is only in RAM: the system must never write the
-    // memory of the process into a file (security/process.rs).
-    if let Err(error) = security::process::forbid_memory_dumps() {
+    // memory of the process into a file (infrastructure/security/process.rs).
+    if let Err(error) = infrastructure::security::process::forbid_memory_dumps() {
         eprintln!("Error: the memory dumps of the program could not be forbidden: {error}");
         return ExitCode::FAILURE;
     }

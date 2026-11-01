@@ -10,10 +10,10 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::error::DbError;
 use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND};
-use crate::db::models::lists::{check_length, position, read_id_list, write_id_list};
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::lists::{check_length, position, read_id_list, write_id_list};
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::agent::{Agent, GlossaryEntry};
 
 /// The most agents of the user, and terms of the glossary of one agent.
@@ -64,7 +64,7 @@ const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_ch
 /// what is wrong.
 ///
 /// Called by: [`create_agent`], [`update_agent`].
-/// Calls: `lists.rs`: `check_length`.
+/// Calls: `infrastructure/storage/lists.rs`: `check_length`.
 fn check_agent(agent: &Agent) -> Result<(), DbError> {
     check_length(agent.knowledge_bases.len(), MAX_BASES, "knowledge bases of an agent")?;
     check_length(agent.glossary.len(), MAX_TERMS, "terms of a glossary")?;
@@ -100,7 +100,7 @@ fn check_agent(agent: &Agent) -> Result<(), DbError> {
 /// (foreign key) or comes twice (`UNIQUE`).
 ///
 /// Called by: [`create_agent`], [`update_agent`].
-/// Calls: `lists.rs`: `write_id_list`, `position`.
+/// Calls: `infrastructure/storage/lists.rs`: `write_id_list`, `position`.
 fn write_lists(connection: &Connection, id: i64, agent: &Agent) -> Result<(), DbError> {
     write_id_list(
         connection,
@@ -228,7 +228,7 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 /// `update_work_unit_parameters`; `panels/views/agents/agent.rs`: `agent_get`;
 /// `panels/views/chat/chats.rs`: `agent_name`;
 /// `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`.
-/// Calls: [`agent_of`], `lists.rs`: `read_id_list`, [`read_glossary`].
+/// Calls: [`agent_of`], `infrastructure/storage/lists.rs`: `read_id_list`, [`read_glossary`].
 pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_agents WHERE id = :id"))?;

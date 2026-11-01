@@ -1,14 +1,14 @@
 //! Generating the key that encrypts the database.
 //!
 //! The key is 32 random bytes from the random number generator of
-//! the kernel (see `security/random.rs` for why that source). The
+//! the kernel (see `infrastructure/security/random.rs` for why that source). The
 //! bytes are written straight into the memory of the
 //! [`DatabaseKey`], so no other copy of them is made.
 
 use std::io;
 
-use crate::db::storage::encryption::database_key::DatabaseKey;
-use crate::security::random::fill_random;
+use crate::infrastructure::security::random::fill_random;
+use crate::infrastructure::storage::encryption::database_key::DatabaseKey;
 
 /// Generates a new key for the database.
 ///
@@ -22,12 +22,12 @@ pub fn generate_database_key() -> io::Result<DatabaseKey> {
 mod tests {
     //! Unit tests of `generate_key.rs`.
     //!
-    //! The source of the bytes is tested in `security/random.rs`;
+    //! The source of the bytes is tested in `infrastructure/security/random.rs`;
     //! these tests check that a key is filled from it.
 
     use super::*;
 
-    use crate::db::storage::encryption::database_key::DATABASE_KEY_LENGTH;
+    use crate::infrastructure::storage::encryption::database_key::DATABASE_KEY_LENGTH;
 
     #[test]
     fn a_key_is_generated() {

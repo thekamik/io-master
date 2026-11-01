@@ -25,9 +25,9 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::error::DbError;
-use crate::db::models::lists::{check_length, position, read_id_list, write_id_list};
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::lists::{check_length, position, read_id_list, write_id_list};
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
 
 /// The most work units of one plan (the CEM has 813).
@@ -158,7 +158,7 @@ fn author_of(name: &str) -> Result<Author, DbError> {
 /// the work unit ("the work unit ADV_ARC.1-1 depends on itself").
 ///
 /// Called by: [`insert_work_unit`], [`update_work_unit`].
-/// Calls: `lists.rs`: `check_length`.
+/// Calls: `infrastructure/storage/lists.rs`: `check_length`.
 fn check_lists(unit: &WorkUnit) -> Result<(), DbError> {
     check_length(unit.dependencies.len(), MAX_DEPENDENCIES, "dependencies of a work unit")?;
     check_length(unit.input_product_documents.len(), MAX_DOCUMENTS, "documents of a work unit")?;
@@ -192,7 +192,7 @@ fn check_lists(unit: &WorkUnit) -> Result<(), DbError> {
 /// plan").
 ///
 /// Called by: [`insert_work_unit`], [`update_work_unit`].
-/// Calls: `lists.rs`: `read_id_list`; [`verdict_name`].
+/// Calls: `infrastructure/storage/lists.rs`: `read_id_list`; [`verdict_name`].
 fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<(), DbError> {
     let standards = read_id_list(
         connection,
@@ -253,7 +253,7 @@ fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<()
 /// (foreign key) or comes twice (`UNIQUE`).
 ///
 /// Called by: [`insert_work_unit`], [`update_work_unit`].
-/// Calls: `lists.rs`: `write_id_list`, `position`.
+/// Calls: `infrastructure/storage/lists.rs`: `write_id_list`, `position`.
 fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), DbError> {
     write_id_list(
         connection,
@@ -306,7 +306,7 @@ fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), 
 /// when it depends on itself, or when a dependency is not stored.
 ///
 /// Called by: `evaluation_plan.rs`: `create_evaluation`.
-/// Calls: `lists.rs`: `check_length`, `write_id_list`.
+/// Calls: `infrastructure/storage/lists.rs`: `check_length`, `write_id_list`.
 pub(in crate::db) fn write_dependencies(connection: &Connection, id: i64, dependencies: &[i64]) -> Result<(), DbError> {
     check_length(dependencies.len(), MAX_DEPENDENCIES, "dependencies of a work unit")?;
     ensure!(!dependencies.contains(&id), DbError::Inconsistent("a work unit that depends on itself".to_owned()));
@@ -483,7 +483,7 @@ fn read_quotes(connection: &Connection, id: i64) -> Result<Vec<Quote>, DbError> 
 /// longer than its limit (a database the program did not write).
 ///
 /// Called by: [`read_work_unit`].
-/// Calls: `lists.rs`: `read_id_list`; [`read_quotes`].
+/// Calls: `infrastructure/storage/lists.rs`: `read_id_list`; [`read_quotes`].
 fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbError> {
     unit.dependencies = read_id_list(
         connection,
@@ -565,7 +565,7 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
 /// `domain/models/evaluation/evaluation_plan/work_units.rs`: `add_all_work_units`,
 /// `add_work_unit`, `available_controls`;
 /// `panels/views/evaluation_plan/work_units.rs`: `work_unit_list`.
-/// Calls: `lists.rs`: `read_id_list`; [`read_work_unit`].
+/// Calls: `infrastructure/storage/lists.rs`: `read_id_list`; [`read_work_unit`].
 pub fn read_work_units(db: &UserDatabase, plan: i64) -> Result<Vec<WorkUnit>, DbError> {
     let ids = read_id_list(
         db.connection(),

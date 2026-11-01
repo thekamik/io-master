@@ -80,10 +80,10 @@ They bind **our code** (`src/`, `ui/`). The dependencies cannot follow them; the
 ## The database
 
 - **Create, read and update only: no delete** (user, 2026-10-28), with one exception: `delete_work_unit`, only for a plan in planning (user, 2026-10-29).
-- **`db/` has two parts** (user, 2026-10-31): `db/storage/` the database files (where they are, made, opened, their tables made, their encryption), knowing no model but the list of the tables; `db/models/` the models in them. `db/error.rs` is the error of both.
+- **The database files and the models in them are apart** (user, 2026-10-31): `infrastructure/storage/` the database files (where they are, made, opened, their tables made from the list its caller gives, their encryption, the lists of ids, `DbError`), knowing no model; `db/models/` the models in them.
 - **The layout of `db/models/` mirrors `model/`**: one file per file of a model, with its tables and its functions `create_<model>`, `read_<model>`, `update_<model>`; beside them `schema.rs` (the tables of each database) and `lists.rs` (the lists of a model).
-- **SQL lives only in `db/`.** Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`.
-- `db/storage/encryption/` holds the encryption of the databases, moved unchanged from the earlier program; the user audits it later.
+- **SQL lives only in `infrastructure/storage/` and `db/models/`** (checked by `architecture_tests.rs`). Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`.
+- `infrastructure/storage/encryption/` holds the encryption of the databases, moved unchanged from the earlier program; the user audits it later.
 
 ## The AI
 

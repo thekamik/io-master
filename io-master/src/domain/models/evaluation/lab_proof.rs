@@ -9,10 +9,10 @@
 
 use crate::db::models::evaluation::lab_proof::{read_lab_proof, update_lab_proof};
 use crate::db::models::evaluation::work_unit::read_work_units;
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
 use crate::domain::models::evaluation::evaluation_plan::evaluation::{evaluation_in_progress, needed_proofs};
 use crate::domain::text::checked_text;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::lab_proof::LabProof;
 
 /// The longest tester or equipment, in characters.

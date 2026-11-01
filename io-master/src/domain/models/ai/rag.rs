@@ -5,7 +5,7 @@
 //! by a newer file and its name changed.
 //!
 //! ```text
-//! a file ──► source_text: .txt, .md as UTF-8; .pdf through pdf/poppler.rs, by parts of pages
+//! a file ──► source_text: .txt, .md as UTF-8; .pdf through infrastructure/pdf/poppler.rs, by parts of pages
 //!        ──► add_source / replace_source_text ──► db/ cuts the text into passages and indexes them
 //! ```
 
@@ -16,11 +16,11 @@ use crate::db::models::ai::rag::{
     MAX_BASES, MAX_FOUND, MAX_SOURCE_CHARS, MAX_SOURCES, create_knowledge_base, create_source, read_knowledge_base,
     read_knowledge_bases, read_passages, read_source, read_sources, update_knowledge_base, update_source,
 };
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
 use crate::domain::text::checked_text;
+use crate::infrastructure::pdf::poppler::{self, MAX_FILE};
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::rag::{KnowledgeBase, Source};
-use crate::pdf::poppler::{self, MAX_FILE};
 
 /// The longest name of a base or a source, in characters.
 const MAX_NAME: usize = 200;
@@ -73,7 +73,7 @@ pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), Domain
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_add`,
 /// `knowledge_source_replace` (a file chosen in the dialog).
-/// Calls: `pdf/poppler.rs`: `text`.
+/// Calls: `infrastructure/pdf/poppler.rs`: `text`.
 pub fn source_text(path: &Path) -> Result<String, DomainError> {
     let read = |error: std::io::Error| DomainError::Refused(format!("{}: {error}", path.display()));
     let extension = path.extension().and_then(|extension| extension.to_str()).unwrap_or_default().to_lowercase();

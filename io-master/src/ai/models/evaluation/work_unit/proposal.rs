@@ -39,9 +39,9 @@ use crate::db::models::evaluation::product_document::read_product_document;
 use crate::db::models::evaluation::work_unit::{
     MAX_DEPENDENCIES, MAX_DOCUMENTS, MAX_PROOFS, read_work_unit, read_work_units,
 };
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::models::evaluation::evaluation_plan::planning::plan_to_fill;
 use crate::domain::models::evaluation::work_unit::parameters::{WorkUnitParameters, update_work_unit_parameters};
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;

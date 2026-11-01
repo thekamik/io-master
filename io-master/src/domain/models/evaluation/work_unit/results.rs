@@ -16,10 +16,10 @@
 
 use crate::db::models::evaluation::product_document::{read_document_text, read_product_document};
 use crate::db::models::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
 use crate::domain::models::evaluation::evaluation_plan::evaluation::evaluation_in_progress;
 use crate::domain::text::check_length;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
 
 /// The longest text of a result, in characters.

@@ -27,10 +27,10 @@ use crate::ai::error::AiError;
 use crate::ai::models::ai::agent::agent_question;
 use crate::ai::models::ai::integration::question::{MAX_MESSAGES, Prepared, Question, prepare};
 use crate::ai::models::ai::journal::Answer;
-use crate::clock::now;
 use crate::db::models::ai::chat::{MAX_MESSAGES as MAX_CHAT_MESSAGES, create_message, read_chat};
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::models::ai::chat::checked_question;
+use crate::infrastructure::clock::now;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::ai::journal::Ending;
 
@@ -165,7 +165,7 @@ fn kept_text(answer: &Answer) -> Option<String> {
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_ask` (after `journal.rs`:
 /// `record`).
-/// Calls: [`kept_text`]; `clock.rs`: `now`; `db/models/ai/chat.rs`:
+/// Calls: [`kept_text`]; `infrastructure/clock.rs`: `now`; `db/models/ai/chat.rs`:
 /// `create_message`.
 pub fn add_answer(db: &UserDatabase, chat: i64, answer: &Answer) -> Result<Option<Message>, AiError> {
     let Some(text) = kept_text(answer) else {

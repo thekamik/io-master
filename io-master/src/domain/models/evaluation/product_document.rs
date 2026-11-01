@@ -15,12 +15,12 @@ use std::fs;
 use std::path::Path;
 
 use crate::db::models::evaluation::product_document::{read_product_document, update_product_document};
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
 use crate::domain::models::evaluation::evaluation_plan::evaluation::evaluation_in_progress;
 use crate::domain::text::checked_text;
+use crate::infrastructure::pdf::poppler::{self, MAX_FILE};
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::product_document::ProductDocument;
-use crate::pdf::poppler::{self, MAX_FILE};
 
 /// The largest text file of a document, in bytes.
 const MAX_TEXT_FILE: u64 = 64 * 1024 * 1024;
@@ -58,7 +58,7 @@ pub fn document_file(path: &Path) -> Result<Vec<u8>, DomainError> {
 /// anything else as UTF-8; refused when it holds no text.
 ///
 /// Called by: [`give_document`].
-/// Calls: `pdf/poppler.rs`: `text`.
+/// Calls: `infrastructure/pdf/poppler.rs`: `text`.
 pub fn document_text(content: &[u8]) -> Result<String, DomainError> {
     let text = if content.starts_with(PDF_SIGNATURE) {
         poppler::text(content)?

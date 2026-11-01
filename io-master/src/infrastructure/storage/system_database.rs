@@ -1,8 +1,9 @@
 //! The system database: the file `system.v2.db` of the data folder, where
 //! it is, made and opened, its tables made when they are missing
-//! (`connection.rs`, `models/schema.rs`: `SYSTEM_TABLES`). It holds what
-//! the login needs: the installation, its one user and the two wrapped
-//! copies of the key of the database of the user (`models/user/`).
+//! (`connection.rs`; the list of the tables given by the caller,
+//! `db/models/schema.rs`: `SYSTEM_TABLES`). It holds what the login needs:
+//! the installation, its one user and the two wrapped copies of the key of
+//! the database of the user (`db/models/user/`).
 //!
 //! **Protection: NOT encrypted.** The program opens it at every start,
 //! before anyone has given a password, so no key could open it; it holds
@@ -10,18 +11,17 @@
 //! (`encryption/sqlcipher.rs`, `create_plain`).
 //!
 //! ```text
-//! access.rs: create_account          ──create(data_dir)─► sqlcipher::create_plain ─┐
-//! access.rs: installed_user, log_in  ──open(data_dir)───► sqlcipher::open_plain ───┴─► from ─► SystemDatabase
+//! access.rs: create_account          ──create(data_dir, SYSTEM_TABLES)─► sqlcipher::create_plain ─┐
+//! access.rs: installed_user, log_in  ──open(data_dir, SYSTEM_TABLES)───► sqlcipher::open_plain ───┴─► from ─► SystemDatabase
 //! ```
 
 use std::path::{Path, PathBuf};
 
 use rusqlite::Connection;
 
-use crate::db::error::DbError;
-use crate::db::models::schema::SYSTEM_TABLES;
-use crate::db::storage::connection::prepare;
-use crate::db::storage::encryption::sqlcipher;
+use crate::infrastructure::storage::connection::prepare;
+use crate::infrastructure::storage::encryption::sqlcipher;
+use crate::infrastructure::storage::error::DbError;
 
 /// The name of the file of the system database, in the data folder.
 const FILE_NAME: &str = "system.v2.db";
@@ -36,26 +36,30 @@ pub struct SystemDatabase {
 impl SystemDatabase {
     /// Makes the system database from a connection just opened.
     ///
-    /// Input: `connection`, the plain file of the system database.
+    /// Input:
+    /// - `connection`: the plain file of the system database.
+    /// - `tables`: the `SCHEMA` of every table of the system database
+    ///   (`db/models/schema.rs`: `SYSTEM_TABLES`).
     ///
-    /// Output: the database, every table of `SYSTEM_TABLES` made; an error
-    /// of SQLite when a table cannot be made.
+    /// Output: the database, every table of `tables` made; an error of
+    /// SQLite when a table cannot be made.
     ///
     /// Called by: [`create`], [`open`].
     /// Calls: `connection.rs`: `prepare`.
-    fn from(connection: Connection) -> Result<SystemDatabase, DbError> {
-        prepare(&connection, &SYSTEM_TABLES)?;
+    fn from(connection: Connection, tables: &[&str]) -> Result<SystemDatabase, DbError> {
+        prepare(&connection, tables)?;
 
         Ok(SystemDatabase { connection })
     }
 
-    /// The connection, for SQL. **Only `db/` reaches it**
-    /// (`pub(in crate::db)`).
+    /// The connection, for SQL. **Only `db/models/` reaches it**: checked by
+    /// `architecture_tests.rs` (`the_sql_is_only_in_the_store`), since the
+    /// models in the databases are no longer below this folder.
     ///
-    /// Called by: every function of `models/user/user_data.rs`,
-    /// `models/user/user_keys.rs` and `models/user/program_data.rs` (the
-    /// installation) that runs SQL.
-    pub(in crate::db) fn connection(&self) -> &Connection {
+    /// Called by: every function of `db/models/user/user_data.rs`,
+    /// `db/models/user/user_keys.rs` and `db/models/user/program_data.rs`
+    /// (the installation) that runs SQL.
+    pub fn connection(&self) -> &Connection {
         &self.connection
     }
 }
@@ -70,8 +74,10 @@ pub fn path(data_dir: &Path) -> PathBuf {
 
 /// Makes the empty system database at the first start.
 ///
-/// Input: `data_dir`, the data folder of the program
-/// (`~/.local/share/io-master`).
+/// Input:
+/// - `data_dir`: the data folder of the program (`~/.local/share/io-master`).
+/// - `tables`: the `SCHEMA` of every table of the system database
+///   (`db/models/schema.rs`: `SYSTEM_TABLES`).
 ///
 /// Output: the database, open, with its tables. An error when the file
 /// exists already (never overwritten: `DbError::Exists`, the program is
@@ -79,13 +85,16 @@ pub fn path(data_dir: &Path) -> PathBuf {
 ///
 /// Called by: `panels/logic/program_start/access.rs`: `create_account`.
 /// Calls: [`path`], `sqlcipher::create_plain`, [`SystemDatabase::from`].
-pub fn create(data_dir: &Path) -> Result<SystemDatabase, DbError> {
-    SystemDatabase::from(sqlcipher::create_plain(&path(data_dir))?)
+pub fn create(data_dir: &Path, tables: &[&str]) -> Result<SystemDatabase, DbError> {
+    SystemDatabase::from(sqlcipher::create_plain(&path(data_dir))?, tables)
 }
 
 /// Opens the system database at the start and at the login.
 ///
-/// Input: `data_dir`, the data folder of the program.
+/// Input:
+/// - `data_dir`: the data folder of the program.
+/// - `tables`: the `SCHEMA` of every table of the system database
+///   (`db/models/schema.rs`: `SYSTEM_TABLES`).
 ///
 /// Output: the database, open, with its tables. An error when the file is
 /// missing (`DbError::NotFound`: the program is not installed yet) or is
@@ -94,8 +103,8 @@ pub fn create(data_dir: &Path) -> Result<SystemDatabase, DbError> {
 /// Called by: `panels/logic/program_start/access.rs`: `installed_user`,
 /// `log_in`.
 /// Calls: [`path`], `sqlcipher::open_plain`, [`SystemDatabase::from`].
-pub fn open(data_dir: &Path) -> Result<SystemDatabase, DbError> {
-    SystemDatabase::from(sqlcipher::open_plain(&path(data_dir))?)
+pub fn open(data_dir: &Path, tables: &[&str]) -> Result<SystemDatabase, DbError> {
+    SystemDatabase::from(sqlcipher::open_plain(&path(data_dir))?, tables)
 }
 
 #[cfg(test)]
@@ -104,16 +113,17 @@ mod tests {
 
     use super::*;
 
+    use crate::db::models::schema::SYSTEM_TABLES;
     use crate::test_support::TempDir;
 
     #[test]
     fn the_system_database_is_made_once_and_opened_again() {
         let directory = TempDir::new();
 
-        create(directory.path()).unwrap();
+        create(directory.path(), &SYSTEM_TABLES).unwrap();
 
         assert!(directory.path().join("system.v2.db").exists());
-        assert!(matches!(create(directory.path()), Err(DbError::Exists(_))));
-        open(directory.path()).unwrap();
+        assert!(matches!(create(directory.path(), &SYSTEM_TABLES), Err(DbError::Exists(_))));
+        open(directory.path(), &SYSTEM_TABLES).unwrap();
     }
 }

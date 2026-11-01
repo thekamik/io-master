@@ -12,12 +12,12 @@
 //! The plan stays as it was; a blocked plan, or one with a cross reference,
 //! is refused by `db/`.
 
-use crate::clock::now;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::evaluation_plan::{create_evaluation, read_evaluation_plan, update_evaluation_plan};
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
 use crate::domain::text::{MAX_NAME, checked_text};
+use crate::infrastructure::clock::now;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::work_unit::WorkUnit;
 
@@ -37,7 +37,7 @@ use crate::model::evaluation::work_unit::WorkUnit;
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_create`.
 /// Calls: `domain/text.rs`: `checked_text`; `db/models/ai/agent.rs`:
-/// `read_agent`; `clock.rs`: `now`; `db/models/evaluation/evaluation_plan.rs`:
+/// `read_agent`; `infrastructure/clock.rs`: `now`; `db/models/evaluation/evaluation_plan.rs`:
 /// `create_evaluation`.
 pub fn new_evaluation(db: &UserDatabase, plan: i64, identification: [&str; 3], agent: i64) -> Result<i64, DomainError> {
     let [product, client, evaluator] = identification;

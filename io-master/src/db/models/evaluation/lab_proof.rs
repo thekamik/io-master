@@ -12,8 +12,8 @@
 
 use rusqlite::{Connection, named_params};
 
-use crate::db::error::DbError;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::lab_proof::LabProof;
 
 /// The table, made when it is missing (`schema.rs`, `USER_TABLES`).

@@ -1,6 +1,7 @@
 //! The tables of each database. Each `SCHEMA` is written in the file of its
-//! model; this file only lists them for `storage/`, which makes the missing
-//! tables whenever it opens a database, and so knows no model itself.
+//! model; this file only lists them. The caller that opens a database gives
+//! its list to `infrastructure/storage/`, which makes the missing tables, and
+//! so knows no model itself.
 //!
 //! **The tables are parted by the database they live in**, not by the
 //! folder of their model: the system database is not encrypted, since it
@@ -11,8 +12,8 @@
 //! checks a foreign key when a row is written, not when its table is made.
 //!
 //! ```text
-//! models/<area>/<model>.rs ──SCHEMA──► schema.rs ──USER_TABLES───► storage/user_database.rs
-//!                                                 └─SYSTEM_TABLES─► storage/system_database.rs
+//! models/<area>/<model>.rs ──SCHEMA──► schema.rs ──USER_TABLES, SYSTEM_TABLES──► access.rs (the first start, the login)
+//!   ──create / open(data_dir, ..., tables)──► infrastructure/storage/user_database.rs, system_database.rs
 //! ```
 
 use crate::db::models::ai::{agent, api_key, chat, integration, journal, rag};

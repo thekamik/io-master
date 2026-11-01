@@ -28,7 +28,7 @@ use crate::db::models::evaluation::product_document::{
     read_document_passages, read_document_text, read_product_document,
 };
 use crate::db::models::evaluation::work_unit::{read_work_unit, read_work_units};
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Verdict, WorkUnit};

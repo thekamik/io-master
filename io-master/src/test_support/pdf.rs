@@ -1,4 +1,4 @@
-//! Help for the tests that run the tools of Poppler (`pdf/poppler.rs`): a
+//! Help for the tests that run the tools of Poppler (`infrastructure/pdf/poppler.rs`): a
 //! small but real PDF.
 
 /// A small but real PDF with one page per text (Helvetica; a line

@@ -11,8 +11,8 @@ use std::fmt;
 
 use serde_json::Value;
 
-use crate::db::error::DbError;
 use crate::domain::error::DomainError;
+use crate::infrastructure::storage::error::DbError;
 
 /// The longest explanation taken from an answer, in characters.
 const EXPLANATION_LENGTH: usize = 300;

@@ -58,7 +58,7 @@ use std::path::Path;
 use rusqlite::Connection;
 use zeroize::Zeroizing;
 
-use crate::db::error::DbError;
+use crate::infrastructure::storage::error::DbError;
 
 use super::database_key::DatabaseKey;
 
@@ -188,7 +188,7 @@ mod tests {
     use std::fs;
     use std::os::unix::fs::PermissionsExt;
 
-    use crate::security::random::fill_random;
+    use crate::infrastructure::security::random::fill_random;
     use crate::test_support::TempDir;
 
     /// A random key.

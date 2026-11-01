@@ -9,8 +9,8 @@
 
 use rusqlite::{Row, named_params};
 
-use crate::db::error::DbError;
-use crate::db::storage::system_database::SystemDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::system_database::SystemDatabase;
 use crate::model::user::user_data::User;
 
 /// The most users of an installation: one (`docs/architecture.md`, section 3).
@@ -172,7 +172,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::storage::system_database::create;
+    use crate::db::models::schema::SYSTEM_TABLES;
+    use crate::infrastructure::storage::system_database::create;
     use crate::test_support::TempDir;
 
     fn user(name: &str) -> User {
@@ -182,7 +183,7 @@ mod tests {
     #[test]
     fn the_one_user_is_stored_read_and_renamed() {
         let directory = TempDir::new();
-        let system = create(directory.path()).unwrap();
+        let system = create(directory.path(), &SYSTEM_TABLES).unwrap();
         let id = create_user(&system, &user("Kamil")).unwrap();
         let mut stored = read_user(&system, id).unwrap();
 
@@ -198,7 +199,7 @@ mod tests {
     #[test]
     fn a_name_that_is_no_name_is_refused() {
         let directory = TempDir::new();
-        let system = create(directory.path()).unwrap();
+        let system = create(directory.path(), &SYSTEM_TABLES).unwrap();
 
         for name in ["", "   ", "a/b", "x\u{0}y", &"a".repeat(MAX_NAME + 1)] {
             assert!(matches!(create_user(&system, &user(name)), Err(DbError::Inconsistent(_))), "{name:?}");

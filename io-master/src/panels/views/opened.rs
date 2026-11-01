@@ -7,7 +7,7 @@
 //! let db = database(&opened)?;       the database, or "nobody is logged in"
 //! ```
 
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::panels::views::error::ViewError;
 
 /// The open database of the session `opened`; refused when nobody is

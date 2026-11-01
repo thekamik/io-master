@@ -26,7 +26,7 @@ use crate::ai::models::evaluation::work_unit::proposal::{
     read_parameters,
 };
 use crate::db::models::evaluation::work_unit::read_work_unit;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::user_database::UserDatabase;
 
 /// The task of a filling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

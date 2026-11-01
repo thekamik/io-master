@@ -20,14 +20,14 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::error::DbError;
 use crate::db::models::evaluation::lab_proof::{insert_lab_proof, read_lab_proof};
 use crate::db::models::evaluation::product_document::{insert_product_document, read_product_document};
 use crate::db::models::evaluation::work_unit::{
     MAX_WORK_UNITS, insert_work_unit, read_work_units, verdict_name, verdict_of, write_dependencies,
 };
-use crate::db::models::lists::{check_length, position, read_id_list, write_id_list};
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::lists::{check_length, position, read_id_list, write_id_list};
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::product_document::ProductDocument;
@@ -124,7 +124,7 @@ fn state_of(name: &str) -> Result<PlanState, DbError> {
 /// what is wrong.
 ///
 /// Called by: [`insert_plan`], [`update_evaluation_plan`].
-/// Calls: `lists.rs`: `check_length`.
+/// Calls: `infrastructure/storage/lists.rs`: `check_length`.
 fn check_plan(plan: &EvaluationPlan) -> Result<(), DbError> {
     check_length(plan.oscal_documents.len(), MAX_STANDARDS, "standards of a plan")?;
     check_length(plan.product_documents.len(), MAX_DOCUMENTS, "documents of a plan")?;
@@ -152,7 +152,7 @@ fn check_plan(plan: &EvaluationPlan) -> Result<(), DbError> {
 /// stored (foreign key) or comes twice (`UNIQUE`).
 ///
 /// Called by: [`insert_plan`], [`update_evaluation_plan`].
-/// Calls: `lists.rs`: `write_id_list`, `position`; `work_unit.rs`:
+/// Calls: `infrastructure/storage/lists.rs`: `write_id_list`, `position`; `work_unit.rs`:
 /// `verdict_name`.
 fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Result<(), DbError> {
     write_id_list(
@@ -322,7 +322,7 @@ fn read_verdicts(connection: &Connection, id: i64) -> Result<Vec<Verdict>, DbErr
 /// longer than its limit (a database the program did not write).
 ///
 /// Called by: [`read_evaluation_plan`].
-/// Calls: `lists.rs`: `read_id_list`; [`read_verdicts`].
+/// Calls: `infrastructure/storage/lists.rs`: `read_id_list`; [`read_verdicts`].
 fn read_lists(connection: &Connection, plan: &mut EvaluationPlan) -> Result<(), DbError> {
     plan.oscal_documents = read_id_list(
         connection,
@@ -425,7 +425,7 @@ pub fn read_evaluation_plans(db: &UserDatabase) -> Result<Vec<EvaluationPlan>, D
 /// `units` misses one, names one twice or one of another plan.
 ///
 /// Called by: [`update_evaluation_plan`].
-/// Calls: `lists.rs`: `read_id_list`, `position`.
+/// Calls: `infrastructure/storage/lists.rs`: `read_id_list`, `position`.
 fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(), DbError> {
     let stored =
         read_id_list(connection, "SELECT id FROM work_units WHERE evaluation_plan = :owner", id, MAX_WORK_UNITS)?;

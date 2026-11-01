@@ -11,8 +11,8 @@
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
 use crate::ai::error::AiError;
-use crate::db::error::DbError;
 use crate::domain::error::DomainError;
+use crate::infrastructure::storage::error::DbError;
 use crate::panels::logic::evaluation::error::EvaluationError;
 use crate::panels::logic::program_start::access::AccountError;
 use crate::panels::logic::settings::error::SettingsError;

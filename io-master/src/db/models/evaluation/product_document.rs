@@ -22,9 +22,9 @@
 
 use rusqlite::{Connection, named_params};
 
-use crate::db::error::DbError;
 use crate::db::models::ai::rag::{MAX_FOUND, passages, query_of};
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::product_document::ProductDocument;
 
 /// The most passages of one document (a text of 20 million characters).

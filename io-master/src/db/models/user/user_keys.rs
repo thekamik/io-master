@@ -12,8 +12,8 @@
 
 use rusqlite::named_params;
 
-use crate::db::error::DbError;
-use crate::db::storage::system_database::SystemDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::system_database::SystemDatabase;
 use crate::model::user::user_keys::{RecoveryWrappedKey, UserKeys, WrappedKey};
 
 /// The table, made when it is missing (`schema.rs`, `SYSTEM_TABLES`).
@@ -186,8 +186,9 @@ mod tests {
 
     use super::*;
 
+    use crate::db::models::schema::SYSTEM_TABLES;
     use crate::db::models::user::user_data::create_user;
-    use crate::db::storage::system_database::create;
+    use crate::infrastructure::storage::system_database::create;
     use crate::model::user::user_data::User;
     use crate::test_support::TempDir;
 
@@ -214,7 +215,7 @@ mod tests {
     #[test]
     fn the_keys_of_a_user_are_stored_read_and_replaced() {
         let directory = TempDir::new();
-        let system = create(directory.path()).unwrap();
+        let system = create(directory.path(), &SYSTEM_TABLES).unwrap();
         let user = create_user(&system, &User { id: 0, name: "Kamil".to_owned(), created: 1 }).unwrap();
 
         create_user_keys(&system, &keys(user, 1)).unwrap();
@@ -229,7 +230,7 @@ mod tests {
     #[test]
     fn keys_of_no_user_and_empty_keys_are_refused() {
         let directory = TempDir::new();
-        let system = create(directory.path()).unwrap();
+        let system = create(directory.path(), &SYSTEM_TABLES).unwrap();
         let mut empty = keys(1, 1);
 
         empty.password.salt.clear();

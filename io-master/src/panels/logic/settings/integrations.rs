@@ -14,7 +14,7 @@ use crate::ai::models::ai::integration::question::{Prepared, Question, prepare};
 use crate::db::models::ai::api_key::{MAX_KEY, read_api_key, update_api_key};
 use crate::db::models::ai::integration::{create_integration, read_integration, update_integration};
 use crate::db::models::user::program_data::{read_settings, update_settings};
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::api_key::ApiKey;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::ai::integration::Integration;
@@ -166,7 +166,7 @@ mod tests {
 
     use crate::ai::error::AiError;
     use crate::db::models::user::program_data::create_settings;
-    use crate::db::storage::user_database::UserDatabase;
+    use crate::infrastructure::storage::user_database::UserDatabase;
     use crate::model::ai::integration::Protocol;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};

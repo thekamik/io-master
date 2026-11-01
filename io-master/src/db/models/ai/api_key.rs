@@ -16,9 +16,9 @@ use reqwest::Url;
 use rusqlite::named_params;
 use zeroize::Zeroizing;
 
-use crate::db::error::DbError;
 use crate::db::models::ai::integration::read_integration;
-use crate::db::storage::user_database::UserDatabase;
+use crate::infrastructure::storage::error::DbError;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::api_key::ApiKey;
 
 /// The longest key accepted, in characters: keys are 30 to 120 characters,

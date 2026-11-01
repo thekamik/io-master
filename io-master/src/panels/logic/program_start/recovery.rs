@@ -20,11 +20,11 @@ use hkdf::Hkdf;
 use sha2::Sha256;
 use zeroize::Zeroizing;
 
+use crate::infrastructure::security::random::fill_random;
 use crate::model::user::user_keys::RecoveryWrappedKey;
 use crate::panels::logic::program_start::recovery_code::{CODE_BYTES, RecoveryCode};
-use crate::security::random::fill_random;
 
-use crate::db::storage::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
+use crate::infrastructure::storage::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 
 /// What the HKDF derivation is for: never the same key as the one of the
 /// password (`keys.rs`, "io-master unlocking key v1").

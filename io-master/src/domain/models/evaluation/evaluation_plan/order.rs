@@ -15,8 +15,8 @@
 
 use crate::db::models::evaluation::evaluation_plan::{read_evaluation_plan, update_evaluation_plan};
 use crate::db::models::evaluation::work_unit::{read_work_units, update_work_unit};
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::WorkUnit;
 

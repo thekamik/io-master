@@ -5,9 +5,9 @@
 
 use std::fmt;
 
-use crate::db::error::DbError;
 use crate::domain::models::evaluation::oscal_standard_document::OscalError;
-use crate::pdf::poppler::PdfError;
+use crate::infrastructure::pdf::poppler::PdfError;
+use crate::infrastructure::storage::error::DbError;
 
 /// Why a rule of the data refused a change, or could not be checked.
 #[derive(Debug)]

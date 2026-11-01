@@ -16,8 +16,8 @@ use jsonschema::Validator;
 use serde_json::Value;
 
 use crate::db::models::evaluation::oscal_standard_document::create_oscal_standard_document;
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::oscal_standard_document::OscalStandardDocument;
 
 /// The largest document read, in bytes (the CEM is 3 MB).

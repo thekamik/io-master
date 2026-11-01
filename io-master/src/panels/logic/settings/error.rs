@@ -6,7 +6,7 @@
 use std::fmt;
 
 use crate::ai::error::AiError;
-use crate::db::error::DbError;
+use crate::infrastructure::storage::error::DbError;
 
 /// Why a change of the settings of the AI was refused or failed.
 #[derive(Debug)]

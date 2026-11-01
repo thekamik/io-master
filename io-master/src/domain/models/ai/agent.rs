@@ -11,9 +11,9 @@
 use crate::db::models::ai::agent::{MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent};
 use crate::db::models::ai::integration::read_integration;
 use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND, read_knowledge_base};
-use crate::db::storage::user_database::UserDatabase;
 use crate::domain::error::DomainError;
 use crate::domain::text::checked_text;
+use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::agent::{Agent, GlossaryEntry};
 
 /// The longest name of an agent, in characters.

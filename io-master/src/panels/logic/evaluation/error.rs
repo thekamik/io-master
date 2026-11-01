@@ -4,7 +4,7 @@
 
 use std::fmt;
 
-use crate::db::error::DbError;
+use crate::infrastructure::storage::error::DbError;
 
 /// Why what the panel of the evaluation shows could not be read.
 #[derive(Debug)]

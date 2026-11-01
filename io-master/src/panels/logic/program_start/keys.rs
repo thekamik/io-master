@@ -29,10 +29,10 @@ use hkdf::Hkdf;
 use sha2::Sha256;
 use zeroize::Zeroizing;
 
+use crate::infrastructure::security::random::fill_random;
 use crate::model::user::user_keys::WrappedKey;
-use crate::security::random::fill_random;
 
-use crate::db::storage::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
+use crate::infrastructure::storage::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 
 /// The fewest characters of a password.
 pub const PASSWORD_MIN: usize = 12;
