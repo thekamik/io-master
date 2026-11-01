@@ -1,5 +1,5 @@
-//! The knowledge bases and their sources, as the panel of the agents makes
-//! and changes them. A base is shared: every agent that names it searches
+//! The rules of the knowledge (`KnowledgeBase`, `Source`): the bases and
+//! their sources made and changed, a base searched. A base is shared: every agent that names it searches
 //! it. A source is the text of one file (`.txt`, `.md` or `.pdf`); it is
 //! never removed (no delete, user 2026-10-28), but its text may be replaced
 //! by a newer file and its name changed.
@@ -17,8 +17,9 @@ use crate::db::models::ai::rag::{
     read_knowledge_bases, read_passages, read_source, read_sources, update_knowledge_base, update_source,
 };
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::error::DomainError;
+use crate::domain::text::checked_text;
 use crate::model::ai::rag::{KnowledgeBase, Source};
-use crate::panels::logic::agents::error::AgentError;
 use crate::pdf::poppler::{self, MAX_FILE};
 
 /// The longest name of a base or a source, in characters.
@@ -31,30 +32,17 @@ const MAX_DESCRIPTION: usize = 2000;
 /// character of the longest text of a source.
 const MAX_TEXT_FILE: u64 = 64 * 1024 * 1024;
 
-/// A name trimmed, refused when it is empty or over [`MAX_NAME`].
-///
-/// Called by: [`add_base`], [`change_base`], [`add_source`],
-/// [`rename_source`].
-fn checked_name(name: &str, what: &str) -> Result<String, AgentError> {
-    let name = name.trim();
-
-    ensure!(!name.is_empty(), AgentError::Refused(format!("{what} without a name")));
-    ensure!(name.chars().count() <= MAX_NAME, AgentError::Refused(format!("a name over {MAX_NAME} characters")));
-
-    Ok(name.to_owned())
-}
-
 /// Makes a new knowledge base; gives its id.
 ///
-/// Called by: `panels/views/agents/knowledge.rs` (a new base).
-/// Calls: [`checked_name`], `read_knowledge_bases`, `create_knowledge_base`.
-pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64, AgentError> {
-    let name = checked_name(name, "a knowledge base")?;
+/// Called by: `panels/views/agents/knowledge.rs`: `knowledge_base_create`.
+/// Calls: `domain/text.rs`: `checked_text`, `read_knowledge_bases`, `create_knowledge_base`.
+pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64, DomainError> {
+    let name = checked_text(name, "the name of the base", MAX_NAME)?;
 
-    ensure!(read_knowledge_bases(db)?.len() < MAX_BASES, AgentError::Refused(format!("{MAX_BASES} bases already")));
+    ensure!(read_knowledge_bases(db)?.len() < MAX_BASES, DomainError::Refused(format!("{MAX_BASES} bases already")));
     ensure!(
         description.chars().count() <= MAX_DESCRIPTION,
-        AgentError::Refused(format!("a description over {MAX_DESCRIPTION} characters"))
+        DomainError::Refused(format!("a description over {MAX_DESCRIPTION} characters"))
     );
 
     Ok(create_knowledge_base(db, &KnowledgeBase { id: 0, name, description: description.trim().to_owned() })?)
@@ -62,15 +50,15 @@ pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64,
 
 /// Writes the name and the description of the base `base.id` anew.
 ///
-/// Called by: `panels/views/agents/knowledge.rs` (a base saved).
-/// Calls: [`checked_name`], `read_knowledge_base`, `update_knowledge_base`.
-pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), AgentError> {
-    let name = checked_name(&base.name, "a knowledge base")?;
+/// Called by: `panels/views/agents/knowledge.rs`: `knowledge_base_save`.
+/// Calls: `domain/text.rs`: `checked_text`, `read_knowledge_base`, `update_knowledge_base`.
+pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), DomainError> {
+    let name = checked_text(&base.name, "the name of the base", MAX_NAME)?;
 
     read_knowledge_base(db, base.id)?;
     ensure!(
         base.description.chars().count() <= MAX_DESCRIPTION,
-        AgentError::Refused(format!("a description over {MAX_DESCRIPTION} characters"))
+        DomainError::Refused(format!("a description over {MAX_DESCRIPTION} characters"))
     );
 
     Ok(update_knowledge_base(
@@ -83,30 +71,30 @@ pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), AgentE
 /// UTF-8, a `.pdf` through Poppler; refused for another kind, a file over
 /// its limit, a text that is no UTF-8 or that holds nothing.
 ///
-/// Called by: `panels/views/agents/knowledge.rs` (a file chosen in the
-/// dialog).
-/// Calls: `poppler::text`.
-pub fn source_text(path: &Path) -> Result<String, AgentError> {
-    let read = |error: std::io::Error| AgentError::Refused(format!("{}: {error}", path.display()));
+/// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_add`,
+/// `knowledge_source_replace` (a file chosen in the dialog).
+/// Calls: `pdf/poppler.rs`: `text`.
+pub fn source_text(path: &Path) -> Result<String, DomainError> {
+    let read = |error: std::io::Error| DomainError::Refused(format!("{}: {error}", path.display()));
     let extension = path.extension().and_then(|extension| extension.to_str()).unwrap_or_default().to_lowercase();
     let size = fs::metadata(path).map_err(read)?.len();
     let text = match extension.as_str() {
         "txt" | "md" => {
-            ensure!(size <= MAX_TEXT_FILE, AgentError::Refused(format!("a text file over {MAX_TEXT_FILE} bytes")));
+            ensure!(size <= MAX_TEXT_FILE, DomainError::Refused(format!("a text file over {MAX_TEXT_FILE} bytes")));
             String::from_utf8(fs::read(path).map_err(read)?)
-                .map_err(|_| AgentError::Refused("the file is no text in UTF-8".to_owned()))?
+                .map_err(|_| DomainError::Refused("the file is no text in UTF-8".to_owned()))?
         }
         "pdf" => {
-            ensure!(size <= MAX_FILE, AgentError::Refused(format!("a PDF over {MAX_FILE} bytes")));
+            ensure!(size <= MAX_FILE, DomainError::Refused(format!("a PDF over {MAX_FILE} bytes")));
             poppler::text(&fs::read(path).map_err(read)?)?
         }
-        _ => return Err(AgentError::Refused("only .txt, .md and .pdf files are sources".to_owned())),
+        _ => return Err(DomainError::Refused("only .txt, .md and .pdf files are sources".to_owned())),
     };
 
-    ensure!(!text.trim().is_empty(), AgentError::Refused("the file holds no text".to_owned()));
+    ensure!(!text.trim().is_empty(), DomainError::Refused("the file holds no text".to_owned()));
     ensure!(
         text.chars().count() <= MAX_SOURCE_CHARS,
-        AgentError::Refused(format!("a text over {MAX_SOURCE_CHARS} characters"))
+        DomainError::Refused(format!("a text over {MAX_SOURCE_CHARS} characters"))
     );
 
     Ok(text)
@@ -115,15 +103,15 @@ pub fn source_text(path: &Path) -> Result<String, AgentError> {
 /// Adds the text `text` to the base `base` as a new source named `name`;
 /// gives its id. The database indexes its passages.
 ///
-/// Called by: `panels/views/agents/knowledge.rs` (a file added).
-/// Calls: [`checked_name`], `read_sources`, `create_source`.
-pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Result<i64, AgentError> {
-    let name = checked_name(name, "a source")?;
+/// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_add`.
+/// Calls: `domain/text.rs`: `checked_text`, `read_sources`, `create_source`.
+pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Result<i64, DomainError> {
+    let name = checked_text(name, "the name of the source", MAX_NAME)?;
 
     read_knowledge_base(db, base)?;
     ensure!(
         read_sources(db, base)?.len() < MAX_SOURCES,
-        AgentError::Refused(format!("{MAX_SOURCES} sources in the base already"))
+        DomainError::Refused(format!("{MAX_SOURCES} sources in the base already"))
     );
 
     Ok(create_source(db, &Source { id: 0, knowledge_base: base, name, text })?)
@@ -132,9 +120,9 @@ pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Res
 /// Replaces the text of the source `id` (a newer version of its file); the
 /// database indexes it anew.
 ///
-/// Called by: `panels/views/agents/knowledge.rs` (a file chosen anew).
+/// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_replace`.
 /// Calls: `read_source`, `update_source`.
-pub fn replace_source_text(db: &UserDatabase, id: i64, text: String) -> Result<(), AgentError> {
+pub fn replace_source_text(db: &UserDatabase, id: i64, text: String) -> Result<(), DomainError> {
     let source = read_source(db, id)?;
 
     Ok(update_source(db, &Source { text, ..source })?)
@@ -142,10 +130,10 @@ pub fn replace_source_text(db: &UserDatabase, id: i64, text: String) -> Result<(
 
 /// Changes the name of the source `id`.
 ///
-/// Called by: `panels/views/agents/knowledge.rs` (a source renamed).
-/// Calls: [`checked_name`], `read_source`, `update_source`.
-pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), AgentError> {
-    let name = checked_name(name, "a source")?;
+/// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_rename`.
+/// Calls: `domain/text.rs`: `checked_text`, `read_source`, `update_source`.
+pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), DomainError> {
+    let name = checked_text(name, "the name of the source", MAX_NAME)?;
     let source = read_source(db, id)?;
 
     Ok(update_source(db, &Source { name, ..source })?)
@@ -154,9 +142,9 @@ pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), Agent
 /// The passages of the base `base` that fit `question` best: the test of a
 /// base, at most [`MAX_FOUND`].
 ///
-/// Called by: `panels/views/agents/knowledge.rs` (the search in a base).
+/// Called by: `panels/views/agents/knowledge.rs`: `knowledge_search`.
 /// Calls: `read_knowledge_base`, `read_passages`.
-pub fn search_base(db: &UserDatabase, base: i64, question: &str) -> Result<Vec<String>, AgentError> {
+pub fn search_base(db: &UserDatabase, base: i64, question: &str) -> Result<Vec<String>, DomainError> {
     read_knowledge_base(db, base)?;
 
     Ok(read_passages(db, &[base], question, MAX_FOUND)?)
@@ -208,7 +196,7 @@ mod tests {
         let text = source_text(&report).unwrap();
 
         assert!(text.contains("Annex A") && text.contains("Annex B"));
-        assert!(matches!(source_text(&image), Err(AgentError::Refused(_))));
-        assert!(matches!(source_text(&empty), Err(AgentError::Refused(_))));
+        assert!(matches!(source_text(&image), Err(DomainError::Refused(_))));
+        assert!(matches!(source_text(&empty), Err(DomainError::Refused(_))));
     }
 }

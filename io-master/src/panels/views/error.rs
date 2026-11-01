@@ -13,7 +13,6 @@ use serde::ser::{Serialize, SerializeStruct, Serializer};
 use crate::ai::error::AiError;
 use crate::db::error::DbError;
 use crate::domain::error::DomainError;
-use crate::panels::logic::agents::error::AgentError;
 use crate::panels::logic::chat::error::ChatError;
 use crate::panels::logic::evaluation::error::EvaluationError;
 use crate::panels::logic::program_start::access::AccountError;
@@ -30,8 +29,6 @@ pub enum ViewError {
     Session,
     /// Nobody is logged in: the page shows the login again.
     NotLoggedIn,
-    /// The panel of the agents refused a change, or failed.
-    Agent(AgentError),
     /// The settings of the AI refused a change, or failed.
     Settings(SettingsError),
     /// The panel of the chat refused a chat or a question, or failed.
@@ -49,12 +46,6 @@ pub enum ViewError {
     /// What the page sent, or a file the user chose, cannot be taken;
     /// holds the reason.
     Invalid(String),
-}
-
-impl From<AgentError> for ViewError {
-    fn from(error: AgentError) -> ViewError {
-        ViewError::Agent(error)
-    }
 }
 
 impl From<ChatError> for ViewError {
@@ -135,9 +126,6 @@ impl ViewError {
                 | AiError::TooLong { .. }
                 | AiError::TooManyMessages { .. },
             )
-            | ViewError::Agent(
-                AgentError::Refused(_) | AgentError::Pdf(_) | AgentError::Db(DbError::Inconsistent(_)),
-            )
             | ViewError::Chat(
                 ChatError::Refused(_)
                 | ChatError::Ai(
@@ -154,7 +142,6 @@ impl ViewError {
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
             | ViewError::Settings(SettingsError::Db(_))
-            | ViewError::Agent(AgentError::Db(_))
             | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))
             | ViewError::Evaluation(EvaluationError::Db(_))
             | ViewError::Domain(DomainError::Db(_))
@@ -172,7 +159,6 @@ impl ViewError {
             ViewError::Session => "the session of the window failed: start the program again".to_owned(),
             ViewError::NotLoggedIn => "nobody is logged in".to_owned(),
             ViewError::Settings(error) => error.to_string(),
-            ViewError::Agent(error) => error.to_string(),
             ViewError::Chat(error) => error.to_string(),
             ViewError::Evaluation(error) => error.to_string(),
             ViewError::Ai(error) => error.to_string(),

@@ -1,6 +1,6 @@
-//! The agents, as their panel makes and changes them: an agent made, its
-//! changes checked. The knowledge it gives with a question is a part of the
-//! AI (`ai/models/ai/agent.rs`).
+//! The rules of an agent (`Agent`): an agent made, its changes checked. The
+//! knowledge it gives with a question is a part of the AI
+//! (`ai/models/ai/agent.rs`).
 //!
 //! An agent is a layer of knowledge over the model of an integration (user,
 //! 2026-10-29): it names the integration that answers it, its instructions,
@@ -12,8 +12,9 @@ use crate::db::models::ai::agent::{MAX_CHARACTERS, MAX_TERMS, create_agent, read
 use crate::db::models::ai::integration::read_integration;
 use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND, read_knowledge_base};
 use crate::db::storage::user_database::UserDatabase;
+use crate::domain::error::DomainError;
+use crate::domain::text::checked_text;
 use crate::model::ai::agent::{Agent, GlossaryEntry};
-use crate::panels::logic::agents::error::AgentError;
 
 /// The longest name of an agent, in characters.
 const MAX_NAME: usize = 100;
@@ -40,9 +41,10 @@ knowledge is not enough, say what is missing.";
 /// Makes a new agent of the integration `integration`, with the default
 /// instructions and limits and no knowledge yet; gives its id.
 ///
-/// Called by: `panels/views/agents/agent.rs` (a new agent).
-/// Calls: `read_integration`, [`checked`], `create_agent`.
-pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64, AgentError> {
+/// Called by: `panels/views/agents/agent.rs`: `agent_create`.
+/// Calls: `db/models/ai/integration.rs`: `read_integration`; [`checked`];
+/// `db/models/ai/agent.rs`: `create_agent`.
+pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64, DomainError> {
     read_integration(db, integration)?;
 
     let agent = Agent {
@@ -62,9 +64,9 @@ pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64,
 /// Writes the agent `agent.id` anew: its name, integration, instructions,
 /// knowledge bases, glossary and limits.
 ///
-/// Called by: `panels/views/agents/agent.rs` (an agent saved).
-/// Calls: `read_agent`, [`checked`], `update_agent`.
-pub fn change_agent(db: &UserDatabase, agent: &Agent) -> Result<(), AgentError> {
+/// Called by: `panels/views/agents/agent.rs`: `agent_save`.
+/// Calls: `db/models/ai/agent.rs`: `read_agent`, `update_agent`; [`checked`].
+pub fn change_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DomainError> {
     read_agent(db, agent.id)?;
 
     Ok(update_agent(db, &checked(db, agent)?)?)
@@ -75,8 +77,8 @@ pub fn change_agent(db: &UserDatabase, agent: &Agent) -> Result<(), AgentError> 
 /// over its limit.
 ///
 /// Called by: [`checked`].
-fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, AgentError> {
-    ensure!(glossary.len() <= MAX_TERMS, AgentError::Refused(format!("more than {MAX_TERMS} terms")));
+fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, DomainError> {
+    ensure!(glossary.len() <= MAX_TERMS, DomainError::Refused(format!("more than {MAX_TERMS} terms")));
 
     let mut kept = Vec::with_capacity(glossary.len());
 
@@ -89,11 +91,11 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Ag
 
         ensure!(
             !term.is_empty() && !meaning.is_empty(),
-            AgentError::Refused(format!("the term \"{term}{meaning}\" needs both the term and its meaning"))
+            DomainError::Refused(format!("the term \"{term}{meaning}\" needs both the term and its meaning"))
         );
         ensure!(
             term.chars().count() <= MAX_TERM && meaning.chars().count() <= MAX_TERM,
-            AgentError::Refused(format!("a term or a meaning over {MAX_TERM} characters"))
+            DomainError::Refused(format!("a term or a meaning over {MAX_TERM} characters"))
         );
         kept.push(GlossaryEntry { term: term.to_owned(), meaning: meaning.to_owned() });
     }
@@ -105,26 +107,26 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Ag
 /// knowledge bases that exist, each base once, limits in their ranges.
 ///
 /// Called by: [`new_agent`], [`change_agent`].
-/// Calls: `read_integration`, `read_knowledge_base`, [`checked_glossary`].
-fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, AgentError> {
-    let name = agent.name.trim();
+/// Calls: `domain/text.rs`: `checked_text`; `db/models/ai/integration.rs`:
+/// `read_integration`; `db/models/ai/rag.rs`: `read_knowledge_base`;
+/// [`checked_glossary`].
+fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
+    let name = checked_text(&agent.name, "the name of the agent", MAX_NAME)?;
     let passages = usize::try_from(agent.max_passages).unwrap_or(usize::MAX);
 
-    ensure!(!name.is_empty(), AgentError::Refused("an agent without a name".to_owned()));
-    ensure!(name.chars().count() <= MAX_NAME, AgentError::Refused(format!("a name over {MAX_NAME} characters")));
     ensure!(
         agent.instructions.chars().count() <= MAX_INSTRUCTIONS,
-        AgentError::Refused(format!("instructions over {MAX_INSTRUCTIONS} characters"))
+        DomainError::Refused(format!("instructions over {MAX_INSTRUCTIONS} characters"))
     );
     ensure!(
         (1..=MAX_FOUND).contains(&passages),
-        AgentError::Refused(format!("the passages of a question: from 1 to {MAX_FOUND}"))
+        DomainError::Refused(format!("the passages of a question: from 1 to {MAX_FOUND}"))
     );
     ensure!(
         (MIN_CHARACTERS..=MAX_CHARACTERS).contains(&agent.max_characters),
-        AgentError::Refused(format!("the characters of a question: from {MIN_CHARACTERS} to {MAX_CHARACTERS}"))
+        DomainError::Refused(format!("the characters of a question: from {MIN_CHARACTERS} to {MAX_CHARACTERS}"))
     );
-    ensure!(agent.knowledge_bases.len() <= MAX_BASES, AgentError::Refused("too many knowledge bases".to_owned()));
+    ensure!(agent.knowledge_bases.len() <= MAX_BASES, DomainError::Refused("too many knowledge bases".to_owned()));
     read_integration(db, agent.integration)?;
 
     let mut bases = Vec::with_capacity(agent.knowledge_bases.len());
@@ -139,7 +141,7 @@ fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, AgentError> {
 
     Ok(Agent {
         id: agent.id,
-        name: name.to_owned(),
+        name,
         integration: agent.integration,
         instructions: agent.instructions.trim().to_owned(),
         knowledge_bases: bases,
@@ -195,12 +197,12 @@ mod tests {
         ];
 
         for agent in &refused {
-            assert!(matches!(change_agent(&db, agent), Err(AgentError::Refused(_))));
+            assert!(matches!(change_agent(&db, agent), Err(DomainError::Refused(_))));
         }
 
         assert!(matches!(
             change_agent(&db, &Agent { knowledge_bases: vec![base + 1], ..stored }),
-            Err(AgentError::Db(_))
+            Err(DomainError::Db(_))
         ));
         assert!(new_agent(&db, "Another", local + 1).is_err());
     }

@@ -71,6 +71,11 @@ storage/ ──UserDatabase / SystemDatabase (the connection, seen only in db/)�
 The rules of the data (user, 2026-11-01: `data_model.md`, "the rules of the data live outside `model/`"), in a mirror of `model/`; `error.rs` (`DomainError`: refused, a document that is no OSCAL catalog, a PDF whose text cannot be read, or a failure of the database), which each panel turns into its own error; `text.rs` (`checked_text`, `check_length`), the one rule of a text the user gives.
 
 ```text
+domain/models/ai/
+  agent.rs                   new_agent (the default instructions and limits), change_agent; checked (a name,
+                             an integration and bases that exist, limits in their ranges, the glossary)
+  rag.rs                     add_base, change_base; source_text (.txt, .md, .pdf within its limit), add_source,
+                             replace_source_text, rename_source; search_base (the test of a base)
 domain/models/evaluation/
   evaluation_plan/
     planning.rs              the life of a plan and its data: create_plan (the verdicts of Common Criteria),
@@ -147,7 +152,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 |---|---|---|
 | `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
 | `evaluation_plan` | none: the rules are in `domain/models/evaluation/`, "Fill with AI" in `ai/models/evaluation/` | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
-| `agents` | `agent.rs` (an agent made, its changes checked; its knowledge and its question are in `ai/models/ai/agent.rs`), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
+| `agents` | none: the rules of an agent and of the knowledge are in `domain/models/ai/`, its knowledge and its question in `ai/models/ai/agent.rs` | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `domain/models/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |

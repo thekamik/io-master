@@ -135,7 +135,7 @@ fn write_lists(connection: &Connection, id: i64, agent: &Agent) -> Result<(), Db
 /// is taken (`UNIQUE`), or when its integration or a knowledge base is not
 /// stored (foreign key); nothing is then written.
 ///
-/// Called by: `panels/logic/agents/agent.rs`: `new_agent`.
+/// Called by: `domain/models/ai/agent.rs`: `new_agent`.
 /// Calls: [`check_agent`], [`write_lists`].
 pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
     ensure!(agent.id == 0, DbError::Inconsistent("a new agent has an id already".to_owned()));
@@ -218,7 +218,7 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 ///
 /// Output: the agent; `DbError::NoRow` when there is none.
 ///
-/// Called by: [`read_agents`]; `panels/logic/agents/agent.rs`:
+/// Called by: [`read_agents`]; `domain/models/ai/agent.rs`:
 /// `agent_knowledge`, `change_agent`; `panels/logic/chat/chats.rs`:
 /// `chat_question`, `new_chat`; `domain/models/evaluation/evaluation_plan/evaluation.rs`:
 /// `change_agent`, `new_evaluation`; `ai/models/evaluation/work_unit/assessment_question.rs`:
@@ -288,7 +288,7 @@ pub fn read_agents(db: &UserDatabase) -> Result<Vec<Agent>, DbError> {
 /// Output: nothing; an error as [`create_agent`], or `DbError::NoRow` when
 /// there is no agent `agent.id`; nothing is then written.
 ///
-/// Called by: `panels/logic/agents/agent.rs`: `change_agent`.
+/// Called by: `domain/models/ai/agent.rs`: `change_agent`.
 /// Calls: [`check_agent`], [`write_lists`].
 pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
     check_agent(agent)?;

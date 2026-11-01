@@ -165,8 +165,9 @@ pub fn text_of_pages(pdf: &[u8], first: u32, last: u32) -> Result<Vec<String>, P
 /// The whole text of the PDF `pdf`, read by parts of [`PART`] pages, the
 /// pages parted by an empty line.
 ///
-/// Called by: `panels/logic/agents/knowledge.rs` (a source),
-/// `panels/logic/evaluation/inputs.rs` (a document of the product).
+/// Called by: `domain/models/ai/rag.rs`: `source_text` (a source);
+/// `domain/models/evaluation/product_document.rs`: `document_text` (a
+/// document of the product).
 /// Calls: [`info`], [`text_of_pages`].
 pub fn text(pdf: &[u8]) -> Result<String, PdfError> {
     let pages = info(pdf)?.pages;
