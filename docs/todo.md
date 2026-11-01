@@ -11,10 +11,10 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 The code is moved to the layout of `CLAUDE.md` ("The window and the layers"), one step at a time, each built, tested and committed on its own and checked by the user before the next; the files keep their content but for their paths (`git mv`), and `README.md`, `code_structure.md`, `architecture_map.md`, `data_model.md` and `review.md` change with each step:
 
-1. `infrastructure/`: `db/storage/` to `storage/` (with `db/error.rs` and `db/models/lists.rs`; the list of the tables given as a parameter), the transport of `ai/models/ai/integration/` to `ai_service/` (with `ai/error.rs`), `security/`, `pdf/`, `clock.rs`, `session/data_folder.rs`; the paths in the comments of `Cargo.toml` mended.
+1. `infrastructure/`: `db/storage/` to `storage/` (with `db/error.rs` and `db/models/lists.rs`; the list of the tables given as a parameter), `security/`, `pdf/`, `clock.rs`, `session/data_folder.rs`; the paths in the comments of `Cargo.toml` mended.
 2. `objects/user/`: `user_data`, `program_data`, `user_keys` (the model, the store and the rules of `panels/logic/program_start/`).
-3. `objects/ai/`: `integration`, `api_key`, `agent`, `chat`, `journal`, `rag` (with `panels/logic/settings/`).
-4. `objects/evaluation/` and `objects/session/`.
+3. `objects/ai/`: `integration` (its connection and protocols in `integration_ai/`), `api_key`, `agent`, `chat`, `journal`, `rag` (with `panels/logic/settings/`); `ai/error.rs` to `objects/ai_error.rs`.
+4. `objects/evaluation/` and `objects/session/` (`ai/lock.rs` with `Progress`).
 5. `panels/session.rs` (`session/state.rs`); `architecture_tests.rs` checking the three groups and the roles of the files.
 
 ## Before the release
