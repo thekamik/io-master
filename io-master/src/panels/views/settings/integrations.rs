@@ -48,7 +48,7 @@ pub struct IntegrationView {
     name: String,
     url: String,
     model: String,
-    /// "openai_chat", "anthropic_messages".
+    /// `"openai_chat"`, `"anthropic_messages"`.
     protocol: &'static str,
     /// Empty: the trusted certificates of the system.
     ca_certificate: String,

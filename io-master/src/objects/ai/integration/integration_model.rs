@@ -12,7 +12,7 @@ pub struct Integration {
     /// The name the user gave it ("Ollama on this computer").
     pub name: String,
 
-    /// The address of the service ("http://127.0.0.1:11434/v1/chat/completions").
+    /// The address of the service (`"http://127.0.0.1:11434/v1/chat/completions"`).
     pub url: String,
 
     /// The name of the model at the service ("llama3.1:70b").

@@ -35,8 +35,8 @@ pub const SCHEMA: &str = "
 ";
 
 /// The origin of the address of an integration: the scheme, the host and the
-/// port its key is bound to ("https://api.openai.com/v1/chat/completions" →
-/// "https://api.openai.com").
+/// port its key is bound to (`"https://api.openai.com/v1/chat/completions"` →
+/// `"https://api.openai.com"`).
 ///
 /// Input: `db`, the open database of the user; `integration`, the id of the
 /// integration.

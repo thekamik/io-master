@@ -33,7 +33,7 @@ pub const SCHEMA: &str = "
 const COLUMNS: &str = "id, name, url, model, protocol, ca_certificate, context_size";
 
 /// The name of a protocol in the column `protocol` (`Protocol::OpenAiChat` →
-/// "openai_chat").
+/// `"openai_chat"`).
 ///
 /// Called by: [`create_integration`], [`update_integration`].
 fn protocol_name(protocol: Protocol) -> &'static str {
@@ -43,7 +43,7 @@ fn protocol_name(protocol: Protocol) -> &'static str {
     }
 }
 
-/// The protocol of its name in the column `protocol` ("openai_chat" →
+/// The protocol of its name in the column `protocol` (`"openai_chat"` →
 /// `Protocol::OpenAiChat`); a name the program never writes is
 /// `DbError::Corrupt`.
 ///
@@ -77,7 +77,7 @@ fn check_integration(integration: &Integration) -> Result<(), DbError> {
 /// Input:
 /// - `db`: the open database of the user.
 /// - `integration`: the new integration, its `id` 0 (the database gives
-///   it): a name, the address ("https://api.openai.com/v1/chat/completions"),
+///   it): a name, the address (`"https://api.openai.com/v1/chat/completions"`),
 ///   the model, the protocol, an optional CA certificate, the size of the
 ///   context.
 ///

@@ -1,4 +1,4 @@
-//! The direction of the dependencies of the program (docs/code_structure.md),
+//! The direction of the dependencies of the program (`docs/code_structure.md`),
 //! checked on the source itself, so that an auditor sees the rule and its
 //! check in one place. Three groups (user, 2026-11-01), the dependencies one
 //! way:

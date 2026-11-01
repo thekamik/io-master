@@ -113,14 +113,13 @@ pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<Work
             }
         }
 
-        let standard = match standard {
-            Some(title) => title,
-            None => {
-                let title = standard_title(db, unit.reference)?;
+        let standard = if let Some(title) = standard {
+            title
+        } else {
+            let title = standard_title(db, unit.reference)?;
 
-                titles.push((unit.reference, title.clone()));
-                title
-            }
+            titles.push((unit.reference, title.clone()));
+            title
         };
 
         rows.push(WorkUnitRowView {
