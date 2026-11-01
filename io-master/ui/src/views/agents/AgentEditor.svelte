@@ -84,6 +84,8 @@
 
 <p><button type="button" class="ghost" onclick={onback}>← Agents</button></p>
 
+{#if problem}<p class="problem">{problem}</p>{/if}
+
 {#if view}
   <section class="card ai-config">
     <h2>{view.name}</h2>
