@@ -1,6 +1,6 @@
 # IO Master: the structure of the code
 
-*Where* everything is in the code and which rules keep it in order. **`io-master/src/main.rs` is the map**: every module, in the order of the layers, each group commented; there is no `mod.rs`.
+*Where* everything is in the code and which rules keep it in order; model by model, where each is stored, processed and shown: `architecture_map.md`. **`io-master/src/main.rs` is the map**: every module, in the order of the layers, each group commented; there is no `mod.rs`.
 
 ## 1. The layers
 
