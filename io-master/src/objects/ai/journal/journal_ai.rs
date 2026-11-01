@@ -10,12 +10,12 @@
 //!
 //! The caller holds the lock of the session for it, as for `prepare`.
 
-use crate::ai::error::AiError;
-use crate::ai::models::ai::integration::question::Prepared;
-use crate::ai::models::ai::integration::sending::Sent;
-use crate::db::models::ai::journal::create_journal_entry;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::journal::{Ending, JournalEntry};
+use crate::objects::ai::integration::integration_ai::question::Prepared;
+use crate::objects::ai::integration::integration_ai::sending::Sent;
+use crate::objects::ai::journal::journal_model::{Ending, JournalEntry};
+use crate::objects::ai::journal::journal_store::create_journal_entry;
+use crate::objects::ai_error::AiError;
 
 /// The answer, written into the journal of its agent.
 #[derive(Debug)]
@@ -43,7 +43,7 @@ pub struct Answer {
 /// tells why it failed.
 ///
 /// Called by: [`record`].
-/// Calls: `db/models/ai/journal.rs`: `create_journal_entry`.
+/// Calls: `objects/ai/journal/journal_store.rs`: `create_journal_entry`.
 fn write_entry(db: &UserDatabase, prepared: Prepared, agent: i64, answer: &Answer) -> Result<i64, AiError> {
     let mut written = answer.text.clone();
 
@@ -113,15 +113,15 @@ mod tests {
     use tokio::sync::mpsc;
     use zeroize::Zeroizing;
 
-    use crate::ai::models::ai::integration::question::{Question, prepare};
-    use crate::ai::models::ai::integration::sending::send;
     use crate::db::models::ai::agent::create_agent;
-    use crate::db::models::ai::api_key::{create_api_key, update_api_key};
-    use crate::db::models::ai::integration::{create_integration, update_integration};
-    use crate::db::models::ai::journal::{read_journal_entries, read_journal_entry};
-    use crate::model::ai::api_key::ApiKey;
     use crate::model::ai::chat::{Message, Speaker};
-    use crate::model::ai::integration::{Integration, Protocol};
+    use crate::objects::ai::api_key::api_key_model::ApiKey;
+    use crate::objects::ai::api_key::api_key_store::{create_api_key, update_api_key};
+    use crate::objects::ai::integration::integration_ai::question::{Question, prepare};
+    use crate::objects::ai::integration::integration_ai::sending::send;
+    use crate::objects::ai::integration::integration_model::{Integration, Protocol};
+    use crate::objects::ai::integration::integration_store::{create_integration, update_integration};
+    use crate::objects::ai::journal::journal_store::{read_journal_entries, read_journal_entry};
     use crate::test_support::ai_service::{FakeAnswer, FakeService, anthropic_events, openai_events};
     use crate::test_support::database::{agent, database, integration};
 

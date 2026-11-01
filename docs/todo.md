@@ -11,7 +11,7 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 The code is moved to the layout of `CLAUDE.md` ("The window and the layers"), one step at a time, each built, tested and committed on its own and checked by the user before the next; the files keep their content but for their paths (`git mv`), and `README.md`, `code_structure.md`, `architecture_map.md`, `data_model.md` and `review.md` change with each step:
 
-1. `objects/ai/`: `integration` (its connection and protocols in `integration_ai/`), `api_key`, `agent`, `chat`, `journal`, `rag` (with `panels/logic/settings/`); `ai/error.rs` to `objects/ai_error.rs`.
+1. `objects/ai/`: the rest of it, in two steps: `agent` and `rag`; then `chat` (with `panels/logic/settings/`). Done: `integration` (`integration_ai/`), `api_key`, `journal`, `objects/ai_error.rs`.
 2. `objects/evaluation/` and `objects/session/` (`ai/lock.rs` with `Progress`).
 3. `panels/session.rs` (`session/state.rs`); `architecture_tests.rs` checking the three groups and the roles of the files.
 

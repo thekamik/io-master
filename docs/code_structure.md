@@ -33,27 +33,18 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 | `model`, `infrastructure::clock`, `::data_folder`, `::security`, `::pdf` | nothing of the program |
 | `infrastructure::storage` | `infrastructure::security` (a new key of a database made of random bytes) |
 | `db` | `infrastructure::storage`, `model` |
-| `domain` | `infrastructure` (`clock`, `pdf`, `storage`), `db`, `model` |
-| `ai` | `infrastructure` (`clock`, `storage`), `domain`, `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
-| `objects` | `infrastructure`, `db` (the stores still there, named by `schema.rs`), `model` |
+| `domain` | the model and the store of the integration, `infrastructure` (`clock`, `pdf`, `storage`), `db`, `model` |
+| `ai` | `objects/ai_error.rs`, the integration, the journal, `infrastructure` (`clock`, `storage`), `domain`, `db`, `model` (inside: the agent and the chat ask through the integration) |
+| `objects` | `infrastructure`, `db` (the stores still there, named by `schema.rs`), `domain/error.rs` (held by `AiError`), `model`; inside, `objects/ai/integration/` only the API key and the model of the journal |
 | `session` | `objects::user`, `infrastructure::storage`, `db`, `model` |
-| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `objects`, `infrastructure`, `domain`, `db`, `model` |
-| `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `objects`, `infrastructure::storage`, `domain`, `db`, `model`, `session` |
+| `panels::logic` | `ai`, `objects/user/`, of `objects/ai/` the error, the journal, the model and the store of the integration and of the API key, of the AI of the integration only `question.rs`, `sending.rs`, `address.rs`; `infrastructure`, `domain`, `db`, `model` |
+| `panels::views` | `panels::logic`, `ai`, `objects/user/`, of `objects/ai/` the same as `panels::logic` but `address.rs`; `infrastructure::storage`, `domain`, `db`, `model`, `session` |
 
 **SQL only in the store**: `rusqlite` and the connection of an open database (`.connection()`) appear only in `infrastructure/storage/`, `db/models/` and the stores of the objects (`objects/**/<object>_store.rs`), checked by `architecture_tests.rs` (`the_sql_is_only_in_the_store`), since the models in the databases are not below the folder of the database files.
 
-`panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only; a panel whose work is all rules of the data has no folder in `panels/logic/` (`evaluation_plan`: its views call `domain/` and `ai/` alone).
+`panels/views/` uses `objects/ai/integration/integration_ai/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only; a panel whose work is all rules of the data has no folder in `panels/logic/` (`evaluation_plan`: its views call `domain/` and `ai/` alone).
 
-**Models × concerns** (user, 2026-11-01). The program is a grid: `model/` declares the structures, and each concern mirrors `model/` with the functions on each model in the file of its name, so that the place of a function follows from its model and its concern:
-
-```text
-                      model/ai/integration.rs     model/evaluation/work_unit.rs     model/session/progress.rs
-db/models/  (store)   db/models/ai/integration.rs db/models/evaluation/work_unit.rs  (never stored)
-domain/models/ (rules)                            domain/models/evaluation/work_unit.rs
-ai/models/  (the AI)  ai/models/ai/integration/   ai/models/evaluation/work_unit.rs
-```
-
-The whole program is brought to it step by step (`todo.md`); `panels/logic/` keeps only what a panel shows, and only `panels/views/` knows the window (Tauri, serde), so that another front end (an HTTPS server) would replace it alone.
+**Three groups** (user, 2026-11-01): `objects/` (every model with the functions on it, a folder per object, its files named by the object and their role), `panels/` (the window), `infrastructure/` (what belongs to no object). The program is moved to them step by step (`todo.md`); the models not yet moved keep the earlier mirror of `model/` in each concern (`db/models/` the store, `domain/models/` the rules, `ai/models/` the AI), so that the place of a function follows from its model and its concern in both. `panels/logic/` keeps only what a panel shows, and only `panels/views/` knows the window (Tauri, serde), so that another front end (an HTTPS server) would replace it alone.
 
 ## 2. The folders
 
@@ -87,9 +78,26 @@ Every model with the functions that work on it (user, 2026-11-01), a folder per 
 | `<object>_rules.rs` | the rules of its data | the stores, the models, `infrastructure/` |
 | `<object>_ai.rs` | the work of the AI on it | the rules, the stores, the models |
 
-A big role becomes a folder of the same name (`user_keys_rules/`), whose files carry no prefix. `schema.rs` lists the tables of each database for the caller that opens it.
+A big role becomes a folder of the same name (`user_keys_rules/`, `integration_ai/`), whose files carry no prefix. `schema.rs` lists the tables of each database for the caller that opens it. The integration knows of the other objects only the API key (masked in its errors) and the model of the journal (`Ending`); the journal, the agent and the chat ask through it; the panels see of it only `question.rs`, `sending.rs`, `address.rs`, its model and its store, never the connection or a protocol (checked by `architecture_tests.rs`). Their fields read by the journal alone (`Prepared`, `Sent`) are visible only in `objects/ai/` (`pub(in crate::objects::ai)`).
 
 ```text
+objects/
+  ai_error.rs    AiError, the error of every work of the AI
+objects/ai/
+  integration/   integration_model.rs (Integration, Protocol), integration_store.rs,
+                 integration_ai/ (the service that answers):
+                   question.rs: Question, prepare ──► Prepared (the request, the names for the journal; the size and
+                   the number of messages checked)
+                   sending.rs:  send ──► Sent (the answer streamed, no database); send_whole (awaited whole)
+                   address.rs (the address and the CA certificate checked), connection.rs (TLS 1.3, no redirect, no
+                   proxy, the stream read, every input bounded); protocol.rs, the one place that chooses the protocol
+                   (needs_key, body, key_headers, read_event) ──► openai.rs, anthropic.rs (the body, the key header,
+                   one event read); sse.rs (events from pieces of any size), turns.rs (alternating turns starting
+                   with the user), reading.rs (the answer read so far)
+  api_key/       api_key_model.rs (ApiKey), api_key_store.rs (bound to the origin of its integration),
+                 api_key_ai.rs (the key masked in every text taken from an answer)
+  journal/       journal_model.rs (JournalEntry, Ending), journal_store.rs,
+                 journal_ai.rs (record ──► Answer: the journal of the agent written before the answer is given)
 objects/user/
   program_data/  program_data_model.rs (Installation, Settings), program_data_store.rs
   user_data/     user_data_model.rs (User), user_data_store.rs,
@@ -139,23 +147,11 @@ domain/models/evaluation/
 
 ### `ai/`
 
-The core of the program that talks with the AI (user, 2026-11-01: a core part gets a folder of its own, as `db/` has; `panels/logic/` holds only what a panel shows). **`ai/models/` mirrors `model/`**, as `db/models/` does: the functions of the AI on each model are in the file (or the folder) of its name. `error.rs` (`AiError`) is the error of all of them.
+The core of the program that talks with the AI (user, 2026-11-01: a core part gets a folder of its own, as `db/` has; `panels/logic/` holds only what a panel shows). **`ai/models/` mirrors `model/`**, as `db/models/` does: the functions of the AI on each model are in the file (or the folder) of its name; their error is `objects/ai_error.rs` (`AiError`). The integration, its API key and the journal are already objects (`objects/ai/`, below).
 
 ```text
 ai/
-  error.rs              AiError
   models/ai/
-    integration/        Integration, the service that answers
-                        question.rs: Question, prepare ──► Prepared (the request, the names for the journal; the size
-                        and the number of messages checked)
-                        sending.rs:  send ──► Sent (the answer streamed, no database); send_whole (awaited whole)
-                        address.rs (the address and the CA certificate checked), connection.rs (TLS 1.3, no
-                        redirect, no proxy, the stream read, every input bounded); protocol.rs, the one place that
-                        chooses the protocol (needs_key, body, key_headers, read_event) ──► openai.rs, anthropic.rs
-                        (the body, the key header, one event read); sse.rs (events from pieces of any size), turns.rs
-                        (alternating turns starting with the user), reading.rs (the answer read so far)
-    api_key.rs          ApiKey: the key masked in every text taken from an answer
-    journal.rs          JournalEntry: record ──► Answer (the journal of the agent written before the answer is given)
     agent.rs            Agent: the passages of its bases that fit a question (its glossary, its limits);
                         agent_question (its instructions, the task, its knowledge, the messages ──► Question)
     chat.rs             Chat: the question of a chat with the knowledge of its agent (chat_question, prepared: its oldest
@@ -173,13 +169,11 @@ ai/
     progress.rs         Progress (a helper model): a step of a long work written into it (record_step)
   lock.rs               the locks of the session as a long work takes them: the database only for the short steps
 
-panels ──► agent.rs: agent_question ──► integration/question.rs: prepare ──► integration/sending.rs: send
-                                                                   ──► integration/connection.rs ──► the service
-                                                                       (integration/protocol.rs: the protocol chosen)
-       ──► journal.rs: record ──► db (the journal of the agent)
+panels ──► agent.rs: agent_question ──► integration_ai/question.rs: prepare ──► integration_ai/sending.rs: send
+                                                                   ──► integration_ai/connection.rs ──► the service
+                                                                       (integration_ai/protocol.rs: the protocol chosen)
+       ──► journal_ai.rs: record ──► journal_store.rs (the journal of the agent)
 ```
-
-The integration knows of the other models only the API key (masked in its errors); the journal, the agent and the chat ask through the integration (checked by `architecture_tests.rs`). The panels never see the connection or a protocol.
 
 ### `session/`
 

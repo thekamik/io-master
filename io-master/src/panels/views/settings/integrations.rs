@@ -8,7 +8,8 @@
 //!                     ──integration_save(...)───► change_integration
 //!                     ──integration_activate()──► activate_integration
 //!                     ──integration_set_key()───► set_key            (the key goes in, never out)
-//!                     ──integration_check(id)───► check_question ─► sending::send_whole ─► journal::record ──► CheckView
+//!                     ──integration_check(id)───► check_question ─► sending::send_whole ─► journal::record ──►
+//! CheckView
 //!                                                  (the lock held)   (released)   (the lock held; no agent,
 //!                                                                                  so nothing is written)
 //! ```
@@ -16,11 +17,11 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
-use crate::ai::models::ai::integration::sending::send_whole;
-use crate::ai::models::ai::journal::record;
-use crate::db::models::ai::integration::read_integrations;
-use crate::model::ai::integration::{Integration, Protocol};
-use crate::model::ai::journal::Ending;
+use crate::objects::ai::integration::integration_ai::sending::send_whole;
+use crate::objects::ai::integration::integration_model::{Integration, Protocol};
+use crate::objects::ai::integration::integration_store::read_integrations;
+use crate::objects::ai::journal::journal_ai::record;
+use crate::objects::ai::journal::journal_model::Ending;
 use crate::objects::user::program_data::program_data_store::read_settings;
 use crate::panels::logic::settings::integrations::{
     activate_integration, add_integration, change_integration, check_question, has_key, set_key,
@@ -93,7 +94,7 @@ fn protocol_of(name: &str) -> Result<Protocol, ViewError> {
 
 /// The name of an ending on the page.
 ///
-/// Called by: [`integration_check`]; `journal.rs`.
+/// Called by: [`integration_check`]; `panels/views/agents/journal.rs`.
 pub fn ending_name(ending: Ending) -> &'static str {
     match ending {
         Ending::Complete => "complete",
@@ -224,7 +225,8 @@ pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) ->
 /// the answer is awaited, so the window stays usable.
 ///
 /// Called by: `Integrations.svelte`, "Check the connection".
-/// Calls: `check_question`, `ai/models/ai/integration/sending.rs`: `send_whole`, `ai/models/ai/journal.rs`: `record`.
+/// Calls: `check_question`, `objects/ai/integration/integration_ai/sending.rs`: `send_whole`,
+/// `objects/ai/journal/journal_ai.rs`: `record`.
 #[tauri::command]
 pub async fn integration_check(session: State<'_, Session>, id: i64) -> Result<CheckView, ViewError> {
     let prepared = {

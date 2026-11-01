@@ -13,14 +13,14 @@
 //! ```
 //!
 //! Whether the documents fit whole into the context of the model is told by
-//! `ai/models/ai/integration/question.rs` (`prepare`) when the question is prepared: the caller asks first for
+//! `objects/ai/integration/integration_ai/question.rs` (`prepare`) when the question is prepared: the caller asks
+//! first for
 //! them whole, then for their passages.
 
-use crate::ai::error::AiError;
+use crate::objects::ai_error::AiError;
 use serde_json::{Value, json};
 
 use crate::ai::models::ai::agent::agent_question;
-use crate::ai::models::ai::integration::question::Question;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
@@ -32,6 +32,7 @@ use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
+use crate::objects::ai::integration::integration_ai::question::Question;
 
 /// The most passages of the documents given with a question when the
 /// documents do not fit whole.

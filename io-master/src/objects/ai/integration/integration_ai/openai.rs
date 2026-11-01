@@ -17,12 +17,12 @@
 use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
-use crate::ai::error::{AiError, shorten};
-use crate::ai::models::ai::integration::reading::Reading;
-use crate::ai::models::ai::integration::sse::SseEvent;
-use crate::ai::models::ai::integration::turns::Turn;
 use crate::model::ai::chat::Speaker;
-use crate::model::ai::journal::Ending;
+use crate::objects::ai::integration::integration_ai::reading::Reading;
+use crate::objects::ai::integration::integration_ai::sse::SseEvent;
+use crate::objects::ai::integration::integration_ai::turns::Turn;
+use crate::objects::ai::journal::journal_model::Ending;
+use crate::objects::ai_error::{AiError, shorten};
 
 /// The body of a question: the instructions as the first message of the
 /// role `system`, then the turns.

@@ -13,17 +13,17 @@
 
 use tokio::sync::mpsc;
 
-use crate::ai::models::ai::integration::connection::{self, Received};
-use crate::ai::models::ai::integration::question::Prepared;
+use crate::objects::ai::integration::integration_ai::connection::{self, Received};
+use crate::objects::ai::integration::integration_ai::question::Prepared;
 
 /// The most pieces of an answer drained: every piece has at least one byte
 /// of the stream, whose limit is 32 MiB (`connection.rs`).
 const MAX_PIECES: usize = 32 * 1024 * 1024;
 
 /// The answer as it came, not written into the journal yet: only `record`
-/// (`ai/models/ai/journal.rs`) gives it out.
+/// (`objects/ai/journal/journal_ai.rs`) gives it out.
 #[must_use = "an answer is read only through record(), which writes the journal of its agent"]
-pub struct Sent(pub(in crate::ai::models::ai) Received);
+pub struct Sent(pub(in crate::objects::ai) Received);
 
 /// Sends the question and passes the pieces of the answer into `pieces`
 /// while it is written; stops when the receiver of `pieces` is dropped.

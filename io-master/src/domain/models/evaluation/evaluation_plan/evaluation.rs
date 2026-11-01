@@ -112,9 +112,9 @@ mod tests {
     use super::*;
 
     use crate::db::models::ai::agent::create_agent;
-    use crate::db::models::ai::integration::create_integration;
     use crate::db::models::evaluation::evaluation_plan::create_evaluation_plan;
     use crate::model::ai::agent::Agent;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{agent, database, integration, plan};
 
     #[test]

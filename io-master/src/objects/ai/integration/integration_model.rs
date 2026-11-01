@@ -1,7 +1,7 @@
 //! An integration with an external AI service: where the program sends
 //! its questions and how it speaks with the service. Kept in the table
 //! `ai_integrations` of the encrypted database of the user; its API key
-//! is kept apart (`api_key.rs`).
+//! is kept apart (`objects/ai/api_key/api_key_model.rs`).
 
 /// An integration with an AI service (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -13,9 +13,9 @@
 
 use std::sync::{Mutex, MutexGuard};
 
-use crate::ai::error::AiError;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::session::progress::Progress;
+use crate::objects::ai_error::AiError;
 
 /// The open database of the session, locked for one step of a long work.
 ///

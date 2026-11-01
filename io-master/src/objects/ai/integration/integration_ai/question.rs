@@ -17,17 +17,17 @@
 
 use zeroize::Zeroizing;
 
-use crate::ai::error::AiError;
-use crate::ai::models::ai::integration::address::check_address;
-use crate::ai::models::ai::integration::connection::Request;
-use crate::ai::models::ai::integration::protocol::{body, needs_key};
-use crate::ai::models::ai::integration::turns::{Turn, turns};
-use crate::db::models::ai::api_key::read_api_key;
-use crate::db::models::ai::integration::read_integration;
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
-use crate::model::ai::integration::Integration;
+use crate::objects::ai::api_key::api_key_store::read_api_key;
+use crate::objects::ai::integration::integration_ai::address::check_address;
+use crate::objects::ai::integration::integration_ai::connection::Request;
+use crate::objects::ai::integration::integration_ai::protocol::{body, needs_key};
+use crate::objects::ai::integration::integration_ai::turns::{Turn, turns};
+use crate::objects::ai::integration::integration_model::Integration;
+use crate::objects::ai::integration::integration_store::read_integration;
+use crate::objects::ai_error::AiError;
 
 /// The longest answer asked for, in tokens: a fourth of the context of the
 /// model, at most this.
@@ -58,14 +58,14 @@ pub struct Question {
 
 /// A question ready to be sent, with what its entry of the journal needs.
 pub struct Prepared {
-    pub(in crate::ai::models::ai) request: Request,
+    pub(in crate::objects::ai) request: Request,
     /// The name of the integration asked ("Ollama"), for the journal.
-    pub(in crate::ai::models::ai) integration_name: String,
+    pub(in crate::objects::ai) integration_name: String,
     /// The model asked, for an answer that does not name its own.
-    pub(in crate::ai::models::ai) model: String,
-    pub(in crate::ai::models::ai) agent: Option<i64>,
-    pub(in crate::ai::models::ai) work_unit: Option<i64>,
-    pub(in crate::ai::models::ai) time: i64,
+    pub(in crate::objects::ai) model: String,
+    pub(in crate::objects::ai) agent: Option<i64>,
+    pub(in crate::objects::ai) work_unit: Option<i64>,
+    pub(in crate::objects::ai) time: i64,
 }
 
 /// The longest answer asked of the integration: a fourth of its context,
@@ -105,8 +105,8 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// `panels/logic/settings/integrations.rs`: `check_question`;
 /// `ai/models/evaluation/work_unit/filling.rs`: `prepared_question`; under the
 /// lock of the session.
-/// Calls: `db/models/ai/integration.rs`: `read_integration`;
-/// `db/models/ai/api_key.rs`: `read_api_key`; `address.rs`:
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
+/// `objects/ai/api_key/api_key_store.rs`: `read_api_key`; `address.rs`:
 /// `check_address`; `turns.rs`: `turns`; [`check_size`];
 /// `protocol.rs`: `needs_key`, `body`; `infrastructure/clock.rs`: `now`.
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
@@ -154,7 +154,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::integration::create_integration;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{database, integration};
 
     /// A question without an agent to the integration `integration`.

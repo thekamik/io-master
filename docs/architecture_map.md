@@ -56,11 +56,11 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlanWorkUnits.svelte` ← `plan_get`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`, `work_unit_get`, `work_unit_save`
 
-### `model/ai/api_key.rs`: `ApiKey`
+### `objects/ai/api_key/api_key_model.rs`: `ApiKey`
 
-- **Stored** (`db/models/ai/api_key.rs`): `create_api_key`, `read_api_key`, `update_api_key`
+- **Stored** (`objects/ai/api_key/api_key_store.rs`): `create_api_key`, `read_api_key`, `update_api_key`
 - **Processed, the AI**:
-  - `ai/models/ai/integration/question.rs`: `prepare`
+  - `objects/ai/integration/integration_ai/question.rs`: `prepare`
 - **Processed, the panels (`panels/logic/`)**:
   - `panels/logic/settings/integrations.rs`: `has_key`, `set_key`
 - **Commands** (`panels/views/`):
@@ -78,10 +78,10 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the AI**:
   - `ai/models/ai/agent.rs`: `agent_question`
   - `ai/models/ai/chat.rs`: `add_answer`, `chat_question`, `leave_oldest_out`, `search_text`
-  - `ai/models/ai/integration/anthropic.rs`: `body`
-  - `ai/models/ai/integration/openai.rs`: `body`
-  - `ai/models/ai/integration/question.rs`: `prepare`
-  - `ai/models/ai/integration/turns.rs`: `turns`
+  - `objects/ai/integration/integration_ai/anthropic.rs`: `body`
+  - `objects/ai/integration/integration_ai/openai.rs`: `body`
+  - `objects/ai/integration/integration_ai/question.rs`: `prepare`
+  - `objects/ai/integration/integration_ai/turns.rs`: `turns`
   - `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`
   - `ai/models/evaluation/work_unit/proposal.rs`: `question_of`
 - **Processed, the panels (`panels/logic/`)**:
@@ -94,15 +94,15 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/chat/Conversation.svelte` ← `chat_get`, `chat_rename`, `chat_ask`
   - `views/settings/IntegrationForm.svelte` ← `integration_check`
 
-### `model/ai/integration.rs`: `Integration`, `Protocol`
+### `objects/ai/integration/integration_model.rs`: `Integration`, `Protocol`
 
-- **Stored** (`db/models/ai/integration.rs`): `create_integration`, `read_integration`, `read_integrations`, `update_integration`
+- **Stored** (`objects/ai/integration/integration_store.rs`): `create_integration`, `read_integration`, `read_integrations`, `update_integration`
 - **Processed, the rules of the data**:
   - `domain/models/ai/agent.rs`: `checked`, `new_agent`
 - **Processed, the AI**:
-  - `ai/models/ai/integration/connection.rs`: `read_stream`
-  - `ai/models/ai/integration/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`
-  - `ai/models/ai/integration/question.rs`: `answer_tokens`, `check_size`, `prepare`
+  - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`
+  - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`
+  - `objects/ai/integration/integration_ai/question.rs`: `answer_tokens`, `check_size`, `prepare`
   - `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`
 - **Processed, the panels (`panels/logic/`)**:
   - `panels/logic/settings/integrations.rs`: `activate_integration`, `add_integration`, `change_integration`, `checked`, `set_key`
@@ -119,14 +119,14 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/settings/IntegrationForm.svelte` ← `integration_create`, `integration_save`, `integration_set_key`, `integration_check`
   - `views/settings/IntegrationList.svelte` ← `integration_list`, `integration_activate`
 
-### `model/ai/journal.rs`: `JournalEntry`, `Ending`
+### `objects/ai/journal/journal_model.rs`: `JournalEntry`, `Ending`
 
-- **Stored** (`db/models/ai/journal.rs`): `create_journal_entry`, `read_journal_entry`, `read_journal_entries`, `read_latest_journal_entry`
+- **Stored** (`objects/ai/journal/journal_store.rs`): `create_journal_entry`, `read_journal_entry`, `read_journal_entries`, `read_latest_journal_entry`
 - **Processed, the AI**:
   - `ai/models/ai/chat.rs`: `kept_text`
-  - `ai/models/ai/integration/anthropic.rs`: `ending_of`
-  - `ai/models/ai/integration/openai.rs`: `ending_of`
-  - `ai/models/ai/journal.rs`: `record`, `write_entry`
+  - `objects/ai/integration/integration_ai/anthropic.rs`: `ending_of`
+  - `objects/ai/integration/integration_ai/openai.rs`: `ending_of`
+  - `objects/ai/journal/journal_ai.rs`: `record`, `write_entry`
 - **Commands** (`panels/views/`):
   - `agents/journal.rs`: `agent_journal_list`, `agent_journal_get`
   - `chat/chats.rs`: `chat_ask`

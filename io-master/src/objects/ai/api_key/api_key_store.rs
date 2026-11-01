@@ -16,10 +16,10 @@ use reqwest::Url;
 use rusqlite::named_params;
 use zeroize::Zeroizing;
 
-use crate::db::models::ai::integration::read_integration;
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::api_key::ApiKey;
+use crate::objects::ai::api_key::api_key_model::ApiKey;
+use crate::objects::ai::integration::integration_store::read_integration;
 
 /// The longest key accepted, in characters: keys are 30 to 120 characters,
 /// the limit stops a pasted document.
@@ -45,7 +45,7 @@ pub const SCHEMA: &str = "
 /// address has no origin.
 ///
 /// Called by: [`write_api_key`], [`read_api_key`].
-/// Calls: `integration.rs`: `read_integration`.
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`.
 fn origin_of(db: &UserDatabase, integration: i64) -> Result<String, DbError> {
     let url = read_integration(db, integration)?.url;
     let parsed = Url::parse(&url).map_err(|error| DbError::Inconsistent(format!("the address {url}: {error}")))?;
@@ -118,7 +118,7 @@ pub fn create_api_key(db: &UserDatabase, key: &ApiKey) -> Result<(), DbError> {
 /// changed since the key was given, so that a key is never sent to another
 /// service.
 ///
-/// Called by: `ai/models/ai/integration/question.rs`: `prepare`; `panels/logic/settings/integrations.rs`:
+/// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`; `panels/logic/settings/integrations.rs`:
 /// `has_key`.
 /// Calls: [`origin_of`].
 pub fn read_api_key(db: &UserDatabase, integration: i64) -> Result<Option<ApiKey>, DbError> {
@@ -158,7 +158,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::integration::{create_integration, update_integration};
+    use crate::objects::ai::integration::integration_store::{create_integration, update_integration};
     use crate::test_support::database::{database, integration};
 
     fn key(integration: i64, text: &str) -> ApiKey {
@@ -189,7 +189,7 @@ mod tests {
 
         create_api_key(&db, &key(id, "sk-one")).unwrap();
 
-        let moved = crate::model::ai::integration::Integration {
+        let moved = crate::objects::ai::integration::integration_model::Integration {
             id,
             url: "https://other.example/v1/chat/completions".to_owned(),
             ..integration()

@@ -27,15 +27,15 @@ use tauri::ipc::Channel;
 use tokio::sync::mpsc;
 
 use crate::ai::models::ai::chat::{add_answer, prepared};
-use crate::ai::models::ai::integration::question::Prepared;
-use crate::ai::models::ai::integration::sending::{Sent, send};
-use crate::ai::models::ai::journal::record;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::chat::{read_chat, read_chats};
 use crate::domain::models::ai::chat::{MAX_QUESTION, add_question, new_chat, rename_chat};
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
-use crate::model::ai::journal::Ending;
+use crate::objects::ai::integration::integration_ai::question::Prepared;
+use crate::objects::ai::integration::integration_ai::sending::{Sent, send};
+use crate::objects::ai::journal::journal_ai::record;
+use crate::objects::ai::journal::journal_model::Ending;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;
@@ -50,7 +50,7 @@ const STOP_CHECK: Duration = Duration::from_millis(200);
 
 /// The most steps of the forwarding of an answer: a piece or a look for a
 /// stop. Every piece has at least one byte of the stream, whose limit is 32
-/// MiB (`ai/models/ai/integration/connection.rs`); the looks are as many again, about 77 days of an
+/// MiB (`objects/ai/integration/integration_ai/connection.rs`); the looks are as many again, about 77 days of an
 /// answer, which the silence of the stream (5 minutes) ends long before.
 const MAX_STEPS: usize = 2 * 32 * 1024 * 1024;
 
@@ -228,7 +228,7 @@ fn prepared_question(session: &Session, chat: i64, text: &str) -> Result<(Prepar
 /// listens. Uses no database.
 ///
 /// Called by: [`chat_ask`].
-/// Calls: `ai/models/ai/integration/sending.rs`: `send`, `Session::stop_requested`.
+/// Calls: `objects/ai/integration/integration_ai/sending.rs`: `send`, `Session::stop_requested`.
 async fn forwarded(session: &Session, prepared: &Prepared, on_piece: &Channel<String>) -> Sent {
     let (pieces, mut receiver) = mpsc::channel::<String>(64);
     let sending = async move { send(prepared, &pieces).await };
@@ -260,7 +260,7 @@ async fn forwarded(session: &Session, prepared: &Prepared, on_piece: &Channel<St
 /// the old messages left out of the question.
 ///
 /// Called by: [`chat_ask`].
-/// Calls: `ai/models/ai/journal.rs`: `record`, `add_answer`, [`message_view`], [`ending_name`].
+/// Calls: `objects/ai/journal/journal_ai.rs`: `record`, `add_answer`, [`message_view`], [`ending_name`].
 fn written(session: &Session, chat: (i64, usize), prepared: Prepared, sent: Sent) -> Result<ChatAnswerView, ViewError> {
     let (chat, left_out) = chat;
     let opened = session.lock()?;
@@ -322,10 +322,10 @@ mod tests {
     use serde_json::json;
     use tauri::ipc::InvokeResponseBody;
 
-    use crate::ai::models::ai::integration::question::{Question, prepare};
     use crate::db::models::ai::agent::create_agent;
-    use crate::db::models::ai::integration::create_integration;
-    use crate::model::ai::integration::Integration;
+    use crate::objects::ai::integration::integration_ai::question::{Question, prepare};
+    use crate::objects::ai::integration::integration_model::Integration;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::TempDir;
     use crate::test_support::ai_service::{FakeAnswer, FakeService, openai_events, sse};
     use crate::test_support::database::{agent, database, integration};

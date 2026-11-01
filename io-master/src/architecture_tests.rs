@@ -59,31 +59,35 @@ const ALLOWED: [(&str, &[&str]); 22] = [
     // The database files; a new key of a database made of random bytes.
     ("infrastructure::storage", &["infrastructure::security"]),
     ("db", &["infrastructure::storage", "model"]),
-    // The rules of the data: they read and write through db/.
-    ("domain", &["infrastructure::clock", "infrastructure::pdf", "infrastructure::storage", "db", "model"]),
-    // The AI: it reads the integration, its key and the knowledge, and
-    // writes the journal. Inside, ai/models/ai/ mirrors model/ai/: the
-    // integration (the service, its connection) knows of the other models
-    // only the API key, masked in its errors; the journal, the agent and the
-    // chat ask through the integration.
-    ("ai", &["infrastructure::clock", "domain", "db", "infrastructure::storage", "model"]),
-    ("ai::models::ai::api_key", &["ai::error", "model"]),
+    // The rules of the data: they read and write through db/ and the stores
+    // of the objects (an agent names an integration that exists).
     (
-        "ai::models::ai::integration",
-        &["ai::error", "ai::models::ai::api_key", "infrastructure::clock", "db", "infrastructure::storage", "model"],
+        "domain",
+        &[
+            INTEGRATION_MODEL,
+            INTEGRATION_STORE,
+            "infrastructure::clock",
+            "infrastructure::pdf",
+            "infrastructure::storage",
+            "db",
+            "model",
+        ],
     ),
+    // The AI not yet moved into objects/: it reads the integration, its key
+    // and the knowledge, and writes the journal, through objects/ai/.
     (
-        "ai::models::ai::journal",
-        &["ai::error", "ai::models::ai::integration", "db", "infrastructure::storage", "model"],
+        "ai",
+        &[AI_ERROR, INTEGRATION, JOURNAL, "infrastructure::clock", "domain", "db", "infrastructure::storage", "model"],
     ),
-    ("ai::models::ai::agent", &["ai::error", "ai::models::ai::integration", "db", "infrastructure::storage", "model"]),
+    // The agent and the chat ask through the integration.
+    ("ai::models::ai::agent", &[AI_ERROR, INTEGRATION, "db", "infrastructure::storage", "model"]),
     (
         "ai::models::ai::chat",
         &[
-            "ai::error",
+            AI_ERROR,
             "ai::models::ai::agent",
-            "ai::models::ai::integration",
-            "ai::models::ai::journal",
+            INTEGRATION,
+            JOURNAL,
             "infrastructure::clock",
             "domain",
             "db",
@@ -92,17 +96,28 @@ const ALLOWED: [(&str, &[&str]); 22] = [
         ],
     ),
     // The locks of the session as a long work takes them.
-    ("ai::lock", &["ai::error", "db", "infrastructure::storage", "model"]),
+    ("ai::lock", &[AI_ERROR, "db", "infrastructure::storage", "model"]),
     // The AI on a plan: the loops over its work units (evaluation_plan.rs)
     // use the work on one work unit (work_unit/), never the other way.
     (
         "ai::models::evaluation::work_unit",
-        &["ai::error", "ai::lock", "ai::models::ai", "domain", "db", "infrastructure::storage", "model"],
+        &[
+            AI_ERROR,
+            "ai::lock",
+            "ai::models::ai",
+            INTEGRATION,
+            JOURNAL,
+            "domain",
+            "db",
+            "infrastructure::storage",
+            "model",
+        ],
     ),
     (
         "ai::models::evaluation::evaluation_plan",
         &[
-            "ai::error",
+            AI_ERROR,
+            INTEGRATION_STORE,
             "ai::lock",
             "ai::models::evaluation::work_unit",
             "ai::models::session",
@@ -124,6 +139,7 @@ const ALLOWED: [(&str, &[&str]); 22] = [
         "panels::logic",
         &[
             AI_ERROR,
+            API_KEY_MODEL,
             AGENT,
             CHAT,
             JOURNAL,
@@ -131,7 +147,10 @@ const ALLOWED: [(&str, &[&str]); 22] = [
             SENDING,
             ADDRESS,
             ASSESSMENT_ANSWER,
-            "objects",
+            "objects::user",
+            INTEGRATION_MODEL,
+            INTEGRATION_STORE,
+            API_KEY_STORE,
             "infrastructure::clock",
             "domain",
             "db",
@@ -142,8 +161,18 @@ const ALLOWED: [(&str, &[&str]); 22] = [
         ],
     ),
     // objects/: every model with the functions that work on it (user,
-    // 2026-11-01). Its list of the tables names the stores still in db/.
-    ("objects", &["infrastructure", "db", "model"]),
+    // 2026-11-01). Its list of the tables names the stores still in db/;
+    // AiError holds the error of the rules (domain/error.rs).
+    ("objects", &["infrastructure", "db", "domain::error", "model"]),
+    // The API key of an integration: its store checks the integration it is
+    // bound to.
+    ("objects::ai::api_key", &[AI_ERROR, INTEGRATION_MODEL, INTEGRATION_STORE, "infrastructure::storage"]),
+    // The integration (the service, its connection) knows of the other
+    // objects only the API key, masked in its errors, and the model of the
+    // journal (how an answer ended, `Ending`).
+    ("objects::ai::integration", &[AI_ERROR, "objects::ai::api_key", JOURNAL_MODEL, "infrastructure", "model"]),
+    // The journal writes what the integration asked and was answered.
+    ("objects::ai::journal", &[AI_ERROR, INTEGRATION, "infrastructure", "db", "model"]),
     // The session: the user logged in and their open database.
     ("session", &["objects::user", "db", "infrastructure::storage", "model"]),
     // The commands of the page: they do their work with the folders below.
@@ -161,7 +190,10 @@ const ALLOWED: [(&str, &[&str]); 22] = [
             EVALUATION_PLAN,
             ASSESSMENT_QUESTION,
             FILLING,
-            "objects",
+            "objects::user",
+            INTEGRATION_MODEL,
+            INTEGRATION_STORE,
+            API_KEY_STORE,
             "domain",
             "db",
             "infrastructure::storage",
@@ -171,14 +203,23 @@ const ALLOWED: [(&str, &[&str]); 22] = [
     ),
 ];
 
-/// The parts of `ai/` the panels may use, named once for both layers.
-const AI_ERROR: &str = "ai::error";
+/// The parts of the AI the other folders may use, named once for all of
+/// them. Of the integration the panels see the question, its sending, the
+/// check of an address, its model and its store, never the connection or a
+/// protocol.
+const AI_ERROR: &str = "objects::ai_error";
+const INTEGRATION: &str = "objects::ai::integration";
+const INTEGRATION_MODEL: &str = "objects::ai::integration::integration_model";
+const INTEGRATION_STORE: &str = "objects::ai::integration::integration_store";
+const API_KEY_STORE: &str = "objects::ai::api_key::api_key_store";
+const JOURNAL: &str = "objects::ai::journal";
+const JOURNAL_MODEL: &str = "objects::ai::journal::journal_model";
+const API_KEY_MODEL: &str = "objects::ai::api_key::api_key_model";
+const QUESTION: &str = "objects::ai::integration::integration_ai::question";
+const SENDING: &str = "objects::ai::integration::integration_ai::sending";
+const ADDRESS: &str = "objects::ai::integration::integration_ai::address";
 const AGENT: &str = "ai::models::ai::agent";
 const CHAT: &str = "ai::models::ai::chat";
-const JOURNAL: &str = "ai::models::ai::journal";
-const QUESTION: &str = "ai::models::ai::integration::question";
-const SENDING: &str = "ai::models::ai::integration::sending";
-const ADDRESS: &str = "ai::models::ai::integration::address";
 const PROGRESS: &str = "ai::models::session::progress";
 const EVALUATION_PLAN: &str = "ai::models::evaluation::evaluation_plan";
 const ASSESSMENT_QUESTION: &str = "ai::models::evaluation::work_unit::assessment_question";

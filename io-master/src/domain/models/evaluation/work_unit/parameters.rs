@@ -118,12 +118,12 @@ mod tests {
     use super::*;
 
     use crate::db::models::ai::agent::create_agent;
-    use crate::db::models::ai::integration::create_integration;
     use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
     use crate::domain::models::evaluation::evaluation_plan::planning::{add_document_place, create_plan, update_plan};
     use crate::domain::models::evaluation::evaluation_plan::work_units::add_work_unit;
     use crate::domain::models::evaluation::oscal_standard_document::import_standard;
     use crate::model::evaluation::evaluation_plan::EvaluationPlan;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{agent, database, integration};
 
     const NIST_SAMPLE: &str = include_str!("../../../../../oscal/examples/basic-catalog.json");

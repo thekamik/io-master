@@ -16,7 +16,7 @@
 //! fields `event` and `data` are read; comments (`:`) and other fields are
 //! passed over.
 
-use crate::ai::error::AiError;
+use crate::objects::ai_error::AiError;
 
 /// The longest line kept while it is not complete, in bytes: far more than
 /// any event of an answer; it stops a broken service from filling the

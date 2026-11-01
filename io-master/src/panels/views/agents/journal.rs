@@ -1,6 +1,6 @@
 //! The journal of an agent, as the page reads it: one page of its entries,
 //! the newest first, and one entry whole (its request and its answer). The
-//! journal is only read here: entries are written by `ai/models/ai/journal.rs` (`record`) alone.
+//! journal is only read here: entries are written by `objects/ai/journal/journal_ai.rs` (`record`) alone.
 //!
 //! ```text
 //! AgentJournal.svelte ──agent_journal_list(agent, before)─► read_journal_entries ──► [JournalRowView] (50 at most)
@@ -10,8 +10,8 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::models::ai::journal::{read_journal_entries, read_journal_entry};
-use crate::model::ai::journal::{Ending, JournalEntry};
+use crate::objects::ai::journal::journal_model::{Ending, JournalEntry};
+use crate::objects::ai::journal::journal_store::{read_journal_entries, read_journal_entry};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;

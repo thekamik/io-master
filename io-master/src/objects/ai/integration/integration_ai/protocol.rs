@@ -14,12 +14,12 @@
 use serde_json::Value;
 use zeroize::Zeroizing;
 
-use crate::ai::error::AiError;
-use crate::ai::models::ai::integration::reading::Reading;
-use crate::ai::models::ai::integration::sse::SseEvent;
-use crate::ai::models::ai::integration::turns::Turn;
-use crate::ai::models::ai::integration::{anthropic, openai};
-use crate::model::ai::integration::Protocol;
+use crate::objects::ai::integration::integration_ai::reading::Reading;
+use crate::objects::ai::integration::integration_ai::sse::SseEvent;
+use crate::objects::ai::integration::integration_ai::turns::Turn;
+use crate::objects::ai::integration::integration_ai::{anthropic, openai};
+use crate::objects::ai::integration::integration_model::Protocol;
+use crate::objects::ai_error::AiError;
 
 /// The most headers of a key: two, of Anthropic (the key and the version).
 const MAX_KEY_HEADERS: usize = 2;

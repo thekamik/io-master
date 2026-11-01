@@ -3,7 +3,7 @@
 //! event by the reader of the protocol (`openai.rs`, `anthropic.rs`), kept
 //! by `connection.rs` while the answer streams.
 
-use crate::model::ai::journal::Ending;
+use crate::objects::ai::journal::journal_model::Ending;
 
 /// The answer read so far.
 #[derive(Debug, Default)]

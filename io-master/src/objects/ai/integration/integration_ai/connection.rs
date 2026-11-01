@@ -11,7 +11,7 @@
 //!   the address of the integration and nowhere else;
 //! - proxies of the environment (`HTTPS_PROXY`) are not used;
 //! - the key is marked "sensitive" in its header, and masked in every text
-//!   taken from an answer (`ai/models/ai/api_key.rs`).
+//!   taken from an answer (`objects/ai/api_key/api_key_ai.rs`).
 //!
 //! **An answer can be stopped by the caller**: [`send`] passes the pieces
 //! of the answer into a channel and stops as soon as the receiving end of
@@ -32,13 +32,13 @@ use reqwest::{Client, Response};
 use tokio::sync::mpsc;
 use zeroize::Zeroizing;
 
-use crate::ai::error::{AiError, from_status};
-use crate::ai::models::ai::api_key::masked;
-use crate::ai::models::ai::integration::address::{certificates, check_address};
-use crate::ai::models::ai::integration::protocol::{key_headers, read_event};
-use crate::ai::models::ai::integration::reading::Reading;
-use crate::ai::models::ai::integration::sse::SseDecoder;
-use crate::model::ai::integration::Protocol;
+use crate::objects::ai::api_key::api_key_ai::masked;
+use crate::objects::ai::integration::integration_ai::address::{certificates, check_address};
+use crate::objects::ai::integration::integration_ai::protocol::{key_headers, read_event};
+use crate::objects::ai::integration::integration_ai::reading::Reading;
+use crate::objects::ai::integration::integration_ai::sse::SseDecoder;
+use crate::objects::ai::integration::integration_model::Protocol;
+use crate::objects::ai_error::{AiError, from_status};
 
 /// How long a connection may take to open.
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
@@ -104,7 +104,7 @@ enum StreamEnd {
 /// written until then.
 ///
 /// Called by: `sending.rs`: `send`.
-/// Calls: [`exchange`], `ai/models/ai/api_key.rs`: `masked`.
+/// Calls: [`exchange`], `objects/ai/api_key/api_key_ai.rs`: `masked`.
 pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received {
     let mut reading = Reading::default();
 
@@ -285,8 +285,8 @@ mod tests {
 
     use serde_json::json;
 
-    use crate::ai::models::ai::api_key::MASK;
-    use crate::model::ai::journal::Ending;
+    use crate::objects::ai::api_key::api_key_ai::MASK;
+    use crate::objects::ai::journal::journal_model::Ending;
     use crate::test_support::ai_service::{FakeAnswer, FakeService, anthropic_events, openai_events, sse};
 
     const KEY: &str = "sk-test-secret-key";

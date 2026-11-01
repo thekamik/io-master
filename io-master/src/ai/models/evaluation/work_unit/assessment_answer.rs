@@ -17,7 +17,7 @@
 //! stands in the document is checked by the rule of the data, never taken
 //! from the AI (P5).
 
-use crate::ai::error::AiError;
+use crate::objects::ai_error::AiError;
 use serde_json::Value;
 
 use crate::ai::models::evaluation::work_unit::assessment_question::verdict_name;

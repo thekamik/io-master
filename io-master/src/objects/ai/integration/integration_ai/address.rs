@@ -12,7 +12,7 @@
 
 use reqwest::{Certificate, Url};
 
-use crate::ai::error::AiError;
+use crate::objects::ai_error::AiError;
 
 /// Refuses an address the program does not send to: one that is no URL,
 /// one that is neither `https://` nor `http://` on this computer.
@@ -40,7 +40,7 @@ pub fn check_address(url: &str) -> Result<(), AiError> {
 /// or is no PEM.
 ///
 /// Called by: `connection.rs` (`http_client`); [`check_certificate`].
-pub(in crate::ai::models::ai::integration) fn certificates(pem: &str) -> Result<Vec<Certificate>, AiError> {
+pub(in crate::objects::ai::integration) fn certificates(pem: &str) -> Result<Vec<Certificate>, AiError> {
     let certificates = Certificate::from_pem_bundle(pem.as_bytes())
         .map_err(|error| AiError::Address(format!("the CA certificate: {error}")))?;
 

@@ -11,13 +11,13 @@
 //! agent_question ──► the instructions of the agent + the task + the knowledge + the messages ──► Question
 //! ```
 
-use crate::ai::error::AiError;
-use crate::ai::models::ai::integration::question::Question;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::rag::{MAX_FOUND, read_passages};
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::agent::GlossaryEntry;
 use crate::model::ai::chat::Message;
+use crate::objects::ai::integration::integration_ai::question::Question;
+use crate::objects::ai_error::AiError;
 
 /// The words of `text` in lower case: what lies between the signs that are
 /// no letter or digit.
@@ -122,7 +122,7 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
 ///   evaluation.
 /// - `messages`: the conversation, at least one message.
 ///
-/// Output: the question, not prepared yet (`integration/question.rs`:
+/// Output: the question, not prepared yet (`objects/ai/integration/integration_ai/question.rs`:
 /// `prepare`). An error when the agent cannot be read, or there is no
 /// message.
 ///
@@ -169,11 +169,11 @@ mod tests {
     use super::*;
 
     use crate::db::models::ai::agent::{create_agent, update_agent};
-    use crate::db::models::ai::integration::create_integration;
     use crate::db::models::ai::rag::{create_knowledge_base, create_source};
     use crate::model::ai::agent::Agent;
     use crate::model::ai::chat::Speaker;
     use crate::model::ai::rag::{KnowledgeBase, Source};
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{agent, database, integration};
 
     #[test]

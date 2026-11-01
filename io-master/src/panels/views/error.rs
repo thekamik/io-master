@@ -10,9 +10,9 @@
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 
-use crate::ai::error::AiError;
 use crate::domain::error::DomainError;
 use crate::infrastructure::storage::error::DbError;
+use crate::objects::ai_error::AiError;
 use crate::objects::user::user_data::user_data_rules::AccountError;
 use crate::panels::logic::evaluation::error::EvaluationError;
 use crate::panels::logic::settings::error::SettingsError;

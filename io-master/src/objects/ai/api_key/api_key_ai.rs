@@ -1,8 +1,8 @@
 //! The API key masked in every text taken from an answer: a service may
 //! repeat a header in its error, and no error of the program may hold the
-//! key (`error.rs`).
+//! key (`objects/ai_error.rs`).
 
-use crate::ai::error::AiError;
+use crate::objects::ai_error::AiError;
 
 /// What stands in place of the key where a text could hold it.
 pub const MASK: &str = "••••••••";
@@ -19,9 +19,9 @@ fn mask(text: String, key: Option<&str>) -> String {
 
 /// The error with the key masked in its explanation.
 ///
-/// Called by: `connection.rs` (`send`).
+/// Called by: `objects/ai/integration/integration_ai/connection.rs` (`send`).
 /// Calls: [`mask`].
-pub(in crate::ai::models::ai) fn masked(error: AiError, key: Option<&str>) -> AiError {
+pub(in crate::objects::ai) fn masked(error: AiError, key: Option<&str>) -> AiError {
     match error {
         AiError::Address(text) => AiError::Address(mask(text, key)),
         AiError::KeyRejected(text) => AiError::KeyRejected(mask(text, key)),

@@ -16,17 +16,17 @@
 
 use std::sync::Mutex;
 
-use crate::ai::error::AiError;
 use crate::ai::lock::{lock_database, open_database};
-use crate::ai::models::ai::integration::question::{Prepared, prepare};
-use crate::ai::models::ai::integration::sending::{Sent, send_whole};
-use crate::ai::models::ai::journal::record;
 use crate::ai::models::evaluation::work_unit::proposal::{
     apply_dependencies, apply_parameters, dependencies_question, parameters_question, read_dependencies,
     read_parameters,
 };
 use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::infrastructure::storage::user_database::UserDatabase;
+use crate::objects::ai::integration::integration_ai::question::{Prepared, prepare};
+use crate::objects::ai::integration::integration_ai::sending::{Sent, send_whole};
+use crate::objects::ai::journal::journal_ai::record;
+use crate::objects::ai_error::AiError;
 
 /// The task of a filling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -44,7 +44,7 @@ pub enum FillTask {
 /// Called by: [`fill_work_unit`].
 /// Calls: `ai/lock.rs`: `lock_database`, `open_database`; `read_work_unit`;
 /// `proposal.rs`: `parameters_question`, `dependencies_question`;
-/// `ai/models/ai/integration/question.rs`: `prepare`.
+/// `objects/ai/integration/integration_ai/question.rs`: `prepare`.
 fn prepared_question(
     database: &Mutex<Option<UserDatabase>>,
     task: FillTask,
@@ -84,7 +84,7 @@ fn applied(db: &UserDatabase, task: FillTask, plan: i64, unit: i64, answer: &str
 ///
 /// Called by: [`fill_work_unit`].
 /// Calls: `ai/lock.rs`: `lock_database`, `open_database`;
-/// `ai/models/ai/journal.rs`: `record`; [`applied`].
+/// `objects/ai/journal/journal_ai.rs`: `record`; [`applied`].
 fn written(
     database: &Mutex<Option<UserDatabase>>,
     step: (FillTask, i64, i64),
@@ -121,7 +121,7 @@ fn written(
 /// (`("1.1.1", true, [])`). An error when the session or the database fails.
 ///
 /// Called by: `evaluation_plan.rs`: `fill_plan`.
-/// Calls: [`prepared_question`], `ai/models/ai/integration/sending.rs`:
+/// Calls: [`prepared_question`], `objects/ai/integration/integration_ai/sending.rs`:
 /// `send_whole`, [`written`].
 pub async fn fill_work_unit(
     database: &Mutex<Option<UserDatabase>>,

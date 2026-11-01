@@ -1,7 +1,7 @@
 //! The integrations with AI services (`Integration`), in the table
 //! `ai_integrations` of the database of the user: create, read, update;
 //! never deleted (user, 2026-10-28). Their API keys are kept apart
-//! (`api_key.rs`).
+//! (`objects/ai/api_key/api_key_store.rs`).
 //!
 //! ```text
 //! ai_integrations   id, name (unique), url, model, protocol, ca_certificate, context_size
@@ -11,7 +11,7 @@ use rusqlite::{Row, named_params};
 
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::integration::{Integration, Protocol};
+use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 
 /// The most integrations of the user.
 pub const MAX_INTEGRATIONS: usize = 50;
@@ -140,7 +140,8 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
 ///
 /// Output: the integration; `DbError::NoRow` when there is none.
 ///
-/// Called by: `ai/models/ai/integration/question.rs`: `prepare`; `api_key.rs`: `origin_of`;
+/// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`;
+/// `objects/ai/api_key/api_key_store.rs`: `origin_of`;
 /// `domain/models/ai/agent.rs`: `checked`, `new_agent`;
 /// `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`;
 /// `panels/logic/settings/integrations.rs`: `activate_integration`,
@@ -187,7 +188,7 @@ pub fn read_integrations(db: &UserDatabase) -> Result<Vec<Integration>, DbError>
 
 /// Writes the integration `integration.id` anew. A new address does not
 /// carry its key along: the key stays bound to the address it was given for
-/// (`api_key.rs`), so it must be given again.
+/// (`objects/ai/api_key/api_key_store.rs`), so it must be given again.
 ///
 /// Input:
 /// - `db`: the open database of the user.

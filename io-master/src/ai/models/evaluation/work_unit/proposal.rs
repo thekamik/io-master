@@ -25,13 +25,12 @@
 //! decides; the work units of the cycle are marked `cross_reference`, the
 //! plan `blocked`, until the planner corrects them.
 
-use crate::ai::error::AiError;
+use crate::objects::ai_error::AiError;
 use std::collections::HashMap;
 
 use serde_json::{Value, json};
 
 use crate::ai::models::ai::agent::agent_question;
-use crate::ai::models::ai::integration::question::Question;
 use crate::db::models::ai::agent::read_agents;
 use crate::db::models::evaluation::lab_proof::{create_lab_proof, read_lab_proof};
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
@@ -46,6 +45,7 @@ use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::work_unit::WorkUnit;
+use crate::objects::ai::integration::integration_ai::question::Question;
 
 /// The longest guidance taken from an answer, in characters.
 const MAX_GUIDANCE: usize = 20_000;

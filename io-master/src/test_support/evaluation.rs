@@ -4,7 +4,6 @@
 //! with the AI.
 
 use crate::db::models::ai::agent::create_agent;
-use crate::db::models::ai::integration::create_integration;
 use crate::db::models::evaluation::evaluation_plan::{
     create_evaluation, create_evaluation_plan, read_evaluation_plan, update_evaluation_plan,
 };
@@ -19,6 +18,7 @@ use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::product_document::ProductDocument;
 use crate::model::evaluation::work_unit::WorkUnit;
+use crate::objects::ai::integration::integration_store::create_integration;
 use crate::test_support::database::{agent, integration, plan, unit};
 
 /// The text of the ST of the evaluation.

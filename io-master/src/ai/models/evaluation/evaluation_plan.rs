@@ -23,14 +23,12 @@
 
 use std::sync::Mutex;
 
-use crate::ai::error::AiError;
 use crate::ai::lock::lock_progress;
 use crate::ai::models::evaluation::work_unit::assessment::assess_work_unit;
 use crate::ai::models::evaluation::work_unit::assessment_question::assessing_agent;
 use crate::ai::models::evaluation::work_unit::filling::{FillTask, fill_work_unit};
 use crate::ai::models::session::progress::record_step;
 use crate::db::models::ai::agent::read_agent;
-use crate::db::models::ai::integration::read_integration;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::product_document::read_product_document;
 use crate::db::models::evaluation::work_unit::read_work_units;
@@ -40,6 +38,8 @@ use crate::domain::models::evaluation::evaluation_plan::planning::plan_to_fill;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, WorkUnit};
 use crate::model::session::progress::Progress;
+use crate::objects::ai::integration::integration_store::read_integration;
+use crate::objects::ai_error::AiError;
 
 /// What an assessment would ask, counted when the evaluator asks it.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -66,15 +66,10 @@ mod infrastructure {
 // model/: the data of the program as it is kept in the databases, one
 // structure per kind of data, fields only (docs/data_model.md).
 mod model {
-    // model/ai/: the integration with an external AI service and its key,
-    // the agents, the knowledge for the AI (RAG), the chats, the journal of
-    // the AI.
+    // model/ai/: the agents, the knowledge for the AI (RAG), the chats.
     pub mod ai {
         pub mod agent;
-        pub mod api_key;
         pub mod chat;
-        pub mod integration;
-        pub mod journal;
         pub mod rag;
     }
     // model/evaluation/: the plan of an evaluation, its work units, the
@@ -100,14 +95,11 @@ mod db {
     // per file of model/, no delete (user, 2026-10-28); the tables of each
     // database in their order.
     pub mod models {
-        // db/models/ai/: the integrations and their keys, the knowledge
-        // (RAG) and its index, the agents, the chats, the journal of the AI.
+        // db/models/ai/: the knowledge (RAG) and its index, the agents, the
+        // chats.
         pub mod ai {
             pub mod agent;
-            pub mod api_key;
             pub mod chat;
-            pub mod integration;
-            pub mod journal;
             pub mod rag;
         }
         // db/models/evaluation/: the plans, their work units, the standards,
@@ -163,9 +155,8 @@ mod domain {
 
 // ai/: the core of the program that talks with the AI (user, 2026-11-01):
 // the functions of the AI on the models, in a mirror of model/, as db/models/
-// holds their functions in the database; error.rs is the error of all of them.
+// holds their functions in the database; their error is objects/ai_error.rs.
 mod ai {
-    pub mod error;
     // The locks of the session as a long work of the AI takes them.
     pub mod lock;
     pub mod models {
@@ -174,30 +165,9 @@ mod ai {
             // The agent: the knowledge it gives with a question, and the
             // question it asks with it.
             pub mod agent;
-            // The API key: masked in every text taken from an answer.
-            pub mod api_key;
             // The chat: a question shortened from its oldest messages until
             // it fits.
             pub mod chat;
-            // The journal: the answer written into the journal of its agent
-            // before it is given out (record).
-            pub mod journal;
-            // ai/models/ai/integration/: the integration, the service that
-            // answers: the question prepared and sent, the address checked,
-            // the connection over TLS 1.3, the body and the stream of each
-            // protocol, chosen in one place (protocol.rs).
-            pub mod integration {
-                pub mod address;
-                pub mod anthropic;
-                pub mod connection;
-                pub mod openai;
-                pub mod protocol;
-                pub mod question;
-                pub mod reading;
-                pub mod sending;
-                pub mod sse;
-                pub mod turns;
-            }
         }
         // ai/models/evaluation/: the AI on a plan and its work units: the
         // assessment of an evaluation and "Fill with AI", the loops over the
@@ -229,9 +199,49 @@ mod ai {
 // still in model/, db/, domain/ and ai/ come here step by step
 // (docs/todo.md).
 mod objects {
+    // AiError, the error of every work of the AI.
+    pub mod ai_error;
     // The tables of each database, given to infrastructure/storage/ when a
     // database is opened.
     pub mod schema;
+    // objects/ai/: the integrations with the AI services and their keys, the
+    // journal of every question of an agent.
+    pub mod ai {
+        // The API key of an integration: kept apart, masked in every text
+        // taken from an answer.
+        pub mod api_key {
+            pub mod api_key_ai;
+            pub mod api_key_model;
+            pub mod api_key_store;
+        }
+        // The integration, the service that answers: the question prepared
+        // and sent, the address checked, the connection over TLS 1.3, the
+        // body and the stream of each protocol, chosen in one place
+        // (protocol.rs).
+        pub mod integration {
+            pub mod integration_model;
+            pub mod integration_store;
+            pub mod integration_ai {
+                pub mod address;
+                pub mod anthropic;
+                pub mod connection;
+                pub mod openai;
+                pub mod protocol;
+                pub mod question;
+                pub mod reading;
+                pub mod sending;
+                pub mod sse;
+                pub mod turns;
+            }
+        }
+        // The journal of the AI: the answer written into the journal of its
+        // agent before it is given out (record).
+        pub mod journal {
+            pub mod journal_ai;
+            pub mod journal_model;
+            pub mod journal_store;
+        }
+    }
     // objects/user/: the user, the installation and the settings, the keys of
     // the user; the first start and the login.
     pub mod user {

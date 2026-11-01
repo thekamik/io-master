@@ -17,8 +17,11 @@
 //!   (the first start, the login) ──create / open(data_dir, ..., tables)──► infrastructure/storage/
 //! ```
 
-use crate::db::models::ai::{agent, api_key, chat, integration, journal, rag};
+use crate::db::models::ai::{agent, chat, rag};
 use crate::db::models::evaluation::{evaluation_plan, lab_proof, oscal_standard_document, product_document, work_unit};
+use crate::objects::ai::api_key::api_key_store;
+use crate::objects::ai::integration::integration_store;
+use crate::objects::ai::journal::journal_store;
 use crate::objects::user::program_data::program_data_store;
 use crate::objects::user::user_data::user_data_store;
 use crate::objects::user::user_keys::user_keys_store;
@@ -27,11 +30,12 @@ use crate::objects::user::user_keys::user_keys_store;
 pub const USER_TABLES: [&str; 12] = [
     // db/models/ai/
     agent::SCHEMA,
-    api_key::SCHEMA,
     chat::SCHEMA,
-    integration::SCHEMA,
-    journal::SCHEMA,
     rag::SCHEMA,
+    // objects/ai/
+    api_key_store::SCHEMA,
+    integration_store::SCHEMA,
+    journal_store::SCHEMA,
     // db/models/evaluation/
     evaluation_plan::SCHEMA,
     lab_proof::SCHEMA,

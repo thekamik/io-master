@@ -321,9 +321,9 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::integration::create_integration;
     use crate::db::models::ai::rag::create_knowledge_base;
     use crate::model::ai::rag::KnowledgeBase;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{agent, database, integration};
 
     #[test]

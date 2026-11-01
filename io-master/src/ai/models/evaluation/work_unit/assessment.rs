@@ -16,22 +16,23 @@
 
 use std::sync::Mutex;
 
-use crate::ai::error::AiError;
 use crate::ai::lock::{lock_database, open_database};
-use crate::ai::models::ai::integration::question::{Prepared, prepare};
-use crate::ai::models::ai::integration::sending::{Sent, send_whole};
-use crate::ai::models::ai::journal::record;
 use crate::ai::models::evaluation::work_unit::assessment_answer::{apply_assessment, read_assessment};
 use crate::ai::models::evaluation::work_unit::assessment_question::assessment_question;
 use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::Verdict;
+use crate::objects::ai::integration::integration_ai::question::{Prepared, prepare};
+use crate::objects::ai::integration::integration_ai::sending::{Sent, send_whole};
+use crate::objects::ai::journal::journal_ai::record;
+use crate::objects::ai_error::AiError;
 
 /// The question of the work unit `unit`, prepared: with its documents whole,
 /// or with their passages when they do not fit into the context of the model.
 ///
 /// Called by: [`prepared_question`].
-/// Calls: `assessment_question.rs`: `assessment_question`; `ai/models/ai/integration/question.rs`: `prepare`.
+/// Calls: `assessment_question.rs`: `assessment_question`; `objects/ai/integration/integration_ai/question.rs`:
+/// `prepare`.
 pub(in crate::ai::models::evaluation) fn prepared_assessment(
     db: &UserDatabase,
     evaluation: i64,
@@ -82,7 +83,7 @@ fn prepared_question(
 ///
 /// Called by: [`assess_work_unit`].
 /// Calls: `ai/lock.rs`: `lock_database`, `open_database`;
-/// `ai/models/ai/journal.rs`: `record`; [`assessed`]; `read_work_unit`.
+/// `objects/ai/journal/journal_ai.rs`: `record`; [`assessed`]; `read_work_unit`.
 fn written(
     database: &Mutex<Option<UserDatabase>>,
     step: (i64, i64),
@@ -118,7 +119,7 @@ fn written(
 /// session or the database fails.
 ///
 /// Called by: `evaluation_plan.rs`: `assess_evaluation`.
-/// Calls: [`prepared_question`], `ai/models/ai/integration/sending.rs`:
+/// Calls: [`prepared_question`], `objects/ai/integration/integration_ai/sending.rs`:
 /// `send_whole`, [`written`].
 pub async fn assess_work_unit(
     database: &Mutex<Option<UserDatabase>>,

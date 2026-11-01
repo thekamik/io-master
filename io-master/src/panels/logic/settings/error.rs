@@ -5,8 +5,8 @@
 
 use std::fmt;
 
-use crate::ai::error::AiError;
 use crate::infrastructure::storage::error::DbError;
+use crate::objects::ai_error::AiError;
 
 /// Why a change of the settings of the AI was refused or failed.
 #[derive(Debug)]

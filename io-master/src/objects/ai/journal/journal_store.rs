@@ -19,7 +19,7 @@ use rusqlite::{Row, named_params};
 
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::journal::{Ending, JournalEntry};
+use crate::objects::ai::journal::journal_model::{Ending, JournalEntry};
 
 /// The most entries read at once: one page of the journal.
 pub const PAGE: usize = 50;
@@ -98,7 +98,7 @@ fn ending_of(name: &str) -> Result<Ending, DbError> {
 /// Output: the id of the entry (57). An error when the request is empty or
 /// the agent is not stored (foreign key).
 ///
-/// Called by: `ai/models/ai/journal.rs`: `write_entry`.
+/// Called by: `objects/ai/journal/journal_ai.rs`: `write_entry`.
 /// Calls: [`ending_name`].
 pub fn create_journal_entry(db: &UserDatabase, entry: &JournalEntry) -> Result<i64, DbError> {
     ensure!(entry.id == 0, DbError::Inconsistent("a new entry has an id already".to_owned()));
@@ -231,9 +231,9 @@ mod tests {
     use super::*;
 
     use crate::db::models::ai::agent::create_agent;
-    use crate::db::models::ai::integration::create_integration;
     use crate::model::ai::agent::Agent;
-    use crate::model::ai::integration::Integration;
+    use crate::objects::ai::integration::integration_model::Integration;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::TempDir;
     use crate::test_support::database::{agent, database, integration};
 

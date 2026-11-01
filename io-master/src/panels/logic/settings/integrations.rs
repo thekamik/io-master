@@ -9,14 +9,14 @@
 
 use zeroize::Zeroizing;
 
-use crate::ai::models::ai::integration::address::{check_address, check_certificate};
-use crate::ai::models::ai::integration::question::{Prepared, Question, prepare};
-use crate::db::models::ai::api_key::{MAX_KEY, read_api_key, update_api_key};
-use crate::db::models::ai::integration::{create_integration, read_integration, update_integration};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::api_key::ApiKey;
 use crate::model::ai::chat::{Message, Speaker};
-use crate::model::ai::integration::Integration;
+use crate::objects::ai::api_key::api_key_model::ApiKey;
+use crate::objects::ai::api_key::api_key_store::{MAX_KEY, read_api_key, update_api_key};
+use crate::objects::ai::integration::integration_ai::address::{check_address, check_certificate};
+use crate::objects::ai::integration::integration_ai::question::{Prepared, Question, prepare};
+use crate::objects::ai::integration::integration_model::Integration;
+use crate::objects::ai::integration::integration_store::{create_integration, read_integration, update_integration};
 use crate::objects::user::program_data::program_data_model::Settings;
 use crate::objects::user::program_data::program_data_store::{read_settings, update_settings};
 use crate::panels::logic::settings::error::SettingsError;
@@ -141,7 +141,7 @@ pub fn has_key(db: &UserDatabase, id: i64) -> Result<bool, SettingsError> {
 
 /// The question that checks the integration `id`, prepared: one short
 /// message, no instructions, no agent, so it is not kept in a journal
-/// (`ai/models/ai/journal.rs`: `record`).
+/// (`objects/ai/journal/journal_ai.rs`: `record`).
 ///
 /// Called by: `panels/views/settings/integrations.rs` (the check).
 /// Calls: `prepare`.
@@ -164,9 +164,9 @@ mod tests {
 
     use super::*;
 
-    use crate::ai::error::AiError;
     use crate::infrastructure::storage::user_database::UserDatabase;
-    use crate::model::ai::integration::Protocol;
+    use crate::objects::ai::integration::integration_model::Protocol;
+    use crate::objects::ai_error::AiError;
     use crate::objects::user::program_data::program_data_store::create_settings;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};

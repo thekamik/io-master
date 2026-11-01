@@ -855,9 +855,11 @@ mod tests {
     fn an_evaluation_is_a_copy_of_its_plan_with_its_own_places_and_work_units() {
         let (_directory, db) = database();
         let (source, first, second) = plan_with_units(&db);
-        let integration =
-            crate::db::models::ai::integration::create_integration(&db, &crate::test_support::database::integration())
-                .unwrap();
+        let integration = crate::objects::ai::integration::integration_store::create_integration(
+            &db,
+            &crate::test_support::database::integration(),
+        )
+        .unwrap();
         let planner =
             crate::db::models::ai::agent::create_agent(&db, &crate::test_support::database::agent(integration))
                 .unwrap();

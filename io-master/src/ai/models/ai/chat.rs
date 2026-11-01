@@ -23,16 +23,16 @@
 //! many. The chat keeps them all, and the journal of the agent keeps the
 //! question as it was sent.
 
-use crate::ai::error::AiError;
 use crate::ai::models::ai::agent::agent_question;
-use crate::ai::models::ai::integration::question::{MAX_MESSAGES, Prepared, Question, prepare};
-use crate::ai::models::ai::journal::Answer;
 use crate::db::models::ai::chat::{MAX_MESSAGES as MAX_CHAT_MESSAGES, create_message, read_chat};
 use crate::domain::models::ai::chat::checked_question;
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
-use crate::model::ai::journal::Ending;
+use crate::objects::ai::integration::integration_ai::question::{MAX_MESSAGES, Prepared, Question, prepare};
+use crate::objects::ai::journal::journal_ai::Answer;
+use crate::objects::ai::journal::journal_model::Ending;
+use crate::objects::ai_error::AiError;
 
 /// The marks written after an answer that did not end by itself.
 const STOPPED: &str = "[stopped]";
@@ -63,7 +63,7 @@ fn leave_oldest_out(question: &mut Question) {
 /// of the user alone, or `prepare` refuses it for another reason.
 ///
 /// Called by: [`prepared`].
-/// Calls: `integration/question.rs`: `prepare`; [`leave_oldest_out`].
+/// Calls: `objects/ai/integration/integration_ai/question.rs`: `prepare`; [`leave_oldest_out`].
 pub fn prepare_shortened(db: &UserDatabase, mut question: Question) -> Result<(Prepared, usize), AiError> {
     ensure!(!question.messages.is_empty(), AiError::NoQuestion);
 
@@ -163,7 +163,7 @@ fn kept_text(answer: &Answer) -> Option<String> {
 /// Writes the answer `answer` as the last message of the chat `chat`, as
 /// [`kept_text`] keeps it; gives the message written, `None` when none was.
 ///
-/// Called by: `panels/views/chat/chats.rs`: `chat_ask` (after `journal.rs`:
+/// Called by: `panels/views/chat/chats.rs`: `chat_ask` (after `objects/ai/journal/journal_ai.rs`:
 /// `record`).
 /// Calls: [`kept_text`]; `infrastructure/clock.rs`: `now`; `db/models/ai/chat.rs`:
 /// `create_message`.
@@ -189,13 +189,13 @@ mod tests {
 
     use crate::db::models::ai::agent::create_agent;
     use crate::db::models::ai::chat::create_chat;
-    use crate::db::models::ai::integration::create_integration;
     use crate::db::models::ai::rag::{create_knowledge_base, create_source};
     use crate::domain::error::DomainError;
     use crate::domain::models::ai::chat::{add_question, new_chat};
     use crate::model::ai::chat::Chat;
-    use crate::model::ai::integration::Integration;
     use crate::model::ai::rag::{KnowledgeBase, Source};
+    use crate::objects::ai::integration::integration_model::Integration;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{agent, database, integration};
 
     fn answer(text: &str, ending: Ending) -> Answer {

@@ -153,8 +153,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::integration::create_integration;
     use crate::infrastructure::storage::system_database::create;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::objects::schema::SYSTEM_TABLES;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};

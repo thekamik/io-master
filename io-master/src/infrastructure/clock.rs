@@ -26,7 +26,7 @@ impl std::error::Error for ClockError {}
 /// Output: the seconds; an error when the clock of the computer is set
 /// before 1970.
 ///
-/// Called by: `ai/models/ai/integration/question.rs`: `prepare`;
+/// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`;
 /// `domain/models/ai/chat.rs`: `add_question`; `ai/models/ai/chat.rs`:
 /// `add_answer`;
 /// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `new_evaluation`;

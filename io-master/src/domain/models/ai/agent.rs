@@ -9,12 +9,12 @@
 //! knowledge or its instructions are made better.
 
 use crate::db::models::ai::agent::{MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent};
-use crate::db::models::ai::integration::read_integration;
 use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND, read_knowledge_base};
 use crate::domain::error::DomainError;
 use crate::domain::text::checked_text;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::agent::{Agent, GlossaryEntry};
+use crate::objects::ai::integration::integration_store::read_integration;
 
 /// The longest name of an agent, in characters.
 const MAX_NAME: usize = 100;
@@ -42,7 +42,7 @@ knowledge is not enough, say what is missing.";
 /// instructions and limits and no knowledge yet; gives its id.
 ///
 /// Called by: `panels/views/agents/agent.rs`: `agent_create`.
-/// Calls: `db/models/ai/integration.rs`: `read_integration`; [`checked`];
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`; [`checked`];
 /// `db/models/ai/agent.rs`: `create_agent`.
 pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64, DomainError> {
     read_integration(db, integration)?;
@@ -107,7 +107,7 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Do
 /// knowledge bases that exist, each base once, limits in their ranges.
 ///
 /// Called by: [`new_agent`], [`change_agent`].
-/// Calls: `domain/text.rs`: `checked_text`; `db/models/ai/integration.rs`:
+/// Calls: `domain/text.rs`: `checked_text`; `objects/ai/integration/integration_store.rs`:
 /// `read_integration`; `db/models/ai/rag.rs`: `read_knowledge_base`;
 /// [`checked_glossary`].
 fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
@@ -157,9 +157,9 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::integration::create_integration;
     use crate::db::models::ai::rag::create_knowledge_base;
     use crate::model::ai::rag::KnowledgeBase;
+    use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{database, integration};
 
     #[test]
