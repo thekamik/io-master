@@ -32,7 +32,12 @@ pub(in crate::ai::models::ai) fn masked(error: AiError, key: Option<&str>) -> Ai
         AiError::Reported(text) => AiError::Reported(mask(text, key)),
         AiError::NoConnection(text) => AiError::NoConnection(mask(text, key)),
         AiError::UnexpectedAnswer(text) => AiError::UnexpectedAnswer(mask(text, key)),
-        other @ (AiError::NoKey | AiError::NoQuestion | AiError::TooLong { .. } | AiError::Db(_)) => other,
+        AiError::Refused(text) => AiError::Refused(mask(text, key)),
+        other @ (AiError::NoKey
+        | AiError::NoQuestion
+        | AiError::TooLong { .. }
+        | AiError::Db(_)
+        | AiError::Domain(_)) => other,
     }
 }
 

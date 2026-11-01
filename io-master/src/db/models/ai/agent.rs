@@ -221,9 +221,9 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 /// Called by: [`read_agents`]; `panels/logic/agents/agent.rs`:
 /// `agent_knowledge`, `change_agent`; `panels/logic/chat/chats.rs`:
 /// `chat_question`, `new_chat`; `panels/logic/evaluation/evaluations.rs`:
-/// `change_agent`, `new_evaluation`; `panels/logic/evaluation/question.rs`:
-/// `question_of`; `panels/logic/evaluation/run.rs`: `preview`;
-/// `panels/logic/evaluation_plan/fill.rs`: `fill_preview`, `question_of`;
+/// `change_agent`, `new_evaluation`; `ai/models/evaluation/work_unit/assessment_question.rs`:
+/// `question_of`; `ai/models/evaluation/evaluation_plan.rs`: `preview`;
+/// `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`; `ai/models/evaluation/work_unit/proposal.rs`: `question_of`;
 /// `panels/logic/evaluation_plan/plans.rs`: `update_plan`;
 /// `panels/logic/evaluation_plan/work_units.rs`:
 /// `update_work_unit_parameters`; `panels/views/agents/agent.rs`:
@@ -257,7 +257,7 @@ pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
 /// Output: the agents, ordered by name; an error when the table holds more
 /// than [`MAX_AGENTS`] (a database the program did not write).
 ///
-/// Called by: `panels/logic/evaluation_plan/fill.rs`: `names_of`;
+/// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `names_of`;
 /// `panels/views/agents/agent.rs`: `agent_list`;
 /// `panels/views/evaluation/evaluations.rs`: `evaluation_get`;
 /// `panels/views/evaluation_plan/plans.rs`: `plan_view`;

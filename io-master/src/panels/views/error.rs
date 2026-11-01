@@ -159,7 +159,7 @@ impl ViewError {
             | ViewError::Invalid(_) => "invalid",
             ViewError::Account(AccountError::Key(_))
             | ViewError::Session
-            | ViewError::Plan(PlanError::Db(_) | PlanError::Knowledge(_) | PlanError::Domain(DomainError::Db(_)))
+            | ViewError::Plan(PlanError::Db(_) | PlanError::Domain(DomainError::Db(_)))
             | ViewError::Settings(SettingsError::Db(_))
             | ViewError::Agent(AgentError::Db(_))
             | ViewError::Chat(ChatError::Knowledge(_) | ChatError::Ai(_) | ChatError::Db(_))

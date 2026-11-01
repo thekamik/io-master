@@ -16,6 +16,7 @@
 //! `ai/models/ai/integration/question.rs` (`prepare`) when the question is prepared: the caller asks first for
 //! them whole, then for their passages.
 
+use crate::ai::error::AiError;
 use serde_json::{Value, json};
 
 use crate::ai::models::ai::agent::agent_question;
@@ -31,7 +32,6 @@ use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
-use crate::panels::logic::evaluation::error::EvaluationError;
 
 /// The most passages of the documents given with a question when the
 /// documents do not fit whole.
@@ -58,7 +58,7 @@ document is not taken.";
 /// The name of a verdict, as the question and the answer write it.
 ///
 /// Called by: [`unit_json`], [`dependencies_text`], [`question_of`];
-/// `answer.rs`.
+/// `assessment_answer.rs`.
 pub fn verdict_name(verdict: Verdict) -> &'static str {
     match verdict {
         Verdict::Pass => "pass",
@@ -70,11 +70,12 @@ pub fn verdict_name(verdict: Verdict) -> &'static str {
 /// The agent that assesses the work unit `unit`: its own, or the agent of
 /// the evaluation; refused when there is neither.
 ///
-/// Called by: [`assessment_question`]; `run.rs` (the preview).
-pub fn assessing_agent(evaluation: &EvaluationPlan, unit: &WorkUnit) -> Result<i64, EvaluationError> {
+/// Called by: [`assessment_question`]; `ai/models/evaluation/evaluation_plan.rs`:
+/// `preview`; `panels/views/evaluation/work_units.rs` (the list).
+pub fn assessing_agent(evaluation: &EvaluationPlan, unit: &WorkUnit) -> Result<i64, AiError> {
     match unit.ai_agent.or(evaluation.ai_agent) {
         Some(agent) => Ok(agent),
-        None => Err(EvaluationError::Refused(format!("{} has no agent, nor has the evaluation", unit.label))),
+        None => Err(AiError::Refused(format!("{} has no agent, nor has the evaluation", unit.label))),
     }
 }
 
@@ -97,7 +98,7 @@ fn label_of(units: &[WorkUnit], id: i64) -> String {
 /// Called by: [`question_of`].
 /// Calls: `read_oscal_standard_document`, [`label_of`],
 /// `read_product_document`, `read_lab_proof`, [`verdict_name`].
-fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<Value, EvaluationError> {
+fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<Value, AiError> {
     let mut dependencies = Vec::with_capacity(unit.dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
     let mut quotes = Vec::with_capacity(unit.quotes.len());
@@ -175,7 +176,7 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit]) -> String {
 /// Called by: [`question_of`].
 /// Calls: `read_product_document`, `read_document_text`,
 /// `read_document_passages`.
-fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<String, EvaluationError> {
+fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<String, AiError> {
     let mut text = String::new();
 
     if whole {
@@ -222,7 +223,7 @@ fn day_of(seconds: i64) -> String {
 ///
 /// Called by: [`question_of`].
 /// Calls: `read_lab_proof`, [`day_of`].
-fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, EvaluationError> {
+fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
     let mut text = String::new();
 
     for id in unit.input_functional.as_deref().unwrap_or_default() {
@@ -253,7 +254,7 @@ fn question_of(
     unit: &WorkUnit,
     agent: i64,
     whole: bool,
-) -> Result<Question, EvaluationError> {
+) -> Result<Question, AiError> {
     let units = read_work_units(db, evaluation.id)?;
     let mut verdicts = Vec::with_capacity(evaluation.possible_verdicts.len());
 
@@ -274,7 +275,7 @@ fn question_of(
     let messages = vec![Message { speaker: Speaker::User, text, time: 0 }];
 
     agent_question(db, agent, &task, &search, Some(unit.id), messages)
-        .map_err(|error| EvaluationError::Refused(format!("the question of the agent: {error}")))
+        .map_err(|error| AiError::Refused(format!("the question of the agent: {error}")))
 }
 
 /// The question of the assessment of the work unit `unit` of the evaluation
@@ -282,21 +283,16 @@ fn question_of(
 /// that fit it best. Refused when the work unit is not one of the
 /// evaluation or has no agent.
 ///
-/// Called by: `run.rs` (each work unit).
+/// Called by: `assessment.rs`: `prepared_assessment`.
 /// Calls: `read_evaluation_plan`, `read_work_unit`, [`assessing_agent`],
 /// [`question_of`].
-pub fn assessment_question(
-    db: &UserDatabase,
-    evaluation: i64,
-    unit: i64,
-    whole: bool,
-) -> Result<Question, EvaluationError> {
+pub fn assessment_question(db: &UserDatabase, evaluation: i64, unit: i64, whole: bool) -> Result<Question, AiError> {
     let stored = read_evaluation_plan(db, evaluation)?;
     let this = read_work_unit(db, unit)?;
 
     ensure!(
         stored.work_units.contains(&unit),
-        EvaluationError::Refused("the work unit is not one of the evaluation".to_owned())
+        AiError::Refused("the work unit is not one of the evaluation".to_owned())
     );
 
     let agent = assessing_agent(&stored, &this)?;
@@ -346,7 +342,7 @@ mod tests {
         let by_passages = assessment_question(&db, id, second, false).unwrap();
 
         assert!(by_passages.messages[0].text.contains("=== a passage of ST ==="));
-        assert!(matches!(assessment_question(&db, id, 999, true), Err(EvaluationError::Db(_))));
+        assert!(matches!(assessment_question(&db, id, 999, true), Err(AiError::Db(_))));
     }
 
     #[test]

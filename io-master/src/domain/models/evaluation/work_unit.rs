@@ -35,9 +35,9 @@ pub struct WorkUnitParameters {
 /// empty list of proofs makes it a test of the documentation (`None`); the
 /// agent named must exist (`ai_agent`, the agent that will work on it).
 ///
-/// Called by: `panels/logic/evaluation_plan/work_units.rs`: `change_work_unit`
-/// (the form of a work unit); `panels/logic/evaluation_plan/fill.rs` (the
-/// parameters and the dependencies proposed by the AI).
+/// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_save`
+/// (the form of a work unit); `ai/models/evaluation/work_unit/proposal.rs`:
+/// `apply_parameters`, `apply_dependencies` (proposed by the AI).
 /// Calls: `evaluation_plan.rs`: `plan_in_planning`, `check_order`;
 /// `db/models/ai/agent.rs`: `read_agent`; `db/models/evaluation/work_unit.rs`:
 /// `read_work_unit`, `update_work_unit`.

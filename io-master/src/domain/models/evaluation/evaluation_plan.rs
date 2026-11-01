@@ -51,6 +51,24 @@ pub fn plan_in_planning(db: &UserDatabase, plan: i64) -> Result<EvaluationPlan, 
     Ok(stored)
 }
 
+/// The plan `plan` to fill with the AI ("Fill with AI"), refused unless it
+/// is in planning and names an agent of the planner; gives the plan and its
+/// agent.
+///
+/// Called by: `ai/models/evaluation/evaluation_plan.rs`: `fill_units`,
+/// `fill_preview`; `ai/models/evaluation/work_unit/proposal.rs`:
+/// `question_of`, `apply_parameters`, `apply_dependencies`.
+/// Calls: [`plan_in_planning`].
+pub fn plan_to_fill(db: &UserDatabase, plan: i64) -> Result<(EvaluationPlan, i64), DomainError> {
+    let stored = plan_in_planning(db, plan)?;
+
+    let Some(agent) = stored.ai_agent else {
+        return Err(DomainError::Refused("the plan has no agent of the planner: choose one in its data".to_owned()));
+    };
+
+    Ok((stored, agent))
+}
+
 /// The evaluation `id`; refused unless it is being carried out (state
 /// `Evaluation`).
 ///

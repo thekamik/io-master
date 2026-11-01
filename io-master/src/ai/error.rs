@@ -12,6 +12,7 @@ use std::fmt;
 use serde_json::Value;
 
 use crate::db::error::DbError;
+use crate::domain::error::DomainError;
 
 /// The longest explanation taken from an answer, in characters.
 const EXPLANATION_LENGTH: usize = 300;
@@ -50,9 +51,16 @@ pub enum AiError {
     NoConnection(String),
     /// The service answered something the protocol does not describe.
     UnexpectedAnswer(String),
+    /// A work of the AI on the data refused what it was given, or an answer
+    /// it cannot take; holds the reason ("the answer holds no JSON object",
+    /// "the work unit is not one of the plan").
+    Refused(String),
     /// The database of the user failed while the question was prepared or
     /// written into the journal.
     Db(DbError),
+    /// A rule of the data refused the work, or could not be checked
+    /// (`domain/`).
+    Domain(DomainError),
 }
 
 impl fmt::Display for AiError {
@@ -79,7 +87,9 @@ impl fmt::Display for AiError {
             AiError::Reported(message) => write!(formatter, "the AI service reported an error: {message}"),
             AiError::NoConnection(message) => write!(formatter, "the AI service cannot be reached: {message}"),
             AiError::UnexpectedAnswer(message) => write!(formatter, "the AI service answered unexpectedly: {message}"),
+            AiError::Refused(reason) => formatter.write_str(reason),
             AiError::Db(error) => write!(formatter, "{error}"),
+            AiError::Domain(error) => write!(formatter, "{error}"),
         }
     }
 }
@@ -89,6 +99,12 @@ impl std::error::Error for AiError {}
 impl From<DbError> for AiError {
     fn from(error: DbError) -> AiError {
         AiError::Db(error)
+    }
+}
+
+impl From<DomainError> for AiError {
+    fn from(error: DomainError) -> AiError {
+        AiError::Domain(error)
     }
 }
 

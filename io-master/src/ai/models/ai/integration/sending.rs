@@ -40,9 +40,9 @@ pub async fn send(prepared: &Prepared, pieces: &mpsc::Sender<String>) -> Sent {
 /// caller that wants the whole answer at once. Uses no database.
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_check`;
-/// `panels/views/evaluation_plan/fill.rs`: `fill_step`;
-/// `panels/views/evaluation/run.rs`: `assess_step`; the lock of the session
-/// released.
+/// `ai/models/evaluation/work_unit/filling.rs`: `fill_work_unit`;
+/// `ai/models/evaluation/work_unit/assessment.rs`: `assess_work_unit`; the
+/// lock of the session released.
 /// Calls: [`send`].
 pub async fn send_whole(prepared: &Prepared) -> Sent {
     let (pieces, mut receiver) = mpsc::channel::<String>(64);

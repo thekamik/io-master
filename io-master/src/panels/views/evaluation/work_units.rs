@@ -12,6 +12,8 @@
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
+use crate::ai::models::evaluation::evaluation_plan::units_in_order;
+use crate::ai::models::evaluation::work_unit::assessment_question::{assessing_agent, verdict_name};
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::journal::read_latest_journal_entry;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
@@ -23,9 +25,7 @@ use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::journal::Ending;
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
-use crate::panels::logic::evaluation::question::{assessing_agent, verdict_name};
 use crate::panels::logic::evaluation::results::{Results, save_results};
-use crate::panels::logic::evaluation::run::units_in_order;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;

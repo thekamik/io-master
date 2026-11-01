@@ -356,11 +356,11 @@ fn read_lists(connection: &Connection, plan: &mut EvaluationPlan) -> Result<(), 
 /// Output: the plan; `DbError::NoRow` when there is none.
 ///
 /// Called by: [`read_evaluation_plans`], [`create_evaluation`];
-/// `panels/logic/evaluation/answer.rs`: `apply_assessment`;
+/// `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`;
 /// `domain/models/evaluation/evaluation_plan.rs`: `evaluation_in_progress`;
 /// `panels/logic/evaluation/inputs.rs`: `inputs`;
-/// `panels/logic/evaluation/question.rs`: `assessment_question`;
-/// `panels/logic/evaluation_plan/fill.rs`: `plan_to_fill`;
+/// `ai/models/evaluation/work_unit/assessment_question.rs`: `assessment_question`;
+/// `domain/models/evaluation/evaluation_plan.rs`: `plan_to_fill`;
 /// `domain/models/evaluation/evaluation_plan.rs`: `check_order`;
 /// `panels/logic/evaluation_plan/plans.rs`: `add_document_place`,
 /// `update_plan`; `panels/logic/evaluation_plan/work_units.rs`:

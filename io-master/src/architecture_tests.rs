@@ -42,7 +42,7 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 15] = [
+const ALLOWED: [(&str, &[&str]); 18] = [
     ("model", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
@@ -61,6 +61,15 @@ const ALLOWED: [(&str, &[&str]); 15] = [
     ("ai::models::ai::journal", &["ai::error", "ai::models::ai::integration", "db", "model"]),
     ("ai::models::ai::agent", &["ai::error", "ai::models::ai::integration", "db", "model"]),
     ("ai::models::ai::chat", &["ai::error", "ai::models::ai::integration", "db", "model"]),
+    // The locks of the session as a long work takes them.
+    ("ai::lock", &["ai::error", "db", "model"]),
+    // The AI on a plan: the loops over its work units (evaluation_plan.rs)
+    // use the work on one work unit (work_unit/), never the other way.
+    ("ai::models::evaluation::work_unit", &["ai::error", "ai::lock", "ai::models::ai", "domain", "db", "model"]),
+    (
+        "ai::models::evaluation::evaluation_plan",
+        &["ai::error", "ai::lock", "ai::models::evaluation::work_unit", "ai::models::session", "domain", "db", "model"],
+    ),
     // The progress of a long work: a helper model, no database.
     ("ai::models::session::progress", &["model"]),
     // The work behind the panels, one folder per panel; a panel may use
@@ -72,7 +81,21 @@ const ALLOWED: [(&str, &[&str]); 15] = [
     // The sources of the knowledge of an agent are read from PDFs too.
     (
         "panels::logic",
-        &[AI_ERROR, AGENT, CHAT, JOURNAL, QUESTION, SENDING, ADDRESS, "domain", "db", "model", "security", "pdf"],
+        &[
+            AI_ERROR,
+            AGENT,
+            CHAT,
+            JOURNAL,
+            QUESTION,
+            SENDING,
+            ADDRESS,
+            ASSESSMENT_ANSWER,
+            "domain",
+            "db",
+            "model",
+            "security",
+            "pdf",
+        ],
     ),
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
@@ -88,6 +111,9 @@ const ALLOWED: [(&str, &[&str]); 15] = [
             QUESTION,
             SENDING,
             PROGRESS,
+            EVALUATION_PLAN,
+            ASSESSMENT_QUESTION,
+            FILLING,
             "domain",
             "db",
             "model",
@@ -105,6 +131,10 @@ const QUESTION: &str = "ai::models::ai::integration::question";
 const SENDING: &str = "ai::models::ai::integration::sending";
 const ADDRESS: &str = "ai::models::ai::integration::address";
 const PROGRESS: &str = "ai::models::session::progress";
+const EVALUATION_PLAN: &str = "ai::models::evaluation::evaluation_plan";
+const ASSESSMENT_QUESTION: &str = "ai::models::evaluation::work_unit::assessment_question";
+const ASSESSMENT_ANSWER: &str = "ai::models::evaluation::work_unit::assessment_answer";
+const FILLING: &str = "ai::models::evaluation::work_unit::filling";
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:
 /// names joined by `::`, a list in braces cut off).

@@ -9,12 +9,9 @@
 //! ```text
 //! PlanFill.svelte ──plan_fill_preview(plan)──► fill_preview: the questions counted now ──► FillPreviewView
 //!                 ──plan_fill_parameters(plan)───┐
-//!                 ──plan_fill_dependencies(plan)─┴► fill: fill_units, then for each work unit:
-//!                     (the lock of the session held)  the question of the task, question::prepare
-//!                     (released)                      sending::send_whole
-//!                     (held)                          journal::record (the journal of the agent),
-//!                                                     the answer read and written by the task
-//!                     ──record_step──► the progress (the work unit, filled or not, the notes)
+//!                 ──plan_fill_dependencies(plan)─┴► fill: fill_units, Session::begin_work, then
+//!                     ai/models/evaluation/evaluation_plan.rs: fill_plan (each work unit filled, its step
+//!                     written into the progress)
 //!                 ──plan_fill_progress(plan)──► progress_of ──► ProgressView
 //!                 ──plan_fill_stop()──► the session asked to stop: the filling ends after its present step
 //! ```
@@ -26,17 +23,8 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::ai::models::ai::integration::question::{Prepared, prepare};
-use crate::ai::models::ai::integration::sending::{Sent, send_whole};
-use crate::ai::models::ai::journal::record;
-use crate::ai::models::session::progress::record_step;
-use crate::db::models::evaluation::work_unit::read_work_unit;
-use crate::db::storage::user_database::UserDatabase;
-use crate::panels::logic::evaluation_plan::error::PlanError;
-use crate::panels::logic::evaluation_plan::fill::{
-    apply_dependencies, apply_parameters, dependencies_question, fill_preview, fill_units, parameters_question,
-    read_dependencies, read_parameters,
-};
+use crate::ai::models::evaluation::evaluation_plan::{fill_plan, fill_preview, fill_units};
+use crate::ai::models::evaluation::work_unit::filling::FillTask;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::panels::views::progress::{ProgressView, progress_of};
@@ -50,110 +38,15 @@ pub struct FillPreviewView {
     integration: String,
 }
 
-/// The task of a filling.
-#[derive(Clone, Copy)]
-enum Task {
-    /// Every parameter but the dependencies.
-    Parameters,
-    /// The dependencies only.
-    Dependencies,
-}
-
-/// What became of one work unit.
-enum Outcome {
-    /// Filled; what was left out of the answer.
-    Filled(Vec<String>),
-    /// Not filled; why.
-    Failed(String),
-}
-
-/// The label of the work unit `unit` and the question of the task, prepared;
-/// the reason when the question is refused (no room in the context, no key).
-///
-/// Called by: [`fill_step`].
-/// Calls: `read_work_unit`, `parameters_question`, `dependencies_question`,
-/// `ai/models/ai/integration/question.rs`: `prepare`.
-fn prepared_question(
-    session: &Session,
-    task: Task,
-    plan: i64,
-    unit: i64,
-) -> Result<(String, Result<Prepared, String>), ViewError> {
-    let opened = session.lock()?;
-    let db = database(&opened)?;
-    let label = read_work_unit(db, unit)?.label;
-    let question = match task {
-        Task::Parameters => parameters_question(db, plan, unit),
-        Task::Dependencies => dependencies_question(db, plan, unit),
-    };
-    let prepared = match question {
-        Ok(question) => prepare(db, &question).map_err(|error| error.to_string()),
-        Err(error) => Err(error.to_string()),
-    };
-
-    Ok((label, prepared))
-}
-
-/// Reads the answer `answer` as the task asks and writes it into the work
-/// unit `unit`; gives the notes of what was left out.
-///
-/// Called by: [`written`].
-/// Calls: `read_parameters`, `apply_parameters`, `read_dependencies`,
-/// `apply_dependencies`.
-fn applied(db: &UserDatabase, task: Task, plan: i64, unit: i64, answer: &str) -> Result<Vec<String>, PlanError> {
-    match task {
-        Task::Parameters => apply_parameters(db, plan, unit, &read_parameters(answer)?),
-        Task::Dependencies => apply_dependencies(db, plan, unit, &read_dependencies(answer)?),
-    }
-}
-
-/// Writes the answer into the journal of the agent of the planner, then
-/// into the work unit `unit`.
-///
-/// Called by: [`fill_step`].
-/// Calls: `ai/models/ai/journal.rs`: `record`, [`applied`].
-fn written(session: &Session, step: (Task, i64, i64), prepared: Prepared, sent: Sent) -> Result<Outcome, ViewError> {
-    let (task, plan, unit) = step;
-    let opened = session.lock()?;
-    let db = database(&opened)?;
-    let answer = record(db, prepared, sent)?;
-
-    if let Some(error) = answer.error {
-        return Ok(Outcome::Failed(error.to_string()));
-    }
-
-    Ok(match applied(db, task, plan, unit, &answer.text) {
-        Ok(notes) => Outcome::Filled(notes),
-        Err(error) => Outcome::Failed(error.to_string()),
-    })
-}
-
-/// Fills the work unit `unit` with the task `task`: the question prepared
-/// under the lock of the session, sent without it, the answer written under
-/// it again.
-///
-/// Called by: [`fill`].
-/// Calls: [`prepared_question`], `ai/models/ai/integration/sending.rs`: `send_whole`, [`written`].
-async fn fill_step(session: &Session, task: Task, plan: i64, unit: i64) -> Result<(String, Outcome), ViewError> {
-    let (label, prepared) = prepared_question(session, task, plan, unit)?;
-    let prepared = match prepared {
-        Ok(prepared) => prepared,
-        Err(reason) => return Ok((label, Outcome::Failed(reason))),
-    };
-    let sent = send_whole(&prepared).await;
-
-    Ok((label, written(session, (task, plan, unit), prepared, sent)?))
-}
-
 /// Fills every work unit of the plan `plan` in its order with the task
 /// `task`, writing each step into the progress of the session. Refused
 /// while another long work of the AI runs, or when the plan has no agent of
 /// the planner.
 ///
 /// Called by: [`plan_fill_parameters`], [`plan_fill_dependencies`].
-/// Calls: `fill_units`, `Session::begin_work`, [`fill_step`],
-/// `ai/models/session/progress.rs`: `record_step`.
-async fn fill(session: &Session, task: Task, plan: i64) -> Result<(), ViewError> {
+/// Calls: `ai/models/evaluation/evaluation_plan.rs`: `fill_units`,
+/// `fill_plan`; `Session::begin_work`, `Session::locks`.
+async fn fill(session: &Session, task: FillTask, plan: i64) -> Result<(), ViewError> {
     let units = {
         let opened = session.lock()?;
 
@@ -162,22 +55,9 @@ async fn fill(session: &Session, task: Task, plan: i64) -> Result<(), ViewError>
     let Some(_work) = session.begin_work(Some(plan), units.len())? else {
         return Err(ViewError::Invalid("another work of the AI runs: wait for it or stop it".to_owned()));
     };
+    let (database, progress) = session.locks();
 
-    for unit in &units {
-        if session.stop_requested()? {
-            break;
-        }
-
-        let (label, outcome) = fill_step(session, task, plan, *unit).await?;
-        let (filled, notes) = match outcome {
-            Outcome::Filled(notes) => (true, notes),
-            Outcome::Failed(reason) => (false, vec![reason]),
-        };
-
-        record_step(&mut *session.progress()?, label, filled, None, notes);
-    }
-
-    Ok(())
+    Ok(fill_plan(database, progress, task, plan, &units).await?)
 }
 
 /// Fills every parameter but the dependencies of every work unit of the
@@ -187,7 +67,7 @@ async fn fill(session: &Session, task: Task, plan: i64) -> Result<(), ViewError>
 /// Calls: [`fill`].
 #[tauri::command]
 pub async fn plan_fill_parameters(session: State<'_, Session>, plan: i64) -> Result<(), ViewError> {
-    fill(&session, Task::Parameters, plan).await
+    fill(&session, FillTask::Parameters, plan).await
 }
 
 /// Fills the dependencies of every work unit of the plan `plan`, over what
@@ -198,7 +78,7 @@ pub async fn plan_fill_parameters(session: State<'_, Session>, plan: i64) -> Res
 /// Calls: [`fill`].
 #[tauri::command]
 pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> Result<(), ViewError> {
-    fill(&session, Task::Dependencies, plan).await
+    fill(&session, FillTask::Dependencies, plan).await
 }
 
 /// What a filling of the plan `plan` would ask, counted now: the number of
@@ -206,7 +86,7 @@ pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> R
 /// planner.
 ///
 /// Called by: `PlanFill.svelte`, before a filling starts.
-/// Calls: `fill_preview`.
+/// Calls: `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`.
 #[tauri::command]
 pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillPreviewView, ViewError> {
     let opened = session.lock()?;

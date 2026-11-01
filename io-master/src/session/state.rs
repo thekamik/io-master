@@ -112,6 +112,15 @@ impl Session {
         Ok(())
     }
 
+    /// The locks of the open database and of the progress, for a long work
+    /// of the AI that takes them for its short steps (`ai/lock.rs`).
+    ///
+    /// Called by: `panels/views/evaluation/run.rs` (`evaluation_assess`),
+    /// `panels/views/evaluation_plan/fill.rs` (`fill`).
+    pub fn locks(&self) -> (&Mutex<Option<UserDatabase>>, &Mutex<Progress>) {
+        (&self.database, &self.progress)
+    }
+
     /// The progress of the long work of the AI, locked: for the work that
     /// writes its steps into it and for the page that reads it.
     ///
@@ -165,9 +174,9 @@ impl Session {
 
     /// Whether the user asked the long work to stop.
     ///
-    /// Called by: `panels/views/evaluation_plan/fill.rs` (before each step),
-    /// `panels/views/evaluation/run.rs` (before each step),
-    /// `panels/views/chat/chats.rs` (while an answer streams).
+    /// Called by: `panels/views/chat/chats.rs` (while an answer streams); a
+    /// filling and an assessment read the same field before each step
+    /// (`ai/models/evaluation/evaluation_plan.rs`).
     /// Calls: [`Session::progress`].
     pub fn stop_requested(&self) -> Result<bool, SessionBroken> {
         Ok(self.progress()?.stop)

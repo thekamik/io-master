@@ -15,7 +15,6 @@ The whole program is brought, step by step, to the grid of `code_structure.md`, 
 
 `ai/models/` mirrors `model/`; the steps agreed, in this order, each with its commit:
 
-- **`ai/models/evaluation/`**: `evaluation_plan.rs` the loops (given the lock of the open database, `&Mutex<Option<UserDatabase>>`, and of the progress, `&Mutex<Progress>`, of the session) (the assessment of an evaluation, "Fill with AI"), over the work units of the plan in the order of the work; `work_unit.rs` the work on one work unit (`assess_work_unit`: the question, the answer read, the quotes checked, the verdict with the dependencies; the parameters and the dependencies proposed).
 - One place that chooses the protocol of an integration (today the body, the key header and the reading of an event each choose it); `now()` written once; a question of too many messages refused with an error of its own, not `TooLong`; `Prepared` without a copy of the whole integration.
 
 ## Before the release

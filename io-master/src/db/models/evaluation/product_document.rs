@@ -96,12 +96,12 @@ pub(in crate::db) fn insert_product_document(
 /// `DbError::NoRow` when there is none.
 ///
 /// Called by: [`update_product_document`]; `evaluation_plan.rs`:
-/// `copied_places`; `panels/logic/evaluation/answer.rs`: `checked_quotes`;
+/// `copied_places`; `ai/models/evaluation/work_unit/assessment_answer.rs`: `checked_quotes`;
 /// `panels/logic/evaluation/inputs.rs`: `give_document`, `inputs`;
-/// `panels/logic/evaluation/question.rs`: `documents_text`, `unit_json`;
+/// `ai/models/evaluation/work_unit/assessment_question.rs`: `documents_text`, `unit_json`;
 /// `panels/logic/evaluation/results.rs`: `check_quotes`;
-/// `panels/logic/evaluation/run.rs`: `missing_inputs`;
-/// `panels/logic/evaluation_plan/fill.rs`: `names_of`;
+/// `ai/models/evaluation/evaluation_plan.rs`: `missing_inputs`;
+/// `ai/models/evaluation/work_unit/proposal.rs`: `names_of`;
 /// `panels/views/evaluation/work_units.rs`: `needs_of`;
 /// `panels/views/evaluation_plan/plans.rs`: `plan_view`.
 pub fn read_product_document(db: &UserDatabase, id: i64) -> Result<ProductDocument, DbError> {
@@ -220,8 +220,8 @@ pub fn update_product_document(
 ///
 /// Output: the text; empty while the file is not given.
 ///
-/// Called by: `panels/logic/evaluation/answer.rs`: `checked_quotes`;
-/// `panels/logic/evaluation/question.rs`: `documents_text`.
+/// Called by: `ai/models/evaluation/work_unit/assessment_answer.rs`: `checked_quotes`;
+/// `ai/models/evaluation/work_unit/assessment_question.rs`: `documents_text`.
 pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError> {
     let mut statement = db.connection().prepare(
         "SELECT text FROM product_document_passages WHERE document = :id ORDER BY CAST(position AS INTEGER)",
@@ -254,7 +254,7 @@ pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError>
 /// document (`[(3, "The TOE protects ...")]`); none when the question has no
 /// word to look for.
 ///
-/// Called by: `panels/logic/evaluation/question.rs`: `documents_text`.
+/// Called by: `ai/models/evaluation/work_unit/assessment_question.rs`: `documents_text`.
 /// Calls: `models/ai/rag.rs`: `query_of`.
 pub fn read_document_passages(
     db: &UserDatabase,

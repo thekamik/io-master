@@ -36,7 +36,7 @@ pub const SCHEMA: &str = "
 ///
 /// Output: the id of the proof (6); an error as [`insert_lab_proof`].
 ///
-/// Called by: `panels/logic/evaluation_plan/fill.rs`: `chosen_proofs`;
+/// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `chosen_proofs`;
 /// `panels/logic/evaluation_plan/work_units.rs`: `add_proof_place`.
 /// Calls: [`insert_lab_proof`].
 pub fn create_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<i64, DbError> {
@@ -81,9 +81,9 @@ pub(in crate::db) fn insert_lab_proof(connection: &Connection, proof: &LabProof)
 ///
 /// Called by: [`update_lab_proof`]; `evaluation_plan.rs`: `copied_places`;
 /// `panels/logic/evaluation/inputs.rs`: `give_proof`, `inputs`;
-/// `panels/logic/evaluation/question.rs`: `proofs_text`, `unit_json`;
-/// `panels/logic/evaluation/run.rs`: `missing_inputs`;
-/// `panels/logic/evaluation_plan/fill.rs`: `current_parameters`,
+/// `ai/models/evaluation/work_unit/assessment_question.rs`: `proofs_text`, `unit_json`;
+/// `ai/models/evaluation/evaluation_plan.rs`: `missing_inputs`;
+/// `ai/models/evaluation/work_unit/proposal.rs`: `current_parameters`,
 /// `proof_named`; `panels/views/evaluation/work_units.rs`: `needs_of`;
 /// `panels/views/evaluation_plan/work_units.rs`: `work_unit_get`.
 pub fn read_lab_proof(db: &UserDatabase, id: i64) -> Result<LabProof, DbError> {

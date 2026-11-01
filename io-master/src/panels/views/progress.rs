@@ -10,8 +10,8 @@
 
 use serde::Serialize;
 
+use crate::ai::models::evaluation::work_unit::assessment_question::verdict_name;
 use crate::model::session::progress::Progress;
-use crate::panels::logic::evaluation::question::verdict_name;
 use crate::panels::views::error::ViewError;
 use crate::session::state::Session;
 

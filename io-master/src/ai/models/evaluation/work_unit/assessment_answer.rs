@@ -16,15 +16,15 @@
 //! 2026-10-30): the contribution of the manufacturer is assessed; whether it
 //! stands in the document is checked here, never taken from the AI (P5).
 
+use crate::ai::error::AiError;
 use serde_json::Value;
 
+use crate::ai::models::evaluation::work_unit::assessment_question::verdict_name;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::product_document::{read_document_text, read_product_document};
 use crate::db::models::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
 use crate::db::storage::user_database::UserDatabase;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
-use crate::panels::logic::evaluation::error::EvaluationError;
-use crate::panels::logic::evaluation::question::verdict_name;
 
 /// The longest text of a result taken from an answer, in characters.
 const MAX_RESULT: usize = 100_000;
@@ -48,25 +48,25 @@ pub struct Assessment {
 /// passed over); refused when the answer holds none.
 ///
 /// Called by: [`read_assessment`].
-fn answer_object(answer: &str) -> Result<Value, EvaluationError> {
+fn answer_object(answer: &str) -> Result<Value, AiError> {
     let (Some(start), Some(end)) = (answer.find('{'), answer.rfind('}')) else {
-        return Err(EvaluationError::Refused("the answer holds no JSON object".to_owned()));
+        return Err(AiError::Refused("the answer holds no JSON object".to_owned()));
     };
 
     serde_json::from_str(answer.get(start..=end).unwrap_or_default())
-        .map_err(|error| EvaluationError::Refused(format!("the answer is no JSON object: {error}")))
+        .map_err(|error| AiError::Refused(format!("the answer is no JSON object: {error}")))
 }
 
 /// The text of the field `field` of the answer, trimmed; refused over
 /// [`MAX_RESULT`] characters.
 ///
 /// Called by: [`read_assessment`].
-fn text_of(value: &Value, field: &str) -> Result<String, EvaluationError> {
+fn text_of(value: &Value, field: &str) -> Result<String, AiError> {
     let text = value.get(field).and_then(Value::as_str).unwrap_or_default().trim();
 
     ensure!(
         text.chars().count() <= MAX_RESULT,
-        EvaluationError::Refused(format!("the {field} of the answer over {MAX_RESULT} characters"))
+        AiError::Refused(format!("the {field} of the answer over {MAX_RESULT} characters"))
     );
 
     Ok(text.to_owned())
@@ -74,9 +74,9 @@ fn text_of(value: &Value, field: &str) -> Result<String, EvaluationError> {
 
 /// The assessment an answer proposes; refused when it holds no JSON object.
 ///
-/// Called by: `run.rs` (each answer).
+/// Called by: `assessment.rs`: `assessed`.
 /// Calls: [`answer_object`], [`text_of`].
-pub fn read_assessment(answer: &str) -> Result<Assessment, EvaluationError> {
+pub fn read_assessment(answer: &str) -> Result<Assessment, AiError> {
     let value = answer_object(answer)?;
     let mut quotes = Vec::new();
 
@@ -118,7 +118,7 @@ fn checked_quotes(
     db: &UserDatabase,
     unit: &WorkUnit,
     proposed: &[(String, String)],
-) -> Result<(Vec<Quote>, Vec<String>), EvaluationError> {
+) -> Result<(Vec<Quote>, Vec<String>), AiError> {
     let mut texts = Vec::with_capacity(unit.input_product_documents.len());
 
     for id in &unit.input_product_documents {
@@ -179,11 +179,7 @@ fn badness(verdict: Verdict) -> u8 {
 ///
 /// Called by: [`apply_assessment`].
 /// Calls: `read_work_unit`, [`badness`].
-fn with_dependencies(
-    db: &UserDatabase,
-    unit: &WorkUnit,
-    own: Verdict,
-) -> Result<(Verdict, Vec<String>), EvaluationError> {
+fn with_dependencies(db: &UserDatabase, unit: &WorkUnit, own: Verdict) -> Result<(Verdict, Vec<String>), AiError> {
     let mut verdict = own;
     let mut lines = Vec::new();
 
@@ -236,7 +232,7 @@ fn joined(first: &str, more: &[String]) -> String {
 /// what was not taken (a quote not found). Refused when the verdict is none
 /// of the plan.
 ///
-/// Called by: `run.rs` (each answer).
+/// Called by: `assessment.rs`: `assessed`.
 /// Calls: `read_evaluation_plan`, `read_work_unit`, [`verdict_of`],
 /// [`checked_quotes`], [`with_dependencies`], [`joined`], `update_work_unit`.
 pub fn apply_assessment(
@@ -244,17 +240,17 @@ pub fn apply_assessment(
     evaluation: i64,
     unit: i64,
     assessment: &Assessment,
-) -> Result<Vec<String>, EvaluationError> {
+) -> Result<Vec<String>, AiError> {
     let stored = read_evaluation_plan(db, evaluation)?;
     let this = read_work_unit(db, unit)?;
 
     ensure!(
         stored.work_units.contains(&unit),
-        EvaluationError::Refused("the work unit is not one of the evaluation".to_owned())
+        AiError::Refused("the work unit is not one of the evaluation".to_owned())
     );
 
     let Some(own) = verdict_of(&assessment.verdict, &stored.possible_verdicts) else {
-        return Err(EvaluationError::Refused(format!("the verdict \"{}\" is none of the plan", assessment.verdict)));
+        return Err(AiError::Refused(format!("the verdict \"{}\" is none of the plan", assessment.verdict)));
     };
     let (quotes, left_out) = checked_quotes(db, &this, &assessment.quotes)?;
     let (verdict, dependency_lines) = with_dependencies(db, &this, own)?;
@@ -280,7 +276,7 @@ pub fn apply_assessment(
 ///
 /// Called by: `results.rs` (the results saved by the evaluator).
 /// Calls: [`checked_quotes`].
-pub fn check_quote(db: &UserDatabase, unit: &WorkUnit, document: &str, text: &str) -> Result<bool, EvaluationError> {
+pub fn check_quote(db: &UserDatabase, unit: &WorkUnit, document: &str, text: &str) -> Result<bool, AiError> {
     let (quotes, _) = checked_quotes(db, unit, &[(document.to_owned(), text.to_owned())])?;
 
     Ok(!quotes.is_empty())
@@ -346,10 +342,10 @@ mod tests {
         let (_directory, db) = database();
         let (id, first, _) = evaluation(&db);
 
-        assert!(matches!(read_assessment("It passes."), Err(EvaluationError::Refused(_))));
+        assert!(matches!(read_assessment("It passes."), Err(AiError::Refused(_))));
         assert!(matches!(
             apply_assessment(&db, id, first, &read_assessment(&answer("inconclusive", "")).unwrap()),
-            Err(EvaluationError::Refused(_))
+            Err(AiError::Refused(_))
         ));
         assert_eq!(read_work_unit(&db, first).unwrap().verdict, None);
     }

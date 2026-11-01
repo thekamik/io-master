@@ -79,8 +79,8 @@ fn document_of(row: &Row<'_>) -> Result<OscalStandardDocument, DbError> {
 ///
 /// Output: the standard; `DbError::NoRow` when there is none.
 ///
-/// Called by: `panels/logic/evaluation/question.rs`: `unit_json`;
-/// `panels/logic/evaluation_plan/fill.rs`: `parameters_question`;
+/// Called by: `ai/models/evaluation/work_unit/assessment_question.rs`: `unit_json`;
+/// `ai/models/evaluation/work_unit/proposal.rs`: `parameters_question`;
 /// `panels/logic/evaluation_plan/work_units.rs`: `controls_of`;
 /// `panels/views/evaluation/work_units.rs`: `unit_view`;
 /// `panels/views/evaluation_plan/work_units.rs`: `standard_title`.

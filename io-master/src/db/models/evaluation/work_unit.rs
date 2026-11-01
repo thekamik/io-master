@@ -520,16 +520,16 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
 /// Output: the work unit; `DbError::NoRow` when there is none.
 ///
 /// Called by: [`read_work_units`], [`check_frozen`];
-/// `panels/logic/evaluation/answer.rs`: `apply_assessment`,
-/// `with_dependencies`; `panels/logic/evaluation/question.rs`:
+/// `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`,
+/// `with_dependencies`; `ai/models/evaluation/work_unit/assessment_question.rs`:
 /// `assessment_question`; `panels/logic/evaluation/results.rs`:
-/// `save_results`; `panels/logic/evaluation_plan/fill.rs`:
+/// `save_results`; `ai/models/evaluation/work_unit/proposal.rs`:
 /// `apply_dependencies`, `apply_parameters`, `dependencies_question`,
 /// `parameters_question`; `panels/logic/evaluation_plan/work_units.rs`:
 /// `add_proof_place`, `update_work_unit_parameters`;
-/// `panels/views/evaluation/run.rs`: `prepared_question`, `written`;
+/// `ai/models/evaluation/work_unit/assessment.rs`: `prepared_question`, `written`;
 /// `panels/views/evaluation/work_units.rs`: `evaluation_unit_get`,
-/// `needs_of`; `panels/views/evaluation_plan/fill.rs`: `prepared_question`;
+/// `needs_of`; `ai/models/evaluation/work_unit/filling.rs`: `prepared_question`;
 /// `panels/views/evaluation_plan/work_units.rs`: `work_unit_get`.
 /// Calls: [`unit_of`], [`read_lists`].
 pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
@@ -556,9 +556,9 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
 ///
 /// Called by: `evaluation_plan.rs`: `create_evaluation`;
 /// `panels/logic/evaluation/inputs.rs`: `give_proof`, `inputs`;
-/// `panels/logic/evaluation/question.rs`: `question_of`;
-/// `panels/logic/evaluation/run.rs`: `units_in_order`;
-/// `panels/logic/evaluation_plan/fill.rs`: `apply_dependencies`,
+/// `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`;
+/// `ai/models/evaluation/evaluation_plan.rs`: `units_in_order`;
+/// `ai/models/evaluation/work_unit/proposal.rs`: `apply_dependencies`,
 /// `dependencies_question`; `domain/models/evaluation/evaluation_plan.rs`:
 /// `check_order`; `panels/logic/evaluation_plan/plans.rs`: `update_plan`;
 /// `panels/logic/evaluation_plan/work_units.rs`: `add_all_work_units`,
@@ -677,7 +677,7 @@ fn check_frozen(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<(), DbE
 /// [`check_links`], or `DbError::NoRow` when there is no work unit
 /// `unit.id`; nothing is then written.
 ///
-/// Called by: `panels/logic/evaluation/answer.rs`: `apply_assessment`;
+/// Called by: `ai/models/evaluation/work_unit/assessment_answer.rs`: `apply_assessment`;
 /// `panels/logic/evaluation/results.rs`: `save_results`;
 /// `domain/models/evaluation/evaluation_plan.rs`: `check_order`;
 /// `panels/logic/evaluation_plan/work_units.rs`: `add_proof_place`,

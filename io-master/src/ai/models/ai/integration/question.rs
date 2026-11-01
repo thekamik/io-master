@@ -111,9 +111,9 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// program sends to, or the protocol needs a key the integration has not.
 ///
 /// Called by: `panels/logic/chat/chats.rs`: `prepared`;
-/// `panels/logic/evaluation/run.rs`: `prepared_assessment`;
+/// `ai/models/evaluation/work_unit/assessment.rs`: `prepared_assessment`;
 /// `panels/logic/settings/integrations.rs`: `check_question`;
-/// `panels/views/evaluation_plan/fill.rs`: `prepared_question`; under the
+/// `ai/models/evaluation/work_unit/filling.rs`: `prepared_question`; under the
 /// lock of the session.
 /// Calls: `db/models/ai/integration.rs`: `read_integration`;
 /// `db/models/ai/api_key.rs`: `read_api_key`; `address.rs`:

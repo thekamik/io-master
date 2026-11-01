@@ -138,6 +138,8 @@ mod domain {
 // holds their functions in the database; error.rs is the error of all of them.
 mod ai {
     pub mod error;
+    // The locks of the session as a long work of the AI takes them.
+    pub mod lock;
     pub mod models {
         // ai/models/ai/: the AI on the models of model/ai/.
         pub mod ai {
@@ -166,6 +168,20 @@ mod ai {
                 pub mod sending;
                 pub mod sse;
                 pub mod turns;
+            }
+        }
+        // ai/models/evaluation/: the AI on a plan and its work units: the
+        // assessment of an evaluation and "Fill with AI", the loops over the
+        // work units in evaluation_plan.rs, the work on one work unit in
+        // work_unit/.
+        pub mod evaluation {
+            pub mod evaluation_plan;
+            pub mod work_unit {
+                pub mod assessment;
+                pub mod assessment_answer;
+                pub mod assessment_question;
+                pub mod filling;
+                pub mod proposal;
             }
         }
         // ai/models/session/: the AI on the helper models of model/session/:
@@ -205,23 +221,20 @@ mod panels {
         }
         // panels/logic/evaluation/: the evaluations: a plan copied for one
         // product with its agent, the documents and proofs given, the
-        // question of a work unit and its answer, the run of the assessment,
-        // the results of the evaluator.
+        // results of the evaluator (the assessment by the AI is in
+        // ai/models/evaluation/).
         pub mod evaluation {
-            pub mod answer;
             pub mod error;
             pub mod evaluations;
             pub mod inputs;
-            pub mod question;
             pub mod results;
-            pub mod run;
         }
         // panels/logic/evaluation_plan/: the making of a plan: the standards
         // checked against the schema of NIST and read, the plans, their work
-        // units, the order of the work and the cross references.
+        // units ("Fill with AI" is in ai/models/evaluation/, the order of the
+        // work in domain/).
         pub mod evaluation_plan {
             pub mod error;
-            pub mod fill;
             pub mod oscal;
             pub mod plans;
             pub mod standards;

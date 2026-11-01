@@ -97,8 +97,18 @@ ai/
     agent.rs            Agent: the passages of its bases that fit a question (its glossary, its limits);
                         agent_question (its instructions, the task, its knowledge, the messages ──► Question)
     chat.rs             Chat: a question prepared with its oldest messages left out until it fits
+  models/evaluation/
+    evaluation_plan.rs  EvaluationPlan: the work units to assess (units_ready, the preview) and to fill (fill_units,
+                        fill_preview); the loops assess_evaluation and fill_plan, a step per work unit, each written
+                        into the progress, "Stop" read before each
+    work_unit/          WorkUnit: the work of the AI on one work unit
+                        assessment.rs (assess_work_unit: the question prepared, sent, the answer written),
+                        assessment_question.rs, assessment_answer.rs (the answer read, the quotes checked, the verdict
+                        with the dependencies); filling.rs (fill_work_unit, FillTask), proposal.rs (the questions of
+                        the parameters and of the dependencies, their answers read and written)
   models/session/
     progress.rs         Progress (a helper model): a step of a long work written into it (record_step)
+  lock.rs               the locks of the session as a long work takes them: the database only for the short steps
 
 panels ──► agent.rs: agent_question ──► integration/question.rs: prepare ──► integration/sending.rs: send
                                                                    ──► integration/connection.rs ──► the service
@@ -118,9 +128,9 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 | Panel | `logic/` | `views/` commands |
 |---|---|---|
 | `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
-| `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs`, `fill.rs` ("Fill with AI": parameters, dependencies, the preview) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
+| `evaluation_plan` | `oscal.rs` (a catalog checked, its controls), `standards.rs`, `plans.rs`, `work_units.rs` ("Fill with AI" is in `ai/models/evaluation/`) | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | `agent.rs` (an agent made, its changes checked; its knowledge and its question are in `ai/models/ai/agent.rs`), `knowledge.rs` (bases, sources from files, the search) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
-| `evaluation` | `evaluations.rs` (an evaluation begun on a copy of a plan with its agent; the agent changed), `inputs.rs` (the documents and proofs given once; whether a file is a PDF told by its first bytes), `question.rs` (the question of a work unit: its JSON, its dependencies, its documents whole or by passages, its proofs), `answer.rs` (the answer read; the quotes checked in the documents; the verdict with the dependencies), `run.rs` (the work units in the order of the work, the preview with the inputs missing, the question prepared), `results.rs` (the results of the evaluator, of author User) | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
+| `evaluation` | `evaluations.rs` (an evaluation begun on a copy of a plan with its agent; the agent changed), `inputs.rs` (the documents and proofs given once; whether a file is a PDF told by its first bytes), `results.rs` (the results of the evaluator, of author User) | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | `chats.rs` (a chat made and renamed; the question with the knowledge of the agent; the question and the answer kept) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |
 

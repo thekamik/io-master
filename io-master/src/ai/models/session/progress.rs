@@ -29,8 +29,8 @@ const MAX_PROBLEMS: usize = 200;
 /// Output: nothing; the counts, the last step and the problems of
 /// `progress` changed.
 ///
-/// Called by: `panels/views/evaluation/run.rs`: `evaluation_assess`;
-/// `panels/views/evaluation_plan/fill.rs`: `fill`.
+/// Called by: `ai/models/evaluation/evaluation_plan.rs`: `assess_evaluation`,
+/// `fill_plan`.
 pub fn record_step(progress: &mut Progress, label: String, done: bool, verdict: Option<Verdict>, notes: Vec<String>) {
     if done {
         progress.assessed += 1;

@@ -8,12 +8,12 @@
 //!                  each quote found in its document ──► update_work_unit, author User
 //! ```
 
+use crate::ai::models::evaluation::work_unit::assessment_answer::check_quote;
 use crate::db::models::evaluation::product_document::read_product_document;
 use crate::db::models::evaluation::work_unit::{MAX_QUOTES, read_work_unit, update_work_unit};
 use crate::db::storage::user_database::UserDatabase;
 use crate::domain::models::evaluation::evaluation_plan::evaluation_in_progress;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
-use crate::panels::logic::evaluation::answer::check_quote;
 use crate::panels::logic::evaluation::error::EvaluationError;
 
 /// The longest text of a result, in characters.
