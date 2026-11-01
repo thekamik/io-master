@@ -18,11 +18,11 @@ use serde::Serialize;
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
-use crate::db::models::ai::rag::{read_knowledge_bases, read_sources};
-use crate::domain::models::ai::rag::{
+use crate::objects::ai::rag::rag_model::KnowledgeBase;
+use crate::objects::ai::rag::rag_rules::{
     add_base, add_source, change_base, rename_source, replace_source_text, search_base, source_text,
 };
-use crate::model::ai::rag::KnowledgeBase;
+use crate::objects::ai::rag::rag_store::{read_knowledge_bases, read_sources};
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;

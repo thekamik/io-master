@@ -55,10 +55,10 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `Integration` | `objects/ai/integration/integration_model.rs` | id, name, url, model, protocol, ca_certificate, context_size | `ai_integrations` |
 | `Protocol` | `objects/ai/integration/integration_model.rs` | OpenAiChat, AnthropicMessages | (a column) |
 | `ApiKey` | `objects/ai/api_key/api_key_model.rs` | integration, key | `ai_api_keys` (with the origin it is bound to) |
-| `Agent` | `agent.rs` | id, name, integration, instructions, knowledge_bases, glossary, max_passages, max_characters | `ai_agents` (lists: `ai_agent_knowledge_bases`, `ai_agent_glossary`) |
-| `GlossaryEntry` | `agent.rs` | term, meaning | (rows of the agent) |
-| `KnowledgeBase` | `rag.rs` | id, name, description | `knowledge_bases` |
-| `Source` | `rag.rs` | id, knowledge_base, name, text | `knowledge_sources` (index: `knowledge_passages`, FTS5) |
+| `Agent` | `objects/ai/agent/agent_model.rs` | id, name, integration, instructions, knowledge_bases, glossary, max_passages, max_characters | `ai_agents` (lists: `ai_agent_knowledge_bases`, `ai_agent_glossary`) |
+| `GlossaryEntry` | `objects/ai/agent/agent_model.rs` | term, meaning | (rows of the agent) |
+| `KnowledgeBase` | `objects/ai/rag/rag_model.rs` | id, name, description | `knowledge_bases` |
+| `Source` | `objects/ai/rag/rag_model.rs` | id, knowledge_base, name, text | `knowledge_sources` (index: `knowledge_passages`, FTS5) |
 | `JournalEntry` | `objects/ai/journal/journal_model.rs` | id, time, integration, model, agent, work_unit, request, answer, ending, input_tokens, output_tokens | `ai_journal` |
 | `Ending` | `objects/ai/journal/journal_model.rs` | Complete, Cut, Stopped, Refused, Failed | (a column) |
 | `Chat` | `chat.rs` | id, title, agent, work_unit, messages | `chats` |

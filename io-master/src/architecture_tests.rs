@@ -46,7 +46,7 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 22] = [
+const ALLOWED: [(&str, &[&str]); 23] = [
     ("model", &[]),
     // infrastructure/: what belongs to no object and no panel, and knows
     // no object (user, 2026-11-01). The time of the computer, the data
@@ -58,12 +58,15 @@ const ALLOWED: [(&str, &[&str]); 22] = [
     ("infrastructure::pdf", &[]),
     // The database files; a new key of a database made of random bytes.
     ("infrastructure::storage", &["infrastructure::security"]),
-    ("db", &["infrastructure::storage", "model"]),
+    // The stores not yet moved: the index of a document of the product is cut
+    // and searched as the knowledge is (rag_store.rs).
+    ("db", &[RAG_STORE, "infrastructure::storage", "model"]),
     // The rules of the data: they read and write through db/ and the stores
     // of the objects (an agent names an integration that exists).
     (
         "domain",
         &[
+            AGENT_STORE,
             INTEGRATION_MODEL,
             INTEGRATION_STORE,
             "infrastructure::clock",
@@ -77,15 +80,24 @@ const ALLOWED: [(&str, &[&str]); 22] = [
     // and the knowledge, and writes the journal, through objects/ai/.
     (
         "ai",
-        &[AI_ERROR, INTEGRATION, JOURNAL, "infrastructure::clock", "domain", "db", "infrastructure::storage", "model"],
+        &[
+            AI_ERROR,
+            AGENT,
+            INTEGRATION,
+            JOURNAL,
+            "infrastructure::clock",
+            "domain",
+            "db",
+            "infrastructure::storage",
+            "model",
+        ],
     ),
-    // The agent and the chat ask through the integration.
-    ("ai::models::ai::agent", &[AI_ERROR, INTEGRATION, "db", "infrastructure::storage", "model"]),
+    // The chat asks through the integration.
     (
         "ai::models::ai::chat",
         &[
             AI_ERROR,
-            "ai::models::ai::agent",
+            AGENT,
             INTEGRATION,
             JOURNAL,
             "infrastructure::clock",
@@ -105,6 +117,7 @@ const ALLOWED: [(&str, &[&str]); 22] = [
             AI_ERROR,
             "ai::lock",
             "ai::models::ai",
+            AGENT,
             INTEGRATION,
             JOURNAL,
             "domain",
@@ -117,6 +130,7 @@ const ALLOWED: [(&str, &[&str]); 22] = [
         "ai::models::evaluation::evaluation_plan",
         &[
             AI_ERROR,
+            AGENT_STORE,
             INTEGRATION_STORE,
             "ai::lock",
             "ai::models::evaluation::work_unit",
@@ -141,6 +155,7 @@ const ALLOWED: [(&str, &[&str]); 22] = [
             AI_ERROR,
             API_KEY_MODEL,
             AGENT,
+            RAG,
             CHAT,
             JOURNAL,
             QUESTION,
@@ -163,7 +178,7 @@ const ALLOWED: [(&str, &[&str]); 22] = [
     // objects/: every model with the functions that work on it (user,
     // 2026-11-01). Its list of the tables names the stores still in db/;
     // AiError holds the error of the rules (domain/error.rs).
-    ("objects", &["infrastructure", "db", "domain::error", "model"]),
+    ("objects", &["infrastructure", "db", "domain::error", "domain::text", "model"]),
     // The API key of an integration: its store checks the integration it is
     // bound to.
     ("objects::ai::api_key", &[AI_ERROR, INTEGRATION_MODEL, INTEGRATION_STORE, "infrastructure::storage"]),
@@ -171,6 +186,10 @@ const ALLOWED: [(&str, &[&str]); 22] = [
     // objects only the API key, masked in its errors, and the model of the
     // journal (how an answer ended, `Ending`).
     ("objects::ai::integration", &[AI_ERROR, "objects::ai::api_key", JOURNAL_MODEL, "infrastructure", "model"]),
+    // The agent asks through the integration, with the knowledge of its
+    // bases; the knowledge knows no other object.
+    ("objects::ai::agent", &[AI_ERROR, INTEGRATION, "objects::ai::rag", "infrastructure", "db", "domain", "model"]),
+    ("objects::ai::rag", &["infrastructure", "db", "domain", "model"]),
     // The journal writes what the integration asked and was answered.
     ("objects::ai::journal", &[AI_ERROR, INTEGRATION, "infrastructure", "db", "model"]),
     // The session: the user logged in and their open database.
@@ -182,6 +201,7 @@ const ALLOWED: [(&str, &[&str]); 22] = [
             "panels::logic",
             AI_ERROR,
             AGENT,
+            RAG,
             CHAT,
             JOURNAL,
             QUESTION,
@@ -218,7 +238,10 @@ const API_KEY_MODEL: &str = "objects::ai::api_key::api_key_model";
 const QUESTION: &str = "objects::ai::integration::integration_ai::question";
 const SENDING: &str = "objects::ai::integration::integration_ai::sending";
 const ADDRESS: &str = "objects::ai::integration::integration_ai::address";
-const AGENT: &str = "ai::models::ai::agent";
+const AGENT: &str = "objects::ai::agent";
+const AGENT_STORE: &str = "objects::ai::agent::agent_store";
+const RAG: &str = "objects::ai::rag";
+const RAG_STORE: &str = "objects::ai::rag::rag_store";
 const CHAT: &str = "ai::models::ai::chat";
 const PROGRESS: &str = "ai::models::session::progress";
 const EVALUATION_PLAN: &str = "ai::models::evaluation::evaluation_plan";

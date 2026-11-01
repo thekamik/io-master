@@ -66,11 +66,9 @@ mod infrastructure {
 // model/: the data of the program as it is kept in the databases, one
 // structure per kind of data, fields only (docs/data_model.md).
 mod model {
-    // model/ai/: the agents, the knowledge for the AI (RAG), the chats.
+    // model/ai/: the chats.
     pub mod ai {
-        pub mod agent;
         pub mod chat;
-        pub mod rag;
     }
     // model/evaluation/: the plan of an evaluation, its work units, the
     // standards, the documents of the product and the proofs of the
@@ -95,12 +93,9 @@ mod db {
     // per file of model/, no delete (user, 2026-10-28); the tables of each
     // database in their order.
     pub mod models {
-        // db/models/ai/: the knowledge (RAG) and its index, the agents, the
-        // chats.
+        // db/models/ai/: the chats.
         pub mod ai {
-            pub mod agent;
             pub mod chat;
-            pub mod rag;
         }
         // db/models/evaluation/: the plans, their work units, the standards,
         // the documents of the product, the proofs of the laboratory.
@@ -122,12 +117,9 @@ mod domain {
     // The one rule of a text the user gives: trimmed, within its limit.
     pub mod text;
     pub mod models {
-        // domain/models/ai/: the rules of an agent, of a chat and of the
-        // knowledge.
+        // domain/models/ai/: the rules of a chat.
         pub mod ai {
-            pub mod agent;
             pub mod chat;
-            pub mod rag;
         }
         // domain/models/evaluation/: the rules of a plan, of its work units
         // and of its standards.
@@ -162,9 +154,6 @@ mod ai {
     pub mod models {
         // ai/models/ai/: the AI on the models of model/ai/.
         pub mod ai {
-            // The agent: the knowledge it gives with a question, and the
-            // question it asks with it.
-            pub mod agent;
             // The chat: a question shortened from its oldest messages until
             // it fits.
             pub mod chat;
@@ -205,8 +194,17 @@ mod objects {
     // database is opened.
     pub mod schema;
     // objects/ai/: the integrations with the AI services and their keys, the
-    // journal of every question of an agent.
+    // agents and their knowledge, the journal of every question of an agent.
     pub mod ai {
+        // The agent: a layer of knowledge over the model of an integration;
+        // the knowledge it gives with a question, and the question it asks
+        // with it.
+        pub mod agent {
+            pub mod agent_ai;
+            pub mod agent_model;
+            pub mod agent_rules;
+            pub mod agent_store;
+        }
         // The API key of an integration: kept apart, masked in every text
         // taken from an answer.
         pub mod api_key {
@@ -240,6 +238,13 @@ mod objects {
             pub mod journal_ai;
             pub mod journal_model;
             pub mod journal_store;
+        }
+        // The knowledge (RAG): the bases and their sources, cut into
+        // passages and indexed (FTS5), searched before a question.
+        pub mod rag {
+            pub mod rag_model;
+            pub mod rag_rules;
+            pub mod rag_store;
         }
     }
     // objects/user/: the user, the installation and the settings, the keys of

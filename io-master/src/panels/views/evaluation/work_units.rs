@@ -14,7 +14,6 @@ use tauri::State;
 
 use crate::ai::models::evaluation::evaluation_plan::units_in_order;
 use crate::ai::models::evaluation::work_unit::assessment_question::{assessing_agent, verdict_name};
-use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
@@ -24,6 +23,7 @@ use crate::domain::models::evaluation::work_unit::results::{Results, save_result
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Author, Quote, Verdict, WorkUnit};
+use crate::objects::ai::agent::agent_store::read_agent;
 use crate::objects::ai::journal::journal_model::Ending;
 use crate::objects::ai::journal::journal_store::read_latest_journal_entry;
 use crate::panels::views::error::ViewError;

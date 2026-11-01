@@ -230,8 +230,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::agent::create_agent;
-    use crate::model::ai::agent::Agent;
+    use crate::objects::ai::agent::agent_model::Agent;
+    use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::integration::integration_model::Integration;
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::TempDir;

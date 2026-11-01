@@ -1,6 +1,6 @@
 //! The rules of an agent (`Agent`): an agent made, its changes checked. The
 //! knowledge it gives with a question is a part of the AI
-//! (`ai/models/ai/agent.rs`).
+//! (`objects/ai/agent/agent_ai.rs`).
 //!
 //! An agent is a layer of knowledge over the model of an integration (user,
 //! 2026-10-29): it names the integration that answers it, its instructions,
@@ -8,13 +8,13 @@
 //! limits. It is changed freely: when its answers are not good enough, its
 //! knowledge or its instructions are made better.
 
-use crate::db::models::ai::agent::{MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent};
-use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND, read_knowledge_base};
 use crate::domain::error::DomainError;
 use crate::domain::text::checked_text;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::agent::{Agent, GlossaryEntry};
+use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
+use crate::objects::ai::agent::agent_store::{MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent};
 use crate::objects::ai::integration::integration_store::read_integration;
+use crate::objects::ai::rag::rag_store::{MAX_BASES, MAX_FOUND, read_knowledge_base};
 
 /// The longest name of an agent, in characters.
 const MAX_NAME: usize = 100;
@@ -43,7 +43,7 @@ knowledge is not enough, say what is missing.";
 ///
 /// Called by: `panels/views/agents/agent.rs`: `agent_create`.
 /// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`; [`checked`];
-/// `db/models/ai/agent.rs`: `create_agent`.
+/// `objects/ai/agent/agent_store.rs`: `create_agent`.
 pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64, DomainError> {
     read_integration(db, integration)?;
 
@@ -65,7 +65,7 @@ pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64,
 /// knowledge bases, glossary and limits.
 ///
 /// Called by: `panels/views/agents/agent.rs`: `agent_save`.
-/// Calls: `db/models/ai/agent.rs`: `read_agent`, `update_agent`; [`checked`].
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`, `update_agent`; [`checked`].
 pub fn change_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DomainError> {
     read_agent(db, agent.id)?;
 
@@ -108,7 +108,7 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Do
 ///
 /// Called by: [`new_agent`], [`change_agent`].
 /// Calls: `domain/text.rs`: `checked_text`; `objects/ai/integration/integration_store.rs`:
-/// `read_integration`; `db/models/ai/rag.rs`: `read_knowledge_base`;
+/// `read_integration`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`;
 /// [`checked_glossary`].
 fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
     let name = checked_text(&agent.name, "the name of the agent", MAX_NAME)?;
@@ -157,9 +157,9 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::rag::create_knowledge_base;
-    use crate::model::ai::rag::KnowledgeBase;
     use crate::objects::ai::integration::integration_store::create_integration;
+    use crate::objects::ai::rag::rag_model::KnowledgeBase;
+    use crate::objects::ai::rag::rag_store::create_knowledge_base;
     use crate::test_support::database::{database, integration};
 
     #[test]

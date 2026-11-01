@@ -860,9 +860,11 @@ mod tests {
             &crate::test_support::database::integration(),
         )
         .unwrap();
-        let planner =
-            crate::db::models::ai::agent::create_agent(&db, &crate::test_support::database::agent(integration))
-                .unwrap();
+        let planner = crate::objects::ai::agent::agent_store::create_agent(
+            &db,
+            &crate::test_support::database::agent(integration),
+        )
+        .unwrap();
 
         update_evaluation_plan(
             &db,

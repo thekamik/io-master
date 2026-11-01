@@ -8,7 +8,7 @@
 //!
 //! With them the index of their text, which is no model: when the file is
 //! given, its text (read by the caller: a PDF through Poppler) is cut into
-//! passages, as the knowledge is (`db/models/ai/rag.rs`), and indexed by FTS5 with
+//! passages, as the knowledge is (`objects/ai/rag/rag_store.rs`), and indexed by FTS5 with
 //! their places, in the same transaction. The passages give the text whole
 //! again ([`read_document_text`]: for the question of a work unit and the
 //! check of its quotes, without reading the PDF again), and those that fit
@@ -22,10 +22,10 @@
 
 use rusqlite::{Connection, named_params};
 
-use crate::db::models::ai::rag::{MAX_FOUND, passages, query_of};
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::product_document::ProductDocument;
+use crate::objects::ai::rag::rag_store::{MAX_FOUND, passages, query_of};
 
 /// The most passages of one document (a text of 20 million characters).
 const MAX_PASSAGES: usize = 20_000;
@@ -132,7 +132,7 @@ pub fn read_product_document(db: &UserDatabase, id: i64) -> Result<ProductDocume
 /// passages.
 ///
 /// Called by: [`update_product_document`].
-/// Calls: `models/ai/rag.rs`: `passages`.
+/// Calls: `objects/ai/rag/rag_store.rs`: `passages`.
 fn write_passages(connection: &Connection, id: i64, text: &str) -> Result<(), DbError> {
     let cut = passages(text);
 
@@ -256,7 +256,7 @@ pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError>
 /// word to look for.
 ///
 /// Called by: `ai/models/evaluation/work_unit/assessment_question.rs`: `documents_text`.
-/// Calls: `models/ai/rag.rs`: `query_of`.
+/// Calls: `objects/ai/rag/rag_store.rs`: `query_of`.
 pub fn read_document_passages(
     db: &UserDatabase,
     documents: &[i64],

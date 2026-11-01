@@ -12,7 +12,6 @@
 //! The plan stays as it was; a blocked plan, or one with a cross reference,
 //! is refused by `db/`.
 
-use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::evaluation_plan::{create_evaluation, read_evaluation_plan, update_evaluation_plan};
 use crate::domain::error::DomainError;
 use crate::domain::text::{MAX_NAME, checked_text};
@@ -20,6 +19,7 @@ use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::work_unit::WorkUnit;
+use crate::objects::ai::agent::agent_store::read_agent;
 
 /// Begins the evaluation of a product on a copy of the plan `plan`, with
 /// the agent `agent` for the work units without an agent of their own.
@@ -36,7 +36,7 @@ use crate::model::evaluation::work_unit::WorkUnit;
 /// or a plan `db/` does not copy.
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_create`.
-/// Calls: `domain/text.rs`: `checked_text`; `db/models/ai/agent.rs`:
+/// Calls: `domain/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`:
 /// `read_agent`; `infrastructure/clock.rs`: `now`; `db/models/evaluation/evaluation_plan.rs`:
 /// `create_evaluation`.
 pub fn new_evaluation(db: &UserDatabase, plan: i64, identification: [&str; 3], agent: i64) -> Result<i64, DomainError> {
@@ -75,7 +75,7 @@ pub fn evaluation_in_progress(db: &UserDatabase, id: i64) -> Result<EvaluationPl
 /// without an agent of their own.
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_set_agent`.
-/// Calls: [`evaluation_in_progress`]; `db/models/ai/agent.rs`: `read_agent`;
+/// Calls: [`evaluation_in_progress`]; `objects/ai/agent/agent_store.rs`: `read_agent`;
 /// `db/models/evaluation/evaluation_plan.rs`: `update_evaluation_plan`.
 pub fn change_agent(db: &UserDatabase, evaluation: i64, agent: i64) -> Result<(), DomainError> {
     let stored = evaluation_in_progress(db, evaluation)?;
@@ -111,9 +111,9 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::agent::create_agent;
     use crate::db::models::evaluation::evaluation_plan::create_evaluation_plan;
-    use crate::model::ai::agent::Agent;
+    use crate::objects::ai::agent::agent_model::Agent;
+    use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{agent, database, integration, plan};
 

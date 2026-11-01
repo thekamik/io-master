@@ -45,7 +45,7 @@ use crate::infrastructure::storage::error::DbError;
 /// Output: the same number as `i64` (`2` → `2`); an error for an index SQL
 /// cannot hold, which no list within its limit reaches.
 ///
-/// Called by: `db/models/ai/agent.rs`: `write_lists`; `db/models/evaluation/evaluation_plan.rs`:
+/// Called by: `objects/ai/agent/agent_store.rs`: `write_lists`; `db/models/evaluation/evaluation_plan.rs`:
 /// `write_lists`, `order_work_units`; `db/models/evaluation/work_unit.rs`:
 /// `write_lists`; this file: [`write_id_list`].
 pub fn position(index: usize) -> Result<i64, DbError> {
@@ -62,7 +62,7 @@ pub fn position(index: usize) -> Result<i64, DbError> {
 /// Output: nothing when the list fits; otherwise the error "more than
 /// `max` `what`".
 ///
-/// Called by: `db/models/ai/agent.rs`: `check_agent`; `db/models/evaluation/evaluation_plan.rs`:
+/// Called by: `objects/ai/agent/agent_store.rs`: `check_agent`; `db/models/evaluation/evaluation_plan.rs`:
 /// `check_plan`; `db/models/evaluation/work_unit.rs`: `check_lists`,
 /// `write_dependencies`.
 pub fn check_length(length: usize, max: usize, what: &str) -> Result<(), DbError> {
@@ -86,7 +86,7 @@ pub fn check_length(length: usize, max: usize, what: &str) -> Result<(), DbError
 /// Output: the ids in the order the SELECT gives them (`[12, 15]`); an
 /// error when the owner has more than `max` rows.
 ///
-/// Called by: `db/models/ai/agent.rs`: `read_agent`; `db/models/evaluation/evaluation_plan.rs`:
+/// Called by: `objects/ai/agent/agent_store.rs`: `read_agent`; `db/models/evaluation/evaluation_plan.rs`:
 /// `read_lists`, `order_work_units` (the work units of a plan, read from
 /// `work_units`); `db/models/evaluation/work_unit.rs`: `read_lists`, `check_links`,
 /// `read_work_units`.
@@ -132,7 +132,7 @@ pub fn read_id_list(connection: &Connection, sql: &str, owner: i64, max: usize) 
 /// An error of SQLite when an id names no object (a foreign key) or comes
 /// twice (`UNIQUE`); the transaction of the caller then writes nothing.
 ///
-/// Called by: `db/models/ai/agent.rs`: `write_lists`; `db/models/evaluation/evaluation_plan.rs`:
+/// Called by: `objects/ai/agent/agent_store.rs`: `write_lists`; `db/models/evaluation/evaluation_plan.rs`:
 /// `write_lists`; `db/models/evaluation/work_unit.rs`: `write_lists`,
 /// `write_dependencies`.
 /// Calls: [`position`].

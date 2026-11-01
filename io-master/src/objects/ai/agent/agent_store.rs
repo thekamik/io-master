@@ -10,11 +10,11 @@
 
 use rusqlite::{Connection, Row, named_params};
 
-use crate::db::models::ai::rag::{MAX_BASES, MAX_FOUND};
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::lists::{check_length, position, read_id_list, write_id_list};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::agent::{Agent, GlossaryEntry};
+use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
+use crate::objects::ai::rag::rag_store::{MAX_BASES, MAX_FOUND};
 
 /// The most agents of the user, and terms of the glossary of one agent.
 pub const MAX_AGENTS: usize = 50;
@@ -135,7 +135,7 @@ fn write_lists(connection: &Connection, id: i64, agent: &Agent) -> Result<(), Db
 /// is taken (`UNIQUE`), or when its integration or a knowledge base is not
 /// stored (foreign key); nothing is then written.
 ///
-/// Called by: `domain/models/ai/agent.rs`: `new_agent`.
+/// Called by: `objects/ai/agent/agent_rules.rs`: `new_agent`.
 /// Calls: [`check_agent`], [`write_lists`].
 pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
     ensure!(agent.id == 0, DbError::Inconsistent("a new agent has an id already".to_owned()));
@@ -218,9 +218,9 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 ///
 /// Output: the agent; `DbError::NoRow` when there is none.
 ///
-/// Called by: [`read_agents`], [`update_agent`]; `ai/models/ai/agent.rs`:
+/// Called by: [`read_agents`], [`update_agent`]; `objects/ai/agent/agent_ai.rs`:
 /// `agent_knowledge`, `agent_question`; `ai/models/evaluation/evaluation_plan.rs`:
-/// `preview`, `fill_preview`; `domain/models/ai/agent.rs`: `checked`,
+/// `preview`, `fill_preview`; `objects/ai/agent/agent_rules.rs`: `checked`,
 /// `change_agent`; `domain/models/ai/chat.rs`: `new_chat`;
 /// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `change_agent`,
 /// `new_evaluation`; `domain/models/evaluation/evaluation_plan/planning.rs`:
@@ -287,7 +287,7 @@ pub fn read_agents(db: &UserDatabase) -> Result<Vec<Agent>, DbError> {
 /// Output: nothing; an error as [`create_agent`], or `DbError::NoRow` when
 /// there is no agent `agent.id`; nothing is then written.
 ///
-/// Called by: `domain/models/ai/agent.rs`: `change_agent`.
+/// Called by: `objects/ai/agent/agent_rules.rs`: `change_agent`.
 /// Calls: [`check_agent`], [`write_lists`].
 pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
     check_agent(agent)?;
@@ -321,9 +321,9 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::rag::create_knowledge_base;
-    use crate::model::ai::rag::KnowledgeBase;
     use crate::objects::ai::integration::integration_store::create_integration;
+    use crate::objects::ai::rag::rag_model::KnowledgeBase;
+    use crate::objects::ai::rag::rag_store::create_knowledge_base;
     use crate::test_support::database::{agent, database, integration};
 
     #[test]

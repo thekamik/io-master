@@ -15,7 +15,6 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::models::ai::agent::read_agents;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
 use crate::db::models::evaluation::work_unit::{read_work_unit, read_work_units};
@@ -26,6 +25,7 @@ use crate::domain::models::evaluation::work_unit::parameters::{
     WorkUnitParameters, add_proof_place, update_work_unit_parameters,
 };
 use crate::infrastructure::storage::user_database::UserDatabase;
+use crate::objects::ai::agent::agent_store::read_agents;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;

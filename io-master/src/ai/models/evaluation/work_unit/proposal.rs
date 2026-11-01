@@ -30,8 +30,6 @@ use std::collections::HashMap;
 
 use serde_json::{Value, json};
 
-use crate::ai::models::ai::agent::agent_question;
-use crate::db::models::ai::agent::read_agents;
 use crate::db::models::evaluation::lab_proof::{create_lab_proof, read_lab_proof};
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
 use crate::db::models::evaluation::product_document::read_product_document;
@@ -45,6 +43,8 @@ use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::work_unit::WorkUnit;
+use crate::objects::ai::agent::agent_ai::agent_question;
+use crate::objects::ai::agent::agent_store::read_agents;
 use crate::objects::ai::integration::integration_ai::question::Question;
 
 /// The longest guidance taken from an answer, in characters.
@@ -151,7 +151,7 @@ fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, AiError> 
 /// knowledge that fits the work unit, and the text `text` of the question.
 ///
 /// Called by: [`parameters_question`], [`dependencies_question`].
-/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `plan_to_fill`, `ai/models/ai/agent.rs`: `agent_question`.
+/// Calls: `domain/models/evaluation/evaluation_plan/planning.rs`: `plan_to_fill`, `objects/ai/agent/agent_ai.rs`: `agent_question`.
 fn question_of(db: &UserDatabase, plan: i64, unit: &WorkUnit, task: &str, text: String) -> Result<Question, AiError> {
     let (stored, agent_id) = plan_to_fill(db, plan)?;
 

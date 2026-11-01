@@ -11,7 +11,6 @@
 //! the panels, the AI ──► plan_in_planning, plan_to_fill (the plan in planning, or refused)
 //! ```
 
-use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::evaluation_plan::{
     create_evaluation_plan, read_evaluation_plan, update_evaluation_plan,
 };
@@ -23,6 +22,7 @@ use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::product_document::ProductDocument;
 use crate::model::evaluation::work_unit::Verdict;
+use crate::objects::ai::agent::agent_store::read_agent;
 
 /// Refuses a plan that is no more in planning, and one without a name.
 ///
@@ -109,7 +109,7 @@ pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_save`.
 /// Calls: [`check_planning`]; `db/models/evaluation/evaluation_plan.rs`:
-/// `read_evaluation_plan`, `update_evaluation_plan`; `db/models/ai/agent.rs`:
+/// `read_evaluation_plan`, `update_evaluation_plan`; `objects/ai/agent/agent_store.rs`:
 /// `read_agent`; `db/models/evaluation/work_unit.rs`: `read_work_units`.
 pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), DomainError> {
     let stored = read_evaluation_plan(db, plan.id)?;

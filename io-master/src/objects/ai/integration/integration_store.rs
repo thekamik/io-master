@@ -142,7 +142,7 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
 ///
 /// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`;
 /// `objects/ai/api_key/api_key_store.rs`: `origin_of`;
-/// `domain/models/ai/agent.rs`: `checked`, `new_agent`;
+/// `objects/ai/agent/agent_rules.rs`: `checked`, `new_agent`;
 /// `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`;
 /// `panels/logic/settings/integrations.rs`: `activate_integration`,
 /// `change_integration`, `set_key`; `panels/views/agents/agent.rs`:

@@ -17,7 +17,7 @@ use rusqlite::{Connection, Row, named_params};
 
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::rag::{KnowledgeBase, Source};
+use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
 
 /// The most knowledge bases, and sources of one base.
 pub const MAX_BASES: usize = 50;
@@ -79,7 +79,7 @@ pub const SCHEMA: &str = "
 /// Output: the id of the base (2). An error when it has no name, when the
 /// user has [`MAX_BASES`] already, or when its name is taken (`UNIQUE`).
 ///
-/// Called by: `domain/models/ai/rag.rs`: `add_base`.
+/// Called by: `objects/ai/rag/rag_rules.rs`: `add_base`.
 pub fn create_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<i64, DbError> {
     ensure!(base.id == 0, DbError::Inconsistent("a new knowledge base has an id already".to_owned()));
     ensure!(!base.name.is_empty(), DbError::Inconsistent("a knowledge base without a name".to_owned()));
@@ -113,8 +113,8 @@ fn base_of(row: &Row<'_>) -> Result<KnowledgeBase, DbError> {
 ///
 /// Output: the base; `DbError::NoRow` when there is none.
 ///
-/// Called by: `domain/models/ai/agent.rs`: `checked`;
-/// `domain/models/ai/rag.rs`: `add_source`, `change_base`,
+/// Called by: `objects/ai/agent/agent_rules.rs`: `checked`;
+/// `objects/ai/rag/rag_rules.rs`: `add_source`, `change_base`,
 /// `search_base`.
 /// Calls: [`base_of`].
 pub fn read_knowledge_base(db: &UserDatabase, id: i64) -> Result<KnowledgeBase, DbError> {
@@ -135,7 +135,7 @@ pub fn read_knowledge_base(db: &UserDatabase, id: i64) -> Result<KnowledgeBase, 
 /// Output: the bases, ordered by name; an error when the table holds more
 /// than [`MAX_BASES`] (a database the program did not write).
 ///
-/// Called by: `domain/models/ai/rag.rs`: `add_base`;
+/// Called by: `objects/ai/rag/rag_rules.rs`: `add_base`;
 /// `panels/views/agents/agent.rs`: `agent_get`;
 /// `panels/views/agents/knowledge.rs`: `knowledge_base_list`.
 /// Calls: [`base_of`].
@@ -165,7 +165,7 @@ pub fn read_knowledge_bases(db: &UserDatabase) -> Result<Vec<KnowledgeBase>, DbE
 /// Output: nothing; an error when it has no name or its name is taken, or
 /// `DbError::NoRow` when there is no base `base.id`.
 ///
-/// Called by: `domain/models/ai/rag.rs`: `change_base`.
+/// Called by: `objects/ai/rag/rag_rules.rs`: `change_base`.
 pub fn update_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), DbError> {
     ensure!(!base.name.is_empty(), DbError::Inconsistent("a knowledge base without a name".to_owned()));
 
@@ -194,7 +194,7 @@ pub fn update_knowledge_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<
 /// Called by: [`write_passages`]; `evaluation/product_document.rs`:
 /// `write_passages` (the index of a document of the product).
 /// Calls: [`push_passage`].
-pub(in crate::db) fn passages(text: &str) -> Vec<String> {
+pub(crate) fn passages(text: &str) -> Vec<String> {
     let mut passages = Vec::new();
     let mut current = String::new();
 
@@ -318,7 +318,7 @@ fn check_source(source: &Source) -> Result<(), DbError> {
 /// ([`check_source`]), when its base has [`MAX_SOURCES`] already, or when the
 /// base is not stored (foreign key); nothing is then written.
 ///
-/// Called by: `domain/models/ai/rag.rs`: `add_source`.
+/// Called by: `objects/ai/rag/rag_rules.rs`: `add_source`.
 /// Calls: [`check_source`], [`write_passages`].
 pub fn create_source(db: &UserDatabase, source: &Source) -> Result<i64, DbError> {
     ensure!(source.id == 0, DbError::Inconsistent("a new source has an id already".to_owned()));
@@ -367,7 +367,7 @@ fn source_of(row: &Row<'_>) -> Result<Source, DbError> {
 ///
 /// Output: the source; `DbError::NoRow` when there is none.
 ///
-/// Called by: `domain/models/ai/rag.rs`: `rename_source`,
+/// Called by: `objects/ai/rag/rag_rules.rs`: `rename_source`,
 /// `replace_source_text`.
 /// Calls: [`source_of`].
 pub fn read_source(db: &UserDatabase, id: i64) -> Result<Source, DbError> {
@@ -391,7 +391,7 @@ pub fn read_source(db: &UserDatabase, id: i64) -> Result<Source, DbError> {
 /// Output: the sources, ordered by name; an error when the base has more
 /// than [`MAX_SOURCES`] (a database the program did not write).
 ///
-/// Called by: `domain/models/ai/rag.rs`: `add_source`;
+/// Called by: `objects/ai/rag/rag_rules.rs`: `add_source`;
 /// `panels/views/agents/knowledge.rs`: `knowledge_base_list`,
 /// `knowledge_source_list`.
 /// Calls: [`source_of`].
@@ -423,7 +423,7 @@ pub fn read_sources(db: &UserDatabase, base: i64) -> Result<Vec<Source>, DbError
 /// Output: nothing; an error as [`create_source`], or `DbError::NoRow` when
 /// there is no source `source.id`; nothing is then written.
 ///
-/// Called by: `domain/models/ai/rag.rs`: `rename_source`,
+/// Called by: `objects/ai/rag/rag_rules.rs`: `rename_source`,
 /// `replace_source_text`.
 /// Calls: [`check_source`], [`write_passages`].
 pub fn update_source(db: &UserDatabase, source: &Source) -> Result<(), DbError> {
@@ -453,7 +453,7 @@ pub fn update_source(db: &UserDatabase, source: &Source) -> Result<(), DbError> 
 ///
 /// Called by: [`read_passages`]; `evaluation/product_document.rs`:
 /// `read_document_passages` (the search in the documents of the product).
-pub(in crate::db) fn query_of(question: &str) -> Option<String> {
+pub(crate) fn query_of(question: &str) -> Option<String> {
     let mut words = Vec::new();
 
     // The closure tells `split` where a word ends: at every sign that is no
@@ -480,8 +480,8 @@ pub(in crate::db) fn query_of(question: &str) -> Option<String> {
 /// Output: at most `count` and at most [`MAX_FOUND`] passages; none when the
 /// question has no word to look for. An error when there are too many bases.
 ///
-/// Called by: `ai/models/ai/agent.rs`: `agent_knowledge`;
-/// `domain/models/ai/rag.rs`: `search_base`.
+/// Called by: `objects/ai/agent/agent_ai.rs`: `agent_knowledge`;
+/// `objects/ai/rag/rag_rules.rs`: `search_base`.
 /// Calls: [`query_of`].
 pub fn read_passages(db: &UserDatabase, bases: &[i64], question: &str, count: usize) -> Result<Vec<String>, DbError> {
     ensure!(bases.len() <= MAX_BASES, DbError::Inconsistent(format!("more than {MAX_BASES} knowledge bases")));

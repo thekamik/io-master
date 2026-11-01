@@ -8,7 +8,6 @@
 //!     ──► plan_in_planning ──► update_work_unit ──► check_order
 //! ```
 
-use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::lab_proof::create_lab_proof;
 use crate::db::models::evaluation::work_unit::{read_work_unit, update_work_unit};
 use crate::domain::error::DomainError;
@@ -18,6 +17,7 @@ use crate::domain::text::{MAX_NAME, checked_text};
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::work_unit::WorkUnit;
+use crate::objects::ai::agent::agent_store::read_agent;
 
 /// What the planner gives a work unit.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,7 +45,7 @@ pub struct WorkUnitParameters {
 /// `apply_parameters`, `apply_dependencies` (proposed by the AI).
 /// Calls: `../evaluation_plan/planning.rs`: `plan_in_planning`;
 /// `../evaluation_plan/order.rs`: `check_order`;
-/// `db/models/ai/agent.rs`: `read_agent`; `db/models/evaluation/work_unit.rs`:
+/// `objects/ai/agent/agent_store.rs`: `read_agent`; `db/models/evaluation/work_unit.rs`:
 /// `read_work_unit`, `update_work_unit`.
 pub fn update_work_unit_parameters(
     db: &UserDatabase,
@@ -117,12 +117,12 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::agent::create_agent;
     use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
     use crate::domain::models::evaluation::evaluation_plan::planning::{add_document_place, create_plan, update_plan};
     use crate::domain::models::evaluation::evaluation_plan::work_units::add_work_unit;
     use crate::domain::models::evaluation::oscal_standard_document::import_standard;
     use crate::model::evaluation::evaluation_plan::EvaluationPlan;
+    use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{agent, database, integration};
 

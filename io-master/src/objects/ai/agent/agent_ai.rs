@@ -11,12 +11,12 @@
 //! agent_question ──► the instructions of the agent + the task + the knowledge + the messages ──► Question
 //! ```
 
-use crate::db::models::ai::agent::read_agent;
-use crate::db::models::ai::rag::{MAX_FOUND, read_passages};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::agent::GlossaryEntry;
 use crate::model::ai::chat::Message;
+use crate::objects::ai::agent::agent_model::GlossaryEntry;
+use crate::objects::ai::agent::agent_store::read_agent;
 use crate::objects::ai::integration::integration_ai::question::Question;
+use crate::objects::ai::rag::rag_store::{MAX_FOUND, read_passages};
 use crate::objects::ai_error::AiError;
 
 /// The words of `text` in lower case: what lies between the signs that are
@@ -85,8 +85,8 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 ///
 /// Called by: [`agent_question`]; `panels/views/agents/agent.rs`:
 /// `agent_knowledge_test`.
-/// Calls: `db/models/ai/agent.rs`: `read_agent`; [`widened`];
-/// `db/models/ai/rag.rs`: `read_passages`.
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`widened`];
+/// `objects/ai/rag/rag_store.rs`: `read_passages`.
 pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<Vec<String>, AiError> {
     let agent = read_agent(db, agent)?;
     let count = usize::try_from(agent.max_passages).unwrap_or(MAX_FOUND);
@@ -129,7 +129,7 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
 /// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `question_of`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`;
 /// `chat.rs`: `chat_question`.
-/// Calls: `db/models/ai/agent.rs`: `read_agent`; [`agent_knowledge`].
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`agent_knowledge`].
 pub fn agent_question(
     db: &UserDatabase,
     agent: i64,
@@ -168,12 +168,12 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::agent::{create_agent, update_agent};
-    use crate::db::models::ai::rag::{create_knowledge_base, create_source};
-    use crate::model::ai::agent::Agent;
     use crate::model::ai::chat::Speaker;
-    use crate::model::ai::rag::{KnowledgeBase, Source};
+    use crate::objects::ai::agent::agent_model::Agent;
+    use crate::objects::ai::agent::agent_store::{create_agent, update_agent};
     use crate::objects::ai::integration::integration_store::create_integration;
+    use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
+    use crate::objects::ai::rag::rag_store::{create_knowledge_base, create_source};
     use crate::test_support::database::{agent, database, integration};
 
     #[test]

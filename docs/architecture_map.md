@@ -18,17 +18,17 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ## The models
 
-### `model/ai/agent.rs`: `Agent`, `GlossaryEntry`
+### `objects/ai/agent/agent_model.rs`: `Agent`, `GlossaryEntry`
 
-- **Stored** (`db/models/ai/agent.rs`): `create_agent`, `read_agent`, `read_agents`, `update_agent`
+- **Stored** (`objects/ai/agent/agent_store.rs`): `create_agent`, `read_agent`, `read_agents`, `update_agent`
 - **Processed, the rules of the data**:
-  - `domain/models/ai/agent.rs`: `change_agent`, `checked`, `checked_glossary`, `new_agent`
+  - `objects/ai/agent/agent_rules.rs`: `change_agent`, `checked`, `checked_glossary`, `new_agent`
   - `domain/models/ai/chat.rs`: `new_chat`
   - `domain/models/evaluation/evaluation_plan/evaluation.rs`: `change_agent`, `new_evaluation`
   - `domain/models/evaluation/evaluation_plan/planning.rs`: `update_plan`
   - `domain/models/evaluation/work_unit/parameters.rs`: `update_work_unit_parameters`
 - **Processed, the AI**:
-  - `ai/models/ai/agent.rs`: `agent_knowledge`, `agent_question`, `widened`
+  - `objects/ai/agent/agent_ai.rs`: `agent_knowledge`, `agent_question`, `widened`
   - `ai/models/evaluation/evaluation_plan.rs`: `fill_preview`, `preview`
   - `ai/models/evaluation/work_unit/proposal.rs`: `names_of`
 - **Commands** (`panels/views/`):
@@ -76,7 +76,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the rules of the data**:
   - `domain/models/ai/chat.rs`: `add_question`, `new_chat`, `rename_chat`
 - **Processed, the AI**:
-  - `ai/models/ai/agent.rs`: `agent_question`
+  - `objects/ai/agent/agent_ai.rs`: `agent_question`
   - `ai/models/ai/chat.rs`: `add_answer`, `chat_question`, `leave_oldest_out`, `search_text`
   - `objects/ai/integration/integration_ai/anthropic.rs`: `body`
   - `objects/ai/integration/integration_ai/openai.rs`: `body`
@@ -98,7 +98,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`objects/ai/integration/integration_store.rs`): `create_integration`, `read_integration`, `read_integrations`, `update_integration`
 - **Processed, the rules of the data**:
-  - `domain/models/ai/agent.rs`: `checked`, `new_agent`
+  - `objects/ai/agent/agent_rules.rs`: `checked`, `new_agent`
 - **Processed, the AI**:
   - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`
   - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`
@@ -138,14 +138,14 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation/EvaluationUnit.svelte` ← `evaluation_unit_get`
   - `views/settings/IntegrationForm.svelte` ← `integration_check`
 
-### `model/ai/rag.rs`: `KnowledgeBase`, `Source`
+### `objects/ai/rag/rag_model.rs`: `KnowledgeBase`, `Source`
 
-- **Stored** (`db/models/ai/rag.rs`): `create_knowledge_base`, `read_knowledge_base`, `read_knowledge_bases`, `update_knowledge_base`, `create_source`, `read_source`, `read_sources`, `update_source`, `read_passages`
+- **Stored** (`objects/ai/rag/rag_store.rs`): `create_knowledge_base`, `read_knowledge_base`, `read_knowledge_bases`, `update_knowledge_base`, `create_source`, `read_source`, `read_sources`, `update_source`, `read_passages`
 - **Processed, the rules of the data**:
-  - `domain/models/ai/agent.rs`: `checked`
-  - `domain/models/ai/rag.rs`: `add_base`, `add_source`, `change_base`, `rename_source`, `replace_source_text`, `search_base`
+  - `objects/ai/agent/agent_rules.rs`: `checked`
+  - `objects/ai/rag/rag_rules.rs`: `add_base`, `add_source`, `change_base`, `rename_source`, `replace_source_text`, `search_base`
 - **Processed, the AI**:
-  - `ai/models/ai/agent.rs`: `agent_knowledge`
+  - `objects/ai/agent/agent_ai.rs`: `agent_knowledge`
 - **Commands** (`panels/views/`):
   - `agents/agent.rs`: `agent_create`, `agent_get`, `agent_save`, `agent_knowledge_test`
   - `agents/knowledge.rs`: `knowledge_base_list`, `knowledge_base_create`, `knowledge_base_save`, `knowledge_source_list`, `knowledge_source_add`, `knowledge_source_replace`, `knowledge_source_rename`, `knowledge_search`

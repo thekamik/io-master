@@ -94,10 +94,19 @@ objects/ai/
                    (needs_key, body, key_headers, read_event) ──► openai.rs, anthropic.rs (the body, the key header,
                    one event read); sse.rs (events from pieces of any size), turns.rs (alternating turns starting
                    with the user), reading.rs (the answer read so far)
+  agent/         agent_model.rs (Agent, GlossaryEntry), agent_store.rs,
+                 agent_rules.rs (new_agent: the default instructions and limits; change_agent; checked: a name, an
+                 integration and bases that exist, limits in their ranges, the glossary),
+                 agent_ai.rs (the passages of its bases that fit a question: its glossary, its limits;
+                 agent_question: its instructions, the task, its knowledge, the messages ──► Question)
   api_key/       api_key_model.rs (ApiKey), api_key_store.rs (bound to the origin of its integration),
                  api_key_ai.rs (the key masked in every text taken from an answer)
   journal/       journal_model.rs (JournalEntry, Ending), journal_store.rs,
                  journal_ai.rs (record ──► Answer: the journal of the agent written before the answer is given)
+  rag/           rag_model.rs (KnowledgeBase, Source), rag_store.rs (every source cut into passages of 1500
+                 characters and indexed, FTS5; a search passes over common English words),
+                 rag_rules.rs (add_base, change_base; source_text: .txt, .md, .pdf within its limit; add_source,
+                 replace_source_text, rename_source; search_base, the test of a base)
 objects/user/
   program_data/  program_data_model.rs (Installation, Settings), program_data_store.rs
   user_data/     user_data_model.rs (User), user_data_store.rs,
@@ -111,7 +120,7 @@ objects/user/
 
 ### `db/`
 
-`db/models/` holds one file per file of `model/`, with its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; `objects/schema.rs` lists the tables of each database (parted by the database, not by the folder; the order does not matter to SQLite); a list of a model is a table of its own, one row per element with its position (`infrastructure/storage/lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). `infrastructure/storage/` makes the missing tables whenever it opens a database; its `encryption/` opens the files with SQLCipher. The knowledge: `models/ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`models/evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
+`db/models/` holds one file per file of `model/`, with its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; `objects/schema.rs` lists the tables of each database (parted by the database, not by the folder; the order does not matter to SQLite); a list of a model is a table of its own, one row per element with its position (`infrastructure/storage/lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). `infrastructure/storage/` makes the missing tables whenever it opens a database; its `encryption/` opens the files with SQLCipher. The knowledge: `objects/ai/rag/rag_store.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`models/evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
 
 ### `domain/`
 
@@ -119,11 +128,7 @@ The rules of the data (user, 2026-11-01: `data_model.md`, "the rules of the data
 
 ```text
 domain/models/ai/
-  agent.rs                   new_agent (the default instructions and limits), change_agent; checked (a name,
-                             an integration and bases that exist, limits in their ranges, the glossary)
   chat.rs                    new_chat, rename_chat, checked_question, add_question
-  rag.rs                     add_base, change_base; source_text (.txt, .md, .pdf within its limit), add_source,
-                             replace_source_text, rename_source; search_base (the test of a base)
 domain/models/evaluation/
   evaluation_plan/
     planning.rs              the life of a plan and its data: create_plan (the verdicts of Common Criteria),
@@ -147,13 +152,11 @@ domain/models/evaluation/
 
 ### `ai/`
 
-The core of the program that talks with the AI (user, 2026-11-01: a core part gets a folder of its own, as `db/` has; `panels/logic/` holds only what a panel shows). **`ai/models/` mirrors `model/`**, as `db/models/` does: the functions of the AI on each model are in the file (or the folder) of its name; their error is `objects/ai_error.rs` (`AiError`). The integration, its API key and the journal are already objects (`objects/ai/`, below).
+The core of the program that talks with the AI (user, 2026-11-01: a core part gets a folder of its own, as `db/` has; `panels/logic/` holds only what a panel shows). **`ai/models/` mirrors `model/`**, as `db/models/` does: the functions of the AI on each model are in the file (or the folder) of its name; their error is `objects/ai_error.rs` (`AiError`). The integration, its API key, the journal, the agent and the knowledge are already objects (`objects/ai/`, below).
 
 ```text
 ai/
   models/ai/
-    agent.rs            Agent: the passages of its bases that fit a question (its glossary, its limits);
-                        agent_question (its instructions, the task, its knowledge, the messages ──► Question)
     chat.rs             Chat: the question of a chat with the knowledge of its agent (chat_question, prepared: its oldest
                         messages left out until it fits); the answer written into the chat with its mark (add_answer)
   models/evaluation/
@@ -169,7 +172,7 @@ ai/
     progress.rs         Progress (a helper model): a step of a long work written into it (record_step)
   lock.rs               the locks of the session as a long work takes them: the database only for the short steps
 
-panels ──► agent.rs: agent_question ──► integration_ai/question.rs: prepare ──► integration_ai/sending.rs: send
+panels ──► agent_ai.rs: agent_question ──► integration_ai/question.rs: prepare ──► integration_ai/sending.rs: send
                                                                    ──► integration_ai/connection.rs ──► the service
                                                                        (integration_ai/protocol.rs: the protocol chosen)
        ──► journal_ai.rs: record ──► journal_store.rs (the journal of the agent)
@@ -187,7 +190,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 |---|---|---|
 | `program_start` | none: the first start and the login are the rules of the user (`objects/user/user_data/user_data_rules.rs`) | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
 | `evaluation_plan` | none: the rules are in `domain/models/evaluation/`, "Fill with AI" in `ai/models/evaluation/` | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
-| `agents` | none: the rules of an agent and of the knowledge are in `domain/models/ai/`, its knowledge and its question in `ai/models/ai/agent.rs` | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
+| `agents` | none: the agent and the knowledge are objects (`objects/ai/agent/`, `objects/ai/rag/`) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `domain/models/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | none: the rules of a chat are in `domain/models/ai/chat.rs`, its question and its answer in `ai/models/ai/chat.rs` | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |

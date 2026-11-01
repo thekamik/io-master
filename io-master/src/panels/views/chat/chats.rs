@@ -27,11 +27,11 @@ use tauri::ipc::Channel;
 use tokio::sync::mpsc;
 
 use crate::ai::models::ai::chat::{add_answer, prepared};
-use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::chat::{read_chat, read_chats};
 use crate::domain::models::ai::chat::{MAX_QUESTION, add_question, new_chat, rename_chat};
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
+use crate::objects::ai::agent::agent_store::read_agent;
 use crate::objects::ai::integration::integration_ai::question::Prepared;
 use crate::objects::ai::integration::integration_ai::sending::{Sent, send};
 use crate::objects::ai::journal::journal_ai::record;
@@ -322,7 +322,7 @@ mod tests {
     use serde_json::json;
     use tauri::ipc::InvokeResponseBody;
 
-    use crate::db::models::ai::agent::create_agent;
+    use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::integration::integration_ai::question::{Question, prepare};
     use crate::objects::ai::integration::integration_model::Integration;
     use crate::objects::ai::integration::integration_store::create_integration;

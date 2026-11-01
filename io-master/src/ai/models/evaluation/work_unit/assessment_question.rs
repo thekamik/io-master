@@ -20,7 +20,6 @@
 use crate::objects::ai_error::AiError;
 use serde_json::{Value, json};
 
-use crate::ai::models::ai::agent::agent_question;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
 use crate::db::models::evaluation::oscal_standard_document::read_oscal_standard_document;
@@ -32,6 +31,7 @@ use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
+use crate::objects::ai::agent::agent_ai::agent_question;
 use crate::objects::ai::integration::integration_ai::question::Question;
 
 /// The most passages of the documents given with a question when the
@@ -248,7 +248,7 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
 ///
 /// Called by: [`assessment_question`].
 /// Calls: [`unit_json`], [`dependencies_text`], [`documents_text`],
-/// [`proofs_text`], `ai/models/ai/agent.rs`: `agent_question`.
+/// [`proofs_text`], `objects/ai/agent/agent_ai.rs`: `agent_question`.
 fn question_of(
     db: &UserDatabase,
     evaluation: &EvaluationPlan,

@@ -12,15 +12,15 @@
 use std::fs;
 use std::path::Path;
 
-use crate::db::models::ai::rag::{
-    MAX_BASES, MAX_FOUND, MAX_SOURCE_CHARS, MAX_SOURCES, create_knowledge_base, create_source, read_knowledge_base,
-    read_knowledge_bases, read_passages, read_source, read_sources, update_knowledge_base, update_source,
-};
 use crate::domain::error::DomainError;
 use crate::domain::text::checked_text;
 use crate::infrastructure::pdf::poppler::{self, MAX_FILE};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::rag::{KnowledgeBase, Source};
+use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
+use crate::objects::ai::rag::rag_store::{
+    MAX_BASES, MAX_FOUND, MAX_SOURCE_CHARS, MAX_SOURCES, create_knowledge_base, create_source, read_knowledge_base,
+    read_knowledge_bases, read_passages, read_source, read_sources, update_knowledge_base, update_source,
+};
 
 /// The longest name of a base or a source, in characters.
 const MAX_NAME: usize = 200;

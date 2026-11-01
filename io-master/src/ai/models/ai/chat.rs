@@ -23,12 +23,12 @@
 //! many. The chat keeps them all, and the journal of the agent keeps the
 //! question as it was sent.
 
-use crate::ai::models::ai::agent::agent_question;
 use crate::db::models::ai::chat::{MAX_MESSAGES as MAX_CHAT_MESSAGES, create_message, read_chat};
 use crate::domain::models::ai::chat::checked_question;
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
+use crate::objects::ai::agent::agent_ai::agent_question;
 use crate::objects::ai::integration::integration_ai::question::{MAX_MESSAGES, Prepared, Question, prepare};
 use crate::objects::ai::journal::journal_ai::Answer;
 use crate::objects::ai::journal::journal_model::Ending;
@@ -55,7 +55,7 @@ fn leave_oldest_out(question: &mut Question) {
 /// until it fits into the context of the model of its integration.
 ///
 /// Input:
-/// - `question`: the question of a chat (`ai/models/ai/agent.rs`:
+/// - `question`: the question of a chat (`objects/ai/agent/agent_ai.rs`:
 ///   `agent_question`), its last message the question of the user.
 ///
 /// Output: the question prepared and how many messages were left out of it
@@ -105,7 +105,7 @@ fn search_text(messages: &[Message], question: &str) -> String {
 ///
 /// Called by: [`prepared`].
 /// Calls: `db/models/ai/chat.rs`: `read_chat`; `domain/models/ai/chat.rs`:
-/// `checked_question`; [`search_text`]; `agent.rs`: `agent_question`.
+/// `checked_question`; [`search_text`]; `objects/ai/agent/agent_ai.rs`: `agent_question`.
 fn chat_question(db: &UserDatabase, chat: i64, text: &str) -> Result<Question, AiError> {
     let stored = read_chat(db, chat)?;
     let question = checked_question(text)?;
@@ -187,15 +187,15 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::agent::create_agent;
     use crate::db::models::ai::chat::create_chat;
-    use crate::db::models::ai::rag::{create_knowledge_base, create_source};
     use crate::domain::error::DomainError;
     use crate::domain::models::ai::chat::{add_question, new_chat};
     use crate::model::ai::chat::Chat;
-    use crate::model::ai::rag::{KnowledgeBase, Source};
+    use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::integration::integration_model::Integration;
     use crate::objects::ai::integration::integration_store::create_integration;
+    use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
+    use crate::objects::ai::rag::rag_store::{create_knowledge_base, create_source};
     use crate::test_support::database::{agent, database, integration};
 
     fn answer(text: &str, ending: Ending) -> Answer {

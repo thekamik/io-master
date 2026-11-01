@@ -10,13 +10,13 @@
 //! add_question           ──► the question written into the chat, once ai/models/ai/chat.rs: prepared took it
 //! ```
 
-use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::chat::{create_chat, create_message, read_chat, update_chat};
 use crate::domain::error::DomainError;
 use crate::domain::text::checked_text;
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
+use crate::objects::ai::agent::agent_store::read_agent;
 
 /// The longest title of a chat, in characters.
 const MAX_TITLE: usize = 200;
@@ -27,7 +27,7 @@ pub const MAX_QUESTION: usize = 20_000;
 /// Makes a new chat with the agent `agent`, without messages; gives its id.
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_create`.
-/// Calls: `domain/text.rs`: `checked_text`; `db/models/ai/agent.rs`: `read_agent`;
+/// Calls: `domain/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`: `read_agent`;
 /// `db/models/ai/chat.rs`: `create_chat`.
 pub fn new_chat(db: &UserDatabase, title: &str, agent: i64) -> Result<i64, DomainError> {
     let title = checked_text(title, "the title of the chat", MAX_TITLE)?;
@@ -83,7 +83,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::agent::create_agent;
+    use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{agent, database, integration};
 
