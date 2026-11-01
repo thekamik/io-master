@@ -24,6 +24,8 @@ The code is moved to the layout of `CLAUDE.md` ("The window and the layers"), on
 
 ## Reminders
 
+- **The parts of a control beyond its statement and guidance** (2026-11-01): the catalog of ETSI TS 103 701 (`testing_documents/`) has no part `guidance`; its parts `test-units`, `assessment-method` and `assignment-of-verdict` are kept in the stored catalog but reach no work unit (`domain/models/evaluation/oscal_standard_document.rs`: `control_of` takes only `statement` and `guidance`). To decide whether and how a work unit shows them.
+
 - **The reading of a whole plan, measured** (2026-10-31): `read_work_units` reads each work unit apart, five queries each (about 4000 for the CEM), every query parsed anew (`prepare`). To measure first; then `prepare_cached`, or each list read once for the whole plan.
 - **`IdList`** (2026-10-31): a constant per list of ids (its table, its columns, its limit) instead of three statements of SQL at its callers (`infrastructure/storage/lists.rs`); put off while the comments read well.
 
