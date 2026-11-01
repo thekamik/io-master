@@ -13,12 +13,13 @@
 //! ```
 //!
 //! Whether the documents fit whole into the context of the model is told by
-//! `ai/ask.rs` when the question is prepared: the caller asks first for
+//! `ai/ask/` when the question is prepared: the caller asks first for
 //! them whole, then for their passages.
 
 use serde_json::{Value, json};
 
-use crate::ai::ask::Question;
+use crate::ai::agent::knowledge::agent_knowledge;
+use crate::ai::ask::question::Question;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
@@ -31,7 +32,6 @@ use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
-use crate::panels::logic::agents::agent::agent_knowledge;
 use crate::panels::logic::evaluation::error::EvaluationError;
 
 /// The most passages of the documents given with a question when the

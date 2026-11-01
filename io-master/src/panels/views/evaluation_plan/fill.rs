@@ -8,9 +8,9 @@
 //! PlanFill.svelte ──plan_fill_preview(plan)──► fill_preview: the questions counted now ──► FillPreviewView
 //!                 ──plan_fill_parameters(plan, on_step)───┐
 //!                 ──plan_fill_dependencies(plan, on_step)─┴► fill: fill_units, then for each work unit:
-//!                     (the lock of the session held)  the question of the task, ask::prepare
-//!                     (released)                      answer::send_drained
-//!                     (held)                          ask::record (the journal of the agent),
+//!                     (the lock of the session held)  the question of the task, question::prepare
+//!                     (released)                      sending::send_whole
+//!                     (held)                          journal::record (the journal of the agent),
 //!                                                     the answer read and written by the task
 //!                     ──on_step──► FillStepView (the work unit, filled or not, the notes)
 //!                 ──plan_fill_stop()──► the session asked to stop: the filling ends after its present step
@@ -24,7 +24,9 @@ use serde::Serialize;
 use tauri::State;
 use tauri::ipc::Channel;
 
-use crate::ai::ask::{Prepared, Sent, prepare, record};
+use crate::ai::ask::journal::record;
+use crate::ai::ask::question::{Prepared, prepare};
+use crate::ai::ask::sending::{Sent, send_whole};
 use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::db::storage::user_database::UserDatabase;
 use crate::panels::logic::evaluation_plan::error::PlanError;
@@ -32,7 +34,6 @@ use crate::panels::logic::evaluation_plan::fill::{
     apply_dependencies, apply_parameters, dependencies_question, fill_preview, fill_units, parameters_question,
     read_dependencies, read_parameters,
 };
-use crate::panels::views::answer::send_drained;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;
@@ -91,7 +92,7 @@ enum Outcome {
 ///
 /// Called by: [`fill_step`].
 /// Calls: `read_work_unit`, `parameters_question`, `dependencies_question`,
-/// `ask::prepare`.
+/// `ai/ask/question.rs`: `prepare`.
 fn prepared_question(
     session: &Session,
     task: Task,
@@ -130,7 +131,7 @@ fn applied(db: &UserDatabase, task: Task, plan: i64, unit: i64, answer: &str) ->
 /// into the work unit `unit`.
 ///
 /// Called by: [`fill_step`].
-/// Calls: `ask::record`, [`applied`].
+/// Calls: `ai/ask/journal.rs`: `record`, [`applied`].
 fn written(session: &Session, step: (Task, i64, i64), prepared: Prepared, sent: Sent) -> Result<Outcome, ViewError> {
     let (task, plan, unit) = step;
     let opened = session.lock()?;
@@ -152,14 +153,14 @@ fn written(session: &Session, step: (Task, i64, i64), prepared: Prepared, sent: 
 /// it again.
 ///
 /// Called by: [`fill`].
-/// Calls: [`prepared_question`], `answer::send_drained`, [`written`].
+/// Calls: [`prepared_question`], `ai/ask/sending.rs`: `send_whole`, [`written`].
 async fn fill_step(session: &Session, task: Task, plan: i64, unit: i64) -> Result<(String, Outcome), ViewError> {
     let (label, prepared) = prepared_question(session, task, plan, unit)?;
     let prepared = match prepared {
         Ok(prepared) => prepared,
         Err(reason) => return Ok((label, Outcome::Failed(reason))),
     };
-    let sent = send_drained(&prepared).await;
+    let sent = send_whole(&prepared).await;
 
     Ok((label, written(session, (task, plan, unit), prepared, sent)?))
 }

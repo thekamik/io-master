@@ -17,10 +17,10 @@
 use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
-use crate::ai::conversation::Turn;
 use crate::ai::error::{AiError, shorten};
-use crate::ai::reading::Reading;
-use crate::ai::sse::SseEvent;
+use crate::ai::provider::reading::Reading;
+use crate::ai::provider::sse::SseEvent;
+use crate::ai::provider::turns::Turn;
 use crate::model::ai::chat::Speaker;
 use crate::model::ai::journal::Ending;
 
@@ -31,7 +31,7 @@ const VERSION: &str = "2026-10-21";
 /// The body of a question: the instructions in the field `system`, the
 /// turns in `messages`, the answer at most `answer_tokens` long.
 ///
-/// Called by: `ask.rs` ([`crate::ai::ask::prepare`]).
+/// Called by: `ai/ask/question.rs`: `prepare`.
 pub fn body(model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Value {
     let mut messages = Vec::with_capacity(turns.len());
 
@@ -53,7 +53,7 @@ pub fn body(model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Va
 
 /// The headers of the key and of the version of the API.
 ///
-/// Called by: `client.rs` (the request).
+/// Called by: `connection.rs` (the request).
 pub fn key_headers(key: &str) -> [(&'static str, Zeroizing<String>); 2] {
     [("x-api-key", Zeroizing::new(key.to_owned())), ("anthropic-version", Zeroizing::new(VERSION.to_owned()))]
 }
@@ -83,7 +83,7 @@ fn tokens(value: Option<&Value>) -> Option<u32> {
 /// Reads one event of the answer into `reading`; gives the piece of text it
 /// carried, if any. An error the service reports is an error.
 ///
-/// Called by: `client.rs` (every event of the stream).
+/// Called by: `connection.rs` (every event of the stream).
 /// Calls: [`ending_of`], [`tokens`].
 pub fn read_event(event: &SseEvent, reading: &mut Reading) -> Result<Option<String>, AiError> {
     let value: Value = serde_json::from_str(&event.data)

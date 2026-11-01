@@ -98,7 +98,7 @@ fn ending_of(name: &str) -> Result<Ending, DbError> {
 /// Output: the id of the entry (57). An error when the request is empty or
 /// the agent is not stored (foreign key).
 ///
-/// Called by: `ai/ask.rs`: `write_entry`.
+/// Called by: `ai/ask/journal.rs`: `write_entry`.
 /// Calls: [`ending_name`].
 pub fn create_journal_entry(db: &UserDatabase, entry: &JournalEntry) -> Result<i64, DbError> {
     ensure!(entry.id == 0, DbError::Inconsistent("a new entry has an id already".to_owned()));

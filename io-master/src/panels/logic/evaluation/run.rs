@@ -8,11 +8,11 @@
 //! preview         ──► how many questions go to which agents; every document and proof they need that is
 //!                     not given: the assessment does not start while one is missing
 //! for each:  prepared_assessment ──► the question with the documents whole, or their passages when
-//!                                    they do not fit (ask::prepare tells it)
+//!                                    they do not fit (question::prepare tells it)
 //!            assessed            ──► read_assessment, apply_assessment
 //! ```
 
-use crate::ai::ask::{Prepared, prepare};
+use crate::ai::ask::question::{Prepared, prepare};
 use crate::ai::error::AiError;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::evaluation::lab_proof::read_lab_proof;
@@ -148,7 +148,7 @@ pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Previe
 /// or with their passages when they do not fit into the context of the model.
 ///
 /// Called by: `panels/views/evaluation/run.rs` (each work unit).
-/// Calls: `assessment_question`, `ask::prepare`.
+/// Calls: `assessment_question`, `ai/ask/question.rs`: `prepare`.
 pub fn prepared_assessment(db: &UserDatabase, evaluation: i64, unit: i64) -> Result<Prepared, EvaluationError> {
     match prepare(db, &assessment_question(db, evaluation, unit, true)?) {
         Ok(prepared) => Ok(prepared),
@@ -161,7 +161,7 @@ pub fn prepared_assessment(db: &UserDatabase, evaluation: i64, unit: i64) -> Res
 /// the notes of what was not taken.
 ///
 /// Called by: `panels/views/evaluation/run.rs` (each answer, after
-/// `ask::record`).
+/// `ai/ask/journal.rs`: `record`).
 /// Calls: `read_assessment`, `apply_assessment`.
 pub fn assessed(db: &UserDatabase, evaluation: i64, unit: i64, answer: &str) -> Result<Vec<String>, EvaluationError> {
     apply_assessment(db, evaluation, unit, &read_assessment(answer)?)

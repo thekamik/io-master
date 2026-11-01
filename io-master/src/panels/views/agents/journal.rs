@@ -1,6 +1,6 @@
 //! The journal of an agent, as the page reads it: one page of its entries,
 //! the newest first, and one entry whole (its request and its answer). The
-//! journal is only read here: entries are written by `ai/ask.rs` alone.
+//! journal is only read here: entries are written by `ai/ask/` alone.
 //!
 //! ```text
 //! AgentJournal.svelte ──agent_journal_list(agent, before)─► read_journal_entries ──► [JournalRowView] (50 at most)

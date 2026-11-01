@@ -8,9 +8,9 @@
 //! a question of the user:
 //!   chat_question ──► the instructions of the agent
 //!                     + the knowledge of the agent that fits the question (RAG)
-//!                     + every message of the chat and the question ──► Question (ai/ask.rs)
-//!   prepared      ──► ask::prepare; the oldest messages left out until the question fits
-//!   add_question  ──► the question written into the chat, once ask::prepare took it
+//!                     + every message of the chat and the question ──► Question (ai/ask/)
+//!   prepared      ──► question::prepare; the oldest messages left out until the question fits
+//!   add_question  ──► the question written into the chat, once question::prepare took it
 //!   add_answer    ──► the answer written into the chat; a stopped or cut one with a mark,
 //!                     a failed one not at all (its reason is in the journal of the agent)
 //! ```
@@ -27,14 +27,15 @@
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use crate::ai::ask::{Answer, Prepared, Question, prepare};
+use crate::ai::agent::knowledge::agent_knowledge;
+use crate::ai::ask::journal::Answer;
+use crate::ai::ask::question::{Prepared, Question, prepare};
 use crate::ai::error::AiError;
 use crate::db::models::ai::agent::read_agent;
 use crate::db::models::ai::chat::{MAX_MESSAGES, create_chat, create_message, read_chat, update_chat};
 use crate::db::storage::user_database::UserDatabase;
 use crate::model::ai::chat::{Chat, Message, Speaker};
 use crate::model::ai::journal::Ending;
-use crate::panels::logic::agents::agent::agent_knowledge;
 use crate::panels::logic::chat::error::ChatError;
 
 /// The longest title of a chat, in characters.
@@ -148,7 +149,8 @@ fn chat_question(db: &UserDatabase, chat: i64, text: &str) -> Result<Question, C
     );
 
     let agent = read_agent(db, agent_id)?;
-    let knowledge = agent_knowledge(db, agent_id, &search_text(&stored.messages, &question))?;
+    let knowledge =
+        agent_knowledge(db, agent_id, &search_text(&stored.messages, &question)).map_err(ChatError::Knowledge)?;
     let mut system = agent.instructions;
 
     if !knowledge.is_empty() {
@@ -181,7 +183,7 @@ fn leave_oldest_out(question: &mut Question) {
 /// Refused when the question does not fit even alone.
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_ask`).
-/// Calls: [`chat_question`], `ask::prepare`, [`leave_oldest_out`].
+/// Calls: [`chat_question`], `ai/ask/question.rs`: `prepare`, [`leave_oldest_out`].
 pub fn prepared(db: &UserDatabase, chat: i64, text: &str) -> Result<(Prepared, usize), ChatError> {
     let mut question = chat_question(db, chat, text)?;
     let all = question.messages.len();
@@ -235,7 +237,7 @@ fn kept_text(answer: &Answer) -> Option<String> {
 /// Writes the answer `answer` as the last message of the chat `chat`, as
 /// [`kept_text`] keeps it; gives the message written, `None` when none was.
 ///
-/// Called by: `panels/views/chat/chats.rs` (`chat_ask`, after `ask::record`).
+/// Called by: `panels/views/chat/chats.rs` (`chat_ask`, after `ai/ask/journal.rs`: `record`).
 /// Calls: [`kept_text`], [`now`], `create_message`.
 pub fn add_answer(db: &UserDatabase, chat: i64, answer: &Answer) -> Result<Option<Message>, ChatError> {
     let Some(text) = kept_text(answer) else {

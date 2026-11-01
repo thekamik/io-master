@@ -46,7 +46,7 @@ impl SseDecoder {
     /// Reads the next piece of the stream; gives the events it completed,
     /// in order. A line longer than [`MAX_LINE`] is an error.
     ///
-    /// Called by: `client.rs` (every piece of a streamed answer).
+    /// Called by: `connection.rs` (every piece of a streamed answer).
     /// Calls: [`SseDecoder::line`].
     pub fn push(&mut self, bytes: &[u8]) -> Result<Vec<SseEvent>, AiError> {
         self.pending.extend_from_slice(bytes);

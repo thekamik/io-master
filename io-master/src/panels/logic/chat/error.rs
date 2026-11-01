@@ -7,7 +7,6 @@ use std::fmt;
 
 use crate::ai::error::AiError;
 use crate::db::error::DbError;
-use crate::panels::logic::agents::error::AgentError;
 
 /// Why a chat or a message of it was refused or failed.
 #[derive(Debug)]
@@ -16,7 +15,7 @@ pub enum ChatError {
     /// chat without a title, an empty message, a chat without an agent).
     Refused(String),
     /// The knowledge of the agent could not be read.
-    Knowledge(AgentError),
+    Knowledge(AiError),
     /// The way to the AI refused the question (no key, a question that does
     /// not fit even alone).
     Ai(AiError),
@@ -36,12 +35,6 @@ impl fmt::Display for ChatError {
 }
 
 impl std::error::Error for ChatError {}
-
-impl From<AgentError> for ChatError {
-    fn from(error: AgentError) -> ChatError {
-        ChatError::Knowledge(error)
-    }
-}
 
 impl From<AiError> for ChatError {
     fn from(error: AiError) -> ChatError {

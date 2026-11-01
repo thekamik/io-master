@@ -4,7 +4,7 @@
 
 IO Master is installed on the computer of an evaluator, in their own Linux account, and used through one desktop window. It knows no particular standard: a standard is an **OSCAL 1.2.3 catalog**, checked against the JSON schema of NIST (Common Criteria with the CEM and ETSI EN 303 645 first).
 
-**Status:** early development, rebuilt on a new data model. The work goes to `test_branch`; `main` and `V0.1` are brought to its state from time to time; the earlier program is kept at the commit `0797e85`. No releases; the data of the tests is not kept between versions until version 1.
+**Status:** early development, rebuilt on a new data model. The work goes to `test_branch`; `main` is brought to its state from time to time; the earlier program is kept at the commit `0797e85`. No releases; the data of the tests is not kept between versions until version 1.
 
 ## What works today
 

@@ -9,6 +9,9 @@
 //!   panels/logic/   (the work behind the panels: program_start, evaluation_plan, ...)
 //!         │
 //!         ▼
+//!        ai/        (agent/ ──► ask/ ──► provider/: the agent, the way to the AI, the API of a provider)
+//!         │
+//!         ▼
 //!        db/        (create, read and update of the models; the database files)
 //!         │
 //!         ▼
@@ -36,25 +39,34 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 8] = [
+const ALLOWED: [(&str, &[&str]); 11] = [
     ("model", &[]),
     ("security", &[]),
     // Reading PDFs with Poppler: another program, nothing of ours.
     ("pdf", &[]),
     ("db", &["model", "security"]),
-    // The only way to the AI: it reads the integration and its key, and
-    // writes the journal.
+    // The AI: it reads the integration, its key and the knowledge, and
+    // writes the journal. Inside, in layers from the top down: agent/ uses
+    // ask/, ask/ uses provider/; error.rs is the error of all of them.
     ("ai", &["db", "model"]),
+    ("ai::agent", &["ai::ask", "ai::error", "db", "model"]),
+    ("ai::ask", &["ai::provider", "ai::error", "db", "model"]),
+    // The API of a provider knows nothing of the database.
+    ("ai::provider", &["ai::error", "model"]),
     // The work behind the panels, one folder per panel; a panel may use
-    // another (in one direction: chat and evaluation use rag and
-    // evaluation_plan, never the other way). It gets the open database as a
-    // parameter and never reaches the session.
+    // another (in one direction: evaluation uses evaluation_plan, never the
+    // other way). It gets the open database as a
+    // parameter and never reaches the session. Of the provider it sees only
+    // the checks of an address and of a certificate (the settings of the AI).
     // The sources of the knowledge of an agent are read from PDFs too.
-    ("panels::logic", &["ai", "db", "model", "security", "pdf"]),
+    (
+        "panels::logic",
+        &["ai::agent", "ai::ask", "ai::error", "ai::provider::address", "db", "model", "security", "pdf"],
+    ),
     // The session: the user logged in and their open database.
     ("session", &["db", "model"]),
     // The commands of the page: they do their work with the folders below.
-    ("panels::views", &["panels::logic", "ai", "db", "model", "session"]),
+    ("panels::views", &["panels::logic", "ai::agent", "ai::ask", "ai::error", "db", "model", "session"]),
 ];
 
 /// Every `crate::...` path in `text` (the path only, as far as it goes:

@@ -17,17 +17,17 @@
 use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
-use crate::ai::conversation::Turn;
 use crate::ai::error::{AiError, shorten};
-use crate::ai::reading::Reading;
-use crate::ai::sse::SseEvent;
+use crate::ai::provider::reading::Reading;
+use crate::ai::provider::sse::SseEvent;
+use crate::ai::provider::turns::Turn;
 use crate::model::ai::chat::Speaker;
 use crate::model::ai::journal::Ending;
 
 /// The body of a question: the instructions as the first message of the
 /// role `system`, then the turns.
 ///
-/// Called by: `ask.rs` ([`crate::ai::ask::prepare`]).
+/// Called by: `ai/ask/question.rs`: `prepare`.
 pub fn body(model: &str, system: &str, turns: &[Turn]) -> Value {
     let mut messages = Vec::with_capacity(turns.len() + 1);
 
@@ -50,7 +50,7 @@ pub fn body(model: &str, system: &str, turns: &[Turn]) -> Value {
 /// The header of the key, when there is one: `authorization`, the value
 /// `Bearer <key>`.
 ///
-/// Called by: `client.rs` (the request).
+/// Called by: `connection.rs` (the request).
 pub fn key_header(key: &str) -> (&'static str, Zeroizing<String>) {
     ("authorization", Zeroizing::new(format!("Bearer {key}")))
 }
@@ -80,7 +80,7 @@ fn tokens(value: Option<&Value>) -> Option<u32> {
 /// Reads one event of the answer into `reading`; gives the piece of text it
 /// carried, if any. An error the service reports is an error.
 ///
-/// Called by: `client.rs` (every event of the stream).
+/// Called by: `connection.rs` (every event of the stream).
 /// Calls: [`ending_of`], [`tokens`].
 pub fn read_event(event: &SseEvent, reading: &mut Reading) -> Result<Option<String>, AiError> {
     if event.data == "[DONE]" {

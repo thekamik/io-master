@@ -8,8 +8,8 @@
 //!                        ──evaluation_assess(id, again, on_step)─► preview (refused while an input is missing),
 //!                            then for each work unit:
 //!                            (the lock of the session held)  prepared_assessment
-//!                            (released)                      answer::send_drained
-//!                            (held)                          ask::record (the journal of the agent), assessed
+//!                            (released)                      sending::send_whole
+//!                            (held)                          journal::record (the journal of the agent), assessed
 //!                            ──on_step──► AssessStepView
 //!                        ──evaluation_assess_stop()──────────► the assessment ends after its present work unit
 //! ```
@@ -22,11 +22,12 @@ use serde::Serialize;
 use tauri::State;
 use tauri::ipc::Channel;
 
-use crate::ai::ask::{Prepared, Sent, record};
+use crate::ai::ask::journal::record;
+use crate::ai::ask::question::Prepared;
+use crate::ai::ask::sending::{Sent, send_whole};
 use crate::db::models::evaluation::work_unit::read_work_unit;
 use crate::panels::logic::evaluation::question::verdict_name;
 use crate::panels::logic::evaluation::run::{Preview, assessed, prepared_assessment, preview};
-use crate::panels::views::answer::send_drained;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
 use crate::session::state::Session;
@@ -134,7 +135,7 @@ fn prepared_question(
 /// `unit`; gives its verdict and the notes, or no verdict and why.
 ///
 /// Called by: [`assess_step`].
-/// Calls: `ask::record`, `assessed`, `read_work_unit`.
+/// Calls: `ai/ask/journal.rs`: `record`, `assessed`, `read_work_unit`.
 fn written(
     session: &Session,
     step: (i64, i64),
@@ -160,7 +161,7 @@ fn written(
 /// the session, sent without it, the answer written under it again.
 ///
 /// Called by: [`assess`].
-/// Calls: [`prepared_question`], `answer::send_drained`, [`written`].
+/// Calls: [`prepared_question`], `ai/ask/sending.rs`: `send_whole`, [`written`].
 async fn assess_step(
     session: &Session,
     evaluation: i64,
@@ -171,7 +172,7 @@ async fn assess_step(
         Ok(prepared) => prepared,
         Err(reason) => return Ok((label, None, vec![reason])),
     };
-    let sent = send_drained(&prepared).await;
+    let sent = send_whole(&prepared).await;
     let (verdict, notes) = written(session, (evaluation, unit), prepared, sent)?;
 
     Ok((label, verdict, notes))

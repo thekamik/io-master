@@ -6,12 +6,12 @@
 //! - the address is `https://`, or `http://` only on this computer (a local
 //!   model); TLS 1.3 or newer, the certificate verified against the trusted
 //!   certificates of the system, or only against the CA certificate of the
-//!   integration ([`check_address`], [`http_client`]);
+//!   integration (`address.rs`, [`http_client`]);
 //! - redirects are never followed, so the key and the conversation go to
 //!   the address of the integration and nowhere else;
 //! - proxies of the environment (`HTTPS_PROXY`) are not used;
 //! - the key is marked "sensitive" in its header, and masked in every text
-//!   taken from an answer ([`masked`]).
+//!   taken from an answer (`masking.rs`).
 //!
 //! **An answer can be stopped by the caller**: [`send`] passes the pieces
 //! of the answer into a channel and stops as soon as the receiving end of
@@ -28,14 +28,16 @@ use std::time::Duration;
 use reqwest::header::HeaderValue;
 use reqwest::redirect::Policy;
 use reqwest::tls::Version;
-use reqwest::{Certificate, Client, Response, Url};
+use reqwest::{Client, Response};
 use tokio::sync::mpsc;
 use zeroize::Zeroizing;
 
 use crate::ai::error::{AiError, from_status};
-use crate::ai::reading::Reading;
-use crate::ai::sse::{SseDecoder, SseEvent};
-use crate::ai::{anthropic, openai};
+use crate::ai::provider::address::{certificates, check_address};
+use crate::ai::provider::masking::masked;
+use crate::ai::provider::reading::Reading;
+use crate::ai::provider::sse::{SseDecoder, SseEvent};
+use crate::ai::provider::{anthropic, openai};
 use crate::model::ai::integration::Protocol;
 
 /// How long a connection may take to open.
@@ -60,9 +62,6 @@ const MAX_ERROR: usize = 64 * 1024;
 
 /// The most causes of a failed connection named in its explanation.
 const MAX_CAUSES: usize = 8;
-
-/// What stands in place of the key where a text could hold it.
-pub const MASK: &str = "••••••••";
 
 /// A request ready to be sent.
 pub struct Request {
@@ -99,58 +98,13 @@ enum StreamEnd {
     Stopped,
 }
 
-/// Refuses an address the program does not send to: one that is no URL,
-/// one that is neither `https://` nor `http://` on this computer.
-///
-/// Called by: `ask.rs` ([`crate::ai::ask::prepare`]); the settings of the
-/// AI (an integration saved).
-pub fn check_address(url: &str) -> Result<(), AiError> {
-    let parsed = Url::parse(url).map_err(|error| AiError::Address(format!("{url}: {error}")))?;
-    let local = matches!(parsed.host_str(), Some("127.0.0.1" | "[::1]" | "localhost"));
-
-    ensure!(
-        parsed.scheme() == "https" || (parsed.scheme() == "http" && local),
-        AiError::Address("only https://, or http:// on this computer (127.0.0.1, localhost)".to_owned())
-    );
-    ensure!(
-        parsed.username().is_empty() && parsed.password().is_none(),
-        AiError::Address("a password in the address".to_owned())
-    );
-
-    Ok(())
-}
-
-/// The certificates of a CA certificate in PEM; refused when it holds none
-/// or is no PEM.
-///
-/// Called by: [`http_client`]; the settings of the AI (an integration
-/// saved, through [`check_certificate`]).
-fn certificates(pem: &str) -> Result<Vec<Certificate>, AiError> {
-    let certificates = Certificate::from_pem_bundle(pem.as_bytes())
-        .map_err(|error| AiError::Address(format!("the CA certificate: {error}")))?;
-
-    ensure!(!certificates.is_empty(), AiError::Address("the CA certificate holds no certificate".to_owned()));
-
-    Ok(certificates)
-}
-
-/// Refuses a CA certificate the connection could not use.
-///
-/// Called by: the settings of the AI (an integration saved).
-/// Calls: [`certificates`].
-pub fn check_certificate(pem: &str) -> Result<(), AiError> {
-    certificates(pem)?;
-
-    Ok(())
-}
-
 /// Sends the request and reads the answer, passing every piece of its text
 /// into `pieces`; stops when the receiver of `pieces` is dropped. Never
 /// fails as a whole: how it ended is in [`Received`], next to what was
 /// written until then.
 ///
-/// Called by: `ask.rs` ([`crate::ai::ask::send`]).
-/// Calls: [`exchange`], [`masked`].
+/// Called by: `ai/ask/sending.rs`: `send`.
+/// Calls: [`exchange`], `masking.rs`: `masked`.
 pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received {
     let mut reading = Reading::default();
 
@@ -165,7 +119,8 @@ pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received 
 /// The work of [`send`]; gives whether the caller stopped the answer.
 ///
 /// Called by: [`send`].
-/// Calls: [`http_client`], [`post`], [`read_error`], [`read_stream`].
+/// Calls: `address.rs`: `check_address`; [`http_client`], [`post`],
+/// [`read_error`], [`read_stream`].
 async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mut Reading) -> Result<bool, AiError> {
     check_address(&request.url)?;
 
@@ -198,6 +153,7 @@ async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mu
 /// own, and the program asks few questions.
 ///
 /// Called by: [`exchange`].
+/// Calls: `address.rs`: `certificates`.
 fn http_client(request: &Request) -> Result<Client, AiError> {
     let mut builder = Client::builder()
         .https_only(request.url.starts_with("https://"))
@@ -313,36 +269,6 @@ async fn read_error(response: &mut Response) -> Vec<u8> {
     body
 }
 
-/// The text with every occurrence of the key replaced by [`MASK`]: a
-/// service may repeat a header in an error.
-///
-/// Called by: [`masked`].
-fn mask(text: String, key: Option<&str>) -> String {
-    match key {
-        Some(key) if !key.is_empty() && text.contains(key) => text.replace(key, MASK),
-        _ => text,
-    }
-}
-
-/// The error with the key masked in its explanation.
-///
-/// Called by: [`send`].
-/// Calls: [`mask`].
-fn masked(error: AiError, key: Option<&str>) -> AiError {
-    match error {
-        AiError::Address(text) => AiError::Address(mask(text, key)),
-        AiError::KeyRejected(text) => AiError::KeyRejected(mask(text, key)),
-        AiError::NotFound(text) => AiError::NotFound(mask(text, key)),
-        AiError::LimitReached(text) => AiError::LimitReached(mask(text, key)),
-        AiError::Rejected(status, text) => AiError::Rejected(status, mask(text, key)),
-        AiError::ServiceFailed(status, text) => AiError::ServiceFailed(status, mask(text, key)),
-        AiError::Reported(text) => AiError::Reported(mask(text, key)),
-        AiError::NoConnection(text) => AiError::NoConnection(mask(text, key)),
-        AiError::UnexpectedAnswer(text) => AiError::UnexpectedAnswer(mask(text, key)),
-        other @ (AiError::NoKey | AiError::NoQuestion | AiError::TooLong { .. } | AiError::Db(_)) => other,
-    }
-}
-
 /// The explanation of a failed connection: the error and its causes ("error
 /// sending request" alone says little).
 ///
@@ -376,6 +302,7 @@ mod tests {
 
     use serde_json::json;
 
+    use crate::ai::provider::masking::MASK;
     use crate::model::ai::journal::Ending;
     use crate::test_support::ai_service::{FakeAnswer, FakeService, anthropic_events, openai_events, sse};
 
@@ -450,9 +377,11 @@ mod tests {
         let (received, _) = send_collecting(&local).await;
 
         assert_eq!(received.reading.text, "local");
-        assert!(check_address("http://example.com/v1/chat/completions").is_err());
-        assert!(check_address("https://user:pw@example.com/v1").is_err());
-        assert!(check_address("https://api.anthropic.com/v1/messages").is_ok());
+
+        let remote = Request { url: "http://example.com/v1/chat/completions".to_owned(), ..local };
+        let (received, _) = send_collecting(&remote).await;
+
+        assert!(matches!(received.error, Some(AiError::Address(_))));
     }
 
     #[tokio::test]

@@ -114,19 +114,38 @@ mod db {
     }
 }
 
-// ai/: the only way to an AI service (user, 2026-10-29): a question
-// prepared from the integration and its key, sent over TLS 1.3 in the protocol
-// of the integration, its answer read while it streams and written into the
-// journal of the AI before it is given out.
+// ai/: the core of the program that talks with the AI (user, 2026-11-01),
+// in layers from the top down: agent/ uses ask/, ask/ uses provider/
+// (checked by architecture_tests.rs); error.rs is the error of all of them.
 mod ai {
-    pub mod anthropic;
-    pub mod ask;
-    pub mod client;
-    pub mod conversation;
     pub mod error;
-    pub mod openai;
-    pub mod reading;
-    pub mod sse;
+    // ai/agent/: the agent, a layer of knowledge over the model of an
+    // integration: the knowledge it gives with a question.
+    pub mod agent {
+        pub mod knowledge;
+    }
+    // ai/ask/: the only way to an AI service (user, 2026-10-29), in three
+    // steps: a question prepared from the integration and its key, sent
+    // without the database, its answer written into the journal of its
+    // agent before it is given out.
+    pub mod ask {
+        pub mod journal;
+        pub mod question;
+        pub mod sending;
+    }
+    // ai/provider/: the API of a provider, what goes over the network: the
+    // address checked, the connection over TLS 1.3, the key masked, the
+    // body and the stream of each protocol.
+    pub mod provider {
+        pub mod address;
+        pub mod anthropic;
+        pub mod connection;
+        pub mod masking;
+        pub mod openai;
+        pub mod reading;
+        pub mod sse;
+        pub mod turns;
+    }
 }
 
 // session/: what every command of the window shares: the data folder, and
@@ -200,7 +219,6 @@ mod panels {
         }
     }
     pub mod views {
-        pub mod answer;
         pub mod error;
         pub mod opened;
         // panels/views/agents/: the agents, the knowledge bases and their

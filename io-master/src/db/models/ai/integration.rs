@@ -140,7 +140,7 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
 ///
 /// Output: the integration; `DbError::NoRow` when there is none.
 ///
-/// Called by: `ai/ask.rs`: `prepare`; `api_key.rs`: `origin_of`;
+/// Called by: `ai/ask/question.rs`: `prepare`; `api_key.rs`: `origin_of`;
 /// `panels/logic/agents/agent.rs`: `checked`, `new_agent`;
 /// `panels/logic/evaluation_plan/fill.rs`: `fill_preview`;
 /// `panels/logic/settings/integrations.rs`: `activate_integration`,

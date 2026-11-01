@@ -21,7 +21,7 @@
 //!
 //! Every question also carries the instructions of the agent, its task and
 //! the knowledge of the agent that fits the work unit; it is asked through
-//! `ai/ask.rs` and kept in the journal of the agent. **A dependency that
+//! `ai/ask/` and kept in the journal of the agent. **A dependency that
 //! closes a cycle is written as proposed** (user, 2026-10-29): the planner
 //! decides; the work units of the cycle are marked `cross_reference`, the
 //! plan `blocked`, until the planner corrects them.
@@ -30,7 +30,8 @@ use std::collections::HashMap;
 
 use serde_json::{Value, json};
 
-use crate::ai::ask::Question;
+use crate::ai::agent::knowledge::agent_knowledge;
+use crate::ai::ask::question::Question;
 use crate::db::models::ai::agent::{read_agent, read_agents};
 use crate::db::models::ai::integration::read_integration;
 use crate::db::models::evaluation::evaluation_plan::read_evaluation_plan;
@@ -45,7 +46,6 @@ use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::work_unit::WorkUnit;
-use crate::panels::logic::agents::agent::agent_knowledge;
 use crate::panels::logic::evaluation_plan::error::PlanError;
 use crate::panels::logic::evaluation_plan::plans::check_planning;
 use crate::panels::logic::evaluation_plan::work_units::{WorkUnitParameters, update_work_unit_parameters};

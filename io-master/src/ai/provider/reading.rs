@@ -1,7 +1,7 @@
 //! What an answer said so far: its text, the model that wrote it, the
 //! tokens counted by the service and how the model ended. Filled event by
 //! event by the reader of the protocol (`openai.rs`, `anthropic.rs`), kept
-//! by `client.rs` while the answer streams.
+//! by `connection.rs` while the answer streams.
 
 use crate::model::ai::journal::Ending;
 
