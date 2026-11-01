@@ -12,7 +12,7 @@ use serde::Serialize;
 use tauri::State;
 use zeroize::Zeroizing;
 
-use crate::panels::logic::program_start::access::{installed_user, log_in};
+use crate::objects::user::user_data::user_data_rules::{installed_user, log_in};
 use crate::panels::views::error::ViewError;
 use crate::session::state::Session;
 

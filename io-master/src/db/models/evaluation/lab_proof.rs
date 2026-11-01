@@ -16,7 +16,7 @@ use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::evaluation::lab_proof::LabProof;
 
-/// The table, made when it is missing (`schema.rs`, `USER_TABLES`).
+/// The table, made when it is missing (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS lab_proofs (
         id        INTEGER PRIMARY KEY,

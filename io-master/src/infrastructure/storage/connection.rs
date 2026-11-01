@@ -1,7 +1,7 @@
 //! What both databases do with a connection just opened, before it is
 //! used: the same wait for a busy database, and their tables made when
 //! they are missing. Each database gives only the list of its tables
-//! (`db/models/schema.rs`, given by the caller of `user_database.rs` and
+//! (`objects/schema.rs`, given by the caller of `user_database.rs` and
 //! `system_database.rs`).
 //!
 //! ```text
@@ -27,7 +27,7 @@ const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 /// - `connection`: the connection to a database file, just opened (and, for
 ///   the database of the user, unlocked with its key).
 /// - `tables`: the `SCHEMA` of every table of that database
-///   (`db/models/schema.rs`: `USER_TABLES` or `SYSTEM_TABLES`); each is a
+///   (`objects/schema.rs`: `USER_TABLES` or `SYSTEM_TABLES`); each is a
 ///   `CREATE TABLE IF NOT EXISTS`, so a table that exists stays as it is.
 ///
 /// Output: nothing; the database holds every table of `tables`. An error of
@@ -40,7 +40,7 @@ pub(in crate::infrastructure::storage) fn prepare(connection: &Connection, table
 
     connection.busy_timeout(BUSY_TIMEOUT)?;
 
-    // The list is bounded: it is a constant of db/models/schema.rs.
+    // The list is bounded: it is a constant of objects/schema.rs.
     for table in tables {
         connection.execute_batch(table)?;
     }

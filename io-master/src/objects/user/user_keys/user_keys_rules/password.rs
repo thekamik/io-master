@@ -30,7 +30,7 @@ use sha2::Sha256;
 use zeroize::Zeroizing;
 
 use crate::infrastructure::security::random::fill_random;
-use crate::model::user::user_keys::WrappedKey;
+use crate::objects::user::user_keys::user_keys_model::WrappedKey;
 
 use crate::infrastructure::storage::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 
@@ -198,7 +198,7 @@ pub fn unwrap(wrapped: &WrappedKey, password: &str, binding: &[u8]) -> Result<Da
 
 #[cfg(test)]
 mod tests {
-    //! Unit tests of `keys.rs`.
+    //! Unit tests of `password.rs`.
 
     use super::*;
 

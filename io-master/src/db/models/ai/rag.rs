@@ -46,7 +46,7 @@ const STOP_WORDS: [&str; 64] = [
     "with",
 ];
 
-/// The tables, made when they are missing (`schema.rs`, `USER_TABLES`). The tokenizer
+/// The tables, made when they are missing (`objects/schema.rs`, `USER_TABLES`). The tokenizer
 /// `porter` finds an English word by its stem ("keys" finds "key"),
 /// `unicode61` folds the case and the diacritics.
 pub const SCHEMA: &str = "

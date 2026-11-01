@@ -25,7 +25,7 @@ use crate::model::ai::journal::{Ending, JournalEntry};
 pub const PAGE: usize = 50;
 
 /// The table and its two triggers, made when they are missing
-/// (`schema.rs`, `USER_TABLES`).
+/// (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_journal (
         id            INTEGER PRIMARY KEY,

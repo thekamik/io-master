@@ -15,7 +15,7 @@ use crate::model::evaluation::oscal_standard_document::OscalStandardDocument;
 /// The most standards the user keeps.
 pub const MAX_OSCAL_STANDARD_DOCUMENTS: usize = 500;
 
-/// The table, made when it is missing (`schema.rs`, `USER_TABLES`).
+/// The table, made when it is missing (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS oscal_standard_documents (
         id      INTEGER PRIMARY KEY,

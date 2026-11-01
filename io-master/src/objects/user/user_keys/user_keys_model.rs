@@ -1,8 +1,9 @@
 //! The keys of the database of a user, as they are kept in the system
-//! database (`db/models/user/user_keys.rs`): two copies of the one random key of
+//! database (`user_keys_store.rs`): two copies of the one random key of
 //! the encrypted database of the user, one wrapped with the password, one
-//! with the recovery code (`panels/logic/program_start/keys.rs`, `panels/logic/program_start/recovery.rs`). None
-//! of it is secret: a copy is useless without its password or its code.
+//! with the recovery code (`user_keys_rules/password.rs`,
+//! `user_keys_rules/recovery.rs`). None of it is secret: a copy is useless
+//! without its password or its code.
 //! The user decided (2026-10-28) that the keys are a model of their own,
 //! apart from `User`, and that the two copies keep the shape they had.
 

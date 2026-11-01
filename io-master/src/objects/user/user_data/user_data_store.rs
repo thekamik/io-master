@@ -11,7 +11,7 @@ use rusqlite::{Row, named_params};
 
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::system_database::SystemDatabase;
-use crate::model::user::user_data::User;
+use crate::objects::user::user_data::user_data_model::User;
 
 /// The most users of an installation: one (`docs/architecture.md`, section 3).
 pub const MAX_USERS: usize = 1;
@@ -19,7 +19,7 @@ pub const MAX_USERS: usize = 1;
 /// The longest name of a user, in characters.
 pub const MAX_NAME: usize = 64;
 
-/// The table, made when it is missing (`schema.rs`, `SYSTEM_TABLES`). Names that
+/// The table, made when it is missing (`objects/schema.rs`, `SYSTEM_TABLES`). Names that
 /// differ only in their letter case are one name: 'Anna' and 'anna' would
 /// be too easy to mix up.
 pub const SCHEMA: &str = "
@@ -65,7 +65,7 @@ fn check_name(name: &str) -> Result<(), DbError> {
 /// ([`check_name`]), when the installation has its user already, or when
 /// the name is taken whatever its letter case (`UNIQUE COLLATE NOCASE`).
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `install`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `install`.
 /// Calls: [`check_name`].
 pub fn create_user(system: &SystemDatabase, user: &User) -> Result<i64, DbError> {
     ensure!(user.id == 0, DbError::Inconsistent("a new user has an id already".to_owned()));
@@ -122,7 +122,7 @@ pub fn read_user(system: &SystemDatabase, id: i64) -> Result<User, DbError> {
 /// an error when the table holds more than [`MAX_USERS`] (a database the
 /// program did not write).
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `installed_user`,
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `installed_user`,
 /// `log_in`.
 /// Calls: [`user_of`].
 pub fn read_users(system: &SystemDatabase) -> Result<Vec<User>, DbError> {
@@ -172,8 +172,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::schema::SYSTEM_TABLES;
     use crate::infrastructure::storage::system_database::create;
+    use crate::objects::schema::SYSTEM_TABLES;
     use crate::test_support::TempDir;
 
     fn user(name: &str) -> User {

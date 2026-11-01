@@ -2,7 +2,8 @@
 //! `user_keys` of the system database, which is not encrypted: create,
 //! read, update; never deleted (user, 2026-10-28). Nothing of it is
 //! secret: the two copies of the key are useless without the password or
-//! the recovery code (`panels/logic/program_start/keys.rs`, `panels/logic/program_start/recovery.rs`).
+//! the recovery code (`user_keys_rules/password.rs`,
+//! `user_keys_rules/recovery.rs`).
 //!
 //! ```text
 //! user_keys   user (one row each); the copy wrapped with the password: key_salt, key_memory_kib,
@@ -14,9 +15,9 @@ use rusqlite::named_params;
 
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::system_database::SystemDatabase;
-use crate::model::user::user_keys::{RecoveryWrappedKey, UserKeys, WrappedKey};
+use crate::objects::user::user_keys::user_keys_model::{RecoveryWrappedKey, UserKeys, WrappedKey};
 
-/// The table, made when it is missing (`schema.rs`, `SYSTEM_TABLES`).
+/// The table, made when it is missing (`objects/schema.rs`, `SYSTEM_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS user_keys (
         user                INTEGER PRIMARY KEY REFERENCES users(id),
@@ -70,7 +71,7 @@ fn check_keys(keys: &UserKeys) -> Result<(), DbError> {
 /// Output: nothing; an error when a part is empty ([`check_keys`]), when the
 /// user has keys already (`PRIMARY KEY`) or is not stored (foreign key).
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `keys_and_database`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`.
 /// Calls: [`check_keys`].
 pub fn create_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), DbError> {
     check_keys(keys)?;
@@ -105,7 +106,7 @@ pub fn create_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), 
 ///
 /// Output: the two copies; `DbError::NoRow` when the user has none.
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `log_in`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`.
 pub fn read_user_keys(system: &SystemDatabase, user: i64) -> Result<UserKeys, DbError> {
     let connection = system.connection();
     let mut statement = connection.prepare(
@@ -186,10 +187,10 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::schema::SYSTEM_TABLES;
-    use crate::db::models::user::user_data::create_user;
     use crate::infrastructure::storage::system_database::create;
-    use crate::model::user::user_data::User;
+    use crate::objects::schema::SYSTEM_TABLES;
+    use crate::objects::user::user_data::user_data_model::User;
+    use crate::objects::user::user_data::user_data_store::create_user;
     use crate::test_support::TempDir;
 
     fn keys(user: i64, byte: u8) -> UserKeys {

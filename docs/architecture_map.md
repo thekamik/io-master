@@ -1,6 +1,6 @@
 # IO Master: the map of the architecture
 
-Where each model of `io-master/src/model/` is stored, processed, reached by a command of the page and shown (user, 2026-11-01): a list, model by model, so that every flow of the data can be followed from the model to the window and nothing is missed. It changes in the same commit as the code; a graphical map may come later from it.
+Where each model of `io-master/src/model/` and `io-master/src/objects/` is stored, processed, reached by a command of the page and shown (user, 2026-11-01): a list, model by model, so that every flow of the data can be followed from the model to the window and nothing is missed. It changes in the same commit as the code; a graphical map may come later from it.
 
 ```text
 model/  ──► db/models/ (stored) ──► domain/models/, ai/models/, session/, panels/logic/ (processed)
@@ -9,8 +9,8 @@ model/  ──► db/models/ (stored) ──► domain/models/, ai/models/, sess
 
 How it is read:
 
-- **Stored**: the functions of `db/models/` that create, read and update the model.
-- **Processed**: the functions that call them or take the model itself, by concern: the rules of the data (`domain/`), the AI (`ai/`), the session, and the panels not yet brought to the grid (`panels/logic/`).
+- **Stored**: the functions of `db/models/`, or of the store of the object (`<object>_store.rs`), that create, read and update the model.
+- **Processed**: the functions that call them or take the model itself, by concern: the rules of the data (`domain/`, or the rules of an object, `<object>_rules.rs`), the AI (`ai/`), the session, and the panels not yet brought to the grid (`panels/logic/`).
 - **Commands**: the commands of `panels/views/` that reach the model within three calls.
 - **Shown**: the components of the page that call those commands (`ui/src/lib/api/` names each function as its command).
 
@@ -327,11 +327,12 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation/EvaluationUnit.svelte` ← `evaluation_unit_save`
   - `views/evaluation_plan/PlanFill.svelte` ← `plan_fill_progress`, `plan_fill_stop`
 
-### `model/user/program_data.rs`: `Installation`, `Settings`
+### `objects/user/program_data/program_data_model.rs`: `Installation`, `Settings`
 
-- **Stored** (`db/models/user/program_data.rs`): `create_installation`, `read_installation`, `create_settings`, `read_settings`, `update_settings`
+- **Stored** (`program_data_store.rs`): `create_installation`, `read_installation`, `create_settings`, `read_settings`, `update_settings`
+- **Processed, the rules of the data**:
+  - `objects/user/user_data/user_data_rules.rs`: `install`, `keys_and_database`
 - **Processed, the panels (`panels/logic/`)**:
-  - `panels/logic/program_start/access.rs`: `install`, `keys_and_database`
   - `panels/logic/settings/integrations.rs`: `activate_integration`, `add_integration`
 - **Commands** (`panels/views/`):
   - `program_start/installation.rs`: `installation_create`
@@ -342,13 +343,13 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/settings/IntegrationForm.svelte` ← `integration_create`
   - `views/settings/IntegrationList.svelte` ← `integration_list`, `integration_activate`
 
-### `model/user/user_data.rs`: `User`
+### `objects/user/user_data/user_data_model.rs`: `User`
 
-- **Stored** (`db/models/user/user_data.rs`): `create_user`, `read_user`, `read_users`, `update_user`
+- **Stored** (`user_data_store.rs`): `create_user`, `read_user`, `read_users`, `update_user`
+- **Processed, the rules of the data**:
+  - `objects/user/user_data/user_data_rules.rs`: `install`, `installed_user`, `keys_and_database`, `log_in`
 - **Processed, the session**:
   - `session/state.rs`: `log_in`
-- **Processed, the panels (`panels/logic/`)**:
-  - `panels/logic/program_start/access.rs`: `install`, `installed_user`, `keys_and_database`, `log_in`
 - **Commands** (`panels/views/`):
   - `program_start/installation.rs`: `installation_create`
   - `program_start/login.rs`: `login_get`, `login_log_in`
@@ -357,13 +358,13 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/program_start/InstallationForm.svelte` ← `installation_create`
   - `views/program_start/LoginForm.svelte` ← `login_log_in`
 
-### `model/user/user_keys.rs`: `UserKeys`, `WrappedKey`, `RecoveryWrappedKey`
+### `objects/user/user_keys/user_keys_model.rs`: `UserKeys`, `WrappedKey`, `RecoveryWrappedKey`
 
-- **Stored** (`db/models/user/user_keys.rs`): `create_user_keys`, `read_user_keys`, `update_user_keys`
-- **Processed, the panels (`panels/logic/`)**:
-  - `panels/logic/program_start/access.rs`: `keys_and_database`, `log_in`
-  - `panels/logic/program_start/keys.rs`: `unwrap`, `wrap`
-  - `panels/logic/program_start/recovery.rs`: `unwrap`, `wrap`
+- **Stored** (`user_keys_store.rs`): `create_user_keys`, `read_user_keys`, `update_user_keys`
+- **Processed, the rules of the data**:
+  - `objects/user/user_data/user_data_rules.rs`: `keys_and_database`, `log_in`
+  - `objects/user/user_keys/user_keys_rules/password.rs`: `unwrap`, `wrap`
+  - `objects/user/user_keys/user_keys_rules/recovery.rs`: `unwrap`, `wrap`
 - **Commands** (`panels/views/`):
   - `program_start/installation.rs`: `installation_create`
   - `program_start/login.rs`: `login_log_in`

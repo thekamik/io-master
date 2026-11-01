@@ -10,7 +10,7 @@
 //! Argon2id is not used here: it makes the guessing of a password slow,
 //! and 160 random bits cannot be guessed at all. The copy is stored in
 //! the system database beside the copy wrapped with the password
-//! (`keys.rs`); neither tells anything without its secret.
+//! (`password.rs`); neither tells anything without its secret.
 
 use std::fmt;
 
@@ -21,13 +21,13 @@ use sha2::Sha256;
 use zeroize::Zeroizing;
 
 use crate::infrastructure::security::random::fill_random;
-use crate::model::user::user_keys::RecoveryWrappedKey;
-use crate::panels::logic::program_start::recovery_code::{CODE_BYTES, RecoveryCode};
+use crate::objects::user::user_keys::user_keys_model::RecoveryWrappedKey;
+use crate::objects::user::user_keys::user_keys_rules::recovery_code::{CODE_BYTES, RecoveryCode};
 
 use crate::infrastructure::storage::encryption::database_key::{DATABASE_KEY_LENGTH, DatabaseKey};
 
 /// What the HKDF derivation is for: never the same key as the one of the
-/// password (`keys.rs`, "io-master unlocking key v1").
+/// password (`password.rs`, "io-master unlocking key v1").
 const RECOVERY_KEY_PURPOSE: &[u8] = b"io-master recovery key v1";
 
 /// Length of the random salt of HKDF.
@@ -64,7 +64,7 @@ impl std::error::Error for RecoveryError {}
 
 /// A new recovery code: 160 random bits from the kernel.
 ///
-/// Called by: `panels/logic/program_start/access.rs` (the account made, the password
+/// Called by: `objects/user/user_data/user_data_rules.rs` (the account made, the password
 /// changed or recovered, a new code asked for).
 /// Calls: `security::random::fill_random`.
 pub fn new_code() -> Result<RecoveryCode, RecoveryError> {
@@ -93,7 +93,7 @@ fn recovery_key(code: &RecoveryCode, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>,
 /// Wraps the key of a database with a recovery code. `binding` ties the
 /// copy to its account, as in `keys::wrap`.
 ///
-/// Called by: `panels/logic/program_start/access.rs`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`.
 /// Calls: `fill_random`, [`recovery_key`], AES-256-GCM.
 pub fn wrap(key: &DatabaseKey, code: &RecoveryCode, binding: &[u8]) -> Result<RecoveryWrappedKey, RecoveryError> {
     ensure!(!binding.is_empty(), RecoveryError::Failed("a copy of a key needs its account".to_owned()));
@@ -120,7 +120,7 @@ pub fn wrap(key: &DatabaseKey, code: &RecoveryCode, binding: &[u8]) -> Result<Re
 /// Opens the key of a database with a recovery code. Fails with
 /// [`RecoveryError::WrongCode`] when the code (or `binding`) does not fit.
 ///
-/// Called by: `panels/logic/program_start/access.rs` (`recover`).
+/// Called by: `objects/user/user_data/user_data_rules.rs` (`recover`).
 /// Calls: [`recovery_key`], AES-256-GCM.
 pub fn unwrap(wrapped: &RecoveryWrappedKey, code: &RecoveryCode, binding: &[u8]) -> Result<DatabaseKey, RecoveryError> {
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| RecoveryError::Damaged)?;

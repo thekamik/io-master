@@ -44,17 +44,78 @@ cargo test             # also the test of the architecture
 
 The program is started without parameters; everything is set in its window.
 
+## Architecture
+
+The program is a desktop window (Tauri 2) over a Rust core. The page (`io-master/ui/`, Svelte 5) holds only presentation and calls a fixed list of commands; no network port is opened. The Rust code (`io-master/src/`) is parted into three groups, and the dependencies go one way:
+
+```text
+panels/  ──►  objects/  ──►  infrastructure/
+the window    the models and    what belongs to no object: the database files and their
+              the functions     encryption, random bytes, PDFs read with Poppler, the clock
+              on them
+```
+
+- **`objects/`**: one folder per model, holding the model and every function that works on it. The files are named by the object and their role:
+
+  | File | Holds | May use |
+  |---|---|---|
+  | `user_data_model.rs` | the structure, fields only | nothing |
+  | `user_data_store.rs` | its tables, `create_`, `read_`, `update_` (the only place with SQL) | the models, `infrastructure/storage/` |
+  | `user_data_rules.rs` | the rules of its data | the stores, the models, `infrastructure/` |
+  | `user_data_ai.rs` | the work of the AI on it | the rules, the stores, the models |
+
+  A role that grows becomes a folder of the same name (`user_keys_rules/password.rs`). An object has only the roles it needs.
+- **`infrastructure/`**: knows no object (`storage/`, `security/`, `pdf/`, `clock.rs`, `data_folder.rs`).
+- **`panels/`**: `views/<panel>/` the commands the page calls (the only code that knows Tauri and serde), `logic/<panel>/` only what a panel shows.
+
+**Where a new function goes:** with the model it works on, in the file of its role. A function is never a universal helper shared by several models.
+
+The code is being moved into this layout step by step (`docs/todo.md`); until then, the models not yet moved keep the folders `model/` (the structures), `db/models/` (the stores), `domain/models/` (the rules) and `ai/models/` (the AI). `io-master/src/main.rs` is the map of every module; `io-master/src/architecture_tests.rs` checks the direction of the dependencies and that SQL is only in the stores. The rules of the code ("The Power of 10", adapted to Rust) are in `CLAUDE.md`. More: `docs/architecture.md` (what and why), `docs/data_model.md` (the models), `docs/code_structure.md` (where everything is), `docs/architecture_map.md` (each model from the database to the window).
+
+## Dependencies
+
+Few, well known, pinned; each explained where it is declared (`io-master/Cargo.toml`, `io-master/package.json`).
+
+| Rust crate | Version | Why |
+|---|---|---|
+| `tauri` | 2.12.4 | the desktop window with a web view (WebKitGTK), commands without a network port |
+| `tauri-plugin-dialog` | 2.8.3 | the dialogs of the system to choose files, called only from Rust |
+| `tokio` | 1.53.3 | the asynchronous runtime under the window and the requests to the AI |
+| `reqwest` | 0.13.5 | the HTTPS client of the AI integrations (rustls, TLS 1.3, no proxy) |
+| `rusqlite` | 0.40.2 | SQLite with SQLCipher built in: every database encrypted with AES-256 |
+| `argon2` | 0.6.0 | the password turned into a key (Argon2id) |
+| `aes-gcm` | 0.11.1 | the key of the database wrapped with the password and the recovery code |
+| `hkdf`, `sha2` | 0.13.0, 0.11.1 | keys derived from one secret; the check sum of the recovery code |
+| `zeroize` | 1.9.1 | secrets overwritten in memory when no longer needed |
+| `rustix` | 1.1.5 | random bytes from the kernel and no memory dumps, without unsafe code |
+| `serde_json` | 1.0.154 | JSON read and written by hand: the AI, the OSCAL catalogs |
+| `serde` | 1.0 | the views of the page as JSON, at the boundary to the window only |
+| `jsonschema` | 0.58.5 | every OSCAL catalog checked against the JSON schema of NIST, built in |
+| `rcgen`, `tokio-rustls` (tests) | 0.14.10, 0.26.6 | a fake AI service with real TLS 1.3 on 127.0.0.1 |
+| `tauri-build` (build) | 2.7.3 | the permissions of the commands, made at build time |
+
+| npm package | Version | Why |
+|---|---|---|
+| `svelte` | 5.57.2 | the page |
+| `@tauri-apps/api` | 2.12.4 | the commands called from the page |
+| `vite`, `@sveltejs/vite-plugin-svelte` | 8.3.4, 7.3.1 | the page built into `ui/dist` |
+| `typescript`, `svelte-check`, `@tsconfig/svelte` | 5.9.3, 4.7.6, 5.0.8 | TypeScript strict, checked before every commit |
+| `@tauri-apps/cli` | 2.12.3 | the tools of Tauri |
+
+The system packages are in **Requirements** above; Poppler (`pdfinfo`, `pdftotext`) is run as another program to read PDFs.
+
 ## The repository
 
 ```text
 io-master/          the program (Rust, Tauri 2 + Svelte 5)
-  src/              infrastructure (storage, security, pdf), model, db, domain, ai, session, panels (logic and views)
+  src/              infrastructure/, objects/, panels/ (and, until they move, model/, db/, domain/, ai/, session/)
   ui/               the page of the window, a separate project
   oscal/            the JSON schemas of OSCAL 1.2.3 and example documents of NIST
 docs/
   architecture.md   what the program is and why: the user, the keys, the AI, the standards
   data_model.md     the models, their links and their rules
   code_structure.md where everything is in the code, and the rules that keep it in order
+  architecture_map.md each model: where it is stored, processed, reached by a command and shown
   todo.md           the open work
   handover.md       the state of the work, for a new working session
 testing_documents/  documents for trying the program by hand (the CEM:2022 as an OSCAL catalog, the script that made it)

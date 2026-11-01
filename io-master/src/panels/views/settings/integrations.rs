@@ -19,9 +19,9 @@ use tauri::State;
 use crate::ai::models::ai::integration::sending::send_whole;
 use crate::ai::models::ai::journal::record;
 use crate::db::models::ai::integration::read_integrations;
-use crate::db::models::user::program_data::read_settings;
 use crate::model::ai::integration::{Integration, Protocol};
 use crate::model::ai::journal::Ending;
+use crate::objects::user::program_data::program_data_store::read_settings;
 use crate::panels::logic::settings::integrations::{
     activate_integration, add_integration, change_integration, check_question, has_key, set_key,
 };

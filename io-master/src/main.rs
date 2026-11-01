@@ -57,6 +57,7 @@ mod infrastructure {
         // later.
         pub mod encryption {
             pub mod database_key;
+            pub mod generate_key;
             pub mod sqlcipher;
         }
     }
@@ -91,12 +92,6 @@ mod model {
     pub mod session {
         pub mod progress;
     }
-    // model/user/: the user and the settings of the program.
-    pub mod user {
-        pub mod program_data;
-        pub mod user_data;
-        pub mod user_keys;
-    }
 }
 
 // db/: the models of model/ in the databases of infrastructure/storage/.
@@ -105,7 +100,6 @@ mod db {
     // per file of model/, no delete (user, 2026-10-28); the tables of each
     // database in their order.
     pub mod models {
-        pub mod schema;
         // db/models/ai/: the integrations and their keys, the knowledge
         // (RAG) and its index, the agents, the chats, the journal of the AI.
         pub mod ai {
@@ -115,13 +109,6 @@ mod db {
             pub mod integration;
             pub mod journal;
             pub mod rag;
-        }
-        // db/models/user/: the user and the installation (the system
-        // database), the settings of the user.
-        pub mod user {
-            pub mod program_data;
-            pub mod user_data;
-            pub mod user_keys;
         }
         // db/models/evaluation/: the plans, their work units, the standards,
         // the documents of the product, the proofs of the laboratory.
@@ -234,6 +221,46 @@ mod ai {
     }
 }
 
+// objects/: every model with the functions that work on it, a folder per
+// object, its files named by the object and their role (user, 2026-11-01):
+// <object>_model.rs (the structure), <object>_store.rs (create, read,
+// update), <object>_rules.rs (the rules of the data), <object>_ai.rs (the
+// work of the AI); a big role becomes a folder of the same name. The models
+// still in model/, db/, domain/ and ai/ come here step by step
+// (docs/todo.md).
+mod objects {
+    // The tables of each database, given to infrastructure/storage/ when a
+    // database is opened.
+    pub mod schema;
+    // objects/user/: the user, the installation and the settings, the keys of
+    // the user; the first start and the login.
+    pub mod user {
+        // The installation (the system database) and the settings of the user.
+        pub mod program_data {
+            pub mod program_data_model;
+            pub mod program_data_store;
+        }
+        // The user; their account made at the first start, the login.
+        pub mod user_data {
+            pub mod user_data_model;
+            pub mod user_data_rules;
+            pub mod user_data_store;
+        }
+        // The two copies of the key of the database of the user, wrapped with
+        // the password and with the recovery code (moved unchanged from the
+        // earlier program, audited later).
+        pub mod user_keys {
+            pub mod user_keys_model;
+            pub mod user_keys_store;
+            pub mod user_keys_rules {
+                pub mod password;
+                pub mod recovery;
+                pub mod recovery_code;
+            }
+        }
+    }
+}
+
 // session/: what every command of the window shares: the data folder, and
 // the user logged in with their open database (the only global state).
 mod session {
@@ -253,17 +280,6 @@ mod panels {
         pub mod evaluation {
             pub mod error;
             pub mod inputs;
-        }
-        // panels/logic/program_start/: the first start, the login and the
-        // recovery of a forgotten password; the password and the recovery
-        // code that wrap the key of the database (moved unchanged from the
-        // earlier program, audited later).
-        pub mod program_start {
-            pub mod access;
-            pub mod generate_key;
-            pub mod keys;
-            pub mod recovery;
-            pub mod recovery_code;
         }
         // panels/logic/settings/: the settings of the AI: the integrations,
         // their keys and the question that checks them.

@@ -6,7 +6,10 @@
 //!   panels/views/   (the commands the page calls) ──► session/ (the user logged in)
 //!         │
 //!         ▼
-//!   panels/logic/   (the work behind the panels: program_start, evaluation, ...)
+//!   panels/logic/   (the work behind the panels: evaluation, settings)
+//!         │
+//!         ▼
+//!     objects/      (a folder per object: its model, store, rules, AI; schema.rs)
 //!         │
 //!         ▼
 //!        ai/        (models/: the AI on the models, a mirror of model/)
@@ -43,7 +46,7 @@ use std::path::Path;
 /// that start so (`crate::` left out). A folder is named by its path of
 /// modules: `panels::views` and `panels::logic` are two layers of one
 /// folder.
-const ALLOWED: [(&str, &[&str]); 21] = [
+const ALLOWED: [(&str, &[&str]); 22] = [
     ("model", &[]),
     // infrastructure/: what belongs to no object and no panel, and knows
     // no object (user, 2026-11-01). The time of the computer, the data
@@ -53,7 +56,8 @@ const ALLOWED: [(&str, &[&str]); 21] = [
     ("infrastructure::data_folder", &[]),
     ("infrastructure::security", &[]),
     ("infrastructure::pdf", &[]),
-    ("infrastructure::storage", &[]),
+    // The database files; a new key of a database made of random bytes.
+    ("infrastructure::storage", &["infrastructure::security"]),
     ("db", &["infrastructure::storage", "model"]),
     // The rules of the data: they read and write through db/.
     ("domain", &["infrastructure::clock", "infrastructure::pdf", "infrastructure::storage", "db", "model"]),
@@ -127,6 +131,7 @@ const ALLOWED: [(&str, &[&str]); 21] = [
             SENDING,
             ADDRESS,
             ASSESSMENT_ANSWER,
+            "objects",
             "infrastructure::clock",
             "domain",
             "db",
@@ -136,8 +141,11 @@ const ALLOWED: [(&str, &[&str]); 21] = [
             "infrastructure::pdf",
         ],
     ),
+    // objects/: every model with the functions that work on it (user,
+    // 2026-11-01). Its list of the tables names the stores still in db/.
+    ("objects", &["infrastructure", "db", "model"]),
     // The session: the user logged in and their open database.
-    ("session", &["db", "infrastructure::storage", "model"]),
+    ("session", &["objects::user", "db", "infrastructure::storage", "model"]),
     // The commands of the page: they do their work with the folders below.
     (
         "panels::views",
@@ -153,6 +161,7 @@ const ALLOWED: [(&str, &[&str]); 21] = [
             EVALUATION_PLAN,
             ASSESSMENT_QUESTION,
             FILLING,
+            "objects",
             "domain",
             "db",
             "infrastructure::storage",
@@ -291,6 +300,10 @@ fn every_folder_uses_only_the_folders_below_it() {
 /// models in them (CLAUDE.md, "The database").
 const SQL_FOLDERS: [&str; 2] = ["infrastructure/storage/", "db/models/"];
 
+/// The end of the name of the store of an object (`user_data_store.rs`), the
+/// other place where SQL may be written.
+const STORE_FILE: &str = "_store.rs";
+
 /// The signs of SQL in a file: the library of SQLite, and the connection
 /// of an open database.
 const SQL_SIGNS: [&str; 2] = ["rusqlite", ".connection()"];
@@ -304,7 +317,10 @@ fn the_sql_is_only_in_the_store() {
         let text = program_part(&text);
 
         // The files of tests name the signs of SQL to look for them.
-        if FILES_OF_TESTS.contains(&file.as_str()) || SQL_FOLDERS.iter().any(|folder| file.starts_with(folder)) {
+        let store = file.starts_with("objects/") && file.ends_with(STORE_FILE);
+
+        if store || FILES_OF_TESTS.contains(&file.as_str()) || SQL_FOLDERS.iter().any(|folder| file.starts_with(folder))
+        {
             continue;
         }
 

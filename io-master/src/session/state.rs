@@ -1,7 +1,7 @@
 //! The session: what every command of the window shares (user,
 //! 2026-10-28): the data folder of the program, and, while the user is
 //! logged in, the user and their database, open. The database is opened
-//! once at the login (`panels/logic/program_start/access.rs`) and kept here until the logout
+//! once at the login (`objects/user/user_data/user_data_rules.rs`) and kept here until the logout
 //! or the end of the program; the key that opened it is already wiped,
 //! SQLCipher keeps its own inside the connection.
 //!
@@ -27,7 +27,7 @@ use std::sync::{Mutex, MutexGuard};
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::model::session::progress::Progress;
-use crate::model::user::user_data::User;
+use crate::objects::user::user_data::user_data_model::User;
 
 /// The session of the window.
 pub struct Session {

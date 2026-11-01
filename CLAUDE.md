@@ -4,7 +4,7 @@
 
 ## The models: only with the user's consent (user, 2026-10-29)
 
-**The models of `io-master/src/model/` are changed only with the user's consent and permission.** Every change of a model (a field added, removed, renamed or retyped, a model added or removed) is proposed first and implemented only after the user has accepted it. The models are the schema of the whole project (`docs/data_model.md`): the relations between them are reflected in the database and in the window, so a view processes the models whose relations it shows; when it is unclear which models a view should process, ask the user.
+**The models of `io-master/src/model/` and `io-master/src/objects/` (`<object>_model.rs`) are changed only with the user's consent and permission.** Every change of a model (a field added, removed, renamed or retyped, a model added or removed) is proposed first and implemented only after the user has accepted it. The models are the schema of the whole project (`docs/data_model.md`): the relations between them are reflected in the database and in the window, so a view processes the models whose relations it shows; when it is unclear which models a view should process, ask the user.
 
 ## The project
 
@@ -81,7 +81,7 @@ They bind **our code** (`src/`, `ui/`). The dependencies cannot follow them; the
 
 - **Create, read and update only: no delete** (user, 2026-10-28), with one exception: `delete_work_unit`, only for a plan in planning (user, 2026-10-29).
 - **The database files and the models in them are apart** (user, 2026-10-31): `infrastructure/storage/` the database files (where they are, made, opened, their tables made from the list its caller gives, their encryption, the lists of ids, `DbError`), knowing no model; `db/models/` the models in them.
-- **The layout of `db/models/` mirrors `model/`**: one file per file of a model, with its tables and its functions `create_<model>`, `read_<model>`, `update_<model>`; beside them `schema.rs` (the tables of each database) and `lists.rs` (the lists of a model).
+- **The layout of `db/models/` mirrors `model/`**: one file per file of a model, with its tables and its functions `create_<model>`, `read_<model>`, `update_<model>`; the tables of each database are listed in `objects/schema.rs`, the help for the lists of ids is `infrastructure/storage/lists.rs`; the stores of the objects (`<object>_store.rs`) follow the same rules.
 - **SQL lives only in `infrastructure/storage/` and `db/models/`** (checked by `architecture_tests.rs`). Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`.
 - `infrastructure/storage/encryption/` holds the encryption of the databases, moved unchanged from the earlier program; the user audits it later.
 

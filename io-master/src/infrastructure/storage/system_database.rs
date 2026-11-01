@@ -1,9 +1,9 @@
 //! The system database: the file `system.v2.db` of the data folder, where
 //! it is, made and opened, its tables made when they are missing
 //! (`connection.rs`; the list of the tables given by the caller,
-//! `db/models/schema.rs`: `SYSTEM_TABLES`). It holds what the login needs:
+//! `objects/schema.rs`: `SYSTEM_TABLES`). It holds what the login needs:
 //! the installation, its one user and the two wrapped copies of the key of
-//! the database of the user (`db/models/user/`).
+//! the database of the user (`objects/user/`).
 //!
 //! **Protection: NOT encrypted.** The program opens it at every start,
 //! before anyone has given a password, so no key could open it; it holds
@@ -11,8 +11,9 @@
 //! (`encryption/sqlcipher.rs`, `create_plain`).
 //!
 //! ```text
-//! access.rs: create_account          ──create(data_dir, SYSTEM_TABLES)─► sqlcipher::create_plain ─┐
-//! access.rs: installed_user, log_in  ──open(data_dir, SYSTEM_TABLES)───► sqlcipher::open_plain ───┴─► from ─► SystemDatabase
+//! objects/user/user_data/user_data_rules.rs:
+//!   create_account          ──create(data_dir, SYSTEM_TABLES)─► sqlcipher::create_plain ─┐
+//!   installed_user, log_in  ──open(data_dir, SYSTEM_TABLES)───► sqlcipher::open_plain ───┴─► from ─► SystemDatabase
 //! ```
 
 use std::path::{Path, PathBuf};
@@ -39,7 +40,7 @@ impl SystemDatabase {
     /// Input:
     /// - `connection`: the plain file of the system database.
     /// - `tables`: the `SCHEMA` of every table of the system database
-    ///   (`db/models/schema.rs`: `SYSTEM_TABLES`).
+    ///   (`objects/schema.rs`: `SYSTEM_TABLES`).
     ///
     /// Output: the database, every table of `tables` made; an error of
     /// SQLite when a table cannot be made.
@@ -56,8 +57,8 @@ impl SystemDatabase {
     /// `architecture_tests.rs` (`the_sql_is_only_in_the_store`), since the
     /// models in the databases are no longer below this folder.
     ///
-    /// Called by: every function of `db/models/user/user_data.rs`,
-    /// `db/models/user/user_keys.rs` and `db/models/user/program_data.rs`
+    /// Called by: every function of `objects/user/user_data/user_data_store.rs`,
+    /// `objects/user/user_keys/user_keys_store.rs` and `objects/user/program_data/program_data_store.rs`
     /// (the installation) that runs SQL.
     pub fn connection(&self) -> &Connection {
         &self.connection
@@ -66,7 +67,7 @@ impl SystemDatabase {
 
 /// The path of the system database: `<data>/system.v2.db`.
 ///
-/// Called by: [`create`], [`open`]; `panels/logic/program_start/access.rs`:
+/// Called by: [`create`], [`open`]; `objects/user/user_data/user_data_rules.rs`:
 /// `create_account` (the file removed when the first start fails half way).
 pub fn path(data_dir: &Path) -> PathBuf {
     data_dir.join(FILE_NAME)
@@ -77,13 +78,13 @@ pub fn path(data_dir: &Path) -> PathBuf {
 /// Input:
 /// - `data_dir`: the data folder of the program (`~/.local/share/io-master`).
 /// - `tables`: the `SCHEMA` of every table of the system database
-///   (`db/models/schema.rs`: `SYSTEM_TABLES`).
+///   (`objects/schema.rs`: `SYSTEM_TABLES`).
 ///
 /// Output: the database, open, with its tables. An error when the file
 /// exists already (never overwritten: `DbError::Exists`, the program is
 /// installed) or cannot be made.
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `create_account`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `create_account`.
 /// Calls: [`path`], `sqlcipher::create_plain`, [`SystemDatabase::from`].
 pub fn create(data_dir: &Path, tables: &[&str]) -> Result<SystemDatabase, DbError> {
     SystemDatabase::from(sqlcipher::create_plain(&path(data_dir))?, tables)
@@ -94,13 +95,13 @@ pub fn create(data_dir: &Path, tables: &[&str]) -> Result<SystemDatabase, DbErro
 /// Input:
 /// - `data_dir`: the data folder of the program.
 /// - `tables`: the `SCHEMA` of every table of the system database
-///   (`db/models/schema.rs`: `SYSTEM_TABLES`).
+///   (`objects/schema.rs`: `SYSTEM_TABLES`).
 ///
 /// Output: the database, open, with its tables. An error when the file is
 /// missing (`DbError::NotFound`: the program is not installed yet) or is
 /// not a plain database of SQLite (`DbError::WrongKey`).
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `installed_user`,
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `installed_user`,
 /// `log_in`.
 /// Calls: [`path`], `sqlcipher::open_plain`, [`SystemDatabase::from`].
 pub fn open(data_dir: &Path, tables: &[&str]) -> Result<SystemDatabase, DbError> {
@@ -113,7 +114,7 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::schema::SYSTEM_TABLES;
+    use crate::objects::schema::SYSTEM_TABLES;
     use crate::test_support::TempDir;
 
     #[test]

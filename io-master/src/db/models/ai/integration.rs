@@ -16,7 +16,7 @@ use crate::model::ai::integration::{Integration, Protocol};
 /// The most integrations of the user.
 pub const MAX_INTEGRATIONS: usize = 50;
 
-/// The table, made when it is missing (`schema.rs`, `USER_TABLES`).
+/// The table, made when it is missing (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_integrations (
         id             INTEGER PRIMARY KEY,

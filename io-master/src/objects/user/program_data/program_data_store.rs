@@ -17,10 +17,10 @@ use rusqlite::named_params;
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::system_database::SystemDatabase;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::user::program_data::{Installation, Settings};
+use crate::objects::user::program_data::program_data_model::{Installation, Settings};
 
 /// The table of the installation, made when it is missing
-/// (`schema.rs`, `SYSTEM_TABLES`).
+/// (`objects/schema.rs`, `SYSTEM_TABLES`).
 pub const SYSTEM_SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS installation (
         one     INTEGER PRIMARY KEY CHECK (one = 1),
@@ -29,7 +29,7 @@ pub const SYSTEM_SCHEMA: &str = "
     );
 ";
 
-/// The table of the settings, made when it is missing (`schema.rs`, `USER_TABLES`).
+/// The table of the settings, made when it is missing (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS settings (
         one                INTEGER PRIMARY KEY CHECK (one = 1),
@@ -48,7 +48,7 @@ pub const SCHEMA: &str = "
 /// Output: nothing; an error when the id or the time is missing, or when
 /// the installation is stored already (the one row of its table).
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `install`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `install`.
 pub fn create_installation(system: &SystemDatabase, installation: &Installation) -> Result<(), DbError> {
     ensure!(installation.id != [0; 16], DbError::Inconsistent("an installation without its random id".to_owned()));
     ensure!(installation.created > 0, DbError::Inconsistent("an installation without its time".to_owned()));
@@ -95,7 +95,7 @@ pub fn read_installation(system: &SystemDatabase) -> Result<Option<Installation>
 /// Output: nothing; an error when they are stored already (the one row of
 /// its table).
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `keys_and_database`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`.
 pub fn create_settings(db: &UserDatabase, settings: &Settings) -> Result<(), DbError> {
     db.connection().execute(
         "INSERT INTO settings (one, active_integration) VALUES (1, :active_integration)",
@@ -154,8 +154,8 @@ mod tests {
     use super::*;
 
     use crate::db::models::ai::integration::create_integration;
-    use crate::db::models::schema::SYSTEM_TABLES;
     use crate::infrastructure::storage::system_database::create;
+    use crate::objects::schema::SYSTEM_TABLES;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};
 

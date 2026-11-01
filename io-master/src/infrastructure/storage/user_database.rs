@@ -1,7 +1,7 @@
 //! The database of the user: the file `users/<id>.v2.db` of the data
 //! folder, where it is, made and opened, its tables made when they are
 //! missing (`connection.rs`; the list of the tables given by the caller,
-//! `db/models/schema.rs`: `USER_TABLES`). It holds
+//! `objects/schema.rs`: `USER_TABLES`). It holds
 //! everything but the login: the plans, the agents, the API keys, the
 //! journal. The layout changes freely until version 1 (CLAUDE.md): a
 //! database of an older layout is removed and made anew.
@@ -10,8 +10,9 @@
 //! the key of the user, unwrapped by the password at the login.
 //!
 //! ```text
-//! access.rs: keys_and_database ──create(data_dir, id, key, USER_TABLES)─► sqlcipher::create ─┐
-//! access.rs: log_in            ──open(data_dir, id, key, USER_TABLES)───► sqlcipher::open ───┴─► from ─► UserDatabase
+//! objects/user/user_data/user_data_rules.rs:
+//!   keys_and_database ──create(data_dir, id, key, USER_TABLES)─► sqlcipher::create ─┐
+//!   log_in            ──open(data_dir, id, key, USER_TABLES)───► sqlcipher::open ───┴─► from ─► UserDatabase
 //! ```
 
 use std::fs::DirBuilder;
@@ -43,7 +44,7 @@ impl UserDatabase {
     /// - `connection`: the file of the database of the user, unlocked with
     ///   its key.
     /// - `tables`: the `SCHEMA` of every table of the database of the user
-    ///   (`db/models/schema.rs`: `USER_TABLES`).
+    ///   (`objects/schema.rs`: `USER_TABLES`).
     ///
     /// Output: the database, every table of `tables` made; an error of
     /// SQLite when a table cannot be made.
@@ -62,7 +63,7 @@ impl UserDatabase {
     /// are no longer below this folder.
     ///
     /// Called by: every function of `db/models/ai/`, `db/models/evaluation/`
-    /// and `db/models/user/program_data.rs` (the settings) that runs SQL.
+    /// and `objects/user/program_data/program_data_store.rs` (the settings) that runs SQL.
     pub fn connection(&self) -> &Connection {
         &self.connection
     }
@@ -70,7 +71,7 @@ impl UserDatabase {
 
 /// The path of the database of the user `user_id`: `<data>/users/7.v2.db`.
 ///
-/// Called by: [`create`], [`open`]; `panels/logic/program_start/access.rs`:
+/// Called by: [`create`], [`open`]; `objects/user/user_data/user_data_rules.rs`:
 /// `create_account` (the file removed when the first start fails half way).
 pub fn path(data_dir: &Path, user_id: i64) -> PathBuf {
     data_dir.join(DIRECTORY).join(format!("{user_id}.v2.db"))
@@ -81,15 +82,15 @@ pub fn path(data_dir: &Path, user_id: i64) -> PathBuf {
 /// Input:
 /// - `data_dir`: the data folder of the program (`~/.local/share/io-master`).
 /// - `user_id`: the id of the user in the system database (1).
-/// - `key`: the new random key of the database (`panels/logic/program_start/generate_key.rs`).
+/// - `key`: the new random key of the database (`infrastructure/storage/encryption/generate_key.rs`).
 /// - `tables`: the `SCHEMA` of every table of the database of the user
-///   (`db/models/schema.rs`: `USER_TABLES`).
+///   (`objects/schema.rs`: `USER_TABLES`).
 ///
 /// Output: the database, open, with its tables. An error when the file
 /// exists already (never overwritten: `DbError::Exists`) or when the folder
 /// or the file cannot be made.
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `keys_and_database`;
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`;
 /// the tests: `test_support/database.rs`.
 /// Calls: [`path`], `sqlcipher::create`, [`UserDatabase::from`].
 pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey, tables: &[&str]) -> Result<UserDatabase, DbError> {
@@ -112,15 +113,15 @@ pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey, tables: &[&str])
 /// - `data_dir`: the data folder of the program.
 /// - `user_id`: the id of the user in the system database (1).
 /// - `key`: the key of the database, unwrapped by the password
-///   (`panels/logic/program_start/keys.rs`: `unwrap`).
+///   (`objects/user/user_keys/user_keys_rules/password.rs`: `unwrap`).
 /// - `tables`: the `SCHEMA` of every table of the database of the user
-///   (`db/models/schema.rs`: `USER_TABLES`).
+///   (`objects/schema.rs`: `USER_TABLES`).
 ///
 /// Output: the database, open, with its tables. An error when the file is
 /// missing (`DbError::NotFound`) or the key does not open it
 /// (`DbError::WrongKey`).
 ///
-/// Called by: `panels/logic/program_start/access.rs`: `log_in`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`.
 /// Calls: [`path`], `sqlcipher::open`, [`UserDatabase::from`].
 pub fn open(data_dir: &Path, user_id: i64, key: &DatabaseKey, tables: &[&str]) -> Result<UserDatabase, DbError> {
     UserDatabase::from(sqlcipher::open(&path(data_dir, user_id), key)?, tables)
@@ -132,8 +133,8 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::schema::USER_TABLES;
     use crate::infrastructure::security::random::fill_random;
+    use crate::objects::schema::USER_TABLES;
     use crate::test_support::TempDir;
 
     #[test]

@@ -30,7 +30,7 @@ impl std::error::Error for ClockError {}
 /// `domain/models/ai/chat.rs`: `add_question`; `ai/models/ai/chat.rs`:
 /// `add_answer`;
 /// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `new_evaluation`;
-/// `panels/logic/program_start/access.rs`: `install`.
+/// `objects/user/user_data/user_data_rules.rs`: `install`.
 pub fn now() -> Result<i64, ClockError> {
     let seconds =
         SystemTime::now().duration_since(UNIX_EPOCH).map_err(|error| ClockError(error.to_string()))?.as_secs();

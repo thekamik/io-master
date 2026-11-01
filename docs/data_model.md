@@ -1,6 +1,6 @@
 # IO Master: the data model
 
-The models of `io-master/src/model/`, agreed with the user model by model, and their tables in `db/` (`users/<id>.v2.db`; `User`, `Installation` and `UserKeys` in the system database `system.v2.db`). **A model is changed only with the user's consent** (`CLAUDE.md`).
+The models of `io-master/src/model/` and of `io-master/src/objects/` (`<object>_model.rs`, user 2026-11-01: brought there step by step), agreed with the user model by model, and their tables in `db/` and in the stores of the objects (`users/<id>.v2.db`; `User`, `Installation` and `UserKeys` in the system database `system.v2.db`). **A model is changed only with the user's consent** (`CLAUDE.md`).
 
 ## 1. The rules of a model (user, 2026-10-28)
 
@@ -29,8 +29,8 @@ EvaluationPlan                                      Integration ◄── ApiKey
                                                     JournalEntry (agent ──► Agent, work_unit ──► WorkUnit)
                                                     Chat (agent ──► Agent, work_unit ──► WorkUnit)
 
-model/user/
-───────────
+objects/user/
+─────────────
 User, Installation (system database, not encrypted)   Settings (active_integration ──► Integration)
 ```
 
@@ -65,16 +65,16 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `Message` | `chat.rs` | speaker, text, time | `chat_messages` |
 | `Speaker` | `chat.rs` | User, Ai | (a column) |
 
-### 2.3 `model/user/`
+### 2.3 `objects/user/`
 
 | Model | File | Fields | Table |
 |---|---|---|---|
-| `User` | `user_data.rs` | id, name, created | `users` (`system.v2.db`) |
-| `Installation` | `program_data.rs` | id, created | `installation` (`system.v2.db`; create and read only) |
-| `Settings` | `program_data.rs` | active_integration | `settings` (one row) |
-| `UserKeys` | `user_keys.rs` | user, password (`WrappedKey`), recovery (`RecoveryWrappedKey`) | `user_keys` (`system.v2.db`) |
-| `WrappedKey` | `user_keys.rs` | salt, memory_kib, iterations, nonce, ciphertext, tag | (columns of `user_keys`) |
-| `RecoveryWrappedKey` | `user_keys.rs` | salt, nonce, ciphertext, tag | (columns of `user_keys`) |
+| `User` | `user_data/user_data_model.rs` | id, name, created | `users` (`system.v2.db`) |
+| `Installation` | `program_data/program_data_model.rs` | id, created | `installation` (`system.v2.db`; create and read only) |
+| `Settings` | `program_data/program_data_model.rs` | active_integration | `settings` (one row) |
+| `UserKeys` | `user_keys/user_keys_model.rs` | user, password (`WrappedKey`), recovery (`RecoveryWrappedKey`) | `user_keys` (`system.v2.db`) |
+| `WrappedKey` | `user_keys/user_keys_model.rs` | salt, memory_kib, iterations, nonce, ciphertext, tag | (columns of `user_keys`) |
+| `RecoveryWrappedKey` | `user_keys/user_keys_model.rs` | salt, nonce, ciphertext, tag | (columns of `user_keys`) |
 
 ### 2.4 `model/session/` (helper models, never kept)
 
@@ -128,7 +128,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 ## 5. The user and the program
 
 - One Linux account holds one installation with one user. `User` and `Installation` are kept in the system database, which is not encrypted and holds nothing secret; the copies of the key of the encrypted database of the user are kept beside the user but belong to `infrastructure/storage/encryption/` (`architecture.md`, section 5).
-- **The keys of a user** (`UserKeys`, user 2026-10-28) are a model of their own, apart from `User`: the two copies of the one random key of the database of the user, wrapped with the password (Argon2id) and with the recovery code, each bound to the id of the user (`panels/logic/program_start/access.rs`). None of it is secret. The two copies keep the shape they had in the earlier program.
+- **The keys of a user** (`UserKeys`, user 2026-10-28) are a model of their own, apart from `User`: the two copies of the one random key of the database of the user, wrapped with the password (Argon2id) and with the recovery code, each bound to the id of the user (`objects/user/user_data/user_data_rules.rs`). None of it is secret. The two copies keep the shape they had in the earlier program.
 - `Settings` names every setting as a field of its own. **It stays** (user, 2026-10-31): the laboratory works with many integrations, and `active_integration` is the place of the default one. No question to the AI reads it (each takes its integration from its agent, or the check from the integration checked); today it only proposes the integration of a new agent.
 
 ## 6. The standards in OSCAL

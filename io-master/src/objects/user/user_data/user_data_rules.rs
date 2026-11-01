@@ -1,20 +1,21 @@
 //! The account of the user: the first start (the installation, the user,
 //! the two copies of the key of the database, the recovery code) and the
-//! login. The logic only: the data is written by `db/`, the keys are
-//! wrapped by `keys.rs` and `recovery.rs`. One Linux account holds one
-//! installation with one user (`docs/architecture.md`, section 3).
+//! login. The rules only: the data is written by the stores of
+//! `objects/user/`, the keys are wrapped by `user_keys_rules/password.rs` and
+//! `recovery.rs`. One Linux account holds one installation with one user
+//! (`docs/architecture.md`, section 3).
 //!
 //! ```text
 //! create_account(name, password, password repeated)
 //!   system.v2.db made ── the installation (16 random bytes) ── the user
 //!   the key of the database: 32 random bytes                              (RAM only)
-//!   key ──password (keys::wrap)──► WrappedKey ─┐
+//!   key ──password (password::wrap)──► WrappedKey ─┐
 //!   key ──recovery code (recovery::wrap)──► RecoveryWrappedKey ─┴──► user_keys (system.v2.db)
 //!   users/<id>.v2.db made with the key, its settings ── the key wiped
 //!   ◄── the user, the open database, the recovery code (shown once, kept nowhere)
 //!
 //! log_in(name, password)
-//!   the user by its name ── its WrappedKey ──password (keys::unwrap)──► the key
+//!   the user by its name ── its WrappedKey ──password (password::unwrap)──► the key
 //!   users/<id>.v2.db opened with it ── the key wiped
 //!   ◄── the user, the open database
 //! ```
@@ -28,22 +29,22 @@ use std::fs::{self, DirBuilder};
 use std::os::unix::fs::DirBuilderExt;
 use std::path::Path;
 
-use crate::db::models::schema::{SYSTEM_TABLES, USER_TABLES};
-use crate::db::models::user::program_data::{create_installation, create_settings};
-use crate::db::models::user::user_data::{create_user, read_users};
-use crate::db::models::user::user_keys::{create_user_keys, read_user_keys};
 use crate::infrastructure::clock::now;
 use crate::infrastructure::security::random::fill_random;
+use crate::infrastructure::storage::encryption::generate_key::generate_database_key;
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::system_database::{self, SystemDatabase};
 use crate::infrastructure::storage::user_database::{self, UserDatabase};
-use crate::model::user::program_data::{Installation, Settings};
-use crate::model::user::user_data::User;
-use crate::model::user::user_keys::UserKeys;
-use crate::panels::logic::program_start::generate_key::generate_database_key;
-use crate::panels::logic::program_start::keys::{self, KeyError};
-use crate::panels::logic::program_start::recovery::{self, RecoveryError};
-use crate::panels::logic::program_start::recovery_code::RecoveryCode;
+use crate::objects::schema::{SYSTEM_TABLES, USER_TABLES};
+use crate::objects::user::program_data::program_data_model::{Installation, Settings};
+use crate::objects::user::program_data::program_data_store::{create_installation, create_settings};
+use crate::objects::user::user_data::user_data_model::User;
+use crate::objects::user::user_data::user_data_store::{create_user, read_users};
+use crate::objects::user::user_keys::user_keys_model::UserKeys;
+use crate::objects::user::user_keys::user_keys_rules::password::{self, KeyError};
+use crate::objects::user::user_keys::user_keys_rules::recovery::{self, RecoveryError};
+use crate::objects::user::user_keys::user_keys_rules::recovery_code::RecoveryCode;
+use crate::objects::user::user_keys::user_keys_store::{create_user_keys, read_user_keys};
 
 /// What the first start gives: the user, its database (open), and the
 /// recovery code, which the window shows once.
@@ -132,7 +133,7 @@ fn binding(user: i64) -> Vec<u8> {
 /// Called by: [`create_account`].
 /// Calls: `infrastructure/security/random.rs`: `fill_random`; `infrastructure/clock.rs`: `now`;
 /// `create_installation`, `create_user`, `generate_database_key`,
-/// `keys::wrap`, `recovery::new_code`, `recovery::wrap`, `create_user_keys`,
+/// `password::wrap`, `recovery::new_code`, `recovery::wrap`, `create_user_keys`,
 /// `user_database::create`, `create_settings`.
 fn install(
     system: &SystemDatabase,
@@ -178,7 +179,7 @@ fn keys_and_database(
     let code = recovery::new_code()?;
     let keys = UserKeys {
         user: user.id,
-        password: keys::wrap(&key, password, &binding(user.id))?,
+        password: password::wrap(&key, password, &binding(user.id))?,
         recovery: recovery::wrap(&key, &code, &binding(user.id))?,
     };
 
@@ -213,11 +214,11 @@ fn removed(path: &Path, failure: AccountError) -> AccountError {
 /// When it fails half way, the files it made are removed.
 ///
 /// Called by: `panels/views/program_start/installation.rs`.
-/// Calls: `keys::check_password`, `system_database::create`, [`install`],
+/// Calls: `password::check_password`, `system_database::create`, [`install`],
 /// [`removed`].
 pub fn create_account(data_dir: &Path, name: &str, password: &str, repeated: &str) -> Result<NewAccount, AccountError> {
     ensure!(password == repeated, AccountError::PasswordsDiffer);
-    keys::check_password(password)?;
+    password::check_password(password)?;
 
     DirBuilder::new()
         .recursive(true)
@@ -270,7 +271,7 @@ pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
 ///
 /// Called by: `panels/views/program_start/login.rs`.
 /// Calls: `system_database::open`, `read_users`, `read_user_keys`,
-/// `keys::unwrap`, `user_database::open`.
+/// `password::unwrap`, `user_database::open`.
 pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, UserDatabase), AccountError> {
     let system = match system_database::open(data_dir, &SYSTEM_TABLES) {
         Ok(system) => system,
@@ -290,7 +291,7 @@ pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, User
         return Err(AccountError::WrongCredentials);
     };
     let keys = read_user_keys(&system, user.id)?;
-    let key = keys::unwrap(&keys.password, password, &binding(user.id))?;
+    let key = password::unwrap(&keys.password, password, &binding(user.id))?;
     let database = user_database::open(data_dir, user.id, &key, &USER_TABLES)?;
 
     Ok((user, database))

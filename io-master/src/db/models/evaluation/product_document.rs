@@ -30,7 +30,7 @@ use crate::model::evaluation::product_document::ProductDocument;
 /// The most passages of one document (a text of 20 million characters).
 const MAX_PASSAGES: usize = 20_000;
 
-/// The table and its index, made when they are missing (`schema.rs`, `USER_TABLES`).
+/// The table and its index, made when they are missing (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS product_documents (
         id      INTEGER PRIMARY KEY,

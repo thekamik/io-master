@@ -4,7 +4,6 @@
 
 use crate::db::models::evaluation::oscal_standard_document::create_oscal_standard_document;
 use crate::db::models::evaluation::product_document::create_product_document;
-use crate::db::models::schema::USER_TABLES;
 use crate::infrastructure::security::random::fill_random;
 use crate::infrastructure::storage::encryption::database_key::DatabaseKey;
 use crate::infrastructure::storage::user_database::{self, UserDatabase};
@@ -14,6 +13,7 @@ use crate::model::evaluation::evaluation_plan::{EvaluationPlan, PlanState};
 use crate::model::evaluation::oscal_standard_document::OscalStandardDocument;
 use crate::model::evaluation::product_document::ProductDocument;
 use crate::model::evaluation::work_unit::{Verdict, WorkUnit};
+use crate::objects::schema::USER_TABLES;
 use crate::test_support::TempDir;
 
 /// A new, empty database; the folder is kept as long as it is.

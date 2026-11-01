@@ -18,6 +18,8 @@ io-master/src/
   domain/         the rules of the data (models/, a mirror of model/): a plan made and changed, its work units, its order,
                   the standards imported
   ai/             the AI on the models (models/, a mirror of model/): the integration, the journal, the agent, the chat
+  objects/        every model with the functions on it, a folder per object (user/; the others come step by step);
+                  schema.rs, the tables of each database
   session/        the user logged in, their open database, the progress of the long work of the AI
   panels/logic/   the work behind each panel, given the open database
   panels/views/   the commands the page calls
@@ -28,15 +30,17 @@ io-master/ui/     the page (Svelte 5, TypeScript strict), a separate project
 
 | Folder | May use |
 |---|---|
-| `model`, `infrastructure::clock`, `::data_folder`, `::security`, `::pdf`, `::storage` | nothing of the program (each part of `infrastructure` only itself) |
+| `model`, `infrastructure::clock`, `::data_folder`, `::security`, `::pdf` | nothing of the program |
+| `infrastructure::storage` | `infrastructure::security` (a new key of a database made of random bytes) |
 | `db` | `infrastructure::storage`, `model` |
 | `domain` | `infrastructure` (`clock`, `pdf`, `storage`), `db`, `model` |
 | `ai` | `infrastructure` (`clock`, `storage`), `domain`, `db`, `model` (inside: the journal, the agent and the chat use the integration; the integration only the API key) |
-| `session` | `infrastructure::storage`, `db`, `model` |
-| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `infrastructure`, `domain`, `db`, `model` |
-| `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `infrastructure::storage`, `domain`, `db`, `model`, `session` |
+| `objects` | `infrastructure`, `db` (the stores still there, named by `schema.rs`), `model` |
+| `session` | `objects::user`, `infrastructure::storage`, `db`, `model` |
+| `panels::logic` | `ai` (of the integration only `question.rs`, `sending.rs`, `address.rs`), `objects`, `infrastructure`, `domain`, `db`, `model` |
+| `panels::views` | `panels::logic`, `ai` (of the integration only `question.rs`, `sending.rs`), `objects`, `infrastructure::storage`, `domain`, `db`, `model`, `session` |
 
-**SQL only in the store**: `rusqlite` and the connection of an open database (`.connection()`) appear only in `infrastructure/storage/` and `db/models/`, checked by `architecture_tests.rs` (`the_sql_is_only_in_the_store`), since the models in the databases are not below the folder of the database files.
+**SQL only in the store**: `rusqlite` and the connection of an open database (`.connection()`) appear only in `infrastructure/storage/`, `db/models/` and the stores of the objects (`objects/**/<object>_store.rs`), checked by `architecture_tests.rs` (`the_sql_is_only_in_the_store`), since the models in the databases are not below the folder of the database files.
 
 `panels/views/` uses `ai/models/ai/integration/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only; a panel whose work is all rules of the data has no folder in `panels/logic/` (`evaluation_plan`: its views call `domain/` and `ai/` alone).
 
@@ -65,13 +69,41 @@ infrastructure/storage/
                  busy database, the tables given by the caller); lists.rs: a list of ids as rows of its own table
   encryption/    the key of the database files and SQLCipher
 
-db/models/<area>/<model>.rs ──SCHEMA──► db/models/schema.rs ──USER_TABLES / SYSTEM_TABLES──► access.rs
-access.rs ──create / open(data_dir, ..., tables)──► storage/ ──UserDatabase / SystemDatabase──► db/models/
+<object>_store.rs, db/models/<area>/<model>.rs ──SCHEMA──► objects/schema.rs ──USER_TABLES / SYSTEM_TABLES──►
+objects/user/user_data/user_data_rules.rs ──create / open(data_dir, ..., tables)──► storage/
+storage/ ──UserDatabase / SystemDatabase──► the stores
+```
+
+`encryption/generate_key.rs` makes the new random key of a database (`DatabaseKey`) at the first start.
+
+### `objects/`
+
+Every model with the functions that work on it (user, 2026-11-01), a folder per object, its files named by the object and their role; the models still in `model/`, `db/`, `domain/` and `ai/` come here step by step (`todo.md`):
+
+| File | Holds | May use |
+|---|---|---|
+| `<object>_model.rs` | the structure, fields only (`data_model.md`) | nothing |
+| `<object>_store.rs` | its tables (`SCHEMA`), `create_`, `read_`, `update_` | the models, `infrastructure/storage/` |
+| `<object>_rules.rs` | the rules of its data | the stores, the models, `infrastructure/` |
+| `<object>_ai.rs` | the work of the AI on it | the rules, the stores, the models |
+
+A big role becomes a folder of the same name (`user_keys_rules/`), whose files carry no prefix. `schema.rs` lists the tables of each database for the caller that opens it.
+
+```text
+objects/user/
+  program_data/  program_data_model.rs (Installation, Settings), program_data_store.rs
+  user_data/     user_data_model.rs (User), user_data_store.rs,
+                 user_data_rules.rs (create_account: the installation, the user, the keys, the databases;
+                 installed_user; log_in; AccountError)
+  user_keys/     user_keys_model.rs (UserKeys, WrappedKey, RecoveryWrappedKey), user_keys_store.rs,
+                 user_keys_rules/ password.rs (the key wrapped with the password: Argon2id, HKDF, AES-256-GCM),
+                 recovery.rs (wrapped with the recovery code), recovery_code.rs (RecoveryCode: 160 bits, groups,
+                 check sum)
 ```
 
 ### `db/`
 
-`db/models/` holds one file per file of `model/`, with its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; `schema.rs` lists the tables of each database (parted by the database, not by the folder; the order does not matter to SQLite); a list of a model is a table of its own, one row per element with its position (`infrastructure/storage/lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). `infrastructure/storage/` makes the missing tables whenever it opens a database; its `encryption/` opens the files with SQLCipher. The knowledge: `models/ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`models/evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
+`db/models/` holds one file per file of `model/`, with its tables (`SCHEMA`) and its functions `create_<model>`, `read_<model>` (`read_<model>s` for a list), `update_<model>`; `objects/schema.rs` lists the tables of each database (parted by the database, not by the folder; the order does not matter to SQLite); a list of a model is a table of its own, one row per element with its position (`infrastructure/storage/lists.rs`). No delete, but `delete_work_unit` for a plan in planning. A new object is given with `id` 0. What a model names must hold together, checked at every write (a work unit and its plan, an API key and its address; in an evaluation, only the results of a work unit change; a document or a proof is frozen once given). `infrastructure/storage/` makes the missing tables whenever it opens a database; its `encryption/` opens the files with SQLCipher. The knowledge: `models/ai/rag.rs` cuts every source into passages of 1500 characters and indexes them (FTS5); a search passes over common English words. The text of a document of the product is cut and indexed the same way when its file is given (`models/evaluation/product_document.rs`), with the place of each passage: it gives the text whole again, and the passages that fit a work unit.
 
 ### `domain/`
 
@@ -159,7 +191,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 
 | Panel | `logic/` | `views/` commands |
 |---|---|---|
-| `program_start` | `access.rs` (first start, login), `keys.rs`, `recovery.rs`, `recovery_code.rs`, `generate_key.rs` | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
+| `program_start` | none: the first start and the login are the rules of the user (`objects/user/user_data/user_data_rules.rs`) | `installation_create`, `login_get`, `login_log_in`, `login_log_out` |
 | `evaluation_plan` | none: the rules are in `domain/models/evaluation/`, "Fill with AI" in `ai/models/evaluation/` | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | none: the rules of an agent and of the knowledge are in `domain/models/ai/`, its knowledge and its question in `ai/models/ai/agent.rs` | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `domain/models/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
