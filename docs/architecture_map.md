@@ -23,7 +23,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Stored** (`objects/ai/agent/agent_store.rs`): `create_agent`, `read_agent`, `read_agents`, `update_agent`
 - **Processed, the rules of the data**:
   - `objects/ai/agent/agent_rules.rs`: `change_agent`, `checked`, `checked_glossary`, `new_agent`
-  - `domain/models/ai/chat.rs`: `new_chat`
+  - `objects/ai/chat/chat_rules.rs`: `new_chat`
   - `domain/models/evaluation/evaluation_plan/evaluation.rs`: `change_agent`, `new_evaluation`
   - `domain/models/evaluation/evaluation_plan/planning.rs`: `update_plan`
   - `domain/models/evaluation/work_unit/parameters.rs`: `update_work_unit_parameters`
@@ -70,14 +70,14 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/settings/IntegrationForm.svelte` ← `integration_set_key`, `integration_check`
   - `views/settings/IntegrationList.svelte` ← `integration_list`
 
-### `model/ai/chat.rs`: `Chat`, `Message`, `Speaker`
+### `objects/ai/chat/chat_model.rs`: `Chat`, `Message`, `Speaker`
 
-- **Stored** (`db/models/ai/chat.rs`): `create_chat`, `create_message`, `read_chat`, `read_chats`, `update_chat`
+- **Stored** (`objects/ai/chat/chat_store.rs`): `create_chat`, `create_message`, `read_chat`, `read_chats`, `update_chat`
 - **Processed, the rules of the data**:
-  - `domain/models/ai/chat.rs`: `add_question`, `new_chat`, `rename_chat`
+  - `objects/ai/chat/chat_rules.rs`: `add_question`, `new_chat`, `rename_chat`
 - **Processed, the AI**:
   - `objects/ai/agent/agent_ai.rs`: `agent_question`
-  - `ai/models/ai/chat.rs`: `add_answer`, `chat_question`, `leave_oldest_out`, `search_text`
+  - `objects/ai/chat/chat_ai.rs`: `add_answer`, `chat_question`, `leave_oldest_out`, `search_text`
   - `objects/ai/integration/integration_ai/anthropic.rs`: `body`
   - `objects/ai/integration/integration_ai/openai.rs`: `body`
   - `objects/ai/integration/integration_ai/question.rs`: `prepare`
@@ -123,7 +123,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`objects/ai/journal/journal_store.rs`): `create_journal_entry`, `read_journal_entry`, `read_journal_entries`, `read_latest_journal_entry`
 - **Processed, the AI**:
-  - `ai/models/ai/chat.rs`: `kept_text`
+  - `objects/ai/chat/chat_ai.rs`: `kept_text`
   - `objects/ai/integration/integration_ai/anthropic.rs`: `ending_of`
   - `objects/ai/integration/integration_ai/openai.rs`: `ending_of`
   - `objects/ai/journal/journal_ai.rs`: `record`, `write_entry`

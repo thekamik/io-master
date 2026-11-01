@@ -221,7 +221,7 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 /// Called by: [`read_agents`], [`update_agent`]; `objects/ai/agent/agent_ai.rs`:
 /// `agent_knowledge`, `agent_question`; `ai/models/evaluation/evaluation_plan.rs`:
 /// `preview`, `fill_preview`; `objects/ai/agent/agent_rules.rs`: `checked`,
-/// `change_agent`; `domain/models/ai/chat.rs`: `new_chat`;
+/// `change_agent`; `objects/ai/chat/chat_rules.rs`: `new_chat`;
 /// `domain/models/evaluation/evaluation_plan/evaluation.rs`: `change_agent`,
 /// `new_evaluation`; `domain/models/evaluation/evaluation_plan/planning.rs`:
 /// `update_plan`; `domain/models/evaluation/work_unit/parameters.rs`:

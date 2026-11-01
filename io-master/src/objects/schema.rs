@@ -17,10 +17,10 @@
 //!   (the first start, the login) ──create / open(data_dir, ..., tables)──► infrastructure/storage/
 //! ```
 
-use crate::db::models::ai::chat;
 use crate::db::models::evaluation::{evaluation_plan, lab_proof, oscal_standard_document, product_document, work_unit};
 use crate::objects::ai::agent::agent_store;
 use crate::objects::ai::api_key::api_key_store;
+use crate::objects::ai::chat::chat_store;
 use crate::objects::ai::integration::integration_store;
 use crate::objects::ai::journal::journal_store;
 use crate::objects::ai::rag::rag_store;
@@ -30,11 +30,10 @@ use crate::objects::user::user_keys::user_keys_store;
 
 /// The tables of the database of the user (`users/<id>.v2.db`, encrypted).
 pub const USER_TABLES: [&str; 12] = [
-    // db/models/ai/
-    chat::SCHEMA,
     // objects/ai/
     agent_store::SCHEMA,
     api_key_store::SCHEMA,
+    chat_store::SCHEMA,
     integration_store::SCHEMA,
     journal_store::SCHEMA,
     rag_store::SCHEMA,

@@ -113,10 +113,10 @@ mod tests {
     use tokio::sync::mpsc;
     use zeroize::Zeroizing;
 
-    use crate::model::ai::chat::{Message, Speaker};
     use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::api_key::api_key_model::ApiKey;
     use crate::objects::ai::api_key::api_key_store::{create_api_key, update_api_key};
+    use crate::objects::ai::chat::chat_model::{Message, Speaker};
     use crate::objects::ai::integration::integration_ai::question::{Question, prepare};
     use crate::objects::ai::integration::integration_ai::sending::send;
     use crate::objects::ai::integration::integration_model::{Integration, Protocol};

@@ -62,8 +62,9 @@ impl UserDatabase {
     /// (`the_sql_is_only_in_the_store`), since the models in the databases
     /// are no longer below this folder.
     ///
-    /// Called by: every function of `db/models/ai/`, `db/models/evaluation/`
-    /// and `objects/user/program_data/program_data_store.rs` (the settings) that runs SQL.
+    /// Called by: every function of the stores that runs SQL on the data of
+    /// the user: `objects/ai/*/<object>_store.rs`, `db/models/evaluation/`,
+    /// `objects/user/program_data/program_data_store.rs` (the settings).
     pub fn connection(&self) -> &Connection {
         &self.connection
     }

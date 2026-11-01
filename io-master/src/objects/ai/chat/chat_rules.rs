@@ -2,21 +2,21 @@
 //! and talks with the model of its integration. A chat is never removed;
 //! its title may be changed. The question of a chat with the knowledge of
 //! its agent, and its answer written, are a part of the AI
-//! (`ai/models/ai/chat.rs`).
+//! (`objects/ai/chat/chat_ai.rs`).
 //!
 //! ```text
 //! new_chat(title, agent) ──► create_chat (no messages yet)
 //! rename_chat            ──► update_chat (the title only)
-//! add_question           ──► the question written into the chat, once ai/models/ai/chat.rs: prepared took it
+//! add_question           ──► the question written into the chat, once objects/ai/chat/chat_ai.rs: prepared took it
 //! ```
 
-use crate::db::models::ai::chat::{create_chat, create_message, read_chat, update_chat};
 use crate::domain::error::DomainError;
 use crate::domain::text::checked_text;
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::chat::{Chat, Message, Speaker};
 use crate::objects::ai::agent::agent_store::read_agent;
+use crate::objects::ai::chat::chat_model::{Chat, Message, Speaker};
+use crate::objects::ai::chat::chat_store::{create_chat, create_message, read_chat, update_chat};
 
 /// The longest title of a chat, in characters.
 const MAX_TITLE: usize = 200;
@@ -28,7 +28,7 @@ pub const MAX_QUESTION: usize = 20_000;
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_create`.
 /// Calls: `domain/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`: `read_agent`;
-/// `db/models/ai/chat.rs`: `create_chat`.
+/// `objects/ai/chat/chat_store.rs`: `create_chat`.
 pub fn new_chat(db: &UserDatabase, title: &str, agent: i64) -> Result<i64, DomainError> {
     let title = checked_text(title, "the title of the chat", MAX_TITLE)?;
 
@@ -41,7 +41,7 @@ pub fn new_chat(db: &UserDatabase, title: &str, agent: i64) -> Result<i64, Domai
 /// stay as they were.
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_rename`.
-/// Calls: `db/models/ai/chat.rs`: `read_chat`, `update_chat`; `domain/text.rs`:
+/// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`, `update_chat`; `domain/text.rs`:
 /// `checked_text`.
 pub fn rename_chat(db: &UserDatabase, chat: i64, title: &str) -> Result<(), DomainError> {
     let mut stored = read_chat(db, chat)?;
@@ -54,7 +54,7 @@ pub fn rename_chat(db: &UserDatabase, chat: i64, title: &str) -> Result<(), Doma
 /// The question trimmed; refused when it is empty or over
 /// [`MAX_QUESTION`].
 ///
-/// Called by: [`add_question`]; `ai/models/ai/chat.rs`: `chat_question`.
+/// Called by: [`add_question`]; `objects/ai/chat/chat_ai.rs`: `chat_question`.
 /// Calls: `domain/text.rs`: `checked_text`.
 pub fn checked_question(text: &str) -> Result<String, DomainError> {
     checked_text(text, "the question", MAX_QUESTION)
@@ -65,7 +65,7 @@ pub fn checked_question(text: &str) -> Result<String, DomainError> {
 ///
 /// Called by: `panels/views/chat/chats.rs` (`chat_ask`, once the question is
 /// prepared).
-/// Calls: [`checked_question`]; `infrastructure/clock.rs`: `now`; `db/models/ai/chat.rs`:
+/// Calls: [`checked_question`]; `infrastructure/clock.rs`: `now`; `objects/ai/chat/chat_store.rs`:
 /// `create_message`.
 pub fn add_question(db: &UserDatabase, chat: i64, text: &str) -> Result<(), DomainError> {
     let message = Message {

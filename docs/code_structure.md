@@ -99,6 +99,10 @@ objects/ai/
                  integration and bases that exist, limits in their ranges, the glossary),
                  agent_ai.rs (the passages of its bases that fit a question: its glossary, its limits;
                  agent_question: its instructions, the task, its knowledge, the messages ──► Question)
+  chat/          chat_model.rs (Chat, Message, Speaker), chat_store.rs,
+                 chat_rules.rs (new_chat, rename_chat, checked_question, add_question),
+                 chat_ai.rs (chat_question with the knowledge of its agent, prepared: its oldest messages left out
+                 until it fits; add_answer: the answer written into the chat with its mark)
   api_key/       api_key_model.rs (ApiKey), api_key_store.rs (bound to the origin of its integration),
                  api_key_ai.rs (the key masked in every text taken from an answer)
   journal/       journal_model.rs (JournalEntry, Ending), journal_store.rs,
@@ -127,8 +131,6 @@ objects/user/
 The rules of the data (user, 2026-11-01: `data_model.md`, "the rules of the data live outside `model/`"), in a mirror of `model/`; `error.rs` (`DomainError`: refused, a document that is no OSCAL catalog, a PDF whose text cannot be read, or a failure of the database), which each panel turns into its own error; `text.rs` (`checked_text`, `check_length`), the one rule of a text the user gives.
 
 ```text
-domain/models/ai/
-  chat.rs                    new_chat, rename_chat, checked_question, add_question
 domain/models/evaluation/
   evaluation_plan/
     planning.rs              the life of a plan and its data: create_plan (the verdicts of Common Criteria),
@@ -152,13 +154,10 @@ domain/models/evaluation/
 
 ### `ai/`
 
-The core of the program that talks with the AI (user, 2026-11-01: a core part gets a folder of its own, as `db/` has; `panels/logic/` holds only what a panel shows). **`ai/models/` mirrors `model/`**, as `db/models/` does: the functions of the AI on each model are in the file (or the folder) of its name; their error is `objects/ai_error.rs` (`AiError`). The integration, its API key, the journal, the agent and the knowledge are already objects (`objects/ai/`, below).
+The core of the program that talks with the AI (user, 2026-11-01: a core part gets a folder of its own, as `db/` has; `panels/logic/` holds only what a panel shows). **`ai/models/` mirrors `model/`**, as `db/models/` does: the functions of the AI on each model are in the file (or the folder) of its name; their error is `objects/ai_error.rs` (`AiError`). Everything of `model/ai/` is already an object (`objects/ai/`, below).
 
 ```text
 ai/
-  models/ai/
-    chat.rs             Chat: the question of a chat with the knowledge of its agent (chat_question, prepared: its oldest
-                        messages left out until it fits); the answer written into the chat with its mark (add_answer)
   models/evaluation/
     evaluation_plan.rs  EvaluationPlan: the work units to assess (units_ready, the preview) and to fill (fill_units,
                         fill_preview); the loops assess_evaluation and fill_plan, a step per work unit, each written
@@ -192,7 +191,7 @@ Each panel has a folder in both layers. The logic gets the open database as a pa
 | `evaluation_plan` | none: the rules are in `domain/models/evaluation/`, "Fill with AI" in `ai/models/evaluation/` | `standard_*`, `plan_*`, `work_unit_*`, `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`, `plan_fill_progress`, `plan_fill_stop` |
 | `agents` | none: the agent and the knowledge are objects (`objects/ai/agent/`, `objects/ai/rag/`) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `domain/models/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
-| `chat` | none: the rules of a chat are in `domain/models/ai/chat.rs`, its question and its answer in `ai/models/ai/chat.rs` | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
+| `chat` | none: the chat is an object (`objects/ai/chat/`) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
 | `settings` | `integrations.rs` (an integration checked, its key, the question that checks it) | `integration_*` |
 
 A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `capabilities/default.json`; its function on the page is in `ui/src/lib/api/<panel>.ts`, named as the command.

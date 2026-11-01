@@ -17,7 +17,7 @@
 use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
-use crate::model::ai::chat::Speaker;
+use crate::objects::ai::chat::chat_model::Speaker;
 use crate::objects::ai::integration::integration_ai::reading::Reading;
 use crate::objects::ai::integration::integration_ai::sse::SseEvent;
 use crate::objects::ai::integration::integration_ai::turns::Turn;

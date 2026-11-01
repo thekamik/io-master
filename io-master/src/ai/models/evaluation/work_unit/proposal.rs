@@ -39,12 +39,12 @@ use crate::db::models::evaluation::work_unit::{
 use crate::domain::models::evaluation::evaluation_plan::planning::plan_to_fill;
 use crate::domain::models::evaluation::work_unit::parameters::{WorkUnitParameters, update_work_unit_parameters};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::chat::{Message, Speaker};
 use crate::model::evaluation::evaluation_plan::EvaluationPlan;
 use crate::model::evaluation::lab_proof::LabProof;
 use crate::model::evaluation::work_unit::WorkUnit;
 use crate::objects::ai::agent::agent_ai::agent_question;
 use crate::objects::ai::agent::agent_store::read_agents;
+use crate::objects::ai::chat::chat_model::{Message, Speaker};
 use crate::objects::ai::integration::integration_ai::question::Question;
 
 /// The longest guidance taken from an answer, in characters.

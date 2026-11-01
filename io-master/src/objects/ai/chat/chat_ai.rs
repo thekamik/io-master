@@ -2,7 +2,7 @@
 //! chat, with the instructions and the knowledge of its agent and as many of
 //! the latest messages of the chat as fit into the context of the model; the
 //! answer written into the chat. The rules of a chat (made, renamed, a
-//! question written) are in `domain/models/ai/chat.rs`.
+//! question written) are in `objects/ai/chat/chat_rules.rs`.
 //!
 //! ```text
 //! chat_question ──► the instructions of the agent
@@ -23,12 +23,12 @@
 //! many. The chat keeps them all, and the journal of the agent keeps the
 //! question as it was sent.
 
-use crate::db::models::ai::chat::{MAX_MESSAGES as MAX_CHAT_MESSAGES, create_message, read_chat};
-use crate::domain::models::ai::chat::checked_question;
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::chat::{Message, Speaker};
 use crate::objects::ai::agent::agent_ai::agent_question;
+use crate::objects::ai::chat::chat_model::{Message, Speaker};
+use crate::objects::ai::chat::chat_rules::checked_question;
+use crate::objects::ai::chat::chat_store::{MAX_MESSAGES as MAX_CHAT_MESSAGES, create_message, read_chat};
 use crate::objects::ai::integration::integration_ai::question::{MAX_MESSAGES, Prepared, Question, prepare};
 use crate::objects::ai::journal::journal_ai::Answer;
 use crate::objects::ai::journal::journal_model::Ending;
@@ -104,7 +104,7 @@ fn search_text(messages: &[Message], question: &str) -> String {
 /// has no agent or no room for the question and its answer.
 ///
 /// Called by: [`prepared`].
-/// Calls: `db/models/ai/chat.rs`: `read_chat`; `domain/models/ai/chat.rs`:
+/// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`; `objects/ai/chat/chat_rules.rs`:
 /// `checked_question`; [`search_text`]; `objects/ai/agent/agent_ai.rs`: `agent_question`.
 fn chat_question(db: &UserDatabase, chat: i64, text: &str) -> Result<Question, AiError> {
     let stored = read_chat(db, chat)?;
@@ -165,7 +165,7 @@ fn kept_text(answer: &Answer) -> Option<String> {
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_ask` (after `objects/ai/journal/journal_ai.rs`:
 /// `record`).
-/// Calls: [`kept_text`]; `infrastructure/clock.rs`: `now`; `db/models/ai/chat.rs`:
+/// Calls: [`kept_text`]; `infrastructure/clock.rs`: `now`; `objects/ai/chat/chat_store.rs`:
 /// `create_message`.
 pub fn add_answer(db: &UserDatabase, chat: i64, answer: &Answer) -> Result<Option<Message>, AiError> {
     let Some(text) = kept_text(answer) else {
@@ -187,11 +187,11 @@ mod tests {
 
     use super::*;
 
-    use crate::db::models::ai::chat::create_chat;
     use crate::domain::error::DomainError;
-    use crate::domain::models::ai::chat::{add_question, new_chat};
-    use crate::model::ai::chat::Chat;
     use crate::objects::ai::agent::agent_store::create_agent;
+    use crate::objects::ai::chat::chat_model::Chat;
+    use crate::objects::ai::chat::chat_rules::{add_question, new_chat};
+    use crate::objects::ai::chat::chat_store::create_chat;
     use crate::objects::ai::integration::integration_model::Integration;
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};

@@ -82,21 +82,7 @@ const ALLOWED: [(&str, &[&str]); 23] = [
         "ai",
         &[
             AI_ERROR,
-            AGENT,
-            INTEGRATION,
-            JOURNAL,
-            "infrastructure::clock",
-            "domain",
-            "db",
-            "infrastructure::storage",
-            "model",
-        ],
-    ),
-    // The chat asks through the integration.
-    (
-        "ai::models::ai::chat",
-        &[
-            AI_ERROR,
+            CHAT_MODEL,
             AGENT,
             INTEGRATION,
             JOURNAL,
@@ -116,8 +102,8 @@ const ALLOWED: [(&str, &[&str]); 23] = [
         &[
             AI_ERROR,
             "ai::lock",
-            "ai::models::ai",
             AGENT,
+            CHAT_MODEL,
             INTEGRATION,
             JOURNAL,
             "domain",
@@ -183,13 +169,23 @@ const ALLOWED: [(&str, &[&str]); 23] = [
     // bound to.
     ("objects::ai::api_key", &[AI_ERROR, INTEGRATION_MODEL, INTEGRATION_STORE, "infrastructure::storage"]),
     // The integration (the service, its connection) knows of the other
-    // objects only the API key, masked in its errors, and the model of the
-    // journal (how an answer ended, `Ending`).
-    ("objects::ai::integration", &[AI_ERROR, "objects::ai::api_key", JOURNAL_MODEL, "infrastructure", "model"]),
+    // objects only the API key, masked in its errors, the model of the
+    // journal (how an answer ended, `Ending`) and the model of a chat (the
+    // messages of a question, `Message`, `Speaker`).
+    (
+        "objects::ai::integration",
+        &[AI_ERROR, "objects::ai::api_key", CHAT_MODEL, JOURNAL_MODEL, "infrastructure", "model"],
+    ),
     // The agent asks through the integration, with the knowledge of its
     // bases; the knowledge knows no other object.
-    ("objects::ai::agent", &[AI_ERROR, INTEGRATION, "objects::ai::rag", "infrastructure", "db", "domain", "model"]),
+    (
+        "objects::ai::agent",
+        &[AI_ERROR, CHAT_MODEL, INTEGRATION, "objects::ai::rag", "infrastructure", "db", "domain", "model"],
+    ),
     ("objects::ai::rag", &["infrastructure", "db", "domain", "model"]),
+    // The chat asks through its agent and the integration, and keeps its
+    // answer after the journal has it.
+    ("objects::ai::chat", &[AI_ERROR, AGENT, INTEGRATION, JOURNAL, "infrastructure", "db", "domain", "model"]),
     // The journal writes what the integration asked and was answered.
     ("objects::ai::journal", &[AI_ERROR, INTEGRATION, "infrastructure", "db", "model"]),
     // The session: the user logged in and their open database.
@@ -242,7 +238,8 @@ const AGENT: &str = "objects::ai::agent";
 const AGENT_STORE: &str = "objects::ai::agent::agent_store";
 const RAG: &str = "objects::ai::rag";
 const RAG_STORE: &str = "objects::ai::rag::rag_store";
-const CHAT: &str = "ai::models::ai::chat";
+const CHAT: &str = "objects::ai::chat";
+const CHAT_MODEL: &str = "objects::ai::chat::chat_model";
 const PROGRESS: &str = "ai::models::session::progress";
 const EVALUATION_PLAN: &str = "ai::models::evaluation::evaluation_plan";
 const ASSESSMENT_QUESTION: &str = "ai::models::evaluation::work_unit::assessment_question";

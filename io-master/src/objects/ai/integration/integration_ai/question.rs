@@ -19,8 +19,8 @@ use zeroize::Zeroizing;
 
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::chat::{Message, Speaker};
 use crate::objects::ai::api_key::api_key_store::read_api_key;
+use crate::objects::ai::chat::chat_model::{Message, Speaker};
 use crate::objects::ai::integration::integration_ai::address::check_address;
 use crate::objects::ai::integration::integration_ai::connection::Request;
 use crate::objects::ai::integration::integration_ai::protocol::{body, needs_key};
@@ -100,7 +100,7 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// fits. Refused when there is nothing to ask, the address is not one the
 /// program sends to, or the protocol needs a key the integration has not.
 ///
-/// Called by: `ai/models/ai/chat.rs`: `prepare_shortened`;
+/// Called by: `objects/ai/chat/chat_ai.rs`: `prepare_shortened`;
 /// `ai/models/evaluation/work_unit/assessment.rs`: `prepared_assessment`;
 /// `panels/logic/settings/integrations.rs`: `check_question`;
 /// `ai/models/evaluation/work_unit/filling.rs`: `prepared_question`; under the

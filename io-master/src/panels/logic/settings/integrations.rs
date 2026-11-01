@@ -10,9 +10,9 @@
 use zeroize::Zeroizing;
 
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::chat::{Message, Speaker};
 use crate::objects::ai::api_key::api_key_model::ApiKey;
 use crate::objects::ai::api_key::api_key_store::{MAX_KEY, read_api_key, update_api_key};
+use crate::objects::ai::chat::chat_model::{Message, Speaker};
 use crate::objects::ai::integration::integration_ai::address::{check_address, check_certificate};
 use crate::objects::ai::integration::integration_ai::question::{Prepared, Question, prepare};
 use crate::objects::ai::integration::integration_model::Integration;

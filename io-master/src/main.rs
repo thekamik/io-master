@@ -66,10 +66,6 @@ mod infrastructure {
 // model/: the data of the program as it is kept in the databases, one
 // structure per kind of data, fields only (docs/data_model.md).
 mod model {
-    // model/ai/: the chats.
-    pub mod ai {
-        pub mod chat;
-    }
     // model/evaluation/: the plan of an evaluation, its work units, the
     // standards, the documents of the product and the proofs of the
     // laboratory.
@@ -93,10 +89,6 @@ mod db {
     // per file of model/, no delete (user, 2026-10-28); the tables of each
     // database in their order.
     pub mod models {
-        // db/models/ai/: the chats.
-        pub mod ai {
-            pub mod chat;
-        }
         // db/models/evaluation/: the plans, their work units, the standards,
         // the documents of the product, the proofs of the laboratory.
         pub mod evaluation {
@@ -117,10 +109,6 @@ mod domain {
     // The one rule of a text the user gives: trimmed, within its limit.
     pub mod text;
     pub mod models {
-        // domain/models/ai/: the rules of a chat.
-        pub mod ai {
-            pub mod chat;
-        }
         // domain/models/evaluation/: the rules of a plan, of its work units
         // and of its standards.
         pub mod evaluation {
@@ -152,12 +140,6 @@ mod ai {
     // The locks of the session as a long work of the AI takes them.
     pub mod lock;
     pub mod models {
-        // ai/models/ai/: the AI on the models of model/ai/.
-        pub mod ai {
-            // The chat: a question shortened from its oldest messages until
-            // it fits.
-            pub mod chat;
-        }
         // ai/models/evaluation/: the AI on a plan and its work units: the
         // assessment of an evaluation and "Fill with AI", the loops over the
         // work units in evaluation_plan.rs, the work on one work unit in
@@ -194,7 +176,8 @@ mod objects {
     // database is opened.
     pub mod schema;
     // objects/ai/: the integrations with the AI services and their keys, the
-    // agents and their knowledge, the journal of every question of an agent.
+    // agents and their knowledge, the chats, the journal of every question of
+    // an agent.
     pub mod ai {
         // The agent: a layer of knowledge over the model of an integration;
         // the knowledge it gives with a question, and the question it asks
@@ -211,6 +194,14 @@ mod objects {
             pub mod api_key_ai;
             pub mod api_key_model;
             pub mod api_key_store;
+        }
+        // The chat of the user with an agent: its rules, its question
+        // shortened from its oldest messages until it fits, its answer.
+        pub mod chat {
+            pub mod chat_ai;
+            pub mod chat_model;
+            pub mod chat_rules;
+            pub mod chat_store;
         }
         // The integration, the service that answers: the question prepared
         // and sent, the address checked, the connection over TLS 1.3, the

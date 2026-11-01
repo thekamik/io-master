@@ -7,7 +7,7 @@
 //! are joined into one, and an answer of the model at the start is dropped.
 //! Nothing of the text is shortened.
 
-use crate::model::ai::chat::{Message, Speaker};
+use crate::objects::ai::chat::chat_model::{Message, Speaker};
 
 /// One turn of the conversation.
 #[derive(Debug, Clone, PartialEq, Eq)]

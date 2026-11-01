@@ -26,12 +26,12 @@ use tauri::State;
 use tauri::ipc::Channel;
 use tokio::sync::mpsc;
 
-use crate::ai::models::ai::chat::{add_answer, prepared};
-use crate::db::models::ai::chat::{read_chat, read_chats};
-use crate::domain::models::ai::chat::{MAX_QUESTION, add_question, new_chat, rename_chat};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::chat::{Chat, Message, Speaker};
 use crate::objects::ai::agent::agent_store::read_agent;
+use crate::objects::ai::chat::chat_ai::{add_answer, prepared};
+use crate::objects::ai::chat::chat_model::{Chat, Message, Speaker};
+use crate::objects::ai::chat::chat_rules::{MAX_QUESTION, add_question, new_chat, rename_chat};
+use crate::objects::ai::chat::chat_store::{read_chat, read_chats};
 use crate::objects::ai::integration::integration_ai::question::Prepared;
 use crate::objects::ai::integration::integration_ai::sending::{Sent, send};
 use crate::objects::ai::journal::journal_ai::record;

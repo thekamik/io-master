@@ -12,9 +12,9 @@
 //! ```
 
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::model::ai::chat::Message;
 use crate::objects::ai::agent::agent_model::GlossaryEntry;
 use crate::objects::ai::agent::agent_store::read_agent;
+use crate::objects::ai::chat::chat_model::Message;
 use crate::objects::ai::integration::integration_ai::question::Question;
 use crate::objects::ai::rag::rag_store::{MAX_FOUND, read_passages};
 use crate::objects::ai_error::AiError;
@@ -128,7 +128,7 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
 ///
 /// Called by: `ai/models/evaluation/work_unit/proposal.rs`: `question_of`;
 /// `ai/models/evaluation/work_unit/assessment_question.rs`: `question_of`;
-/// `chat.rs`: `chat_question`.
+/// `objects/ai/chat/chat_ai.rs`: `chat_question`.
 /// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`agent_knowledge`].
 pub fn agent_question(
     db: &UserDatabase,
@@ -168,9 +168,9 @@ mod tests {
 
     use super::*;
 
-    use crate::model::ai::chat::Speaker;
     use crate::objects::ai::agent::agent_model::Agent;
     use crate::objects::ai::agent::agent_store::{create_agent, update_agent};
+    use crate::objects::ai::chat::chat_model::Speaker;
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
     use crate::objects::ai::rag::rag_store::{create_knowledge_base, create_source};

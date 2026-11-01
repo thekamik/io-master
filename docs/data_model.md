@@ -14,8 +14,8 @@ The models of `io-master/src/model/` and of `io-master/src/objects/` (`<object>_
 ## 2. The models and their links
 
 ```text
-model/evaluation/                                   model/ai/, objects/ai/
-─────────────────                                   ──────────────────────
+model/evaluation/                                   objects/ai/
+─────────────────                                   ───────────
 EvaluationPlan                                      Integration ◄── ApiKey (integration)
   ├── oscal_documents ──────► OscalStandardDocument      ▲
   ├── product_documents ────► ProductDocument            │ integration
@@ -48,7 +48,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `ProductDocument` | `product_document.rs` | id, name, content, version | `product_documents` |
 | `LabProof` | `lab_proof.rs` | id, name, proof, performed, tester, equipment | `lab_proofs` |
 
-### 2.2 `model/ai/` and `objects/ai/`
+### 2.2 `objects/ai/`
 
 | Model | File | Fields | Table |
 |---|---|---|---|
@@ -61,9 +61,9 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `Source` | `objects/ai/rag/rag_model.rs` | id, knowledge_base, name, text | `knowledge_sources` (index: `knowledge_passages`, FTS5) |
 | `JournalEntry` | `objects/ai/journal/journal_model.rs` | id, time, integration, model, agent, work_unit, request, answer, ending, input_tokens, output_tokens | `ai_journal` |
 | `Ending` | `objects/ai/journal/journal_model.rs` | Complete, Cut, Stopped, Refused, Failed | (a column) |
-| `Chat` | `chat.rs` | id, title, agent, work_unit, messages | `chats` |
-| `Message` | `chat.rs` | speaker, text, time | `chat_messages` |
-| `Speaker` | `chat.rs` | User, Ai | (a column) |
+| `Chat` | `objects/ai/chat/chat_model.rs` | id, title, agent, work_unit, messages | `chats` |
+| `Message` | `objects/ai/chat/chat_model.rs` | speaker, text, time | `chat_messages` |
+| `Speaker` | `objects/ai/chat/chat_model.rs` | User, Ai | (a column) |
 
 ### 2.3 `objects/user/`
 
