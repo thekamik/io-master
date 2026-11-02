@@ -89,6 +89,8 @@
 
     void write(async () => {
       await knowledgeBaseSave(fields);
+      // Read again: the program keeps the stop words in lower case, each once.
+      await load(base);
       return true;
     });
   }
