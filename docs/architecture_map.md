@@ -279,7 +279,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the AI**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`, `units_in_order`, `units_to_assess`
   - `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assess_work_unit`, `prepared_question`, `written`
-  - `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`, `badness`, `verdict_of`, `with_dependencies`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`, `dependency_warnings`, `verdict_of`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`, `assessment_question`, `dependencies_text`, `documents_text`, `label_of`, `proofs_text`, `question_of`, `unit_json`, `verdict_name`
   - `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`
   - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `apply_dependencies`, `apply_parameters`, `chosen_proofs`, `current_parameters`, `dependencies_question`, `labels`, `parameters_question`, `proof_named`, `question_of`, `summary`

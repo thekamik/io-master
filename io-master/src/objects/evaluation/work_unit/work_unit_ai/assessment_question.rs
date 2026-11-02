@@ -3,13 +3,15 @@
 //! it has none of its own.
 //!
 //! ```text
-//! the instructions of the agent + the task (the verdicts of the plan, the form of the answer)
-//!   + the knowledge of the agent that fits the work unit (RAG)
+//! the instructions of the agent
+//!   + the knowledge of the agent that fits the work unit (RAG, optional), each passage under its source
+//!   + the task: of the documentation, or of a functional test (a work unit with proofs); the form of the answer
 //! the question:
-//!   the work unit as JSON, but id, author, ai_agent and cross_reference; its ids written as names
-//!   its dependencies: their labels, verdicts and findings
+//!   the work unit as JSON: its requirement, guidance and parameters, its ids written as names; never its
+//!     results, so that an assessment made again is not led by the one before
+//!   its dependencies: their labels, verdicts and findings, for the model to weigh
 //!   its documents: their text whole, or the passages that fit the work unit best
-//!   its proofs: their text with the record of the test
+//!   its proofs (a functional test only): their text with the record of the test
 //! ```
 //!
 //! Whether the documents fit whole into the context of the model is told by
@@ -42,19 +44,39 @@ const DOCUMENT_PASSAGES: usize = 20;
 /// characters.
 const MAX_DEPENDENCY_FINDINGS: usize = 1000;
 
-/// The task of the assessment, given after the instructions of the agent;
-/// `{verdicts}` is replaced by the verdicts of the plan.
-const ASSESSMENT_TASK: &str = "You assess one work unit of a security evaluation: whether the documents of the \
-product and the proofs of the laboratory given with it meet its requirement. Answer with one JSON object and nothing \
-else:\n\
+/// What the two tasks of the assessment share: the form of the answer and
+/// how it is written (user, 2026-11-02). `{verdicts}` is replaced by the
+/// verdicts of the plan.
+const ANSWER_FORM: &str = "Answer with one JSON object and nothing else:\n\
 {\"verdict\": one of {verdicts},\n \
-\"findings\": every fault you found, one per line, or an empty text,\n \
-\"analysis\": how the evidence meets or fails the requirement,\n \
+\"findings\": each thing the requirement asks for and the evidence does not give, one per line; empty when none,\n \
+\"analysis\": how the evidence meets or fails the requirement, briefly,\n \
 \"vulnerability_notes\": what an attacker could use, or an empty text,\n \
-\"notes\": anything else the evaluator should know,\n \
+\"notes\": anything else the evaluator should know, or an empty text,\n \
 \"quotes\": [{\"document\": the name of a document given, \"text\": a fragment of it, word for word}]}\n\
-Rest every statement on a quote. Quote only the documents given, word for word: a quote that is not found in its \
-document is not taken.";
+Point with quotes to the places your verdict rests on; a quote is help for the evaluator, not a condition of the \
+verdict. Write briefly and to the point: no repetition of the requirement, no general remarks.";
+
+/// The task of the assessment of a work unit of the documentation (one
+/// without proofs of the laboratory), given last in the instructions.
+const DOCUMENTATION_TASK: &str = "You assess one work unit of a security evaluation as an experienced evaluator: \
+does the product, as its documents describe it, meet the requirement of the work unit? Judge by the substance of \
+the documents, as the evaluation methodology means the requirement; evaluations differ, and a requirement met in \
+other words or in another place of the document is met.\n\n\
+The documents of the product given in the question are the evidence. The knowledge given above, if any, is help \
+in reading the requirement: interpretations of the standard come first, then examples of earlier evaluations and \
+the guidance of the laboratory; it is never evidence about this product.\n\n";
+
+/// The task of the assessment of a work unit of a functional test (one with
+/// proofs of the laboratory), given last in the instructions.
+const FUNCTIONAL_TASK: &str = "You assess one work unit of a security evaluation as an experienced evaluator: do \
+the documents of the product and the proofs of the laboratory show that the requirement of the work unit is met? \
+Judge by the substance of the evidence, as the evaluation methodology means the requirement; evaluations differ, \
+and a requirement met in other words or in another place is met.\n\n\
+The documents of the product and the proofs of the laboratory (the record of each test: who performed it, when and \
+with what) given in the question are the evidence. The knowledge given above, if any, is help in reading the \
+requirement: interpretations of the standard come first, then examples of earlier evaluations and the guidance of \
+the laboratory; it is never evidence about this product.\n\n";
 
 /// The name of a verdict, as the question and the answer write it:
 /// `Verdict::Pass` is "pass".
@@ -63,8 +85,8 @@ document is not taken.";
 /// Output: its name (`"pass"`).
 ///
 /// Called by: [`unit_json`], [`dependencies_text`], [`question_of`];
-/// `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `verdict_of`,
-/// `with_dependencies`; `panels/views/evaluation/work_units.rs`: `row_of`, `needs_of`,
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `verdict_of`;
+/// `panels/views/evaluation/work_units.rs`: `row_of`, `needs_of`,
 /// `unit_view`; `panels/views/progress.rs`: `progress_view`.
 pub fn verdict_name(verdict: Verdict) -> &'static str {
     match verdict {
@@ -114,18 +136,17 @@ fn label_of(units: &[WorkUnit], id: i64) -> String {
 ///
 /// Input: `unit`, the work unit assessed; `units`, the work units of its
 /// evaluation.
-/// Output: the JSON (`{"label": "ADV_ARC.1-1", "standard": "CEM",
-/// "dependencies": [...], ...}`); an error of the database for a standard, a
-/// document or a proof missing.
+/// Output: the JSON without the results of the work unit (`{"label":
+/// "ADV_ARC.1-1", "standard": "CEM", "dependencies": [...], ...}`); an error
+/// of the database for a standard, a document or a proof missing.
 ///
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
 /// `read_oscal_standard_document`; [`label_of`]; `objects/evaluation/product_document/product_document_store.rs`:
-/// `read_product_document`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`verdict_name`].
+/// `read_product_document`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<Value, AiError> {
     let mut dependencies = Vec::with_capacity(unit.dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
-    let mut quotes = Vec::with_capacity(unit.quotes.len());
 
     for id in &unit.dependencies {
         dependencies.push(label_of(units, *id));
@@ -133,10 +154,6 @@ fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<V
 
     for id in &unit.input_product_documents {
         documents.push(read_product_document(db, *id)?.name);
-    }
-
-    for quote in &unit.quotes {
-        quotes.push(json!({"document": read_product_document(db, quote.product_document)?.name, "text": quote.text}));
     }
 
     let proofs = match &unit.input_functional {
@@ -161,12 +178,6 @@ fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<V
         "dependencies": dependencies,
         "input_product_documents": documents,
         "input_functional": proofs,
-        "findings": unit.findings,
-        "analysis": unit.analysis,
-        "vulnerability_notes": unit.vulnerability_notes,
-        "notes": unit.notes,
-        "quotes": quotes,
-        "verdict": unit.verdict.map(verdict_name),
     }))
 }
 
@@ -289,8 +300,9 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
 /// Input: `evaluation`, an evaluation in progress; `unit`, one of its work
 /// units; `agent`, the agent that assesses it; `whole`, whether its documents
 /// go whole.
-/// Output: the question, its task and the work unit with its documents and
-/// proofs; an error of the database or of the agent.
+/// Output: the question with the task of its kind (of the documentation, or
+/// of a functional test when the work unit has proofs) and the work unit
+/// with its evidence; an error of the database or of the agent.
 ///
 /// Called by: [`assessment_question`].
 /// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`unit_json`],
@@ -310,14 +322,22 @@ fn question_of(
         verdicts.push(format!("\"{}\"", verdict_name(*verdict)));
     }
 
-    let task = ASSESSMENT_TASK.replace("{verdicts}", &verdicts.join(", "));
-    let text = format!(
-        "The work unit:\n{}\n\nIts dependencies:\n{}\nIts documents of the product:\n{}\nIts proofs of the laboratory:\n{}",
+    // A work unit with proofs is a functional test; one without asks only for
+    // its documents, and its question names no proofs (user, 2026-11-02).
+    let functional = unit.input_functional.is_some();
+    let task = if functional { FUNCTIONAL_TASK } else { DOCUMENTATION_TASK };
+    let task = format!("{task}{}", ANSWER_FORM.replace("{verdicts}", &verdicts.join(", ")));
+    let mut text = format!(
+        "The work unit:\n{}\n\nIts dependencies (their results are given for context; weigh them \
+         yourself):\n{}\nIts documents of the product:\n{}",
         unit_json(db, unit, &units)?,
         dependencies_text(unit, &units),
         documents_text(db, unit, whole)?,
-        proofs_text(db, unit)?,
     );
+
+    if functional {
+        text.push_str(&format!("\nIts proofs of the laboratory:\n{}", proofs_text(db, unit)?));
+    }
 
     let search = format!("{} {}", unit.label, unit.requirement);
     let messages = vec![Message { speaker: Speaker::User, text, time: 0 }];
@@ -333,7 +353,8 @@ fn question_of(
 /// Input: `evaluation`, the id of an evaluation; `unit`, the id of one of its
 /// work units; `whole`, whether the documents go whole.
 /// Output: the question; `AiError::Refused` when the work unit is not one of
-/// the evaluation or has no agent, the errors of [`question_of`].
+/// the evaluation, names no document and no proof, or has no agent; the
+/// errors of [`question_of`].
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_assessment`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
@@ -347,6 +368,14 @@ pub fn assessment_question(db: &UserDatabase, evaluation: i64, unit: i64, whole:
         AiError::Refused("the work unit is not one of the evaluation".to_owned())
     );
 
+    // A work unit is assessed on its evidence: one that names no document and
+    // no proof would be judged on nothing (user, 2026-11-02).
+    ensure!(
+        !this.input_product_documents.is_empty()
+            || this.input_functional.as_ref().is_some_and(|proofs| !proofs.is_empty()),
+        AiError::Refused(format!("{} names no document and no proof to assess", this.label))
+    );
+
     let agent = assessing_agent(&stored, &this)?;
 
     question_of(db, &stored, &this, agent, whole)
@@ -355,14 +384,19 @@ pub fn assessment_question(db: &UserDatabase, evaluation: i64, unit: i64, whole:
 #[cfg(test)]
 mod tests {
     //! Tests of the question: the work unit as JSON without what it must not
-    //! carry, its dependencies with their verdicts, its documents whole or by
-    //! passages.
+    //! carry (its results among them), its dependencies with their verdicts,
+    //! its documents whole or by passages, the task of its kind, and a work
+    //! unit without evidence refused.
 
     use super::*;
 
+    use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::{
+        create_evaluation, create_evaluation_plan,
+    };
     use crate::objects::evaluation::work_unit::work_unit_model::Author;
-    use crate::test_support::database::database;
-    use crate::test_support::evaluation::{evaluation, write};
+    use crate::objects::evaluation::work_unit::work_unit_store::create_work_unit;
+    use crate::test_support::database::{database, plan, unit};
+    use crate::test_support::evaluation::{evaluation, evaluation_needing_inputs, write};
 
     #[test]
     fn the_question_carries_the_work_unit_its_dependencies_and_its_documents() {
@@ -377,6 +411,8 @@ mod tests {
 
         write(&db, &assessed);
 
+        write(&db, &WorkUnit { analysis: "An earlier analysis.".to_owned(), ..read_work_unit(&db, second).unwrap() });
+
         let question = assessment_question(&db, id, second, true).unwrap();
         let text = &question.messages[0].text;
 
@@ -390,11 +426,38 @@ mod tests {
         assert!(!text.contains("\"id\"") && !text.contains("\"author\"") && !text.contains("cross_reference"));
         assert!(text.contains("ASE_INT.1-1: fail\nThe ST names no TOE."));
         assert!(text.contains("=== ST (version 1.0) ===") && text.contains("Its TSF filters packets."));
+        assert!(!text.contains("An earlier analysis.") && !text.contains("\"verdict\""));
+        assert!(question.system.contains("as its documents describe it") && !text.contains("proofs of the laboratory"));
 
         let by_passages = assessment_question(&db, id, second, false).unwrap();
 
         assert!(by_passages.messages[0].text.contains("=== a passage of ST ==="));
         assert!(matches!(assessment_question(&db, id, 999, true), Err(AiError::Db(_))));
+    }
+
+    #[test]
+    fn a_functional_test_is_asked_about_its_proofs_and_a_unit_without_evidence_is_refused() {
+        let (_directory, db) = database();
+        let needing = evaluation_needing_inputs(&db);
+        let functional = read_work_units(&db, needing).unwrap()[0].id;
+        let question = assessment_question(&db, needing, functional, true).unwrap();
+
+        assert!(question.system.contains("the proofs of the laboratory show"));
+        assert!(question.messages[0].text.contains("Its proofs of the laboratory:\n=== Scan"));
+
+        // A plan whose work unit names no document and no proof, begun as an
+        // evaluation: its planning is frozen there.
+        let routers = plan(&db);
+        let source = create_evaluation_plan(&db, &routers).unwrap();
+        let bare = WorkUnit { input_product_documents: Vec::new(), ..unit(&routers, "ASE_INT.1-1") };
+
+        create_work_unit(&db, source, &bare).unwrap();
+
+        let general = read_evaluation_plan(&db, needing).unwrap().ai_agent;
+        let empty = create_evaluation(&db, source, "R7", "ACME", "K. K.", 1_793_000_000, general).unwrap();
+        let unit_of_empty = read_work_units(&db, empty).unwrap()[0].id;
+
+        assert!(matches!(assessment_question(&db, empty, unit_of_empty, true), Err(AiError::Refused(_))));
     }
 
     #[test]

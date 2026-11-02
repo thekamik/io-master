@@ -532,7 +532,7 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
 ///
 /// Called by: [`read_work_units`], [`check_frozen`];
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`,
-/// `with_dependencies`; `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`:
+/// `dependency_warnings`; `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`:
 /// `assessment_question`; `objects/evaluation/work_unit/work_unit_rules/results.rs`:
 /// `save_results`; `objects/evaluation/work_unit/work_unit_ai/proposal.rs`:
 /// `apply_dependencies`, `apply_parameters`, `dependencies_question`,

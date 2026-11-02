@@ -7,8 +7,8 @@
 //!   the verdict      one of the plan, else the answer is not taken
 //!   each quote       of a document of the work unit, found in its text word for word (the spaces passed over;
 //!                    work_unit_rules/results.rs: quotes_found): kept as a Quote; otherwise written into the notes
-//!   the dependencies the verdict is the worst of its own and theirs (Fail, Inconclusive, Pass);
-//!                    each one that did not pass written into the findings
+//!   the dependencies each one that did not pass or is not assessed warned of in the notes; the verdict
+//!                    stays as the model gave it (it weighed the dependencies in its question)
 //!   ──► update_work_unit, author Ai
 //! ```
 //!
@@ -140,61 +140,34 @@ fn verdict_of(name: &str, possible: &[Verdict]) -> Option<Verdict> {
     None
 }
 
-/// How bad a verdict is: `Fail` the worst (2), `Pass` the best (0).
+/// The warnings about the dependencies of the work unit `unit`: each
+/// dependency that did not pass or is not assessed. The model weighs the
+/// results of the dependencies itself (they are in its question); the
+/// warnings only tell the evaluator, and never change its verdict.
 ///
-/// Input: `verdict`, a verdict.
-/// Output: its badness, 0 to 2.
-///
-/// Called by: [`with_dependencies`].
-fn badness(verdict: Verdict) -> u8 {
-    match verdict {
-        Verdict::Fail => 2,
-        Verdict::Inconclusive => 1,
-        Verdict::Pass => 0,
-    }
-}
-
-/// The verdict `own` of the work unit `unit` made the worst of its own and
-/// those of its dependencies (user, 2026-10-28, as Common Criteria asks).
-///
-/// Input: `unit`, the work unit assessed; `own`, the verdict the answer
-/// gives.
-/// Output: the verdict and the lines of the findings for each dependency
-/// that did not pass or is not assessed (`(Fail, ["Fail: its dependency
-/// ADV_ARC.1-1 failed"])`); an error of the database.
+/// Input: `unit`, the work unit assessed.
+/// Output: the warnings (`["Its dependency ADV_ARC.1-1 failed"]`); empty when
+/// every dependency passed; an error of the database.
 ///
 /// Called by: [`apply_assessment`].
-/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`badness`];
-/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `verdict_name`.
-fn with_dependencies(db: &UserDatabase, unit: &WorkUnit, own: Verdict) -> Result<(Verdict, Vec<String>), AiError> {
-    let mut verdict = own;
-    let mut lines = Vec::new();
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`.
+fn dependency_warnings(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, AiError> {
+    let mut warnings = Vec::with_capacity(unit.dependencies.len());
 
     for id in &unit.dependencies {
         let dependency = read_work_unit(db, *id)?;
 
         match dependency.verdict {
             Some(Verdict::Pass) => {}
-            Some(other) => {
-                lines.push(format!(
-                    "{}: its dependency {} {}",
-                    verdict_name(other),
-                    dependency.label,
-                    match other {
-                        Verdict::Fail => "failed",
-                        _ => "is inconclusive",
-                    }
-                ));
-
-                if badness(other) > badness(verdict) {
-                    verdict = other;
-                }
+            Some(Verdict::Fail) => warnings.push(format!("Its dependency {} failed", dependency.label)),
+            Some(Verdict::Inconclusive) => {
+                warnings.push(format!("Its dependency {} is inconclusive", dependency.label));
             }
-            None => lines.push(format!("its dependency {} is not assessed", dependency.label)),
+            None => warnings.push(format!("Its dependency {} is not assessed", dependency.label)),
         }
     }
 
-    Ok((verdict, lines))
+    Ok(warnings)
 }
 
 /// `first` and the lines `more`, parted by a line end when both hold text:
@@ -219,23 +192,29 @@ fn joined(first: &str, more: &[String]) -> String {
 }
 
 /// Writes the assessment `assessment` into the work unit `unit` of the
-/// evaluation `evaluation`, as the results of the AI.
+/// evaluation `evaluation`, as the results of the AI: its verdict as the model
+/// gave it.
 ///
 /// Input: `evaluation`, the id of an evaluation in progress; `unit`, the id
-/// of one of its work units; `assessment`, from [`read_assessment`].
-/// Output: the notes of what was not taken (`["The AI quoted a text not found
-/// in ST: ..."]`); `AiError::Refused` for a work unit not of the evaluation
-/// or a verdict none of the plan, an error of the database.
+/// of one of its work units; `assessment`, from [`read_assessment`];
+/// `context`, notes on how the question was made (its documents given as
+/// passages), kept with the results.
+/// Output: the notes written beside the model's own (`["The AI quoted a text
+/// not found in ST: ...", "Its dependency ADV_ARC.1-1 failed"]`);
+/// `AiError::Refused` for a work unit not of the evaluation or a verdict none
+/// of the plan, an error of the database.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assessed`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; [`verdict_of`];
-/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`; [`with_dependencies`], [`joined`].
+/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`;
+/// [`dependency_warnings`], [`joined`].
 pub fn apply_assessment(
     db: &UserDatabase,
     evaluation: i64,
     unit: i64,
     assessment: &Assessment,
+    context: &[String],
 ) -> Result<Vec<String>, AiError> {
     let stored = read_evaluation_plan(db, evaluation)?;
     let this = read_work_unit(db, unit)?;
@@ -245,22 +224,27 @@ pub fn apply_assessment(
         AiError::Refused("the work unit is not one of the evaluation".to_owned())
     );
 
-    let Some(own) = verdict_of(&assessment.verdict, &stored.possible_verdicts) else {
+    let Some(verdict) = verdict_of(&assessment.verdict, &stored.possible_verdicts) else {
         return Err(AiError::Refused(format!("the verdict \"{}\" is none of the plan", assessment.verdict)));
     };
     let quotes = quotes_found(db, &this, &assessment.quotes)?;
-    let mut left_out = Vec::with_capacity(quotes.missing.len());
+    let mut added = Vec::with_capacity(context.len() + quotes.missing.len() + this.dependencies.len());
 
+    added.extend_from_slice(context);
+
+    // A quote not found is only told: a quote points to the evidence, it is
+    // no condition of the verdict (user, 2026-11-02).
     for (name, text) in &quotes.missing {
-        left_out.push(format!("The AI quoted a text not found in {name}: \"{text}\""));
+        added.push(format!("The AI quoted a text not found in {name}: \"{text}\""));
     }
 
-    let (verdict, dependency_lines) = with_dependencies(db, &this, own)?;
+    added.extend(dependency_warnings(db, &this)?);
+
     let assessed = WorkUnit {
-        findings: joined(&assessment.findings, &dependency_lines),
+        findings: assessment.findings.clone(),
         analysis: assessment.analysis.clone(),
         vulnerability_notes: assessment.vulnerability_notes.clone(),
-        notes: joined(&assessment.notes, &left_out),
+        notes: joined(&assessment.notes, &added),
         quotes: quotes.found,
         verdict: Some(verdict),
         author: Some(Author::Ai),
@@ -269,13 +253,14 @@ pub fn apply_assessment(
 
     update_work_unit(db, &assessed)?;
 
-    Ok(left_out)
+    Ok(added)
 }
 
 #[cfg(test)]
 mod tests {
     //! Tests of the answer: read from its JSON, the quotes checked in the
-    //! documents, the verdict made the worst with the dependencies.
+    //! documents, the verdict of the model kept beside the warnings about
+    //! its dependencies.
 
     use super::*;
 
@@ -298,7 +283,7 @@ mod tests {
                       {\"document\": \"ST\", \"text\": \"The TOE is a firewall.\"}, \
                       {\"document\": \"IXIT\", \"text\": \"Its TSF filters packets.\"}";
         let assessment = read_assessment(&answer("Pass", quotes)).unwrap();
-        let left_out = apply_assessment(&db, id, first, &assessment).unwrap();
+        let left_out = apply_assessment(&db, id, first, &assessment, &[]).unwrap();
         let stored = read_work_unit(&db, first).unwrap();
 
         assert_eq!((stored.verdict, stored.author), (Some(Verdict::Pass), Some(Author::Ai)));
@@ -310,20 +295,26 @@ mod tests {
     }
 
     #[test]
-    fn the_verdict_is_the_worst_of_its_own_and_its_dependencies() {
+    fn the_verdict_of_the_model_is_kept_and_the_dependencies_only_warned_of() {
         let (_directory, db) = database();
         let (id, first, second) = evaluation(&db);
+        let context = ["The documents did not fit the context of the model.".to_owned()];
 
-        apply_assessment(&db, id, second, &read_assessment(&answer("pass", "")).unwrap()).unwrap();
-        assert!(read_work_unit(&db, second).unwrap().findings.contains("ASE_INT.1-1 is not assessed"));
-
-        apply_assessment(&db, id, first, &read_assessment(&answer("fail", "")).unwrap()).unwrap();
-        apply_assessment(&db, id, second, &read_assessment(&answer("pass", "")).unwrap()).unwrap();
+        apply_assessment(&db, id, second, &read_assessment(&answer("pass", "")).unwrap(), &context).unwrap();
 
         let stored = read_work_unit(&db, second).unwrap();
 
-        assert_eq!(stored.verdict, Some(Verdict::Fail));
-        assert_eq!(stored.findings, "fail: its dependency ASE_INT.1-1 failed");
+        assert!(stored.notes.contains("The documents did not fit the context of the model."));
+        assert!(stored.notes.contains("Its dependency ASE_INT.1-1 is not assessed"));
+
+        apply_assessment(&db, id, first, &read_assessment(&answer("fail", "")).unwrap(), &[]).unwrap();
+        apply_assessment(&db, id, second, &read_assessment(&answer("pass", "")).unwrap(), &[]).unwrap();
+
+        let stored = read_work_unit(&db, second).unwrap();
+
+        assert_eq!(stored.verdict, Some(Verdict::Pass));
+        assert!(stored.findings.is_empty());
+        assert_eq!(stored.notes, "Its dependency ASE_INT.1-1 failed");
     }
 
     #[test]
@@ -333,7 +324,7 @@ mod tests {
 
         assert!(matches!(read_assessment("It passes."), Err(AiError::Refused(_))));
         assert!(matches!(
-            apply_assessment(&db, id, first, &read_assessment(&answer("inconclusive", "")).unwrap()),
+            apply_assessment(&db, id, first, &read_assessment(&answer("inconclusive", "")).unwrap(), &[]),
             Err(AiError::Refused(_))
         ));
         assert_eq!(read_work_unit(&db, first).unwrap().verdict, None);

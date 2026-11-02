@@ -128,17 +128,24 @@ fn count(counted: &mut Vec<(String, usize)>, name: String) {
 }
 
 /// The inputs the work unit `unit` needs and that are not given, by their
-/// names.
+/// names; a work unit that names no document and no proof needs one.
 ///
 /// Input: `unit`, a work unit of an evaluation.
-/// Output: the names (`["the document ST v1.2", "the proof Test 3"]`); an
-/// error of the database for a document or a proof missing.
+/// Output: the names (`["the document ST v1.2", "the proof Test 3"]`,
+/// `["a document or a proof of ASE_INT.1-1"]`); an error of the database for
+/// a document or a proof missing.
 ///
 /// Called by: [`preview`].
 /// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
 /// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, AiError> {
     let mut missing = Vec::new();
+
+    // Without evidence the work unit would be judged on nothing; the plan is
+    // corrected before the assessment starts (user, 2026-11-02).
+    if unit.input_product_documents.is_empty() && unit.input_functional.as_deref().unwrap_or_default().is_empty() {
+        missing.push(format!("a document or a proof of {}", unit.label));
+    }
 
     for id in &unit.input_product_documents {
         let document = read_product_document(db, *id)?;
@@ -378,7 +385,7 @@ mod tests {
 
         let answer = "{\"verdict\": \"pass\", \"analysis\": \"ok\", \"quotes\": []}";
 
-        assert!(assessed(&db, id, first, answer).unwrap().is_empty());
+        assert!(assessed(&db, id, first, answer, &[]).unwrap().is_empty());
         assert_eq!(preview(&db, id, false).unwrap().units, vec![second]);
         assert_eq!(preview(&db, id, true).unwrap().units, vec![first, second]);
 

@@ -74,9 +74,9 @@ pub struct WorkUnit {
     /// The verdict of the assessment, one of the `possible_verdicts` of
     /// the plan; `None` while the work unit is not assessed. A work unit
     /// is assessed by the AI even when a dependency did not pass, so that
-    /// all its faults are found; its verdict is the worst of its own and
-    /// the verdicts of its dependencies (user, 2026-10-28, as Common
-    /// Criteria asks).
+    /// all its faults are found; the model weighs the results of its
+    /// dependencies itself, and a dependency that did not pass is only
+    /// warned of in the notes (user, 2026-11-02).
     pub verdict: Option<Verdict>,
 
     /// Who gave the results and the verdict: the AI, or the user who

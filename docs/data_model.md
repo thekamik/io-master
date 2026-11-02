@@ -112,7 +112,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 - **The verdicts of a plan.** Common Criteria knows only `Pass` and `Fail`; ETSI EN 303 645 also `Inconclusive`. A plan names those its standards know (`possible_verdicts`): `Pass` and `Fail` when it is made; the planner may add `Inconclusive`. From the worst to the best: `Fail`, `Inconclusive`, `Pass`.
 - A work unit is assessed by the AI even when a dependency did not pass, so that all its faults are found for the Observation Report.
-- Its verdict is the worst of its own and the verdicts of its dependencies: a work unit that depends on one `Fail` is `Fail`.
+- Its verdict is the model's (or the evaluator's): the results of its dependencies are given to the model to weigh, and a dependency that did not pass is warned of in its notes.
 - `findings` holds every fault: those the AI found, and each dependency that did not pass, written by the program ("fail: its dependency ADV_ARC.1-1 failed").
 - **The quotes (P5).** The assessment rests on quotes of the documents of the product, word for word, each with the document it is taken from (`Quote`); whether each stands in the documents is checked by the program, never taken from the AI, so that a fault of the document is told from an invention of the model.
 - **The author (P1).** `author` tells whether the results and the verdict are those the AI proposed, or the user wrote or changed them.
