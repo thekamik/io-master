@@ -39,6 +39,7 @@
   let systemTemplate = $state("");
   let knowledgeTemplate = $state("");
   let passageTemplate = $state("");
+  let chatSearch = $state("");
   let role: RoleView | null = $state(null);
   let question = $state("");
   let passages: string[] | null = $state(null);
@@ -62,6 +63,7 @@
       systemTemplate = view.systemTemplate;
       knowledgeTemplate = view.knowledgeTemplate;
       passageTemplate = view.passageTemplate;
+      chatSearch = view.chatSearch;
       role = { ...view.role };
     } catch (error) {
       problem = sentence(error);
@@ -101,6 +103,7 @@
         systemTemplate,
         knowledgeTemplate,
         passageTemplate,
+        chatSearch,
         role,
       });
       savedAt = new Date();
@@ -284,6 +287,10 @@
         <label>
           Each passage of the knowledge <span class="note">{"{source}"}, {"{text}"}</span>
           <textarea class="mono" rows="2" bind:value={passageTemplate}></textarea>
+        </label>
+        <label>
+          Search of the knowledge in a chat <span class="note">{"{previous}"} (the question before), {"{question}"}</span>
+          <input class="mono" bind:value={chatSearch} required />
         </label>
         {#if role !== null && role.kind === "evaluator"}
           <label>

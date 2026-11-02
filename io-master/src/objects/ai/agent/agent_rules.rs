@@ -61,11 +61,17 @@ pub const NEW_SYSTEM_TEMPLATE: &str = "{instructions}\n\n{knowledge}\n\n{task}";
 pub const NEW_KNOWLEDGE_TEMPLATE: &str = "Your knowledge for this question:\n\n{passages}";
 pub const NEW_PASSAGE_TEMPLATE: &str = "=== {source} ===\n{text}";
 
+/// What a new agent searches its knowledge with in a chat: the question of
+/// the user before and the question, so that a short follow-up ("and in the
+/// ST?") still finds what the talk is about.
+pub const NEW_CHAT_SEARCH: &str = "{previous} {question}";
+
 /// The placeholders without which the message of an agent loses its sense: a
 /// template without one of them is saved with a warning (user, 2026-11-02).
 const SYSTEM_NEEDS: [&str; 3] = ["instructions", "knowledge", "task"];
 const KNOWLEDGE_NEEDS: [&str; 1] = ["passages"];
 const PASSAGE_NEEDS: [&str; 2] = ["source", "text"];
+const CHAT_SEARCH_NEEDS: [&str; 1] = ["question"];
 
 /// Makes a new agent of the integration `integration` with the role `role`,
 /// with the default instructions, limits and parameters of its role, and no
@@ -98,6 +104,7 @@ pub fn new_agent(db: &UserDatabase, name: &str, integration: i64, role: &str) ->
         system_template: NEW_SYSTEM_TEMPLATE.to_owned(),
         knowledge_template: NEW_KNOWLEDGE_TEMPLATE.to_owned(),
         passage_template: NEW_PASSAGE_TEMPLATE.to_owned(),
+        chat_search: NEW_CHAT_SEARCH.to_owned(),
         role: new_role(role)?,
     };
 
@@ -222,6 +229,7 @@ fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
         system_template: checked_text(&agent.system_template, "the template of the message", MAX_TEMPLATE)?,
         knowledge_template: checked_text(&agent.knowledge_template, "the template of the knowledge", MAX_TEMPLATE)?,
         passage_template: checked_text(&agent.passage_template, "the template of a passage", MAX_TEMPLATE)?,
+        chat_search: checked_text(&agent.chat_search, "the search of a chat", MAX_TEMPLATE)?,
         role: checked_role(&agent.role)?,
     })
 }
@@ -241,6 +249,7 @@ pub fn agent_warnings(agent: &Agent) -> Vec<String> {
 
     warnings.extend(template_warnings("the template of the knowledge", &agent.knowledge_template, &KNOWLEDGE_NEEDS));
     warnings.extend(template_warnings("the template of a passage", &agent.passage_template, &PASSAGE_NEEDS));
+    warnings.extend(template_warnings("the search of a chat", &agent.chat_search, &CHAT_SEARCH_NEEDS));
     warnings.extend(role_warnings(&agent.role));
 
     warnings

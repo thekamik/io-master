@@ -94,6 +94,7 @@ export interface AgentView {
   systemTemplate: string;
   knowledgeTemplate: string;
   passageTemplate: string;
+  chatSearch: string;
   role: RoleView;
   /** Each placeholder a template needs and does not hold; saved all the same. */
   warnings: string[];
@@ -116,6 +117,7 @@ export interface AgentFields {
   systemTemplate: string;
   knowledgeTemplate: string;
   passageTemplate: string;
+  chatSearch: string;
   role: RoleView;
 }
 

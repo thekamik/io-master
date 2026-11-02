@@ -136,6 +136,7 @@ pub struct AgentView {
     system_template: String,
     knowledge_template: String,
     passage_template: String,
+    chat_search: String,
     role: RoleView,
     /// Each placeholder a template needs and does not hold ("the template of
     /// the message has no {task}"): saved all the same (user, 2026-11-02).
@@ -163,6 +164,7 @@ pub struct AgentFields {
     system_template: String,
     knowledge_template: String,
     passage_template: String,
+    chat_search: String,
     role: RoleView,
 }
 
@@ -432,6 +434,7 @@ pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, View
         system_template: agent.system_template,
         knowledge_template: agent.knowledge_template,
         passage_template: agent.passage_template,
+        chat_search: agent.chat_search,
         role: role_view(agent.role),
         warnings,
         limits: AgentLimitsView {
@@ -466,7 +469,8 @@ fn agent_of(fields: AgentFields) -> Result<Agent, ViewError> {
     );
     ensure!(fields.glossary.len() <= MAX_TERMS, ViewError::Invalid(format!("more than {MAX_TERMS} terms")));
 
-    for template in [&fields.system_template, &fields.knowledge_template, &fields.passage_template] {
+    for template in [&fields.system_template, &fields.knowledge_template, &fields.passage_template, &fields.chat_search]
+    {
         ensure!(
             template.len() <= MAX_TEMPLATE * 4,
             ViewError::Invalid(format!("a template over {MAX_TEMPLATE} characters"))
@@ -496,6 +500,7 @@ fn agent_of(fields: AgentFields) -> Result<Agent, ViewError> {
         system_template: fields.system_template,
         knowledge_template: fields.knowledge_template,
         passage_template: fields.passage_template,
+        chat_search: fields.chat_search,
         role: role_of(fields.role)?,
     })
 }

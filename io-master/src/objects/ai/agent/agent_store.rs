@@ -4,7 +4,7 @@
 //!
 //! ```text
 //! ai_agents                 id, name (unique), integration, instructions, max_passages, max_characters,
-//!                           max_answer_tokens, system_template, knowledge_template, passage_template,
+//!                           max_answer_tokens, system_template, knowledge_template, passage_template, chat_search,
 //!                           role (its parameters: objects/ai/agent_roles/agent_roles_store.rs)
 //! ai_agent_knowledge_bases  (agent, position, knowledge_base)   knowledge_bases
 //! ai_agent_glossary         (agent, position, term, meaning)    glossary
@@ -51,6 +51,7 @@ pub const SCHEMA: &str = "
         system_template    TEXT NOT NULL,
         knowledge_template TEXT NOT NULL,
         passage_template   TEXT NOT NULL,
+        chat_search        TEXT NOT NULL,
         role              TEXT NOT NULL CHECK (role IN ('evaluator', 'planner', 'chat'))
     );
 
@@ -73,7 +74,7 @@ pub const SCHEMA: &str = "
 
 /// The columns every read of an agent selects.
 const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_characters, max_answer_tokens, \
-                       system_template, knowledge_template, passage_template, role";
+                       system_template, knowledge_template, passage_template, chat_search, role";
 
 /// Refuses an agent that does not hold together: lists over their limits, no
 /// name, limits of its knowledge over the program's, a template over
@@ -106,7 +107,7 @@ fn check_agent(agent: &Agent) -> Result<(), DbError> {
     );
     check_agent_role(&agent.role)?;
 
-    for template in [&agent.system_template, &agent.knowledge_template, &agent.passage_template] {
+    for template in [&agent.system_template, &agent.knowledge_template, &agent.passage_template, &agent.chat_search] {
         ensure!(
             template.chars().count() <= MAX_TEMPLATE,
             DbError::Inconsistent(format!("a template of an agent over {MAX_TEMPLATE} characters"))
@@ -186,9 +187,9 @@ pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
 
     transaction.execute(
         "INSERT INTO ai_agents (name, integration, instructions, max_passages, max_characters, max_answer_tokens,
-                                system_template, knowledge_template, passage_template, role)
+                                system_template, knowledge_template, passage_template, chat_search, role)
          VALUES (:name, :integration, :instructions, :max_passages, :max_characters, :max_answer_tokens,
-                 :system_template, :knowledge_template, :passage_template, :role)",
+                 :system_template, :knowledge_template, :passage_template, :chat_search, :role)",
         named_params! {
             ":name": agent.name,
             ":integration": agent.integration,
@@ -199,6 +200,7 @@ pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
             ":system_template": agent.system_template,
             ":knowledge_template": agent.knowledge_template,
             ":passage_template": agent.passage_template,
+            ":chat_search": agent.chat_search,
             ":role": role_name(&agent.role),
         },
     )?;
@@ -230,6 +232,7 @@ fn agent_of(row: &Row<'_>, role: AgentRole) -> Result<Agent, DbError> {
         system_template: row.get("system_template")?,
         knowledge_template: row.get("knowledge_template")?,
         passage_template: row.get("passage_template")?,
+        chat_search: row.get("chat_search")?,
         role,
     })
 }
@@ -351,7 +354,8 @@ pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
         "UPDATE ai_agents SET name = :name, integration = :integration, instructions = :instructions,
                 max_passages = :max_passages, max_characters = :max_characters,
                 max_answer_tokens = :max_answer_tokens, system_template = :system_template,
-                knowledge_template = :knowledge_template, passage_template = :passage_template
+                knowledge_template = :knowledge_template, passage_template = :passage_template,
+                chat_search = :chat_search
          WHERE id = :id AND role = :role",
         named_params! {
             ":id": agent.id,
@@ -364,6 +368,7 @@ pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
             ":system_template": agent.system_template,
             ":knowledge_template": agent.knowledge_template,
             ":passage_template": agent.passage_template,
+            ":chat_search": agent.chat_search,
             ":role": role_name(&agent.role),
         },
     )?;

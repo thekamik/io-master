@@ -25,7 +25,8 @@
 
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::ai::agent::agent_ai::agent_question;
+use crate::objects::ai::agent::agent_ai::{agent_question, filled};
+use crate::objects::ai::agent::agent_store::read_agent;
 use crate::objects::ai::chat::chat_model::{Message, Speaker};
 use crate::objects::ai::chat::chat_rules::checked_question;
 use crate::objects::ai::chat::chat_store::{MAX_MESSAGES as MAX_CHAT_MESSAGES, create_message, read_chat};
@@ -86,22 +87,27 @@ pub fn prepare_shortened(db: &UserDatabase, mut question: Question) -> Result<(P
     Err(AiError::TooManyMessages { count: all, max: MAX_MESSAGES })
 }
 
-/// What the knowledge of the agent is looked for with: the question and
-/// the last question of the user before it.
+/// What the knowledge of the agent is looked for with: its `chat_search`
+/// with the last question of the user before (`{previous}`, empty in a new
+/// chat) and the question (`{question}`).
 ///
-/// Input: `messages`, the messages of the chat before the question;
-/// `question`, the question, checked.
+/// Input: `template`, `Agent::chat_search`; `messages`, the messages of the
+/// chat before the question; `question`, the question, checked.
 /// Output: the text to look for ("What is the TSF? and in the ST?").
 ///
 /// Called by: [`chat_question`].
-fn search_text(messages: &[Message], question: &str) -> String {
+/// Calls: `objects/ai/agent/agent_ai.rs`: `filled`.
+fn search_text(template: &str, messages: &[Message], question: &str) -> String {
+    let mut previous = "";
+
     for message in messages.iter().rev() {
         if message.speaker == Speaker::User {
-            return format!("{} {question}", message.text);
+            previous = &message.text;
+            break;
         }
     }
 
-    question.to_owned()
+    filled(template, &[("previous", previous), ("question", question)]).trim().to_owned()
 }
 
 /// The question `text` in the chat `chat`, as the integration of its agent
@@ -116,7 +122,8 @@ fn search_text(messages: &[Message], question: &str) -> String {
 ///
 /// Called by: [`prepared`].
 /// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`; `objects/ai/chat/chat_rules.rs`: `checked_question`;
-/// [`search_text`]; `objects/ai/agent/agent_ai.rs`: `agent_question`.
+/// `objects/ai/agent/agent_store.rs`: `read_agent`; [`search_text`]; `objects/ai/agent/agent_ai.rs`:
+/// `agent_question`.
 fn chat_question(db: &UserDatabase, chat: i64, text: &str) -> Result<Question, AiError> {
     let stored = read_chat(db, chat)?;
     let question = checked_question(text)?;
@@ -129,7 +136,7 @@ fn chat_question(db: &UserDatabase, chat: i64, text: &str) -> Result<Question, A
         AiError::Refused(format!("the chat is full ({MAX_CHAT_MESSAGES} messages): begin a new one"))
     );
 
-    let search = search_text(&stored.messages, &question);
+    let search = search_text(&read_agent(db, agent_id)?.chat_search, &stored.messages, &question);
     let mut messages = stored.messages;
 
     messages.push(Message { speaker: Speaker::User, text: question, time: 0 });
@@ -237,6 +244,15 @@ mod tests {
     /// A message of `speaker` of `length` characters.
     fn message(speaker: Speaker, length: usize) -> Message {
         Message { speaker, text: "x".repeat(length), time: 0 }
+    }
+
+    #[test]
+    fn a_chat_searches_by_the_template_of_its_agent() {
+        let before = vec![message(Speaker::User, 3), message(Speaker::Ai, 2)];
+
+        assert_eq!(search_text("{previous} {question}", &before, "and in the ST?"), "xxx and in the ST?");
+        assert_eq!(search_text("{previous} {question}", &[], "What is the TSF?"), "What is the TSF?");
+        assert_eq!(search_text("{question}", &before, "and in the ST?"), "and in the ST?");
     }
 
     #[test]

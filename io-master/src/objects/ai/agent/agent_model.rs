@@ -47,6 +47,11 @@ pub struct Agent {
     /// Each passage of its knowledge: `{source}`, `{text}`.
     pub passage_template: String,
 
+    /// What its knowledge is searched with in a chat, whatever its role:
+    /// `{previous}` (the question of the user before), `{question}` (user,
+    /// 2026-11-02).
+    pub chat_search: String,
+
     /// What it is made for, with the parameters of that work (user,
     /// 2026-11-02); given when it is made, never changed.
     pub role: AgentRole,
