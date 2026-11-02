@@ -19,7 +19,7 @@ const CHECK_QUESTION: &str = "Reply with the word OK.";
 /// one).
 ///
 /// Called by: `panels/views/settings/integrations.rs` (the check).
-/// Calls: `question.rs`: `prepare`.
+/// Calls: `objects/ai/integration/integration_ai/question.rs`: `prepare`.
 pub fn check_question(db: &UserDatabase, id: i64) -> Result<Prepared, AiError> {
     let question = Question {
         integration: id,

@@ -44,6 +44,9 @@ pub struct JournalEntryView {
 
 /// The name of an ending on the page.
 ///
+/// Input: `ending`, how an answer ended.
+/// Output: its name on the page (`"complete"`).
+///
 /// Called by: [`row_of`].
 fn ending_name(ending: Ending) -> &'static str {
     match ending {
@@ -56,6 +59,9 @@ fn ending_name(ending: Ending) -> &'static str {
 }
 
 /// The row of the entry `entry`.
+///
+/// Input: `entry`, an entry of the journal.
+/// Output: its row (`JournalRowView { id: 41, ending: "complete", .. }`).
 ///
 /// Called by: [`agent_journal_list`], [`agent_journal_get`].
 fn row_of(entry: &JournalEntry) -> JournalRowView {
@@ -74,8 +80,16 @@ fn row_of(entry: &JournalEntry) -> JournalRowView {
 /// One page of the journal of the agent `agent`, the newest first: its
 /// entries older than `before` (the newest with `None`).
 ///
-/// Called by: `AgentJournal.svelte`, when an agent is opened and for "Older".
-/// Calls: `read_journal_entries`, [`row_of`].
+/// Input: `session`, the session of the window, someone logged in; `agent`, the
+/// id of an agent; `before`, the id of the oldest entry shown, `None` for the
+/// newest page.
+/// Output: the rows of the page (`[{"id": 41, ...}]`); `ViewError::NotLoggedIn`
+/// when nobody is logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/agents.ts`: `agentJournalList`, from `ui/src/views/agents/AgentJournal.svelte`, when
+/// an agent is opened and for "Older".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/journal/journal_store.rs`: `read_journal_entries`; [`row_of`].
 #[tauri::command]
 pub fn agent_journal_list(
     session: State<'_, Session>,
@@ -95,8 +109,15 @@ pub fn agent_journal_list(
 
 /// The entry `id` whole.
 ///
-/// Called by: `AgentJournal.svelte`, when an entry is opened.
-/// Calls: `read_journal_entry`, [`row_of`].
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an entry.
+/// Output: the entry with its question and answer; `ViewError::NotLoggedIn`
+/// when nobody is logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/agents.ts`: `agentJournalGet`, from `ui/src/views/agents/AgentJournal.svelte`, when
+/// an entry is opened.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/journal/journal_store.rs`: `read_journal_entry`; [`row_of`].
 #[tauri::command]
 pub fn agent_journal_get(session: State<'_, Session>, id: i64) -> Result<JournalEntryView, ViewError> {
     let opened = session.lock()?;

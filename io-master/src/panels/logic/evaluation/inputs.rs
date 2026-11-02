@@ -31,8 +31,11 @@ pub struct Inputs {
     pub proofs: Vec<Needed<LabProof>>,
 }
 
-/// How many of the work units `units` need the input `id`: as a document
-/// with `document`, otherwise as a proof.
+/// How many of the work units `units` need the input `id`.
+///
+/// Input: `units`, the work units of the evaluation; `id`, the id of a place
+/// of an input; `document`, whether it is a document (otherwise a proof).
+/// Output: the count (`3`).
 ///
 /// Called by: [`inputs`].
 fn needing(units: &[WorkUnit], id: i64, document: bool) -> usize {
@@ -57,7 +60,12 @@ fn needing(units: &[WorkUnit], id: i64, document: bool) -> usize {
 /// the proofs its work units need, given or not, each with how many work
 /// units need it.
 ///
-/// Called by: `panels/views/evaluation/evaluations.rs` (`evaluation_get`).
+/// Input: `db`, the open database; `evaluation`, the id of a stored
+/// evaluation.
+/// Output: the places (`Inputs { documents: [Needed { input: ST, work_units:
+/// 12 }], proofs: [...] }`); an error of the database.
+///
+/// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_get`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
 /// `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;

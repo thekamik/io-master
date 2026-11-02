@@ -158,8 +158,9 @@ fn unlocking_key(
 /// `KeyError::WeakPassword` for a password refused, `KeyError::Failed` when
 /// no random bytes or no key could be made.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`; `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
-/// Calls: [`check_password`], `infrastructure/security/random.rs`: `fill_random`, [`unlocking_key`].
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`;
+/// `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
+/// Calls: [`check_password`]; `infrastructure/security/random.rs`: `fill_random`; [`unlocking_key`].
 pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<WrappedKey, KeyError> {
     check_password(password)?;
 
@@ -198,7 +199,7 @@ pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<Wrapped
 /// another form.
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`, `open_with_password`.
-/// Calls: [`unlocking_key`], `infrastructure/storage/encryption/database_key.rs`: `DatabaseKey::fill_with`.
+/// Calls: [`unlocking_key`]; `infrastructure/storage/encryption/database_key.rs`: `DatabaseKey::fill_with`.
 pub fn unwrap(wrapped: &WrappedKey, password: &str, binding: &[u8]) -> Result<DatabaseKey, KeyError> {
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| KeyError::Damaged)?;
     let tag: [u8; TAG_LENGTH] = wrapped.tag.as_slice().try_into().map_err(|_| KeyError::Damaged)?;

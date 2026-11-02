@@ -31,8 +31,16 @@ const MAX_PROOF_BYTES: usize = 4 * 1024 * 1024;
 /// whether a file was chosen. Run apart from the window (`async`): the
 /// dialog waits for the user, and a PDF takes a moment.
 ///
-/// Called by: `EvaluationEditor.svelte`, "Give the file".
-/// Calls: the dialog of the system, `document_file`, `give_document`.
+/// Input: `app`, the handle of the window; `session`, the session of the
+/// window, someone logged in; `id`, the id of an evaluation in progress;
+/// `document`, the id of one of its documents; `version`, the version typed.
+/// Output: whether a file was chosen (`true`); `ViewError::NotLoggedIn` when
+/// nobody is logged in, the refusals of the file or the document.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationDocumentGive`, from
+/// `ui/src/views/evaluation/EvaluationEditor.svelte`, "Give the file".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; the dialog of the system;
+/// `objects/evaluation/product_document/product_document_rules.rs`: `document_file`, `give_document`.
 #[tauri::command(async)]
 pub fn evaluation_document_give(
     app: AppHandle,
@@ -65,8 +73,17 @@ pub fn evaluation_document_give(
 /// record of its test: performed at `performed` (seconds since 1970, UTC)
 /// by `tester` with `equipment`.
 ///
-/// Called by: `EvaluationEditor.svelte`, "Give the proof".
-/// Calls: `give_proof`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an evaluation in progress; `proof`, the id of a proof one of its work
+/// units needs; `text`, `performed`, `tester`, `equipment`, the proof and the
+/// record of its test.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in, the
+/// refusals of the proof.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationProofGive`, from
+/// `ui/src/views/evaluation/EvaluationEditor.svelte`, "Give the proof".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`.
 #[tauri::command]
 pub fn evaluation_proof_give(
     session: State<'_, Session>,

@@ -86,8 +86,9 @@ impl From<DbError> for RenewalError {
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `recover`,
 /// `change_password`, `new_recovery_code`.
-/// Calls: `recovery.rs`: `new_code`, `wrap`; `password.rs`: `wrap`;
-/// `objects/user/user_keys/user_keys_store.rs`: `update_user_keys`.
+/// Calls: `objects/user/user_keys/user_keys_rules/recovery.rs`: `new_code`, `wrap`;
+/// `objects/user/user_keys/user_keys_rules/password.rs`: `wrap`; `objects/user/user_keys/user_keys_store.rs`:
+/// `update_user_keys`.
 pub fn renew_keys(
     system: &SystemDatabase,
     user: i64,

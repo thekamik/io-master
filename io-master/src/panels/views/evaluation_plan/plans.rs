@@ -80,6 +80,9 @@ pub struct PlanView {
 
 /// The name of a verdict on the page.
 ///
+/// Input: `verdict`, a verdict.
+/// Output: its name on the page (`"pass"`).
+///
 /// Called by: [`plan_get`].
 fn verdict_name(verdict: Verdict) -> &'static str {
     match verdict {
@@ -91,6 +94,10 @@ fn verdict_name(verdict: Verdict) -> &'static str {
 
 /// The verdict of its name on the page; a name the page never sends is
 /// refused.
+///
+/// Input: `name`, the name of a verdict the page sends (`"pass"`).
+/// Output: the verdict (`Verdict::Pass`); `ViewError::Invalid` for another
+/// name.
 ///
 /// Called by: [`plan_save`].
 fn verdict_of(name: &str) -> Result<Verdict, ViewError> {
@@ -104,8 +111,14 @@ fn verdict_of(name: &str) -> Result<Verdict, ViewError> {
 
 /// The plans in planning, the newest first.
 ///
-/// Called by: `EvaluationPlan.svelte`, when the panel opens and after a change.
-/// Calls: `read_evaluation_plans`.
+/// Input: `session`, the session of the window, someone logged in.
+/// Output: the summaries (`[{"id": 1, "name": "CC EAL4+ router", ...}]`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planList`, from
+/// `ui/src/views/evaluation_plan/EvaluationPlan.svelte`, when the panel opens and after a change.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plans`.
 #[tauri::command]
 pub fn plan_list(session: State<'_, Session>) -> Result<Vec<PlanSummaryView>, ViewError> {
     let opened = session.lock()?;
@@ -127,8 +140,15 @@ pub fn plan_list(session: State<'_, Session>) -> Result<Vec<PlanSummaryView>, Vi
 
 /// Makes a new plan in planning. Gives its id.
 ///
-/// Called by: `EvaluationPlan.svelte`, "New plan".
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`.
+/// Input: `session`, the session of the window, someone logged in; `name`,
+/// `description`, as typed.
+/// Output: the id of the new plan (`1`); `ViewError::NotLoggedIn` when nobody
+/// is logged in, the refusals of the plan.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planCreate`, from
+/// `ui/src/views/evaluation_plan/EvaluationPlan.svelte`, "New plan".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`.
 #[tauri::command]
 pub fn plan_create(session: State<'_, Session>, name: String, description: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
@@ -138,6 +158,9 @@ pub fn plan_create(session: State<'_, Session>, name: String, description: Strin
 
 /// The view of the plan `plan`: its data, every standard of the user with
 /// whether the plan has it, the names of its places of documents.
+///
+/// Input: `db`, the open database; `plan`, a plan.
+/// Output: its view for the form; an error of the database.
 ///
 /// Called by: [`plan_get`].
 fn plan_view(db: &UserDatabase, plan: EvaluationPlan) -> Result<PlanView, ViewError> {
@@ -181,8 +204,15 @@ fn plan_view(db: &UserDatabase, plan: EvaluationPlan) -> Result<PlanView, ViewEr
 
 /// The data of the plan `id`, for its form.
 ///
-/// Called by: `PlanForm.svelte`, when a plan is chosen and after a change.
-/// Calls: `read_evaluation_plan`, [`plan_view`].
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of a plan.
+/// Output: the view of the plan; `ViewError::NotLoggedIn` when nobody is logged
+/// in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planGet`, from `ui/src/views/evaluation_plan/PlanForm.svelte`,
+/// when a plan is chosen and after a change.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`; [`plan_view`].
 #[tauri::command]
 pub fn plan_get(session: State<'_, Session>, id: i64) -> Result<PlanView, ViewError> {
     let opened = session.lock()?;
@@ -213,9 +243,17 @@ pub struct PlanFields {
 /// Saves the data of the plan the planner changed: its name, description,
 /// standards, places of documents, verdicts and the agent of its planner.
 ///
-/// Called by: `PlanForm.svelte`, "Save".
-/// Calls: `read_evaluation_plan`; `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
-/// `update_plan`.
+/// Input: `session`, the session of the window, someone logged in; `fields`,
+/// the fields of the form.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in,
+/// `ViewError::Invalid` for a verdict the page never sends, the refusals of the
+/// plan.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planSave`, from `ui/src/views/evaluation_plan/PlanForm.svelte`,
+/// "Save".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `update_plan`.
 #[tauri::command]
 pub fn plan_save(session: State<'_, Session>, fields: PlanFields) -> Result<(), ViewError> {
     let opened = session.lock()?;
@@ -242,8 +280,15 @@ pub fn plan_save(session: State<'_, Session>, fields: PlanFields) -> Result<(), 
 /// Reserves a new place of a document of the product (`name`: "ST") in the
 /// plan `id`. Gives the id of the place.
 ///
-/// Called by: `PlanForm.svelte`, "Add a document".
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of a plan in planning; `name`, the name typed.
+/// Output: the id of the place (`9`); `ViewError::NotLoggedIn` when nobody is
+/// logged in, the refusals of the plan or the name.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planAddDocument`, from
+/// `ui/src/views/evaluation_plan/PlanForm.svelte`, "Add a document".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`.
 #[tauri::command]
 pub fn plan_add_document(session: State<'_, Session>, id: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;

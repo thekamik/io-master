@@ -38,8 +38,8 @@ use crate::objects::text::{MAX_NAME, checked_text};
 /// or a plan its store does not copy.
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_create`.
-/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`:
-/// `read_agent`; `infrastructure/clock.rs`: `now`; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`: `read_agent`;
+/// `infrastructure/clock.rs`: `now`; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
 /// `create_evaluation`.
 pub fn new_evaluation(db: &UserDatabase, plan: i64, identification: [&str; 3], agent: i64) -> Result<i64, DomainError> {
     let [product, client, evaluator] = identification;

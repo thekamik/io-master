@@ -10,6 +10,10 @@ pub const MASK: &str = "••••••••";
 
 /// The text with every occurrence of the key replaced by [`MASK`].
 ///
+/// Input: `text`, an explanation of an error; `key`, the API key sent, `None`
+/// for none.
+/// Output: the text with [`MASK`] for the key ("key •••••••• rejected").
+///
 /// Called by: [`masked`].
 fn mask(text: String, key: Option<&str>) -> String {
     match key {

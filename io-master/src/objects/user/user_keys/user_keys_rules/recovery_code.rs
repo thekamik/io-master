@@ -207,6 +207,9 @@ fn bytes_of(values: &[u8]) -> Result<[u8; CODE_BYTES], RecoveryCodeError> {
 
 /// The value of a typed character: `value_of('a')` is 8.
 ///
+/// Input: `character`, a character typed.
+/// Output: its value, 0 to 31; `None` when no code has it.
+///
 /// Called by: [`RecoveryCode::parse`].
 fn value_of(character: char) -> Option<u8> {
     let upper = character.to_ascii_uppercase();

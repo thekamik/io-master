@@ -142,6 +142,9 @@ fn verdict_of(name: &str, possible: &[Verdict]) -> Option<Verdict> {
 
 /// How bad a verdict is: `Fail` the worst (2), `Pass` the best (0).
 ///
+/// Input: `verdict`, a verdict.
+/// Output: its badness, 0 to 2.
+///
 /// Called by: [`with_dependencies`].
 fn badness(verdict: Verdict) -> u8 {
     match verdict {
@@ -197,6 +200,9 @@ fn with_dependencies(db: &UserDatabase, unit: &WorkUnit, own: Verdict) -> Result
 /// `first` and the lines `more`, parted by a line end when both hold text:
 /// `joined("A", ["B"])` is "A\nB".
 ///
+/// Input: `first`, a text of the answer; `more`, lines added after it.
+/// Output: the text joined.
+///
 /// Called by: [`apply_assessment`].
 fn joined(first: &str, more: &[String]) -> String {
     let mut text = first.to_owned();
@@ -224,8 +230,7 @@ fn joined(first: &str, more: &[String]) -> String {
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assessed`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; [`verdict_of`];
-/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`;
-/// [`with_dependencies`], [`joined`].
+/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`; [`with_dependencies`], [`joined`].
 pub fn apply_assessment(
     db: &UserDatabase,
     evaluation: i64,

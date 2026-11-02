@@ -33,8 +33,13 @@ pub struct ProgramView {
 /// The state of the program for the page: installed or not, and who is
 /// logged in.
 ///
-/// Called by: `App.svelte`, when the window opens and after every change.
-/// Calls: `objects/user/user_data/user_data_rules.rs`: `installed_user`; `Session::user_name`.
+/// Input: `session`, the session of the window.
+/// Output: the state (`{"installed": true, "user": "Kamil", "loggedIn": false}`);
+/// an error of the system database or the session.
+///
+/// Called by: `ui/src/lib/api/program_start.ts`: `loginGet`, from `ui/src/App.svelte`, when the window opens and
+/// after every change.
+/// Calls: `objects/user/user_data/user_data_rules.rs`: `installed_user`; `panels/session.rs`: `Session::user_name`.
 #[tauri::command]
 pub fn login_get(session: State<'_, Session>) -> Result<ProgramView, ViewError> {
     let installed = installed_user(session.data_folder())?.is_some();
@@ -48,8 +53,13 @@ pub fn login_get(session: State<'_, Session>) -> Result<ProgramView, ViewError> 
 /// the key takes a moment by design (Argon2id). The password is wiped from
 /// memory when the command ends.
 ///
-/// Called by: `LoginForm.svelte`, "Log in".
-/// Calls: `objects/user/user_data/user_data_rules.rs`: `log_in`; `Session::log_in`.
+/// Input: `session`, the session of the window; `name`, `password`, as typed.
+/// Output: nothing; `ViewError::Account` for a wrong name or password, an
+/// error of the databases or the session.
+///
+/// Called by: `ui/src/lib/api/program_start.ts`: `loginLogIn`, from `ui/src/views/program_start/LoginForm.svelte`,
+/// "Log in".
+/// Calls: `objects/user/user_data/user_data_rules.rs`: `log_in`; `panels/session.rs`: `Session::log_in`.
 #[tauri::command(async)]
 pub fn login_log_in(session: State<'_, Session>, name: String, password: String) -> Result<(), ViewError> {
     let password = Zeroizing::new(password);
@@ -67,8 +77,15 @@ pub fn login_log_in(session: State<'_, Session>, name: String, password: String)
 /// wrapped by Argon2id. The passwords and the code are wiped from memory
 /// when the command ends.
 ///
-/// Called by: `LoginForm.svelte`, "Set the new password".
-/// Calls: `objects/user/user_data/user_data_rules.rs`: `recover`; `Session::log_in`;
+/// Input: `session`, the session of the window; `name`, the name typed;
+/// `code`, the recovery code typed; `password`, `password_repeated`, the new
+/// password typed twice.
+/// Output: the new recovery code (`{"code": "ABCDE-..."}`); `ViewError::Account`
+/// for a wrong name or code or a password refused, an error of the session.
+///
+/// Called by: `ui/src/lib/api/program_start.ts`: `loginRecover`, from
+/// `ui/src/views/program_start/LoginForm.svelte`, "Set the new password".
+/// Calls: `objects/user/user_data/user_data_rules.rs`: `recover`; `panels/session.rs`: `Session::log_in`;
 /// `panels/views/recovery_code.rs`: `RecoveryCodeView::new`.
 #[tauri::command(async)]
 pub fn login_recover(
@@ -91,8 +108,9 @@ pub fn login_recover(
 
 /// Logs the user out: their database is closed.
 ///
-/// Called by: the frame of the window (`App.svelte`), "Log out".
-/// Calls: `Session::log_out`.
+/// Called by: `ui/src/lib/api/program_start.ts`: `loginLogOut`, from the frame of the window (`ui/src/App.svelte`),
+/// "Log out".
+/// Calls: `panels/session.rs`: `Session::log_out`.
 #[tauri::command]
 pub fn login_log_out(session: State<'_, Session>) -> Result<(), ViewError> {
     session.log_out()?;

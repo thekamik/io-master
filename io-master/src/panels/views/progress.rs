@@ -42,6 +42,9 @@ pub struct ProgressView {
 
 /// What the page shows of `progress`.
 ///
+/// Input: `progress`, the progress of the session.
+/// Output: what the page shows (`ProgressView { done: 3, total: 12, .. }`).
+///
 /// Called by: [`progress_of`].
 fn progress_view(progress: Progress) -> ProgressView {
     let mut problems = Vec::with_capacity(progress.problems.len());
@@ -66,9 +69,14 @@ fn progress_view(progress: Progress) -> ProgressView {
 /// plan or evaluation `evaluation_plan`; `None` when it was on another, or
 /// there was none since the start of the program.
 ///
+/// Input: `session`, the session of the window; `evaluation_plan`, the id of
+/// the plan or evaluation the page shows.
+/// Output: the progress (`Some(ProgressView { .. })`); `None` when the last
+/// work was on another or there was none; an error of the session.
+///
 /// Called by: `panels/views/evaluation/run.rs`: `evaluation_assess_progress`;
 /// `panels/views/evaluation_plan/fill.rs`: `plan_fill_progress`.
-/// Calls: `Session::progress`, [`progress_view`].
+/// Calls: `panels/session.rs`: `Session::progress`; [`progress_view`].
 pub fn progress_of(session: &Session, evaluation_plan: i64) -> Result<Option<ProgressView>, ViewError> {
     ensure!(evaluation_plan > 0, ViewError::Invalid(format!("no plan {evaluation_plan}")));
 

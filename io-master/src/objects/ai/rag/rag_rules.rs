@@ -126,8 +126,8 @@ pub fn source_text(path: &Path) -> Result<String, DomainError> {
 /// database.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_add`.
-/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`,
-/// `read_sources`, `create_source`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`, `read_sources`,
+/// `create_source`.
 pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Result<i64, DomainError> {
     let name = checked_text(name, "the name of the source", MAX_NAME)?;
 

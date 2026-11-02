@@ -73,6 +73,9 @@ pub struct CheckView {
 
 /// The name of a protocol on the page.
 ///
+/// Input: `protocol`, a protocol.
+/// Output: its name on the page (`"openai"`).
+///
 /// Called by: [`integration_list`].
 fn protocol_name(protocol: Protocol) -> &'static str {
     match protocol {
@@ -84,6 +87,9 @@ fn protocol_name(protocol: Protocol) -> &'static str {
 /// The protocol of its name on the page; a name the page never sends is
 /// refused.
 ///
+/// Input: `name`, the name of a protocol the page sends (`"anthropic"`).
+/// Output: the protocol; `ViewError::Invalid` for another name.
+///
 /// Called by: [`integration_of`].
 fn protocol_of(name: &str) -> Result<Protocol, ViewError> {
     match name {
@@ -94,6 +100,9 @@ fn protocol_of(name: &str) -> Result<Protocol, ViewError> {
 }
 
 /// The name of an ending on the page.
+///
+/// Input: `ending`, how an answer ended.
+/// Output: its name on the page (`"complete"`).
 ///
 /// Called by: [`integration_check`]; `panels/views/agents/journal.rs`.
 pub fn ending_name(ending: Ending) -> &'static str {
@@ -108,6 +117,11 @@ pub fn ending_name(ending: Ending) -> &'static str {
 
 /// The fields of an integration from the page, checked for their size, as
 /// the model.
+///
+/// Input: `fields`, the fields of the form of the page.
+/// Output: the integration (`Integration { id: 0, name: "Ollama", .. }`);
+/// `ViewError::Invalid` for a field over its size or a protocol the page
+/// never sends.
 ///
 /// Called by: [`integration_create`], [`integration_save`].
 fn integration_of(fields: IntegrationFields) -> Result<Integration, ViewError> {
@@ -148,9 +162,17 @@ pub struct IntegrationFields {
 /// Every integration of the user, the active one marked, whether each has a
 /// key.
 ///
-/// Called by: `IntegrationList.svelte`, when the tab opens and after a change;
-/// `AgentList.svelte` (the integration of a new agent).
-/// Calls: `read_integrations`, `read_settings`, `has_key`.
+/// Input: `session`, the session of the window, someone logged in.
+/// Output: the integrations (`[{"id": 1, "name": "Ollama", "active": true,
+/// "hasKey": false, ...}]`); `ViewError::NotLoggedIn` when nobody is logged in,
+/// an error of the database.
+///
+/// Called by: `ui/src/lib/api/settings.ts`: `integrationList`, from `ui/src/views/settings/IntegrationList.svelte`,
+/// when the tab opens and after a change; `ui/src/views/agents/AgentList.svelte` (the integration of a new agent).
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/integration/integration_store.rs`: `read_integrations`;
+/// `objects/user/program_data/program_data_store.rs`: `read_settings`; `objects/ai/api_key/api_key_rules.rs`:
+/// `has_key`.
 #[tauri::command]
 pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationView>, ViewError> {
     let opened = session.lock()?;
@@ -177,8 +199,16 @@ pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationVi
 
 /// Stores a new integration; gives its id.
 ///
-/// Called by: `IntegrationForm.svelte`, "Add the integration".
-/// Calls: [`integration_of`], `add_integration`.
+/// Input: `session`, the session of the window, someone logged in; `fields`,
+/// the fields of the form.
+/// Output: the id of the new integration (`2`); `ViewError::NotLoggedIn` when
+/// nobody is logged in, the refusals of [`integration_of`] and of the
+/// integration.
+///
+/// Called by: `ui/src/lib/api/settings.ts`: `integrationCreate`, from
+/// `ui/src/views/settings/IntegrationForm.svelte`, "Add the integration".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; [`integration_of`];
+/// `objects/ai/integration/integration_rules/settings.rs`: `add_integration`.
 #[tauri::command]
 pub fn integration_create(session: State<'_, Session>, fields: IntegrationFields) -> Result<i64, ViewError> {
     let integration = integration_of(fields)?;
@@ -189,8 +219,15 @@ pub fn integration_create(session: State<'_, Session>, fields: IntegrationFields
 
 /// Saves the data of the integration `fields.id`.
 ///
-/// Called by: `IntegrationForm.svelte`, "Save".
-/// Calls: [`integration_of`], `change_integration`.
+/// Input: `session`, the session of the window, someone logged in; `fields`,
+/// the fields of the form, its id that of an integration.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in, the
+/// refusals of [`integration_of`] and of the integration.
+///
+/// Called by: `ui/src/lib/api/settings.ts`: `integrationSave`, from `ui/src/views/settings/IntegrationForm.svelte`,
+/// "Save".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; [`integration_of`];
+/// `objects/ai/integration/integration_rules/settings.rs`: `change_integration`.
 #[tauri::command]
 pub fn integration_save(session: State<'_, Session>, fields: IntegrationFields) -> Result<(), ViewError> {
     let integration = integration_of(fields)?;
@@ -201,8 +238,10 @@ pub fn integration_save(session: State<'_, Session>, fields: IntegrationFields) 
 
 /// Makes the integration `id` the active one.
 ///
-/// Called by: `IntegrationList.svelte`, "Make active".
-/// Calls: `activate_integration`.
+/// Called by: `ui/src/lib/api/settings.ts`: `integrationActivate`, from
+/// `ui/src/views/settings/IntegrationList.svelte`, "Make active".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`.
 #[tauri::command]
 pub fn integration_activate(session: State<'_, Session>, id: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
@@ -213,8 +252,10 @@ pub fn integration_activate(session: State<'_, Session>, id: i64) -> Result<(), 
 /// Stores the API key of the integration `id`. The key goes in only: no
 /// command gives it back.
 ///
-/// Called by: `IntegrationForm.svelte`, "Store the key".
-/// Calls: `set_key`.
+/// Called by: `ui/src/lib/api/settings.ts`: `integrationSetKey`, from
+/// `ui/src/views/settings/IntegrationForm.svelte`, "Store the key".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/api_key/api_key_rules.rs`: `set_key`.
 #[tauri::command]
 pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) -> Result<(), ViewError> {
     let opened = session.lock()?;
@@ -226,9 +267,17 @@ pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) ->
 /// it is not kept in a journal. The lock of the session is released while
 /// the answer is awaited, so the window stays usable.
 ///
-/// Called by: `IntegrationForm.svelte`, "Check the connection".
-/// Calls: `check_question`, `objects/ai/integration/integration_ai/sending.rs`: `send_whole`,
-/// `objects/ai/journal/journal_ai.rs`: `record`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an integration.
+/// Output: the answer to the question of the check (`{"text": "OK", "ending":
+/// "complete", "error": null}`); `ViewError::NotLoggedIn` when nobody is logged
+/// in, the refusals of the question, an error of the session or the database.
+///
+/// Called by: `ui/src/lib/api/settings.ts`: `integrationCheck`, from
+/// `ui/src/views/settings/IntegrationForm.svelte`, "Check the connection".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/integration/integration_ai/check.rs`: `check_question`;
+/// `objects/ai/integration/integration_ai/sending.rs`: `send_whole`; `objects/ai/journal/journal_ai.rs`: `record`.
 #[tauri::command]
 pub async fn integration_check(session: State<'_, Session>, id: i64) -> Result<CheckView, ViewError> {
     let prepared = {

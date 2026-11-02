@@ -220,10 +220,10 @@ fn install(
 ///
 /// Called by: [`install`].
 /// Calls: `infrastructure/storage/encryption/generate_key.rs`: `generate_database_key`;
-/// `objects/user/user_keys/user_keys_rules/recovery.rs`: `new_code`, `wrap`; `objects/user/user_keys/user_keys_rules/password.rs`: `wrap`; [`binding`];
-/// `objects/user/user_keys/user_keys_store.rs`: `create_user_keys`;
-/// `infrastructure/storage/user_database.rs`: `create`;
-/// `objects/user/program_data/program_data_store.rs`: `create_settings`.
+/// `objects/user/user_keys/user_keys_rules/recovery.rs`: `new_code`, `wrap`;
+/// `objects/user/user_keys/user_keys_rules/password.rs`: `wrap`; [`binding`];
+/// `objects/user/user_keys/user_keys_store.rs`: `create_user_keys`; `infrastructure/storage/user_database.rs`:
+/// `create`; `objects/user/program_data/program_data_store.rs`: `create_settings`.
 fn keys_and_database(
     system: &SystemDatabase,
     data_dir: &Path,
@@ -280,8 +280,9 @@ fn removed(path: &Path, failure: AccountError) -> AccountError {
 /// the databases.
 ///
 /// Called by: `panels/views/program_start/installation.rs`: `installation_create`.
-/// Calls: `objects/user/user_keys/user_keys_rules/password.rs`: `check_password`; `infrastructure/storage/system_database.rs`:
-/// `create`, `path`; `infrastructure/storage/user_database.rs`: `path`; [`install`], [`removed`].
+/// Calls: `objects/user/user_keys/user_keys_rules/password.rs`: `check_password`;
+/// `infrastructure/storage/system_database.rs`: `create`, `path`; `infrastructure/storage/user_database.rs`:
+/// `path`; [`install`], [`removed`].
 pub fn create_account(
     data_dir: &Path,
     name: &str,
@@ -328,8 +329,8 @@ pub fn create_account(
 /// an error of the database.
 ///
 /// Called by: `panels/views/program_start/login.rs`: `login_get`.
-/// Calls: `infrastructure/storage/system_database.rs`: `open`;
-/// `objects/user/user_data/user_data_store.rs`: `read_users`.
+/// Calls: `infrastructure/storage/system_database.rs`: `open`; `objects/user/user_data/user_data_store.rs`:
+/// `read_users`.
 pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
     let system = match system_database::open(data_dir, &SYSTEM_TABLES) {
         Ok(system) => system,
@@ -390,8 +391,8 @@ fn find_user(system: &SystemDatabase, name: &str) -> Result<Option<User>, Accoun
 /// databases.
 ///
 /// Called by: `panels/views/program_start/login.rs`: `login_log_in`.
-/// Calls: [`open_installed`], [`find_user`]; `objects/user/user_keys/user_keys_store.rs`:
-/// `read_user_keys`; `objects/user/user_keys/user_keys_rules/password.rs`: `unwrap`; [`binding`];
+/// Calls: [`open_installed`], [`find_user`]; `objects/user/user_keys/user_keys_store.rs`: `read_user_keys`;
+/// `objects/user/user_keys/user_keys_rules/password.rs`: `unwrap`; [`binding`];
 /// `infrastructure/storage/user_database.rs`: `open`.
 pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, UserDatabase), AccountError> {
     let system = open_installed(data_dir)?;
@@ -427,9 +428,11 @@ pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, User
 /// (`AccountError::WrongRecovery`).
 ///
 /// Called by: `panels/views/program_start/login.rs`: `login_recover`.
-/// Calls: `password::check_password`, `RecoveryCode::parse`, [`open_installed`],
-/// [`find_user`], `read_user_keys`, `recovery::unwrap`, `user_database::open`,
-/// `renewal::renew_keys`.
+/// Calls: `objects/user/user_keys/user_keys_rules/password.rs`: `check_password`;
+/// `objects/user/user_keys/user_keys_rules/recovery_code.rs`: `RecoveryCode::parse`; [`open_installed`],
+/// [`find_user`]; `objects/user/user_keys/user_keys_store.rs`: `read_user_keys`;
+/// `objects/user/user_keys/user_keys_rules/recovery.rs`: `unwrap`; `infrastructure/storage/user_database.rs`:
+/// `open`; `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
 pub fn recover(
     data_dir: &Path,
     name: &str,
@@ -465,7 +468,8 @@ pub fn recover(
 /// when the password does not open it.
 ///
 /// Called by: [`change_password`], [`new_recovery_code`].
-/// Calls: [`open_installed`], `read_user_keys`, `password::unwrap`.
+/// Calls: [`open_installed`]; `objects/user/user_keys/user_keys_store.rs`: `read_user_keys`;
+/// `objects/user/user_keys/user_keys_rules/password.rs`: `unwrap`.
 fn open_with_password(
     data_dir: &Path,
     user: i64,
@@ -500,8 +504,8 @@ fn open_with_password(
 /// or are weak, or the present one is wrong (`AccountError::WrongPassword`).
 ///
 /// Called by: `panels/views/account/credentials.rs`: `account_change_password`.
-/// Calls: `password::check_password`, [`open_with_password`],
-/// `renewal::renew_keys`.
+/// Calls: `objects/user/user_keys/user_keys_rules/password.rs`: `check_password`; [`open_with_password`];
+/// `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
 pub fn change_password(
     data_dir: &Path,
     user: i64,
@@ -529,7 +533,7 @@ pub fn change_password(
 /// password is wrong.
 ///
 /// Called by: `panels/views/account/credentials.rs`: `account_new_recovery_code`.
-/// Calls: [`open_with_password`], `renewal::renew_keys`.
+/// Calls: [`open_with_password`]; `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
 pub fn new_recovery_code(data_dir: &Path, user: i64, password: &str) -> Result<RecoveryCode, AccountError> {
     ensure!(!password.is_empty(), AccountError::WrongPassword);
 

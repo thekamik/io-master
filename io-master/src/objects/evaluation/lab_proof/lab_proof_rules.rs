@@ -35,9 +35,8 @@ const MAX_PROOF: usize = 1_000_000;
 ///
 /// Called by: `panels/views/evaluation/inputs.rs`: `evaluation_proof_give`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`,
-/// `needed_proofs`; `objects/text.rs`: `checked_text`;
-/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
-/// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`, `update_lab_proof`.
+/// `needed_proofs`; `objects/text.rs`: `checked_text`; `objects/evaluation/work_unit/work_unit_store.rs`:
+/// `read_work_units`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`, `update_lab_proof`.
 pub fn give_proof(db: &UserDatabase, evaluation: i64, proof: &LabProof) -> Result<(), DomainError> {
     evaluation_in_progress(db, evaluation)?;
 

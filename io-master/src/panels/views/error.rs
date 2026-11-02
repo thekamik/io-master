@@ -81,7 +81,9 @@ impl From<SessionBroken> for ViewError {
 impl ViewError {
     /// The kind of the error as the page knows it.
     ///
-    /// Called by: the serialization below.
+    /// Output: the kind (`"invalid"`, `"not_logged_in"`).
+    ///
+    /// Called by: `serialize` of `ViewError`, below.
     fn kind(&self) -> &'static str {
         match self {
             ViewError::Account(AccountError::NotInstalled) => "not_installed",
@@ -125,7 +127,9 @@ impl ViewError {
 
     /// The sentence the page shows.
     ///
-    /// Called by: the serialization below.
+    /// Output: the sentence ("the question is too long").
+    ///
+    /// Called by: `serialize` of `ViewError`, below.
     fn message(&self) -> String {
         match self {
             ViewError::Account(error) => error.to_string(),

@@ -30,8 +30,14 @@ pub struct StandardView {
 
 /// Every standard of the user, by its title.
 ///
-/// Called by: `EvaluationPlan.svelte`, when the panel opens and after an import.
-/// Calls: `read_oscal_standard_documents`.
+/// Input: `session`, the session of the window, someone logged in.
+/// Output: the standards (`[{"id": 2, "title": "CEM", "version": "3.1 R5"}]`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `standardList`, from
+/// `ui/src/views/evaluation_plan/EvaluationPlan.svelte`, when the panel opens and after an import.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`: `read_oscal_standard_documents`.
 #[tauri::command]
 pub fn standard_list(session: State<'_, Session>) -> Result<Vec<StandardView>, ViewError> {
     let opened = session.lock()?;
@@ -49,9 +55,16 @@ pub fn standard_list(session: State<'_, Session>) -> Result<Vec<StandardView>, V
 /// dialog was closed. Run apart from the window (`async`): the dialog waits
 /// for the user.
 ///
-/// Called by: `EvaluationPlan.svelte`, "Import a standard".
-/// Calls: the dialog of the system; `objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`:
-/// `import_standard`.
+/// Input: `app`, the handle of the window; `session`, the session of the
+/// window, someone logged in.
+/// Output: the id of the standard (`Some(2)`), `None` when the dialog was
+/// closed; `ViewError::NotLoggedIn` when nobody is logged in,
+/// `ViewError::Invalid` for a file refused, the refusals of the catalog.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `standardImport`, from
+/// `ui/src/views/evaluation_plan/EvaluationPlan.svelte`, "Import a standard".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; the dialog of the system;
+/// `objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `import_standard`.
 #[tauri::command(async)]
 pub fn standard_import(app: AppHandle, session: State<'_, Session>) -> Result<Option<i64>, ViewError> {
     let Some(file) =

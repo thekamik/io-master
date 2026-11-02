@@ -33,8 +33,8 @@ use crate::objects::session::progress::progress_ai::lock::{lock_database, open_d
 /// Input: `evaluation`, the id of an evaluation in progress; `unit`, the id
 /// of one of its work units.
 /// Output: the question prepared; the refusals of
-/// `objects/ai/integration/integration_ai/question.rs`: `prepare` (no key, no room even
-/// with the passages) and of the question made.
+/// `objects/ai/integration/integration_ai/question.rs`: `prepare` (no key, no
+/// room even with the passages) and of the question made.
 ///
 /// Called by: [`prepared_question`].
 /// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessment_question`;
@@ -60,8 +60,7 @@ pub(in crate::objects::evaluation) fn prepared_assessment(
 /// database.
 ///
 /// Called by: [`written`].
-/// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `read_assessment`,
-/// `apply_assessment`.
+/// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `read_assessment`, `apply_assessment`.
 pub(in crate::objects::evaluation) fn assessed(
     db: &UserDatabase,
     evaluation: i64,
@@ -107,8 +106,8 @@ fn prepared_question(
 ///
 /// Called by: [`assess_work_unit`].
 /// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_database`, `open_database`;
-/// `objects/ai/journal/journal_ai.rs`: `record`; [`assessed`];
-/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`.
+/// `objects/ai/journal/journal_ai.rs`: `record`; [`assessed`]; `objects/evaluation/work_unit/work_unit_store.rs`:
+/// `read_work_unit`.
 fn written(
     database: &Mutex<Option<UserDatabase>>,
     step: (i64, i64),
@@ -144,8 +143,7 @@ fn written(
 /// session or the database fails.
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `assess_evaluation`.
-/// Calls: [`prepared_question`], `objects/ai/integration/integration_ai/sending.rs`:
-/// `send_whole`, [`written`].
+/// Calls: [`prepared_question`]; `objects/ai/integration/integration_ai/sending.rs`: `send_whole`; [`written`].
 pub async fn assess_work_unit(
     database: &Mutex<Option<UserDatabase>>,
     evaluation: i64,

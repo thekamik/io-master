@@ -59,6 +59,9 @@ document is not taken.";
 /// The name of a verdict, as the question and the answer write it:
 /// `Verdict::Pass` is "pass".
 ///
+/// Input: `verdict`, a verdict.
+/// Output: its name (`"pass"`).
+///
 /// Called by: [`unit_json`], [`dependencies_text`], [`question_of`];
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `verdict_of`,
 /// `with_dependencies`; `panels/views/evaluation/work_units.rs`: `row_of`, `needs_of`,
@@ -117,8 +120,8 @@ fn label_of(units: &[WorkUnit], id: i64) -> String {
 ///
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
-/// `read_oscal_standard_document`; [`label_of`]; `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
-/// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`verdict_name`].
+/// `read_oscal_standard_document`; [`label_of`]; `objects/evaluation/product_document/product_document_store.rs`:
+/// `read_product_document`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`verdict_name`].
 fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<Value, AiError> {
     let mut dependencies = Vec::with_capacity(unit.dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
@@ -205,8 +208,8 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit]) -> String {
 /// database.
 ///
 /// Called by: [`question_of`].
-/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`, `read_document_text`,
-/// `read_document_passages`.
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
+/// `read_document_text`, `read_document_passages`.
 fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<String, AiError> {
     let mut text = String::new();
 
@@ -234,6 +237,9 @@ fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<Str
 
 /// The day of `seconds` since 1970 (UTC), as YYYY-MM-DD (the civil calendar
 /// of the days since 1970, H. Hinnant): `day_of(1793577600)` is "2026-11-02".
+///
+/// Input: `seconds`, a time written by the program.
+/// Output: its day ("2026-11-02").
 ///
 /// Called by: [`proofs_text`].
 fn day_of(seconds: i64) -> String {
@@ -288,8 +294,8 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
 ///
 /// Called by: [`assessment_question`].
 /// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`unit_json`],
-/// [`dependencies_text`], [`documents_text`], [`proofs_text`], [`verdict_name`];
-/// `objects/ai/agent/agent_ai.rs`: `agent_question`.
+/// [`dependencies_text`], [`documents_text`], [`proofs_text`], [`verdict_name`]; `objects/ai/agent/agent_ai.rs`:
+/// `agent_question`.
 fn question_of(
     db: &UserDatabase,
     evaluation: &EvaluationPlan,
@@ -331,8 +337,7 @@ fn question_of(
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_assessment`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
-/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`assessing_agent`],
-/// [`question_of`].
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`assessing_agent`], [`question_of`].
 pub fn assessment_question(db: &UserDatabase, evaluation: i64, unit: i64, whole: bool) -> Result<Question, AiError> {
     let stored = read_evaluation_plan(db, evaluation)?;
     let this = read_work_unit(db, unit)?;

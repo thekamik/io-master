@@ -184,8 +184,7 @@ pub fn work_order(units: &[WorkUnit]) -> Result<Order, DomainError> {
 /// `remove_work_unit`; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
 /// `update_work_unit_parameters`.
 /// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `update_work_unit`; [`work_order`];
-/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`,
-/// `update_evaluation_plan`.
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`, `update_evaluation_plan`.
 pub fn check_order(db: &UserDatabase, plan: i64) -> Result<bool, DomainError> {
     let units = read_work_units(db, plan)?;
     let crossed = work_order(&units)?.crossed;

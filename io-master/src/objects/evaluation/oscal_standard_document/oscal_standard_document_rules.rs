@@ -210,6 +210,9 @@ fn part_text(part: &Value) -> Result<String, OscalError> {
 /// The label of an object of OSCAL (its prop `label`), if it has one:
 /// `Some("ADV_ARC.1-1")`.
 ///
+/// Input: `object`, a control or a part.
+/// Output: its label, `None` when it has none.
+///
 /// Called by: [`part_text`], [`control_of`].
 fn label_of(object: &Value) -> Option<&str> {
     for prop in object.get("props").and_then(Value::as_array)? {

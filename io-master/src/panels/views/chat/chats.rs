@@ -100,6 +100,10 @@ pub struct ChatAnswerView {
 
 /// The view of the message `message`.
 ///
+/// Input: `message`, a message of a chat.
+/// Output: its view (`MessageView { speaker: "user", text: "...", time:
+/// 1793577600 }`).
+///
 /// Called by: [`chat_view`], [`chat_ask`].
 fn message_view(message: Message) -> MessageView {
     let speaker = match message.speaker {
@@ -112,8 +116,12 @@ fn message_view(message: Message) -> MessageView {
 
 /// The name of the agent of a chat; "(no agent)" when it names none.
 ///
+/// Input: `db`, the open database; `agent`, the id of the agent of a chat.
+/// Output: its name (`"Evaluator"`), "(no agent)" for none; an error of the
+/// database.
+///
 /// Called by: [`chat_list`], [`chat_view`].
-/// Calls: `read_agent`.
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`.
 fn agent_name(db: &UserDatabase, agent: Option<i64>) -> Result<String, ViewError> {
     Ok(match agent {
         Some(id) => read_agent(db, id)?.name,
@@ -122,6 +130,9 @@ fn agent_name(db: &UserDatabase, agent: Option<i64>) -> Result<String, ViewError
 }
 
 /// The view of the chat `chat`.
+///
+/// Input: `db`, the open database; `chat`, a chat with its messages.
+/// Output: its view with the name of its agent; an error of the database.
 ///
 /// Called by: [`chat_get`].
 /// Calls: [`agent_name`], [`message_view`].
@@ -138,6 +149,9 @@ fn chat_view(db: &UserDatabase, chat: Chat) -> Result<ChatView, ViewError> {
 
 /// The name of an ending on the page.
 ///
+/// Input: `ending`, how an answer ended.
+/// Output: its name on the page (`"stopped"`).
+///
 /// Called by: [`chat_ask`].
 fn ending_name(ending: Ending) -> &'static str {
     match ending {
@@ -151,8 +165,14 @@ fn ending_name(ending: Ending) -> &'static str {
 
 /// Every chat, the newest first.
 ///
-/// Called by: `ChatList.svelte`, when the panel is opened and after a change.
-/// Calls: `read_chats`, [`agent_name`].
+/// Input: `session`, the session of the window, someone logged in.
+/// Output: the chats (`[{"id": 5, "title": "...", "agent": "Evaluator"}]`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/chat.ts`: `chatList`, from `ui/src/views/chat/ChatList.svelte`, when the panel is
+/// opened and after a change.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/chat/chat_store.rs`: `read_chats`; [`agent_name`].
 #[tauri::command]
 pub fn chat_list(session: State<'_, Session>) -> Result<Vec<ChatSummaryView>, ViewError> {
     let opened = session.lock()?;
@@ -171,8 +191,14 @@ pub fn chat_list(session: State<'_, Session>) -> Result<Vec<ChatSummaryView>, Vi
 
 /// Makes a new chat titled `title` with the agent `agent`; gives its id.
 ///
-/// Called by: `ChatList.svelte`, "New chat".
-/// Calls: `new_chat`.
+/// Input: `session`, the session of the window, someone logged in; `title`, the
+/// title typed; `agent`, the id of an agent.
+/// Output: the id of the new chat (`5`); `ViewError::NotLoggedIn` when nobody
+/// is logged in, the refusals of the chat.
+///
+/// Called by: `ui/src/lib/api/chat.ts`: `chatCreate`, from `ui/src/views/chat/ChatList.svelte`, "New chat".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/chat/chat_rules.rs`: `new_chat`.
 #[tauri::command]
 pub fn chat_create(session: State<'_, Session>, title: String, agent: i64) -> Result<i64, ViewError> {
     ensure!(title.len() <= MAX_TITLE_BYTES, ViewError::Invalid("the title is too long".to_owned()));
@@ -184,8 +210,15 @@ pub fn chat_create(session: State<'_, Session>, title: String, agent: i64) -> Re
 
 /// The chat `id` whole.
 ///
-/// Called by: `Conversation.svelte`, when a chat is opened.
-/// Calls: `read_chat`, [`chat_view`].
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of a chat.
+/// Output: the chat with its messages; `ViewError::NotLoggedIn` when nobody is
+/// logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/chat.ts`: `chatGet`, from `ui/src/views/chat/Conversation.svelte`, when a chat is
+/// opened.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/chat/chat_store.rs`: `read_chat`; [`chat_view`].
 #[tauri::command]
 pub fn chat_get(session: State<'_, Session>, id: i64) -> Result<ChatView, ViewError> {
     let opened = session.lock()?;
@@ -196,8 +229,14 @@ pub fn chat_get(session: State<'_, Session>, id: i64) -> Result<ChatView, ViewEr
 
 /// Gives the chat `id` the title `title`.
 ///
-/// Called by: `Conversation.svelte`, "Rename".
-/// Calls: `rename_chat`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of a chat; `title`, the title typed.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in, the
+/// refusals of the title.
+///
+/// Called by: `ui/src/lib/api/chat.ts`: `chatRename`, from `ui/src/views/chat/Conversation.svelte`, "Rename".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/chat/chat_rules.rs`: `rename_chat`.
 #[tauri::command]
 pub fn chat_rename(session: State<'_, Session>, id: i64, title: String) -> Result<(), ViewError> {
     ensure!(title.len() <= MAX_TITLE_BYTES, ViewError::Invalid("the title is too long".to_owned()));
@@ -210,8 +249,15 @@ pub fn chat_rename(session: State<'_, Session>, id: i64, title: String) -> Resul
 /// The question `text` in the chat `chat`, prepared, and written into the
 /// chat once it was taken; gives also how many old messages were left out.
 ///
+/// Input: `session`, the session of the window; `chat`, the id of a chat;
+/// `text`, the question typed.
+/// Output: the question prepared and how many old messages were left out
+/// (`(prepared, 4)`); `ViewError::NotLoggedIn` when nobody is logged in, the
+/// refusals of the question.
+///
 /// Called by: [`chat_ask`].
-/// Calls: `prepared`, `add_question`.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; `objects/ai/chat/chat_ai.rs`:
+/// `prepared`; `objects/ai/chat/chat_rules.rs`: `add_question`.
 fn prepared_question(session: &Session, chat: i64, text: &str) -> Result<(Prepared, usize), ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -227,8 +273,14 @@ fn prepared_question(session: &Session, chat: i64, text: &str) -> Result<(Prepar
 /// receiver dropped) when the user asks it to stop or the page no more
 /// listens. Uses no database.
 ///
+/// Input: `session`, the session of the window; `prepared`, the question
+/// prepared; `on_piece`, the channel to the page.
+/// Output: the answer as it came, readable only through
+/// `objects/ai/journal/journal_ai.rs`: `record`.
+///
 /// Called by: [`chat_ask`].
-/// Calls: `objects/ai/integration/integration_ai/sending.rs`: `send`, `Session::stop_requested`.
+/// Calls: `objects/ai/integration/integration_ai/sending.rs`: `send`; `panels/session.rs`:
+/// `Session::stop_requested`.
 async fn forwarded(session: &Session, prepared: &Prepared, on_piece: &Channel<String>) -> Sent {
     let (pieces, mut receiver) = mpsc::channel::<String>(64);
     let sending = async move { send(prepared, &pieces).await };
@@ -259,8 +311,17 @@ async fn forwarded(session: &Session, prepared: &Prepared, on_piece: &Channel<St
 /// `chat.0`; gives what the page shows of it, with the number `chat.1` of
 /// the old messages left out of the question.
 ///
+/// Input: `session`, the session of the window; `chat`, the id of the chat
+/// and how many messages were left out; `prepared`, the question as it was
+/// sent; `sent`, its answer.
+/// Output: the answer as the page shows it (`{"message": {...}, "ending":
+/// "complete", "leftOut": 4}`); `ViewError::NotLoggedIn` when nobody is logged
+/// in, an error of the database.
+///
 /// Called by: [`chat_ask`].
-/// Calls: `objects/ai/journal/journal_ai.rs`: `record`, `add_answer`, [`message_view`], [`ending_name`].
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/journal/journal_ai.rs`: `record`; `objects/ai/chat/chat_ai.rs`: `add_answer`; [`message_view`],
+/// [`ending_name`].
 fn written(session: &Session, chat: (i64, usize), prepared: Prepared, sent: Sent) -> Result<ChatAnswerView, ViewError> {
     let (chat, left_out) = chat;
     let opened = session.lock()?;
@@ -280,9 +341,15 @@ fn written(session: &Session, chat: (i64, usize), prepared: Prepared, sent: Sent
 /// page piece by piece through `on_piece`, and kept in the chat and in the
 /// journal of its agent. Refused while another work of the AI runs.
 ///
-/// Called by: `Conversation.svelte`, "Send".
-/// Calls: `Session::begin_work`, [`prepared_question`], [`forwarded`],
-/// [`written`].
+/// Input: `session`, the session of the window, someone logged in; `chat`, the
+/// id of a chat with an agent; `text`, the question typed; `on_piece`, the
+/// channel to the page.
+/// Output: the answer as the page shows it; `ViewError::Invalid` for a question
+/// too long or while another work of the AI runs, `ViewError::NotLoggedIn` when
+/// nobody is logged in, the refusals of the question, an error of the database.
+///
+/// Called by: `ui/src/lib/api/chat.ts`: `chatAsk`, from `ui/src/views/chat/Conversation.svelte`, "Send".
+/// Calls: `panels/session.rs`: `Session::begin_work`; [`prepared_question`], [`forwarded`], [`written`].
 #[tauri::command]
 pub async fn chat_ask(
     session: State<'_, Session>,
@@ -303,8 +370,8 @@ pub async fn chat_ask(
 
 /// Asks the answer that is being written to stop at once.
 ///
-/// Called by: `Conversation.svelte`, "Stop".
-/// Calls: `Session::request_stop`.
+/// Called by: `ui/src/lib/api/chat.ts`: `chatStop`, from `ui/src/views/chat/Conversation.svelte`, "Stop".
+/// Calls: `panels/session.rs`: `Session::request_stop`.
 #[tauri::command]
 pub fn chat_stop(session: State<'_, Session>) -> Result<(), ViewError> {
     Ok(session.request_stop()?)

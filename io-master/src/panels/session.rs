@@ -63,7 +63,11 @@ impl Session {
     /// A session of the program whose data is in `data_folder`, nobody
     /// logged in.
     ///
-    /// Called by: `main.rs` (the start of the window).
+    /// Input: `data_folder`, the data folder of the program
+    /// (`~/.local/share/io-master`).
+    /// Output: the session.
+    ///
+    /// Called by: `main.rs`: `tauri_startup`.
     pub fn new(data_folder: PathBuf) -> Session {
         Session {
             data_folder,
@@ -75,7 +79,10 @@ impl Session {
 
     /// The data folder of the program.
     ///
-    /// Called by: the commands of `panels/views/program_start/`.
+    /// Called by: `panels/views/account/credentials.rs`: `account_change_password`,
+    /// `account_new_recovery_code`; `panels/views/program_start/installation.rs`:
+    /// `installation_create`; `panels/views/program_start/login.rs`: `login_get`,
+    /// `login_log_in`, `login_recover`.
     pub fn data_folder(&self) -> &Path {
         &self.data_folder
     }
@@ -83,15 +90,33 @@ impl Session {
     /// The open database, locked for one command: `None` when nobody is
     /// logged in.
     ///
-    /// Called by: [`Session::log_in`], [`Session::log_out`], the commands of
-    /// `panels/views/`.
+    /// Called by: [`Session::log_in`], [`Session::log_out`];
+    /// `panels/views/agents/agent.rs`: `agent_list`, `agent_create`, `agent_get`, `agent_save`,
+    /// `agent_knowledge_test`; `panels/views/agents/journal.rs`: `agent_journal_list`,
+    /// `agent_journal_get`; `panels/views/agents/knowledge.rs`: `knowledge_base_list`,
+    /// `knowledge_base_create`, `knowledge_base_save`, `knowledge_source_list`, `knowledge_source_add`,
+    /// `knowledge_source_replace`, `knowledge_source_rename`, `knowledge_search`;
+    /// `panels/views/chat/chats.rs`: `chat_list`, `chat_create`, `chat_get`, `chat_rename`,
+    /// `prepared_question`, `written`; `panels/views/evaluation/evaluations.rs`: `evaluation_list`,
+    /// `evaluation_create`, `evaluation_get`, `evaluation_set_agent`;
+    /// `panels/views/evaluation/inputs.rs`: `evaluation_document_give`, `evaluation_proof_give`;
+    /// `panels/views/evaluation/run.rs`: `evaluation_assess_preview`, `evaluation_assess`;
+    /// `panels/views/evaluation/work_units.rs`: `evaluation_unit_list`, `evaluation_unit_get`,
+    /// `evaluation_unit_save`; `panels/views/evaluation_plan/fill.rs`: `fill`, `plan_fill_preview`;
+    /// `panels/views/evaluation_plan/plans.rs`: `plan_list`, `plan_create`, `plan_get`, `plan_save`,
+    /// `plan_add_document`; `panels/views/evaluation_plan/standards.rs`: `standard_list`,
+    /// `standard_import`; `panels/views/evaluation_plan/work_units.rs`: `work_unit_list`,
+    /// `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`,
+    /// `work_unit_save`, `work_unit_add_proof`; `panels/views/settings/integrations.rs`:
+    /// `integration_list`, `integration_create`, `integration_save`, `integration_activate`,
+    /// `integration_set_key`, `integration_check`.
     pub fn lock(&self) -> Result<MutexGuard<'_, Option<UserDatabase>>, SessionBroken> {
         self.database.lock().map_err(|_| SessionBroken)
     }
 
     /// The name of the user logged in; `None` when nobody is.
     ///
-    /// Called by: `panels/views/program_start/login.rs` (`login_get`).
+    /// Called by: `panels/views/program_start/login.rs`: `login_get`.
     pub fn user_name(&self) -> Result<Option<String>, SessionBroken> {
         let user = self.user.lock().map_err(|_| SessionBroken)?;
 
@@ -111,6 +136,10 @@ impl Session {
     /// Keeps `user` and their open `database` as the session; a session
     /// open before is closed.
     ///
+    /// Input: `user`, the user whose password or code opened `database`;
+    /// `database`, their database, open.
+    /// Output: nothing; `SessionBroken` when a lock of the session is broken.
+    ///
     /// Called by: `panels/views/program_start/installation.rs`: `installation_create`;
     /// `panels/views/program_start/login.rs`: `login_log_in`, `login_recover`.
     /// Calls: [`Session::lock`].
@@ -126,8 +155,8 @@ impl Session {
     /// The locks of the open database and of the progress, for a long work
     /// of the AI that takes them for its short steps (`objects/session/progress/progress_ai/lock.rs`).
     ///
-    /// Called by: `panels/views/evaluation/run.rs` (`evaluation_assess`),
-    /// `panels/views/evaluation_plan/fill.rs` (`fill`).
+    /// Called by: `panels/views/evaluation/run.rs`: `evaluation_assess`;
+    /// `panels/views/evaluation_plan/fill.rs`: `fill`.
     pub fn locks(&self) -> (&Mutex<Option<UserDatabase>>, &Mutex<Progress>) {
         (&self.database, &self.progress)
     }
@@ -136,19 +165,24 @@ impl Session {
     /// writes its steps into it and for the page that reads it.
     ///
     /// Called by: [`Session::begin_work`], [`Session::request_stop`],
-    /// [`Session::stop_requested`], [`Session::is_working`], the commands of
-    /// `panels/views/` that run or show a long work.
+    /// [`Session::stop_requested`], [`Session::is_working`];
+    /// `panels/views/progress.rs`: `progress_of`.
     pub fn progress(&self) -> Result<MutexGuard<'_, Progress>, SessionBroken> {
         self.progress.lock().map_err(|_| SessionBroken)
     }
 
     /// Begins a long work of the AI on the plan or evaluation
-    /// `evaluation_plan` (`None` for a chat), over `total` work units: `None`
-    /// when one runs already. The progress of the work before is forgotten.
+    /// `evaluation_plan`, over `total` work units. The progress of the work
+    /// before is forgotten.
     ///
-    /// Called by: `panels/views/evaluation_plan/fill.rs` (`fill`),
-    /// `panels/views/evaluation/run.rs` (`evaluation_assess`),
-    /// `panels/views/chat/chats.rs` (`chat_ask`).
+    /// Input: `evaluation_plan`, the id of the plan or evaluation, `None` for a
+    /// chat; `total`, how many steps the work has.
+    /// Output: the work, which ends the running when dropped; `None` when one
+    /// runs already; `SessionBroken` when the lock of the progress is broken.
+    ///
+    /// Called by: `panels/views/evaluation_plan/fill.rs`: `fill`;
+    /// `panels/views/evaluation/run.rs`: `evaluation_assess`;
+    /// `panels/views/chat/chats.rs`: `chat_ask`.
     /// Calls: [`Session::progress`].
     pub fn begin_work(&self, evaluation_plan: Option<i64>, total: usize) -> Result<Option<Work<'_>>, SessionBroken> {
         let mut progress = self.progress()?;
@@ -164,8 +198,8 @@ impl Session {
 
     /// Whether a long work of the AI runs.
     ///
-    /// Called by: `panels/views/evaluation/work_units.rs`
-    /// (`evaluation_unit_save`: the evaluator and the AI never write at once).
+    /// Called by: `panels/views/evaluation/work_units.rs`: `evaluation_unit_save` (the
+    /// evaluator and the AI never write at once).
     /// Calls: [`Session::progress`].
     pub fn is_working(&self) -> Result<bool, SessionBroken> {
         Ok(self.progress()?.running)
@@ -173,9 +207,9 @@ impl Session {
 
     /// Asks the long work that runs to stop after its present step.
     ///
-    /// Called by: `panels/views/evaluation_plan/fill.rs` (`plan_fill_stop`),
-    /// `panels/views/evaluation/run.rs` (`evaluation_assess_stop`),
-    /// `panels/views/chat/chats.rs` (`chat_stop`).
+    /// Called by: `panels/views/evaluation_plan/fill.rs`: `plan_fill_stop`;
+    /// `panels/views/evaluation/run.rs`: `evaluation_assess_stop`;
+    /// `panels/views/chat/chats.rs`: `chat_stop`.
     /// Calls: [`Session::progress`].
     pub fn request_stop(&self) -> Result<(), SessionBroken> {
         self.progress()?.stop = true;
@@ -185,9 +219,10 @@ impl Session {
 
     /// Whether the user asked the long work to stop.
     ///
-    /// Called by: `panels/views/chat/chats.rs` (while an answer streams); a
-    /// filling and an assessment read the same field before each step
-    /// (`objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`).
+    /// Called by: `panels/views/chat/chats.rs`: `forwarded` (while an answer
+    /// streams); a filling and an assessment read the same field before each
+    /// step (`objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `assess_evaluation`,
+    /// `fill_plan`).
     /// Calls: [`Session::progress`].
     pub fn stop_requested(&self) -> Result<bool, SessionBroken> {
         Ok(self.progress()?.stop)
@@ -195,8 +230,10 @@ impl Session {
 
     /// Ends the session: the database is closed, nobody is logged in.
     ///
-    /// Called by: `panels/views/program_start/login.rs` (`login_log_out`); `main.rs`
-    /// (the end of the program, however it ends).
+    /// Output: nothing; `SessionBroken` when a lock of the session is broken.
+    ///
+    /// Called by: `panels/views/program_start/login.rs`: `login_log_out`; `main.rs`:
+    /// `tauri_startup` (the end of the program, however it ends).
     /// Calls: [`Session::lock`].
     pub fn log_out(&self) -> Result<(), SessionBroken> {
         *self.user.lock().map_err(|_| SessionBroken)? = None;

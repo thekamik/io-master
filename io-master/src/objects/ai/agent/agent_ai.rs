@@ -102,8 +102,8 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 ///
 /// Called by: [`agent_question`]; `panels/views/agents/agent.rs`:
 /// `agent_knowledge_test`.
-/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`widened`];
-/// `objects/ai/rag/rag_store.rs`: `read_passages`.
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`widened`]; `objects/ai/rag/rag_store.rs`:
+/// `read_passages`.
 pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<Vec<String>, AiError> {
     let agent = read_agent(db, agent)?;
     // The limits were checked when the agent was written
@@ -145,9 +145,9 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
 ///   evaluation.
 /// - `messages`: the conversation, at least one message.
 ///
-/// Output: the question, not prepared yet (`objects/ai/integration/integration_ai/question.rs`:
-/// `prepare`). An error when the agent cannot be read, or there is no
-/// message.
+/// Output: the question, not prepared yet
+/// (`objects/ai/integration/integration_ai/question.rs`: `prepare`). An error
+/// when the agent cannot be read, or there is no message.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `question_of`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`;

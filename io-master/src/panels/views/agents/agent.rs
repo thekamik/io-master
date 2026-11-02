@@ -89,8 +89,16 @@ pub struct AgentFields {
 
 /// Every agent, by its name.
 ///
-/// Called by: `AgentList.svelte`, when the panel opens and after a change.
-/// Calls: `read_agents`, `read_integration`.
+/// Input: `session`, the session of the window, someone logged in.
+/// Output: the agents (`[{"id": 2, "name": "Evaluator", "integration":
+/// "Ollama", "knowledgeBases": 1}]`); `ViewError::NotLoggedIn` when nobody is
+/// logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/agents.ts`: `agentList`, from `ui/src/views/agents/AgentList.svelte`, when the panel
+/// opens and after a change.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/agent/agent_store.rs`: `read_agents`; `objects/ai/integration/integration_store.rs`:
+/// `read_integration`.
 #[tauri::command]
 pub fn agent_list(session: State<'_, Session>) -> Result<Vec<AgentSummaryView>, ViewError> {
     let opened = session.lock()?;
@@ -113,8 +121,15 @@ pub fn agent_list(session: State<'_, Session>) -> Result<Vec<AgentSummaryView>, 
 
 /// Makes a new agent of the integration `integration`; gives its id.
 ///
-/// Called by: `AgentList.svelte`, "Make the agent".
-/// Calls: `new_agent`.
+/// Input: `session`, the session of the window, someone logged in; `name`, the
+/// name typed; `integration`, the id of an integration.
+/// Output: the id of the new agent (`3`); `ViewError::NotLoggedIn` when nobody
+/// is logged in, the refusals of the agent.
+///
+/// Called by: `ui/src/lib/api/agents.ts`: `agentCreate`, from `ui/src/views/agents/AgentList.svelte`, "Make the
+/// agent".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/agent/agent_rules.rs`: `new_agent`.
 #[tauri::command]
 pub fn agent_create(session: State<'_, Session>, name: String, integration: i64) -> Result<i64, ViewError> {
     ensure!(name.len() <= MAX_FIELD, ViewError::Invalid("the name is too long".to_owned()));
@@ -127,8 +142,17 @@ pub fn agent_create(session: State<'_, Session>, name: String, integration: i64)
 /// The agent `id` whole, with every integration and knowledge base to
 /// choose from.
 ///
-/// Called by: `AgentEditor.svelte`, when an agent is opened and after a save.
-/// Calls: `read_agent`, `read_integrations`, `read_knowledge_bases`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an agent.
+/// Output: the agent with what its editor offers (`{"id": 3, "name": ...,
+/// "integrations": [...], "bases": [...]}`); `ViewError::NotLoggedIn` when
+/// nobody is logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/agents.ts`: `agentGet`, from `ui/src/views/agents/AgentEditor.svelte`, when an agent
+/// is opened and after a save.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/integration/integration_store.rs`:
+/// `read_integrations`; `objects/ai/rag/rag_store.rs`: `read_knowledge_bases`.
 #[tauri::command]
 pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, ViewError> {
     let opened = session.lock()?;
@@ -168,6 +192,10 @@ pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, View
 /// The fields of an agent from the page, checked for their size, as the
 /// model.
 ///
+/// Input: `fields`, the fields of the editor of the page.
+/// Output: the agent (`Agent { id: 3, .. }`); `ViewError::Invalid` for a
+/// field over its size.
+///
 /// Called by: [`agent_save`].
 fn agent_of(fields: AgentFields) -> Result<Agent, ViewError> {
     ensure!(fields.name.len() <= MAX_FIELD, ViewError::Invalid("the name is too long".to_owned()));
@@ -201,8 +229,14 @@ fn agent_of(fields: AgentFields) -> Result<Agent, ViewError> {
 
 /// Saves the agent `fields.id`.
 ///
-/// Called by: `AgentEditor.svelte`, "Save".
-/// Calls: [`agent_of`], `change_agent`.
+/// Input: `session`, the session of the window, someone logged in; `fields`,
+/// the fields of the editor of the page.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in,
+/// `ViewError::Invalid` for a field over its size, the refusals of the agent.
+///
+/// Called by: `ui/src/lib/api/agents.ts`: `agentSave`, from `ui/src/views/agents/AgentEditor.svelte`, "Save".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; [`agent_of`];
+/// `objects/ai/agent/agent_rules.rs`: `change_agent`.
 #[tauri::command]
 pub fn agent_save(session: State<'_, Session>, fields: AgentFields) -> Result<(), ViewError> {
     let agent = agent_of(fields)?;
@@ -215,8 +249,16 @@ pub fn agent_save(session: State<'_, Session>, fields: AgentFields) -> Result<()
 /// the test of its bases, its glossary and its limits, before it works on
 /// a work unit. Nothing is sent to an AI service.
 ///
-/// Called by: `AgentEditor.svelte`, "Show the knowledge".
-/// Calls: `agent_knowledge`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an agent; `question`, the question typed.
+/// Output: the passages it would give (`["The TSF shall ..."]`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, an error of the agent or
+/// the database.
+///
+/// Called by: `ui/src/lib/api/agents.ts`: `agentKnowledgeTest`, from `ui/src/views/agents/AgentEditor.svelte`,
+/// "Show the knowledge".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/ai/agent/agent_ai.rs`: `agent_knowledge`.
 #[tauri::command]
 pub fn agent_knowledge_test(session: State<'_, Session>, id: i64, question: String) -> Result<Vec<String>, ViewError> {
     ensure!(question.len() <= MAX_FIELD, ViewError::Invalid("the question is too long".to_owned()));

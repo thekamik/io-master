@@ -116,12 +116,10 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 /// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_assessment`;
 /// `objects/ai/integration/integration_ai/check.rs`: `check_question`;
 /// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
-/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
-/// `objects/ai/api_key/api_key_store.rs`: `read_api_key`;
-/// `objects/ai/integration/integration_rules/address.rs`: `check_address`;
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`; `objects/ai/api_key/api_key_store.rs`:
+/// `read_api_key`; `objects/ai/integration/integration_rules/address.rs`: `check_address`;
 /// `objects/ai/integration/integration_ai/turns.rs`: `turns`; [`check_size`], [`answer_tokens`];
-/// `objects/ai/integration/integration_ai/protocol.rs`: `needs_key`, `body`;
-/// `infrastructure/clock.rs`: `now`.
+/// `objects/ai/integration/integration_ai/protocol.rs`: `needs_key`, `body`; `infrastructure/clock.rs`: `now`.
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
     ensure!(
         question.messages.len() <= MAX_MESSAGES,

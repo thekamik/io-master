@@ -129,8 +129,8 @@ pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received 
 /// broken or unreadable stream.
 ///
 /// Called by: [`send`].
-/// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`; [`http_client`],
-/// [`post`], [`read_error`], [`read_stream`]; `objects/ai_error.rs`: `from_status`.
+/// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`; [`http_client`], [`post`],
+/// [`read_error`], [`read_stream`]; `objects/ai_error.rs`: `from_status`.
 async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mut Reading) -> Result<bool, AiError> {
     check_address(&request.url)?;
 

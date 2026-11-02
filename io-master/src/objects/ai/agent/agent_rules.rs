@@ -125,9 +125,8 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Do
 /// database for an integration or a base missing.
 ///
 /// Called by: [`new_agent`], [`change_agent`].
-/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/integration/integration_store.rs`:
-/// `read_integration`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`;
-/// [`checked_glossary`].
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/integration/integration_store.rs`: `read_integration`;
+/// `objects/ai/rag/rag_store.rs`: `read_knowledge_base`; [`checked_glossary`].
 fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
     let name = checked_text(&agent.name, "the name of the agent", MAX_NAME)?;
     let passages = usize::try_from(agent.max_passages)

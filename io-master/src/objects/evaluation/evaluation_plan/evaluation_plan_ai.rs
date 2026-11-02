@@ -93,7 +93,8 @@ pub fn units_in_order(db: &UserDatabase, evaluation: i64) -> Result<Vec<WorkUnit
 /// progress or with a cross reference, an error of the database.
 ///
 /// Called by: [`preview`].
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`; [`units_in_order`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
+/// [`units_in_order`].
 fn units_to_assess(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Vec<WorkUnit>, AiError> {
     evaluation_in_progress(db, evaluation)?;
 
@@ -168,8 +169,8 @@ fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, AiE
 ///
 /// Called by: [`units_ready`]; `panels/views/evaluation/run.rs`:
 /// `evaluation_assess_preview`.
-/// Calls: [`units_to_assess`], `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
-/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`;
+/// Calls: [`units_to_assess`]; `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`:
+/// `evaluation_in_progress`; `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`;
 /// `objects/ai/agent/agent_store.rs`: `read_agent`; [`missing_inputs`], [`count`].
 pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Preview, AiError> {
     let units = units_to_assess(db, evaluation, again)?;
@@ -225,9 +226,9 @@ pub struct FillPreview {
 /// integration: "Ollama · llama3.1" }`); refused as [`fill_units`] refuses.
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs`: `plan_fill_preview`.
-/// Calls: [`fill_units`], `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
-/// `plan_to_fill`; `objects/ai/agent/agent_store.rs`: `read_agent`;
-/// `objects/ai/integration/integration_store.rs`: `read_integration`.
+/// Calls: [`fill_units`]; `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
+/// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/integration/integration_store.rs`:
+/// `read_integration`.
 pub fn fill_preview(db: &UserDatabase, plan: i64) -> Result<FillPreview, AiError> {
     let questions = fill_units(db, plan)?.len();
     let (_, agent_id) = plan_to_fill(db, plan)?;
@@ -323,8 +324,8 @@ pub async fn assess_evaluation(
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs`: `fill`.
 /// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_progress`;
-/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`:
-/// `fill_work_unit`; `objects/session/progress/progress_ai/step.rs`: `record_step`.
+/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `fill_work_unit`;
+/// `objects/session/progress/progress_ai/step.rs`: `record_step`.
 pub async fn fill_plan(
     database: &Mutex<Option<UserDatabase>>,
     progress: &Mutex<Progress>,

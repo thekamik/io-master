@@ -42,6 +42,8 @@ const REFUSED: &str = "[refused]";
 /// Leaves the oldest message of the conversation of `question` out, and an
 /// answer that would then come first, so that it starts with the user.
 ///
+/// Input: `question`, a question of a chat with more than one message.
+///
 /// Called by: [`prepare_shortened`].
 fn leave_oldest_out(question: &mut Question) {
     question.messages.remove(0);
@@ -113,8 +115,8 @@ fn search_text(messages: &[Message], question: &str) -> String {
 /// database.
 ///
 /// Called by: [`prepared`].
-/// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`; `objects/ai/chat/chat_rules.rs`:
-/// `checked_question`; [`search_text`]; `objects/ai/agent/agent_ai.rs`: `agent_question`.
+/// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`; `objects/ai/chat/chat_rules.rs`: `checked_question`;
+/// [`search_text`]; `objects/ai/agent/agent_ai.rs`: `agent_question`.
 fn chat_question(db: &UserDatabase, chat: i64, text: &str) -> Result<Question, AiError> {
     let stored = read_chat(db, chat)?;
     let question = checked_question(text)?;
@@ -153,7 +155,8 @@ pub fn prepared(db: &UserDatabase, chat: i64, text: &str) -> Result<(Prepared, u
 /// The text of the answer `answer` as the chat keeps it: an answer that did
 /// not end by itself gets its mark.
 ///
-/// Input: `answer`, the answer as `objects/ai/journal/journal_ai.rs`: `record` read it.
+/// Input: `answer`, the answer as `objects/ai/journal/journal_ai.rs`: `record`
+/// read it.
 /// Output: the text to keep ("The TSF ...\n\n[stopped]"); `None` for a
 /// failed answer, or one without text that ended by itself.
 ///
@@ -186,8 +189,7 @@ fn kept_text(answer: &Answer) -> Option<String> {
 ///
 /// Called by: `panels/views/chat/chats.rs`: `written` (after `objects/ai/journal/journal_ai.rs`:
 /// `record`).
-/// Calls: [`kept_text`]; `infrastructure/clock.rs`: `now`; `objects/ai/chat/chat_store.rs`:
-/// `create_message`.
+/// Calls: [`kept_text`]; `infrastructure/clock.rs`: `now`; `objects/ai/chat/chat_store.rs`: `create_message`.
 pub fn add_answer(db: &UserDatabase, chat: i64, answer: &Answer) -> Result<Option<Message>, AiError> {
     let Some(text) = kept_text(answer) else {
         return Ok(None);

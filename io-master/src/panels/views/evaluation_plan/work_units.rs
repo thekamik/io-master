@@ -94,8 +94,17 @@ fn standard_title(db: &UserDatabase, id: i64) -> Result<String, ViewError> {
 
 /// The work units of the plan `plan`, in its order.
 ///
-/// Called by: `PlanWorkUnits.svelte`, when a plan is chosen and after a change; `WorkUnitEditor.svelte` (the dependencies to choose).
-/// Calls: `read_work_units`, [`standard_title`].
+/// Input: `session`, the session of the window, someone logged in; `plan`, the
+/// id of a plan.
+/// Output: the rows (`[{"id": 7, "label": "ADV_ARC.1-1", "standard": "CEM",
+/// ...}]`); `ViewError::NotLoggedIn` when nobody is logged in, an error of the
+/// database.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `workUnitList`, from
+/// `ui/src/views/evaluation_plan/PlanWorkUnits.svelte`, when a plan is chosen and after a change;
+/// `ui/src/views/evaluation_plan/WorkUnitEditor.svelte` (the dependencies to choose).
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`standard_title`].
 #[tauri::command]
 pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<WorkUnitRowView>, ViewError> {
     let opened = session.lock()?;
@@ -139,8 +148,15 @@ pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<Work
 /// The controls of the standard `standard` the plan `plan` does not hold
 /// yet.
 ///
-/// Called by: `PlanWorkUnits.svelte`, when a standard is chosen to add from.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `available_controls`.
+/// Input: `session`, the session of the window, someone logged in; `plan`, the
+/// id of a plan; `standard`, the id of one of its standards.
+/// Output: the controls (`[{"oscalKey": "adv_arc.1-2", "label": "ADV_ARC.1-2"}]`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, the refusals of the standard.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `workUnitControls`, from
+/// `ui/src/views/evaluation_plan/PlanWorkUnits.svelte`, when a standard is chosen to add from.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `available_controls`.
 #[tauri::command]
 pub fn work_unit_controls(
     session: State<'_, Session>,
@@ -164,8 +180,16 @@ pub fn work_unit_controls(
 /// Adds the work unit of the control `oscal_key` of the standard `standard`
 /// to the plan `plan`. Gives its id.
 ///
-/// Called by: `PlanWorkUnits.svelte`, "Add" at a control.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_work_unit`.
+/// Input: `session`, the session of the window, someone logged in; `plan`, the
+/// id of a plan in planning; `standard`, the id of one of its standards;
+/// `oscal_key`, the key of a control of it.
+/// Output: the id of the new work unit (`14`); `ViewError::NotLoggedIn` when
+/// nobody is logged in, the refusals of the plan.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `workUnitAdd`, from
+/// `ui/src/views/evaluation_plan/PlanWorkUnits.svelte`, "Add" at a control.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_work_unit`.
 #[tauri::command]
 pub fn work_unit_add(
     session: State<'_, Session>,
@@ -181,8 +205,10 @@ pub fn work_unit_add(
 /// Adds every control of the standard `standard` the plan `plan` does not
 /// hold yet. Gives how many were added.
 ///
-/// Called by: `PlanWorkUnits.svelte`, "Add all".
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_all_work_units`.
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `workUnitAddAll`, from
+/// `ui/src/views/evaluation_plan/PlanWorkUnits.svelte`, "Add all".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_all_work_units`.
 #[tauri::command(async)]
 pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) -> Result<usize, ViewError> {
     let opened = session.lock()?;
@@ -192,8 +218,10 @@ pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) 
 
 /// Removes the work unit `unit` from the plan `plan`.
 ///
-/// Called by: `PlanWorkUnits.svelte`, "Remove" at a work unit.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `remove_work_unit`.
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `workUnitRemove`, from
+/// `ui/src/views/evaluation_plan/PlanWorkUnits.svelte`, "Remove" at a work unit.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `remove_work_unit`.
 #[tauri::command]
 pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
@@ -204,8 +232,17 @@ pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Re
 /// The work unit `unit`, for its form, with the names of its proofs and
 /// every agent to choose from.
 ///
-/// Called by: `WorkUnitEditor.svelte`, when a work unit is opened.
-/// Calls: `read_work_unit`, `read_lab_proof`, `read_agents`.
+/// Input: `session`, the session of the window, someone logged in; `unit`, the
+/// id of a work unit.
+/// Output: the work unit for its form; `ViewError::NotLoggedIn` when nobody is
+/// logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `workUnitGet`, from
+/// `ui/src/views/evaluation_plan/WorkUnitEditor.svelte`, when a work unit is opened.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
+/// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; `objects/ai/agent/agent_store.rs`:
+/// `read_agents`.
 #[tauri::command]
 pub fn work_unit_get(session: State<'_, Session>, unit: i64) -> Result<WorkUnitView, ViewError> {
     let opened = session.lock()?;
@@ -258,8 +295,16 @@ pub struct WorkUnitFields {
 
 /// Saves the parameters of a work unit.
 ///
-/// Called by: `WorkUnitEditor.svelte`, "Save".
-/// Calls: `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+/// Input: `session`, the session of the window, someone logged in; `fields`,
+/// the fields of the form.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in,
+/// `ViewError::Invalid` for a field over its size, the refusals of the
+/// parameters.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `workUnitSave`, from
+/// `ui/src/views/evaluation_plan/WorkUnitEditor.svelte`, "Save".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
 #[tauri::command]
 pub fn work_unit_save(session: State<'_, Session>, fields: WorkUnitFields) -> Result<(), ViewError> {
     let opened = session.lock()?;
@@ -277,8 +322,10 @@ pub fn work_unit_save(session: State<'_, Session>, fields: WorkUnitFields) -> Re
 /// Reserves a place of a proof of the laboratory (`name`) for the work unit
 /// `unit` of the plan `plan`. Gives the id of the place.
 ///
-/// Called by: `WorkUnitEditor.svelte`, "Add a proof".
-/// Calls: `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`.
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `workUnitAddProof`, from
+/// `ui/src/views/evaluation_plan/WorkUnitEditor.svelte`, "Add a proof".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`.
 #[tauri::command]
 pub fn work_unit_add_proof(session: State<'_, Session>, plan: i64, unit: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;

@@ -27,6 +27,10 @@ const MAX_KEY_HEADERS: usize = 2;
 /// Whether the service of `protocol` always needs an API key: a local
 /// server of the chat completions of `OpenAI` needs none.
 ///
+/// Input: `protocol`, the protocol of an integration.
+/// Output: `true` for the messages of Anthropic, `false` for the chat
+/// completions of `OpenAI`.
+///
 /// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`; [`key_headers`].
 pub fn needs_key(protocol: Protocol) -> bool {
     match protocol {

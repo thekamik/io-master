@@ -43,9 +43,16 @@ pub struct FillPreviewView {
 /// while another long work of the AI runs, or when the plan has no agent of
 /// the planner.
 ///
+/// Input: `session`, the session of the window; `task`, the task of the
+/// filling; `plan`, the id of a plan in planning with an agent of the planner.
+/// Output: nothing once the filling ended; `ViewError::NotLoggedIn` when nobody
+/// is logged in, `ViewError::Invalid` while another work of the AI runs, the
+/// refusals of the plan, an error of the session or the database.
+///
 /// Called by: [`plan_fill_parameters`], [`plan_fill_dependencies`].
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_units`,
-/// `fill_plan`; `Session::begin_work`, `Session::locks`.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_units`, `fill_plan`; `panels/session.rs`:
+/// `Session::begin_work`, `Session::locks`.
 async fn fill(session: &Session, task: FillTask, plan: i64) -> Result<(), ViewError> {
     let units = {
         let opened = session.lock()?;
@@ -63,7 +70,12 @@ async fn fill(session: &Session, task: FillTask, plan: i64) -> Result<(), ViewEr
 /// Fills every parameter but the dependencies of every work unit of the
 /// plan `plan`, over what was there.
 ///
-/// Called by: `PlanFill.svelte`, "Fill parameters".
+/// Input: `session`, the session of the window, someone logged in; `plan`, as
+/// [`fill`].
+/// Output: as [`fill`].
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFill`, from `ui/src/views/evaluation_plan/PlanFill.svelte`,
+/// "Fill parameters".
 /// Calls: [`fill`].
 #[tauri::command]
 pub async fn plan_fill_parameters(session: State<'_, Session>, plan: i64) -> Result<(), ViewError> {
@@ -74,7 +86,12 @@ pub async fn plan_fill_parameters(session: State<'_, Session>, plan: i64) -> Res
 /// was there; a dependency that closes a cycle is written and marked for
 /// the planner.
 ///
-/// Called by: `PlanFill.svelte`, "Fill dependencies".
+/// Input: `session`, the session of the window, someone logged in; `plan`, as
+/// [`fill`].
+/// Output: as [`fill`].
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFill`, from `ui/src/views/evaluation_plan/PlanFill.svelte`,
+/// "Fill dependencies".
 /// Calls: [`fill`].
 #[tauri::command]
 pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> Result<(), ViewError> {
@@ -85,8 +102,16 @@ pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> R
 /// questions, the agent and its integration, for the confirmation of the
 /// planner.
 ///
-/// Called by: `PlanFill.svelte`, before a filling starts.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`.
+/// Input: `session`, the session of the window, someone logged in; `plan`, the
+/// id of a plan.
+/// Output: the preview (`{"questions": 12, "agent": "Planner", "integration":
+/// "Ollama · llama3.1"}`); `ViewError::NotLoggedIn` when nobody is logged in,
+/// the refusals of the plan.
+///
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillPreview`, from
+/// `ui/src/views/evaluation_plan/PlanFill.svelte`, before a filling starts.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`.
 #[tauri::command]
 pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillPreviewView, ViewError> {
     let opened = session.lock()?;
@@ -99,7 +124,8 @@ pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillP
 /// its summary once it ended; `None` when there was none since the start
 /// of the program.
 ///
-/// Called by: `PlanFill.svelte`, while a filling runs and when it is shown.
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillProgress`, from
+/// `ui/src/views/evaluation_plan/PlanFill.svelte`, while a filling runs and when it is shown.
 /// Calls: `progress.rs`: `progress_of`.
 #[tauri::command]
 pub fn plan_fill_progress(session: State<'_, Session>, plan: i64) -> Result<Option<ProgressView>, ViewError> {
@@ -108,8 +134,9 @@ pub fn plan_fill_progress(session: State<'_, Session>, plan: i64) -> Result<Opti
 
 /// Asks the filling that runs to stop after its present work unit.
 ///
-/// Called by: `PlanFill.svelte`, "Stop".
-/// Calls: `Session::request_stop`.
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillStop`, from
+/// `ui/src/views/evaluation_plan/PlanFill.svelte`, "Stop".
+/// Calls: `panels/session.rs`: `Session::request_stop`.
 #[tauri::command]
 pub fn plan_fill_stop(session: State<'_, Session>) -> Result<(), ViewError> {
     Ok(session.request_stop()?)

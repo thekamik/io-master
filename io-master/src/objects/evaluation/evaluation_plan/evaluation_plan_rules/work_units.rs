@@ -107,8 +107,8 @@ fn holds(units: &[WorkUnit], standard: i64, oscal_key: &str) -> bool {
 /// the errors of [`controls_of`], an error of the database.
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_controls`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
-/// [`controls_of`]; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`holds`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`; [`controls_of`];
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`holds`].
 pub fn available_controls(db: &UserDatabase, plan: i64, standard: i64) -> Result<Vec<CatalogControl>, DomainError> {
     let stored = read_evaluation_plan(db, plan)?;
     let units = read_work_units(db, plan)?;
@@ -133,8 +133,9 @@ pub fn available_controls(db: &UserDatabase, plan: i64, standard: i64) -> Result
 /// is not in planning; the errors of [`controls_of`].
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_add`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`; [`controls_of`], [`holds`], [`unit_of`];
-/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `create_work_unit`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`;
+/// [`controls_of`], [`holds`], [`unit_of`]; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`,
+/// `create_work_unit`.
 pub fn add_work_unit(db: &UserDatabase, plan: i64, standard: i64, oscal_key: &str) -> Result<i64, DomainError> {
     let stored = plan_in_planning(db, plan)?;
     let controls = controls_of(db, &stored, standard)?;
@@ -162,8 +163,9 @@ pub fn add_work_unit(db: &UserDatabase, plan: i64, standard: i64, oscal_key: &st
 /// planning, the errors of [`controls_of`].
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_add_all`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`; [`controls_of`], [`holds`], [`unit_of`];
-/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `create_work_unit`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`;
+/// [`controls_of`], [`holds`], [`unit_of`]; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`,
+/// `create_work_unit`.
 pub fn add_all_work_units(db: &UserDatabase, plan: i64, standard: i64) -> Result<usize, DomainError> {
     let stored = plan_in_planning(db, plan)?;
     let controls = controls_of(db, &stored, standard)?;
@@ -189,7 +191,8 @@ pub fn add_all_work_units(db: &UserDatabase, plan: i64, standard: i64) -> Result
 /// or a plan not in planning, an error of the database.
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_remove`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`; `objects/evaluation/work_unit/work_unit_store.rs`: `delete_work_unit`;
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `delete_work_unit`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`.
 pub fn remove_work_unit(db: &UserDatabase, plan: i64, unit: i64) -> Result<(), DomainError> {
     let stored = plan_in_planning(db, plan)?;

@@ -51,8 +51,7 @@ pub fn new_chat(db: &UserDatabase, title: &str, agent: i64) -> Result<i64, Domai
 /// the database for a chat missing.
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_rename`.
-/// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`, `update_chat`; `objects/text.rs`:
-/// `checked_text`.
+/// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`, `update_chat`; `objects/text.rs`: `checked_text`.
 pub fn rename_chat(db: &UserDatabase, chat: i64, title: &str) -> Result<(), DomainError> {
     let mut stored = read_chat(db, chat)?;
 

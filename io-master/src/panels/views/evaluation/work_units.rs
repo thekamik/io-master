@@ -114,6 +114,9 @@ pub struct UnitView {
 
 /// The name of an ending on the page.
 ///
+/// Input: `ending`, how an answer ended.
+/// Output: its name on the page (`"cut"`).
+///
 /// Called by: [`unit_view`].
 fn ending_name(ending: Ending) -> &'static str {
     match ending {
@@ -127,6 +130,9 @@ fn ending_name(ending: Ending) -> &'static str {
 
 /// The name of an author on the page.
 ///
+/// Input: `author`, who wrote the results.
+/// Output: its name on the page (`"ai"`).
+///
 /// Called by: [`row_of`], [`unit_view`].
 fn author_name(author: Author) -> &'static str {
     match author {
@@ -137,8 +143,14 @@ fn author_name(author: Author) -> &'static str {
 
 /// The row of the work unit `unit` of the evaluation `evaluation`.
 ///
+/// Input: `db`, the open database; `evaluation`, the evaluation; `unit`,
+/// one of its work units.
+/// Output: its row with its agent (`UnitRowView { label: "ADV_ARC.1-1", .. }`);
+/// an error for a work unit without an agent or a database failed.
+///
 /// Called by: [`evaluation_unit_list`].
-/// Calls: `assessing_agent`, `read_agent`, [`author_name`].
+/// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`;
+/// `objects/ai/agent/agent_store.rs`: `read_agent`; [`author_name`].
 fn row_of(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> Result<UnitRowView, ViewError> {
     let agent = read_agent(db, assessing_agent(evaluation, &unit)?)?.name;
 
@@ -155,9 +167,17 @@ fn row_of(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> Res
 
 /// The work units of the evaluation `id` in the order of the work.
 ///
-/// Called by: `EvaluationUnits.svelte`, when the tab opens and after each
-/// step of an assessment.
-/// Calls: `read_evaluation_plan`, `units_in_order`, [`row_of`].
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an evaluation.
+/// Output: the rows (`[{"id": 7, "label": "ADV_ARC.1-1", ...}]`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, an evaluation with a
+/// cross reference, an error of the database.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationUnitList`, from
+/// `ui/src/views/evaluation/EvaluationUnits.svelte`, when the tab opens and after each step of an assessment.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `units_in_order`; [`row_of`].
 #[tauri::command]
 pub fn evaluation_unit_list(session: State<'_, Session>, id: i64) -> Result<Vec<UnitRowView>, ViewError> {
     let opened = session.lock()?;
@@ -176,8 +196,14 @@ pub fn evaluation_unit_list(session: State<'_, Session>, id: i64) -> Result<Vec<
 /// The names of what the work unit `unit` needs: its dependencies with their
 /// verdicts, its documents with their versions, its proofs.
 ///
+/// Input: `db`, the open database; `unit`, a work unit.
+/// Output: the names (`Needs { dependencies: ["ADV_ARC.1-1: pass"], .. }`);
+/// an error of the database.
+///
 /// Called by: [`unit_view`].
-/// Calls: `read_work_unit`, `read_product_document`, `read_lab_proof`.
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
+/// `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn needs_of(db: &UserDatabase, unit: &WorkUnit) -> Result<Needs, ViewError> {
     let mut dependencies = Vec::with_capacity(unit.dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
@@ -213,10 +239,16 @@ fn needs_of(db: &UserDatabase, unit: &WorkUnit) -> Result<Needs, ViewError> {
 
 /// The view of the work unit `unit` of the evaluation `evaluation`.
 ///
+/// Input: `db`, the open database; `evaluation`, the evaluation; `unit`,
+/// one of its work units.
+/// Output: the work unit whole with what it needs and the last question and
+/// answer of the AI; an error of the agent or the database.
+///
 /// Called by: [`evaluation_unit_get`].
-/// Calls: [`needs_of`], `assessing_agent`, `read_agent`,
-/// `read_oscal_standard_document`, `read_latest_journal_entry`,
-/// [`ending_name`], [`author_name`].
+/// Calls: [`needs_of`]; `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`;
+/// `objects/ai/agent/agent_store.rs`: `read_agent`;
+/// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`: `read_oscal_standard_document`;
+/// `objects/ai/journal/journal_store.rs`: `read_latest_journal_entry`; [`ending_name`], [`author_name`].
 fn unit_view(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> Result<UnitView, ViewError> {
     let Needs { dependencies, documents, proofs } = needs_of(db, &unit)?;
     let agent = read_agent(db, assessing_agent(evaluation, &unit)?)?.name;
@@ -262,8 +294,17 @@ fn unit_view(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> 
 
 /// The work unit `unit` of the evaluation `id` whole.
 ///
-/// Called by: `EvaluationUnit.svelte`, when a work unit is opened.
-/// Calls: `read_evaluation_plan`, `read_work_unit`, [`unit_view`].
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an evaluation; `unit`, the id of one of its work units.
+/// Output: the work unit whole; `ViewError::NotLoggedIn` when nobody is logged
+/// in, `ViewError::Invalid` for a work unit not of the evaluation, an error of
+/// the database.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationUnitGet`, from
+/// `ui/src/views/evaluation/EvaluationUnit.svelte`, when a work unit is opened.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`unit_view`].
 #[tauri::command]
 pub fn evaluation_unit_get(session: State<'_, Session>, id: i64, unit: i64) -> Result<UnitView, ViewError> {
     let opened = session.lock()?;
@@ -280,6 +321,10 @@ pub fn evaluation_unit_get(session: State<'_, Session>, id: i64, unit: i64) -> R
 
 /// The verdict of its name on the page; `None` for an empty name; a name the
 /// page never sends is refused.
+///
+/// Input: `name`, the name of a verdict the page sends (`"pass"`).
+/// Output: the verdict (`Some(Verdict::Pass)`), `None` for an empty name;
+/// `ViewError::Invalid` for another name.
 ///
 /// Called by: [`evaluation_unit_save`].
 fn verdict_of(name: &str) -> Result<Option<Verdict>, ViewError> {
@@ -309,8 +354,18 @@ pub struct ResultsFields {
 /// evaluator gives them (author User). Refused while a work of the AI runs:
 /// the evaluator and the AI never write at once (user, 2026-10-30).
 ///
-/// Called by: `EvaluationUnit.svelte`, "Save".
-/// Calls: `Session::is_working`, [`verdict_of`], `save_results`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an evaluation in progress; `unit`, the id of one of its work units;
+/// `fields`, the results as typed.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in,
+/// `ViewError::Invalid` while a work of the AI runs or for a verdict the page
+/// never sends, the refusals of the results.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationUnitSave`, from
+/// `ui/src/views/evaluation/EvaluationUnit.svelte`, "Save".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; `panels/session.rs`:
+/// `Session::is_working`; [`verdict_of`]; `objects/evaluation/work_unit/work_unit_rules/results.rs`:
+/// `save_results`.
 #[tauri::command]
 pub fn evaluation_unit_save(
     session: State<'_, Session>,

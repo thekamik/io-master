@@ -21,9 +21,15 @@ use crate::panels::views::recovery_code::RecoveryCodeView;
 /// with the password takes a moment by design (Argon2id). The passwords
 /// are wiped from memory when the command ends.
 ///
-/// Called by: `InstallationForm.svelte`, "Install".
-/// Calls: `objects/user/user_data/user_data_rules.rs`: `create_account`;
-/// `Session::log_in`; `panels/views/recovery_code.rs`: `RecoveryCodeView::new`.
+/// Input: `session`, the session of the window, nobody logged in; `name`,
+/// the name typed; `password`, `password_repeated`, the password typed twice.
+/// Output: the recovery code (`{"code": "ABCDE-..."}`); the refusals of the
+/// account (`ViewError::Account`), an error of the session.
+///
+/// Called by: `ui/src/lib/api/program_start.ts`: `installationCreate`, from
+/// `ui/src/views/program_start/InstallationForm.svelte`, "Install".
+/// Calls: `objects/user/user_data/user_data_rules.rs`: `create_account`; `panels/session.rs`: `Session::log_in`;
+/// `panels/views/recovery_code.rs`: `RecoveryCodeView::new`.
 #[tauri::command(async)]
 pub fn installation_create(
     session: State<'_, Session>,

@@ -140,8 +140,7 @@ fn written(
 /// (`("1.1.1", true, [])`). An error when the session or the database fails.
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_plan`.
-/// Calls: [`prepared_question`], `objects/ai/integration/integration_ai/sending.rs`:
-/// `send_whole`, [`written`].
+/// Calls: [`prepared_question`]; `objects/ai/integration/integration_ai/sending.rs`: `send_whole`; [`written`].
 pub async fn fill_work_unit(
     database: &Mutex<Option<UserDatabase>>,
     task: FillTask,

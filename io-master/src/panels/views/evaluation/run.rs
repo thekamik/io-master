@@ -47,6 +47,9 @@ pub struct AssessPreviewView {
 
 /// The counts of `counted` as the page shows them.
 ///
+/// Input: `counted`, names with their counts.
+/// Output: their views (`[CountView { name: "Evaluator", count: 2 }]`).
+///
 /// Called by: [`preview_view`].
 fn count_views(counted: Vec<(String, usize)>) -> Vec<CountView> {
     let mut views = Vec::with_capacity(counted.len());
@@ -59,6 +62,9 @@ fn count_views(counted: Vec<(String, usize)>) -> Vec<CountView> {
 }
 
 /// The preview `found` as the page shows it.
+///
+/// Input: `found`, the preview of an assessment.
+/// Output: its view, the work units counted.
 ///
 /// Called by: [`evaluation_assess_preview`].
 /// Calls: [`count_views`].
@@ -73,8 +79,17 @@ fn preview_view(found: Preview) -> AssessPreviewView {
 /// What the assessment of the evaluation `id` would ask, counted now; with
 /// `again` the work units of the AI assessed already too.
 ///
-/// Called by: `EvaluationUnits.svelte`, before an assessment starts.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `preview`; [`preview_view`].
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an evaluation in progress; `again`, whether the work units with a verdict
+/// are assessed again.
+/// Output: the preview (`{"units": 12, "agents": [...], "missing": []}`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, the refusals of the
+/// evaluation.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationAssessPreview`, from
+/// `ui/src/views/evaluation/EvaluationUnits.svelte`, before an assessment starts.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `preview`; [`preview_view`].
 #[tauri::command]
 pub fn evaluation_assess_preview(
     session: State<'_, Session>,
@@ -91,9 +106,18 @@ pub fn evaluation_assess_preview(
 /// `again` the work units of the AI assessed already too. Refused while
 /// another work of the AI runs, or an input is missing.
 ///
-/// Called by: `EvaluationRun.svelte`, "Start".
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `units_ready`,
-/// `assess_evaluation`; `Session::begin_work`, `Session::locks`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an evaluation in progress; `again`, as [`evaluation_assess_preview`].
+/// Output: nothing once the assessment ended; `ViewError::NotLoggedIn` when
+/// nobody is logged in, `ViewError::Invalid` while another work of the AI runs,
+/// the refusals of the evaluation (an input missing), an error of the session
+/// or the database.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationAssess`, from
+/// `ui/src/views/evaluation/EvaluationRun.svelte`, "Start".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `units_ready`, `assess_evaluation`;
+/// `panels/session.rs`: `Session::begin_work`, `Session::locks`.
 #[tauri::command]
 pub async fn evaluation_assess(session: State<'_, Session>, id: i64, again: bool) -> Result<(), ViewError> {
     let units = {
@@ -113,8 +137,8 @@ pub async fn evaluation_assess(session: State<'_, Session>, id: i64, again: bool
 /// runs, and its summary once it ended; `None` when there was none since
 /// the start of the program.
 ///
-/// Called by: `EvaluationRun.svelte`, while an assessment runs and when it
-/// is shown.
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationAssessProgress`, from
+/// `ui/src/views/evaluation/EvaluationRun.svelte`, while an assessment runs and when it is shown.
 /// Calls: `progress.rs`: `progress_of`.
 #[tauri::command]
 pub fn evaluation_assess_progress(session: State<'_, Session>, id: i64) -> Result<Option<ProgressView>, ViewError> {
@@ -123,8 +147,9 @@ pub fn evaluation_assess_progress(session: State<'_, Session>, id: i64) -> Resul
 
 /// Asks the assessment that runs to stop after its present work unit.
 ///
-/// Called by: `EvaluationUnits.svelte`, "Stop".
-/// Calls: `Session::request_stop`.
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationAssessStop`, from
+/// `ui/src/views/evaluation/EvaluationUnits.svelte`, "Stop".
+/// Calls: `panels/session.rs`: `Session::request_stop`.
 #[tauri::command]
 pub fn evaluation_assess_stop(session: State<'_, Session>) -> Result<(), ViewError> {
     Ok(session.request_stop()?)

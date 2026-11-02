@@ -21,9 +21,17 @@ use crate::panels::views::recovery_code::RecoveryCodeView;
 /// once. Run apart from the window (`async`): the passwords go through
 /// Argon2id. The passwords are wiped from memory when the command ends.
 ///
-/// Called by: `PasswordForm.svelte`, "Change the password".
-/// Calls: `Session::user_id`; `objects/user/user_data/user_data_rules.rs`:
-/// `change_password`; `panels/views/recovery_code.rs`: `RecoveryCodeView::new`.
+/// Input: `session`, the session of the window, someone logged in; `current`,
+/// the present password typed; `password`, `password_repeated`, the new
+/// password typed twice.
+/// Output: the new recovery code (`{"code": "ABCDE-..."}`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, the refusals of the
+/// passwords, an error of the key or the databases.
+///
+/// Called by: `ui/src/lib/api/account.ts`: `accountChangePassword`, from
+/// `ui/src/views/account/PasswordForm.svelte`, "Change the password".
+/// Calls: `panels/session.rs`: `Session::user_id`; `objects/user/user_data/user_data_rules.rs`: `change_password`;
+/// `panels/views/recovery_code.rs`: `RecoveryCodeView::new`.
 #[tauri::command(async)]
 pub fn account_change_password(
     session: State<'_, Session>,
@@ -46,8 +54,15 @@ pub fn account_change_password(
 /// through Argon2id. The password is wiped from memory when the command
 /// ends.
 ///
-/// Called by: `RecoveryCodeForm.svelte`, "Make a new recovery code".
-/// Calls: `Session::user_id`; `objects/user/user_data/user_data_rules.rs`:
+/// Input: `session`, the session of the window, someone logged in; `password`,
+/// the password typed.
+/// Output: the new recovery code (`{"code": "ABCDE-..."}`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, a wrong password, an
+/// error of the key or the databases.
+///
+/// Called by: `ui/src/lib/api/account.ts`: `accountNewRecoveryCode`, from
+/// `ui/src/views/account/RecoveryCodeForm.svelte`, "Make a new recovery code".
+/// Calls: `panels/session.rs`: `Session::user_id`; `objects/user/user_data/user_data_rules.rs`:
 /// `new_recovery_code`; `panels/views/recovery_code.rs`: `RecoveryCodeView::new`.
 #[tauri::command(async)]
 pub fn account_new_recovery_code(session: State<'_, Session>, password: String) -> Result<RecoveryCodeView, ViewError> {

@@ -33,8 +33,7 @@ const MIN_CONTEXT: u32 = 512;
 /// certificate refused.
 ///
 /// Called by: [`add_integration`], [`change_integration`].
-/// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`,
-/// `check_certificate`.
+/// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`, `check_certificate`.
 fn checked(integration: &Integration) -> Result<Integration, DomainError> {
     let name = integration.name.trim();
     let certificate = integration.ca_certificate.as_deref().unwrap_or_default().trim();
@@ -93,8 +92,7 @@ pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i
 /// error of the database for an integration missing.
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_save`.
-/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`,
-/// `update_integration`; [`checked`].
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`, `update_integration`; [`checked`].
 pub fn change_integration(db: &UserDatabase, integration: &Integration) -> Result<(), DomainError> {
     read_integration(db, integration.id)?;
 

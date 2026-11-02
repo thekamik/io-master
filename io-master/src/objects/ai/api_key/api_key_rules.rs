@@ -21,8 +21,8 @@ use crate::objects::error::DomainError;
 /// database for an integration missing.
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_set_key`.
-/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
-/// `objects/ai/api_key/api_key_store.rs`: `update_api_key`.
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`; `objects/ai/api_key/api_key_store.rs`:
+/// `update_api_key`.
 pub fn set_key(db: &UserDatabase, id: i64, key: &str) -> Result<(), DomainError> {
     let key = key.trim();
 

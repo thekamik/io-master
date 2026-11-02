@@ -68,7 +68,8 @@ impl std::error::Error for RecoveryError {}
 /// bytes.
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database` (the account
-/// made); `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys` (the password changed or recovered, a new code asked for).
+/// made); `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys` (the password changed or recovered, a
+/// new code asked for).
 /// Calls: `infrastructure/security/random.rs`: `fill_random`;
 /// `objects/user/user_keys/user_keys_rules/recovery_code.rs`: `RecoveryCode::from_bytes`.
 pub fn new_code() -> Result<RecoveryCode, RecoveryError> {
@@ -108,7 +109,8 @@ fn recovery_key(code: &RecoveryCode, salt: &[u8]) -> Result<Zeroizing<[u8; 32]>,
 /// `RecoveryError::Failed` for an empty binding or when no random bytes or
 /// no key could be made.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`; `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`;
+/// `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
 /// Calls: `infrastructure/security/random.rs`: `fill_random`; [`recovery_key`]; AES-256-GCM.
 pub fn wrap(key: &DatabaseKey, code: &RecoveryCode, binding: &[u8]) -> Result<RecoveryWrappedKey, RecoveryError> {
     ensure!(!binding.is_empty(), RecoveryError::Failed("a copy of a key needs its account".to_owned()));
@@ -141,8 +143,8 @@ pub fn wrap(key: &DatabaseKey, code: &RecoveryCode, binding: &[u8]) -> Result<Re
 /// another form.
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `recover`.
-/// Calls: [`recovery_key`]; `infrastructure/storage/encryption/database_key.rs`:
-/// `DatabaseKey::fill_with`; AES-256-GCM.
+/// Calls: [`recovery_key`]; `infrastructure/storage/encryption/database_key.rs`: `DatabaseKey::fill_with`;
+/// AES-256-GCM.
 pub fn unwrap(wrapped: &RecoveryWrappedKey, code: &RecoveryCode, binding: &[u8]) -> Result<DatabaseKey, RecoveryError> {
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| RecoveryError::Damaged)?;
     let tag: [u8; TAG_LENGTH] = wrapped.tag.as_slice().try_into().map_err(|_| RecoveryError::Damaged)?;

@@ -91,6 +91,9 @@ pub struct EvaluationView {
 
 /// The name of a state on the page.
 ///
+/// Input: `state`, the state of a plan.
+/// Output: its name on the page (`"evaluation"`).
+///
 /// Called by: [`summary_of`].
 fn state_name(state: PlanState) -> &'static str {
     match state {
@@ -101,6 +104,10 @@ fn state_name(state: PlanState) -> &'static str {
 }
 
 /// The summary of the evaluation `plan`.
+///
+/// Input: `plan`, an evaluation or a report.
+/// Output: its summary (`EvaluationSummaryView { id: 12, product: "Router R7",
+/// .. }`).
 ///
 /// Called by: [`evaluation_list`], [`evaluation_get`].
 /// Calls: [`state_name`].
@@ -119,8 +126,14 @@ fn summary_of(plan: EvaluationPlan) -> EvaluationSummaryView {
 
 /// Every evaluation and report, the newest first.
 ///
-/// Called by: `Evaluations.svelte`, when the panel opens and after a change.
-/// Calls: `read_evaluation_plans`, [`summary_of`].
+/// Input: `session`, the session of the window, someone logged in.
+/// Output: the summaries (`[{"id": 12, "product": "Router R7", ...}]`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationList`, from `ui/src/views/evaluation/Evaluations.svelte`,
+/// when the panel opens and after a change.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plans`; [`summary_of`].
 #[tauri::command]
 pub fn evaluation_list(session: State<'_, Session>) -> Result<Vec<EvaluationSummaryView>, ViewError> {
     let opened = session.lock()?;
@@ -138,8 +151,16 @@ pub fn evaluation_list(session: State<'_, Session>) -> Result<Vec<EvaluationSumm
 /// Begins the evaluation of `product` for `client` by `evaluator` on a copy
 /// of the plan `plan`, with the agent `agent`; gives its id.
 ///
-/// Called by: `Evaluations.svelte`, "Begin the evaluation".
-/// Calls: `new_evaluation`.
+/// Input: `session`, the session of the window, someone logged in; `plan`, the
+/// id of a plan in planning, not blocked; `product`, `client`, `evaluator`, as
+/// typed; `agent`, the id of an agent.
+/// Output: the id of the evaluation (`12`); `ViewError::NotLoggedIn` when
+/// nobody is logged in, the refusals of the evaluation.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationCreate`, from
+/// `ui/src/views/evaluation/Evaluations.svelte`, "Begin the evaluation".
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `new_evaluation`.
 #[tauri::command]
 pub fn evaluation_create(
     session: State<'_, Session>,
@@ -161,8 +182,12 @@ pub fn evaluation_create(
 
 /// The places of input of the evaluation `id`, as the page shows them.
 ///
+/// Input: `db`, the open database; `id`, the id of an evaluation.
+/// Output: the documents and the proofs as the page shows them; an error of
+/// the database.
+///
 /// Called by: [`evaluation_get`].
-/// Calls: `inputs`.
+/// Calls: `panels/logic/evaluation/inputs.rs`: `inputs`.
 fn input_views(db: &UserDatabase, id: i64) -> Result<(Vec<DocumentInputView>, Vec<ProofInputView>), ViewError> {
     let found = inputs(db, id)?;
     let mut documents = Vec::with_capacity(found.documents.len());
@@ -200,10 +225,16 @@ fn input_views(db: &UserDatabase, id: i64) -> Result<(Vec<DocumentInputView>, Ve
 /// The evaluation `id` whole: its identification, its agent, its inputs and
 /// the agents to choose.
 ///
-/// Called by: `EvaluationEditor.svelte`, when an evaluation is opened and
-/// after a change.
-/// Calls: `read_evaluation_plan`, [`input_views`], `read_agents`,
-/// [`summary_of`].
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an evaluation.
+/// Output: the evaluation with its inputs and the agents to choose;
+/// `ViewError::NotLoggedIn` when nobody is logged in, an error of the database.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationGet`, from
+/// `ui/src/views/evaluation/EvaluationEditor.svelte`, when an evaluation is opened and after a change.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`; [`input_views`];
+/// `objects/ai/agent/agent_store.rs`: `read_agents`; [`summary_of`].
 #[tauri::command]
 pub fn evaluation_get(session: State<'_, Session>, id: i64) -> Result<EvaluationView, ViewError> {
     let opened = session.lock()?;
@@ -225,8 +256,15 @@ pub fn evaluation_get(session: State<'_, Session>, id: i64) -> Result<Evaluation
 /// Gives the evaluation `id` the agent `agent` for its work units without
 /// one of their own.
 ///
-/// Called by: `EvaluationEditor.svelte`, the choice of the agent.
-/// Calls: `change_agent`.
+/// Input: `session`, the session of the window, someone logged in; `id`, the id
+/// of an evaluation in progress; `agent`, the id of an agent.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in, the
+/// refusals of the evaluation.
+///
+/// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationSetAgent`, from
+/// `ui/src/views/evaluation/EvaluationEditor.svelte`, the choice of the agent.
+/// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`.
 #[tauri::command]
 pub fn evaluation_set_agent(session: State<'_, Session>, id: i64, agent: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;

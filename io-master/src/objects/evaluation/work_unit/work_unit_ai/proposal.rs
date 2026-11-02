@@ -100,6 +100,9 @@ struct Names {
 
 /// The label of each work unit of `units`, by its id: `{7: "ADV_ARC.1-1"}`.
 ///
+/// Input: `units`, the work units of a plan.
+/// Output: their labels by id.
+///
 /// Called by: [`dependencies_question`], [`apply_dependencies`].
 fn labels(units: &[WorkUnit]) -> HashMap<i64, String> {
     let mut labels = HashMap::with_capacity(units.len());
@@ -163,9 +166,10 @@ fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, AiError> 
 ///
 /// Input: `plan`, the id of a plan to fill; `unit`, one of its work units;
 /// `task`, [`PARAMETERS_TASK`] or [`DEPENDENCIES_TASK`]; `text`, the question.
-/// Output: the question; the refusals of `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`,
-/// `AiError::Refused` for a work unit not of the plan, the errors of the
-/// agent.
+/// Output: the question; the refusals of
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
+/// `plan_to_fill`, `AiError::Refused` for a work unit not of the plan, the
+/// errors of the agent.
 ///
 /// Called by: [`parameters_question`], [`dependencies_question`].
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
@@ -221,10 +225,10 @@ fn current_parameters(db: &UserDatabase, unit: &WorkUnit, names: &Names) -> Resu
 /// database.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
-/// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
-/// `read_oscal_standard_document`; [`names_of`], [`current_parameters`], [`named`],
-/// [`question_of`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
+/// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`: `read_oscal_standard_document`;
+/// [`names_of`], [`current_parameters`], [`named`], [`question_of`].
 pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let (stored, _) = plan_to_fill(db, plan)?;
     let this = read_work_unit(db, unit)?;
@@ -277,8 +281,8 @@ fn summary(unit: &WorkUnit) -> String {
 /// database.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
-/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`; [`labels`], [`named`],
-/// [`summary`], [`question_of`].
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`; [`labels`],
+/// [`named`], [`summary`], [`question_of`].
 pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let units = read_work_units(db, plan)?;
     let this = read_work_unit(db, unit)?;
@@ -493,11 +497,14 @@ fn chosen_agent(agents: &HashMap<i64, String>, proposed: Option<&String>, notes:
 /// Input: `plan`, the id of a plan to fill; `unit`, the id of one of its work
 /// units; `proposal`, from [`read_parameters`].
 /// Output: a note for every name left out (`["no document SRS in the plan"]`);
-/// the refusals of the plan and of `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+/// the refusals of the plan and of
+/// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
+/// `update_work_unit_parameters`.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `applied`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`names_of`],
-/// [`id_of`], [`chosen_agent`], [`chosen_proofs`]; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`names_of`], [`id_of`], [`chosen_agent`],
+/// [`chosen_proofs`]; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
 pub fn apply_parameters(
     db: &UserDatabase,
     plan: i64,
@@ -539,11 +546,14 @@ pub fn apply_parameters(
 /// Input: `plan`, the id of a plan to fill; `unit`, the id of one of its work
 /// units; `proposed`, the labels from [`read_dependencies`].
 /// Output: a note for every label left out (`["no work unit X in the plan"]`);
-/// the refusals of the plan and of `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+/// the refusals of the plan and of
+/// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
+/// `update_work_unit_parameters`.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `applied`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`;
-/// [`labels`], [`id_of`]; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`; [`labels`], [`id_of`];
+/// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
 pub fn apply_dependencies(
     db: &UserDatabase,
     plan: i64,

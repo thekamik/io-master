@@ -126,7 +126,8 @@ pub struct Results {
 /// quote of another document or one not found, an error of the database.
 ///
 /// Called by: [`save_results`].
-/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`; [`check_quote`].
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// [`check_quote`].
 fn check_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[Quote]) -> Result<(), DomainError> {
     ensure!(quotes.len() <= MAX_QUOTES, DomainError::Refused(format!("more than {MAX_QUOTES} quotes")));
 
@@ -158,8 +159,8 @@ fn check_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[Quote]) -> Result<
 ///
 /// Called by: `panels/views/evaluation/work_units.rs`: `evaluation_unit_save`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
-/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; `objects/text.rs`: `check_length`;
-/// [`check_quotes`].
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; `objects/text.rs`:
+/// `check_length`; [`check_quotes`].
 pub fn save_results(db: &UserDatabase, evaluation: i64, unit: i64, results: &Results) -> Result<(), DomainError> {
     let stored = evaluation_in_progress(db, evaluation)?;
     let this = read_work_unit(db, unit)?;

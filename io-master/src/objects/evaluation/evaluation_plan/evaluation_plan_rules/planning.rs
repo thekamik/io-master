@@ -50,7 +50,8 @@ pub fn check_planning(plan: &EvaluationPlan) -> Result<(), DomainError> {
 /// `add_work_unit`, `add_all_work_units`, `remove_work_unit`;
 /// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`,
 /// `add_proof_place`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`; [`check_planning`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// [`check_planning`].
 pub fn plan_in_planning(db: &UserDatabase, plan: i64) -> Result<EvaluationPlan, DomainError> {
     let stored = read_evaluation_plan(db, plan)?;
 
@@ -88,7 +89,8 @@ pub fn plan_to_fill(db: &UserDatabase, plan: i64) -> Result<(EvaluationPlan, i64
 /// refused, an error of the database.
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_create`.
-/// Calls: `objects/text.rs`: `checked_text`; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `create_evaluation_plan`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
+/// `create_evaluation_plan`.
 pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i64, DomainError> {
     let name = checked_text(name, "the name of the plan", MAX_NAME)?;
 
@@ -125,8 +127,8 @@ pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_save`.
 /// Calls: [`check_planning`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
-/// `read_evaluation_plan`, `update_evaluation_plan`; `objects/ai/agent/agent_store.rs`:
-/// `read_agent`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`.
+/// `read_evaluation_plan`, `update_evaluation_plan`; `objects/ai/agent/agent_store.rs`: `read_agent`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`.
 pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), DomainError> {
     let stored = read_evaluation_plan(db, plan.id)?;
 
@@ -174,9 +176,8 @@ pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), Domai
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_add_document`.
 /// Calls: [`check_planning`]; `objects/text.rs`: `checked_text`;
-/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`,
-/// `update_evaluation_plan`; `objects/evaluation/product_document/product_document_store.rs`:
-/// `create_product_document`.
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`, `update_evaluation_plan`;
+/// `objects/evaluation/product_document/product_document_store.rs`: `create_product_document`.
 pub fn add_document_place(db: &UserDatabase, plan: i64, name: &str) -> Result<i64, DomainError> {
     let mut stored = read_evaluation_plan(db, plan)?;
 
