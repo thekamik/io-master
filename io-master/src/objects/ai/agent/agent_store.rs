@@ -3,10 +3,14 @@
 //! never deleted (user, 2026-10-28).
 //!
 //! ```text
-//! ai_agents                 id, name (unique), integration, instructions, max_passages, max_characters
+//! ai_agents                 id, name (unique), integration, instructions, max_passages, max_characters,
+//!                           max_answer_tokens, role (its parameters: objects/ai/agent_roles/agent_roles_store.rs)
 //! ai_agent_knowledge_bases  (agent, position, knowledge_base)   knowledge_bases
 //! ai_agent_glossary         (agent, position, term, meaning)    glossary
 //! ```
+//!
+//! The role of an agent is written with it, in its transaction, and never
+//! changes (user, 2026-11-02).
 
 use rusqlite::{Connection, Row, named_params};
 
@@ -14,6 +18,10 @@ use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::lists::{check_length, position, read_id_list, write_id_list};
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
+use crate::objects::ai::agent_roles::agent_roles_model::AgentRole;
+use crate::objects::ai::agent_roles::agent_roles_store::{
+    check_agent_role, read_agent_role, role_name, write_agent_role,
+};
 use crate::objects::ai::rag::rag_store::{MAX_BASES, MAX_FOUND};
 
 /// The most agents of the user, and terms of the glossary of one agent.
@@ -23,6 +31,9 @@ pub const MAX_TERMS: usize = 500;
 /// The most characters of knowledge an agent gives with one question.
 pub const MAX_CHARACTERS: u32 = 40_000;
 
+/// The longest answer an agent may ask for, in tokens.
+pub const MAX_ANSWER_TOKENS: u32 = 64_000;
+
 /// The tables, made when they are missing (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_agents (
@@ -30,8 +41,10 @@ pub const SCHEMA: &str = "
         name           TEXT NOT NULL UNIQUE,
         integration    INTEGER NOT NULL REFERENCES ai_integrations(id),
         instructions   TEXT NOT NULL,
-        max_passages   INTEGER NOT NULL,
-        max_characters INTEGER NOT NULL
+        max_passages      INTEGER NOT NULL,
+        max_characters    INTEGER NOT NULL,
+        max_answer_tokens INTEGER NOT NULL,
+        role              TEXT NOT NULL CHECK (role IN ('evaluator', 'planner', 'chat'))
     );
 
     CREATE TABLE IF NOT EXISTS ai_agent_knowledge_bases (
@@ -52,7 +65,7 @@ pub const SCHEMA: &str = "
 ";
 
 /// The columns every read of an agent selects.
-const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_characters";
+const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_characters, max_answer_tokens, role";
 
 /// Refuses an agent that does not hold together: lists over their limits, no
 /// name, limits of its knowledge over the program's, or a term of its
@@ -64,7 +77,8 @@ const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_ch
 /// what is wrong.
 ///
 /// Called by: [`create_agent`], [`update_agent`].
-/// Calls: `infrastructure/storage/lists.rs`: `check_length`.
+/// Calls: `infrastructure/storage/lists.rs`: `check_length`; `objects/ai/agent_roles/agent_roles_store.rs`:
+/// `check_agent_role`.
 fn check_agent(agent: &Agent) -> Result<(), DbError> {
     check_length(agent.knowledge_bases.len(), MAX_BASES, "knowledge bases of an agent")?;
     check_length(agent.glossary.len(), MAX_TERMS, "terms of a glossary")?;
@@ -78,6 +92,11 @@ fn check_agent(agent: &Agent) -> Result<(), DbError> {
         agent.max_characters <= MAX_CHARACTERS,
         DbError::Inconsistent(format!("an agent that gives more than {MAX_CHARACTERS} characters"))
     );
+    ensure!(
+        (1..=MAX_ANSWER_TOKENS).contains(&agent.max_answer_tokens),
+        DbError::Inconsistent(format!("an answer of an agent over {MAX_ANSWER_TOKENS} tokens, or of none"))
+    );
+    check_agent_role(&agent.role)?;
 
     for entry in &agent.glossary {
         ensure!(
@@ -136,7 +155,8 @@ fn write_lists(connection: &Connection, id: i64, agent: &Agent) -> Result<(), Db
 /// stored (foreign key); nothing is then written.
 ///
 /// Called by: `objects/ai/agent/agent_rules.rs`: `new_agent`.
-/// Calls: [`check_agent`], [`write_lists`].
+/// Calls: [`check_agent`], [`write_lists`]; `objects/ai/agent_roles/agent_roles_store.rs`: `role_name`,
+/// `write_agent_role`.
 pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
     ensure!(agent.id == 0, DbError::Inconsistent("a new agent has an id already".to_owned()));
     check_agent(agent)?;
@@ -150,30 +170,33 @@ pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
     );
 
     transaction.execute(
-        "INSERT INTO ai_agents (name, integration, instructions, max_passages, max_characters)
-         VALUES (:name, :integration, :instructions, :max_passages, :max_characters)",
+        "INSERT INTO ai_agents (name, integration, instructions, max_passages, max_characters, max_answer_tokens, role)
+         VALUES (:name, :integration, :instructions, :max_passages, :max_characters, :max_answer_tokens, :role)",
         named_params! {
             ":name": agent.name,
             ":integration": agent.integration,
             ":instructions": agent.instructions,
             ":max_passages": agent.max_passages,
             ":max_characters": agent.max_characters,
+            ":max_answer_tokens": agent.max_answer_tokens,
+            ":role": role_name(&agent.role),
         },
     )?;
 
     let id = transaction.last_insert_rowid();
 
     write_lists(&transaction, id, agent)?;
+    write_agent_role(&transaction, id, &agent.role)?;
     transaction.commit()?;
 
     Ok(id)
 }
 
-/// The model of one row of `ai_agents`, its lists still empty
+/// The model of one row of `ai_agents` with its role, its lists still empty
 /// ([`read_agent`] fills them).
 ///
 /// Called by: [`read_agent`].
-fn agent_of(row: &Row<'_>) -> Result<Agent, DbError> {
+fn agent_of(row: &Row<'_>, role: AgentRole) -> Result<Agent, DbError> {
     Ok(Agent {
         id: row.get("id")?,
         name: row.get("name")?,
@@ -183,6 +206,8 @@ fn agent_of(row: &Row<'_>) -> Result<Agent, DbError> {
         glossary: Vec::new(),
         max_passages: row.get("max_passages")?,
         max_characters: row.get("max_characters")?,
+        max_answer_tokens: row.get("max_answer_tokens")?,
+        role,
     })
 }
 
@@ -224,11 +249,14 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 /// `objects/ai/chat/chat_rules.rs`: `new_chat`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`,
 /// `new_evaluation`; `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
-/// `update_plan`; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
+/// `update_plan`, `plan_to_fill`; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
 /// `update_work_unit_parameters`; `panels/views/agents/agent.rs`: `agent_get`;
 /// `panels/views/chat/chats.rs`: `agent_name`;
-/// `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`.
-/// Calls: [`agent_of`]; `infrastructure/storage/lists.rs`: `read_id_list`; [`read_glossary`].
+/// `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`;
+/// `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `planner_role`;
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`.
+/// Calls: `objects/ai/agent_roles/agent_roles_store.rs`: `read_agent_role`; [`agent_of`];
+/// `infrastructure/storage/lists.rs`: `read_id_list`; [`read_glossary`].
 pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_agents WHERE id = :id"))?;
@@ -236,7 +264,8 @@ pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     let Some(row) = rows.next()? else {
         return Err(DbError::NoRow { table: "ai_agents", id });
     };
-    let mut agent = agent_of(row)?;
+    let name: String = row.get("role")?;
+    let mut agent = agent_of(row, read_agent_role(connection, id, &name)?)?;
 
     agent.knowledge_bases = read_id_list(
         connection,
@@ -284,19 +313,22 @@ pub fn read_agents(db: &UserDatabase) -> Result<Vec<Agent>, DbError> {
 /// - `db`: the open database of the user.
 /// - `agent`: the agent as it is to be kept, its `id` that of a stored one.
 ///
-/// Output: nothing; an error as [`create_agent`], or `DbError::NoRow` when
-/// there is no agent `agent.id`; nothing is then written.
+/// Output: nothing; an error as [`create_agent`], `DbError::NoRow` when
+/// there is no agent `agent.id` of the same role (a role never changes);
+/// nothing is then written.
 ///
 /// Called by: `objects/ai/agent/agent_rules.rs`: `change_agent`.
-/// Calls: [`check_agent`], [`write_lists`].
+/// Calls: [`check_agent`], [`write_lists`]; `objects/ai/agent_roles/agent_roles_store.rs`: `role_name`,
+/// `write_agent_role`.
 pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
     check_agent(agent)?;
 
     let transaction = db.connection().unchecked_transaction()?;
     let changed = transaction.execute(
         "UPDATE ai_agents SET name = :name, integration = :integration, instructions = :instructions,
-                max_passages = :max_passages, max_characters = :max_characters
-         WHERE id = :id",
+                max_passages = :max_passages, max_characters = :max_characters,
+                max_answer_tokens = :max_answer_tokens
+         WHERE id = :id AND role = :role",
         named_params! {
             ":id": agent.id,
             ":name": agent.name,
@@ -304,12 +336,17 @@ pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
             ":instructions": agent.instructions,
             ":max_passages": agent.max_passages,
             ":max_characters": agent.max_characters,
+            ":max_answer_tokens": agent.max_answer_tokens,
+            ":role": role_name(&agent.role),
         },
     )?;
 
+    // No row of that id and that role: the agent is missing, or its role
+    // would change, which it never does.
     ensure!(changed == 1, DbError::NoRow { table: "ai_agents", id: agent.id });
 
     write_lists(&transaction, agent.id, agent)?;
+    write_agent_role(&transaction, agent.id, &agent.role)?;
     transaction.commit()?;
 
     Ok(())
@@ -324,7 +361,7 @@ mod tests {
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::objects::ai::rag::rag_model::KnowledgeBase;
     use crate::objects::ai::rag::rag_store::create_knowledge_base;
-    use crate::test_support::database::{agent, database, integration};
+    use crate::test_support::database::{agent, database, integration, planner};
 
     #[test]
     fn an_agent_is_stored_with_its_lists_read_and_changed() {
@@ -346,6 +383,25 @@ mod tests {
         update_agent(&db, &stored).unwrap();
 
         assert_eq!(read_agents(&db).unwrap(), vec![stored]);
+    }
+
+    #[test]
+    fn the_role_of_an_agent_is_stored_with_it_and_never_changes() {
+        let (_directory, db) = database();
+        let integration = create_integration(&db, &integration()).unwrap();
+        let id = create_agent(&db, &planner(integration)).unwrap();
+        let stored = read_agent(&db, id).unwrap();
+
+        assert_eq!(stored, Agent { id, ..planner(integration) });
+        assert!(matches!(
+            update_agent(&db, &Agent { role: agent(integration).role, ..stored.clone() }),
+            Err(DbError::NoRow { .. })
+        ));
+
+        let chat =
+            create_agent(&db, &Agent { name: "Talk".to_owned(), role: AgentRole::Chat, ..agent(integration) }).unwrap();
+
+        assert_eq!(read_agent(&db, chat).unwrap().role, AgentRole::Chat);
     }
 
     #[test]

@@ -95,7 +95,11 @@ objects/ai/
                  agent_rules.rs (new_agent: the default instructions and limits; change_agent; checked: a name, an
                  integration and bases that exist, limits in their ranges, the glossary),
                  agent_ai.rs (the passages of its bases that fit a question: its glossary, its limits;
-                 agent_question: its instructions, the task, its knowledge, the messages ──► Question)
+                 agent_question: its instructions, its knowledge, the task, the messages ──► Question)
+  agent_roles/   agent_roles_model.rs (AgentRole: Evaluator, Planner, Chat; EvaluatorRole, PlannerRole),
+                 agent_roles_store.rs (the parameters of a role in ai_agent_evaluators / ai_agent_planners,
+                 written and read in the transaction of the agent), agent_roles_rules.rs (new_role: the texts and
+                 limits a new agent starts from; checked_role; evaluator_of, planner_of: the role a work asks for)
   chat/          chat_model.rs (Chat, Message, Speaker), chat_store.rs,
                  chat_rules.rs (new_chat, rename_chat, checked_question, add_question),
                  chat_ai.rs (chat_question with the knowledge of its agent, prepared: its oldest messages left out

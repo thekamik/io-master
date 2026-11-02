@@ -242,8 +242,14 @@ mod tests {
     fn the_oldest_messages_are_left_out_until_the_question_fits() {
         let (_directory, db) = database();
         let small = create_integration(&db, &Integration { context_size: 400, ..integration() }).unwrap();
-        let question =
-            |messages| Question { integration: small, agent: None, work_unit: None, system: String::new(), messages };
+        let question = |messages| Question {
+            integration: small,
+            agent: None,
+            work_unit: None,
+            system: String::new(),
+            messages,
+            max_answer_tokens: 16_000,
+        };
         // 300 tokens for the question, about 900 characters: the last
         // question fits, the first question and its answer with it do not.
         let messages = vec![message(Speaker::User, 400), message(Speaker::Ai, 400), message(Speaker::User, 300)];

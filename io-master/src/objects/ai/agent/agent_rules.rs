@@ -4,13 +4,20 @@
 //!
 //! An agent is a layer of knowledge over the model of an integration (user,
 //! 2026-10-29): it names the integration that answers it, its instructions,
-//! its knowledge bases (shared with other agents), its glossary and its
-//! limits. It is changed freely: when its answers are not good enough, its
-//! knowledge or its instructions are made better.
+//! its knowledge bases (shared with other agents), its glossary, its limits
+//! and its role with the parameters of its work (user, 2026-11-02: everything
+//! that shapes a question and its result is in the agent, so that a
+//! laboratory tunes it without a change of the program). It is changed freely
+//! but for its role: when its answers are not good enough, its knowledge, its
+//! instructions or the tasks of its role are made better.
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
-use crate::objects::ai::agent::agent_store::{MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent};
+use crate::objects::ai::agent::agent_store::{
+    MAX_ANSWER_TOKENS, MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent,
+};
+use crate::objects::ai::agent_roles::agent_roles_rules::{checked_role, new_role};
+use crate::objects::ai::agent_roles::agent_roles_store::role_name;
 use crate::objects::ai::integration::integration_store::read_integration;
 use crate::objects::ai::rag::rag_store::{MAX_BASES, MAX_FOUND, read_knowledge_base};
 use crate::objects::error::DomainError;
@@ -33,23 +40,32 @@ const MIN_CHARACTERS: u32 = 1500;
 const NEW_PASSAGES: u32 = 8;
 const NEW_CHARACTERS: u32 = 12_000;
 
+/// The longest answer a new agent asks for, in tokens, and the shortest one
+/// an agent may ask for: less leaves no room for an assessment.
+const NEW_ANSWER_TOKENS: u32 = 16_000;
+const MIN_ANSWER_TOKENS: u32 = 256;
+
 /// The instructions of a new agent, to be made its own by the user.
 const NEW_INSTRUCTIONS: &str = "You are an experienced evaluator of the security of products. Use the knowledge \
 given with a question, when there is any, to read the requirement as the standard and the laboratory mean it; judge \
 the product only by its own documents and proofs. Be precise and brief.";
 
-/// Makes a new agent of the integration `integration`, with the default
-/// instructions and limits and no knowledge yet.
+/// Makes a new agent of the integration `integration` with the role `role`,
+/// with the default instructions, limits and parameters of its role, and no
+/// knowledge yet.
 ///
 /// Input: `name`, the name typed ("Evaluator ADV"), checked here;
-/// `integration`, the id of a stored integration.
+/// `integration`, the id of a stored integration; `role`, the role chosen
+/// (`"evaluator"`, `"planner"`, `"chat"`).
 /// Output: the id of the new agent (`3`); `DomainError::Refused` for a name
-/// refused or taken, an error of the database for an integration missing.
+/// refused or taken or a role unknown, an error of the database for an
+/// integration missing.
 ///
 /// Called by: `panels/views/agents/agent.rs`: `agent_create`.
-/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`; [`checked`];
-/// `objects/ai/agent/agent_store.rs`: `create_agent`.
-pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64, DomainError> {
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
+/// `objects/ai/agent_roles/agent_roles_rules.rs`: `new_role`; [`checked`]; `objects/ai/agent/agent_store.rs`:
+/// `create_agent`.
+pub fn new_agent(db: &UserDatabase, name: &str, integration: i64, role: &str) -> Result<i64, DomainError> {
     read_integration(db, integration)?;
 
     let agent = Agent {
@@ -61,22 +77,32 @@ pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64,
         glossary: Vec::new(),
         max_passages: NEW_PASSAGES,
         max_characters: NEW_CHARACTERS,
+        max_answer_tokens: NEW_ANSWER_TOKENS,
+        role: new_role(role)?,
     };
 
     Ok(create_agent(db, &checked(db, &agent)?)?)
 }
 
 /// Writes the agent `agent.id` anew: its name, integration, instructions,
-/// knowledge bases, glossary and limits.
+/// knowledge bases, glossary, limits and the parameters of its role.
 ///
-/// Input: `agent`, the agent as changed, its id that of a stored agent.
-/// Output: nothing; `DomainError::Refused` for what [`checked`] refuses, an
-/// error of the database for an agent missing.
+/// Input: `agent`, the agent as changed, its id that of a stored agent, its
+/// role that of the stored one.
+/// Output: nothing; `DomainError::Refused` for another role or what
+/// [`checked`] refuses, an error of the database for an agent missing.
 ///
 /// Called by: `panels/views/agents/agent.rs`: `agent_save`.
-/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`, `update_agent`; [`checked`].
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`, `update_agent`;
+/// `objects/ai/agent_roles/agent_roles_store.rs`: `role_name`; [`checked`].
 pub fn change_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DomainError> {
-    read_agent(db, agent.id)?;
+    let stored = read_agent(db, agent.id)?;
+
+    // Plans and evaluations name the agent for its work (user, 2026-11-02).
+    ensure!(
+        role_name(&stored.role) == role_name(&agent.role),
+        DomainError::Refused("the role of an agent never changes: make a new agent".to_owned())
+    );
 
     Ok(update_agent(db, &checked(db, agent)?)?)
 }
@@ -117,7 +143,8 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Do
 }
 
 /// The agent with its text trimmed, checked: a name, an integration and
-/// knowledge bases that exist, each base once, limits in their ranges.
+/// knowledge bases that exist, each base once, limits in their ranges, the
+/// parameters of its role.
 ///
 /// Input: `agent`, the agent as given by the page or made by [`new_agent`].
 /// Output: the agent to write, its bases each once; `DomainError::Refused`
@@ -126,7 +153,8 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Do
 ///
 /// Called by: [`new_agent`], [`change_agent`].
 /// Calls: `objects/text.rs`: `checked_text`; `objects/ai/integration/integration_store.rs`: `read_integration`;
-/// `objects/ai/rag/rag_store.rs`: `read_knowledge_base`; [`checked_glossary`].
+/// `objects/ai/rag/rag_store.rs`: `read_knowledge_base`; [`checked_glossary`];
+/// `objects/ai/agent_roles/agent_roles_rules.rs`: `checked_role`.
 fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
     let name = checked_text(&agent.name, "the name of the agent", MAX_NAME)?;
     let passages = usize::try_from(agent.max_passages)
@@ -145,6 +173,10 @@ fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
         DomainError::Refused(format!("the characters of a question: from {MIN_CHARACTERS} to {MAX_CHARACTERS}"))
     );
     ensure!(agent.knowledge_bases.len() <= MAX_BASES, DomainError::Refused("too many knowledge bases".to_owned()));
+    ensure!(
+        (MIN_ANSWER_TOKENS..=MAX_ANSWER_TOKENS).contains(&agent.max_answer_tokens),
+        DomainError::Refused(format!("the longest answer: from {MIN_ANSWER_TOKENS} to {MAX_ANSWER_TOKENS} tokens"))
+    );
     read_integration(db, agent.integration)?;
 
     let mut bases = Vec::with_capacity(agent.knowledge_bases.len());
@@ -166,6 +198,8 @@ fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
         glossary: checked_glossary(&agent.glossary)?,
         max_passages: agent.max_passages,
         max_characters: agent.max_characters,
+        max_answer_tokens: agent.max_answer_tokens,
+        role: checked_role(&agent.role)?,
     })
 }
 
@@ -175,6 +209,7 @@ mod tests {
 
     use super::*;
 
+    use crate::objects::ai::agent_roles::agent_roles_model::AgentRole;
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::objects::ai::rag::rag_model::KnowledgeBase;
     use crate::objects::ai::rag::rag_store::create_knowledge_base;
@@ -184,7 +219,7 @@ mod tests {
     fn an_agent_is_made_checked_and_changed() {
         let (_directory, db) = database();
         let local = create_integration(&db, &integration()).unwrap();
-        let id = new_agent(&db, "  agent_WU_1-1 ", local).unwrap();
+        let id = new_agent(&db, "  agent_WU_1-1 ", local, "evaluator").unwrap();
         let base =
             create_knowledge_base(&db, &KnowledgeBase { id: 0, name: "CEM".to_owned(), description: String::new() })
                 .unwrap();
@@ -222,6 +257,21 @@ mod tests {
             change_agent(&db, &Agent { knowledge_bases: vec![base + 1], ..stored }),
             Err(DomainError::Db(_))
         ));
-        assert!(new_agent(&db, "Another", local + 1).is_err());
+        assert!(new_agent(&db, "Another", local + 1, "evaluator").is_err());
+    }
+
+    #[test]
+    fn the_role_of_an_agent_is_kept_when_it_is_changed() {
+        let (_directory, db) = database();
+        let local = create_integration(&db, &integration()).unwrap();
+        let id = new_agent(&db, "Planner", local, "planner").unwrap();
+        let stored = read_agent(&db, id).unwrap();
+
+        assert!(matches!(stored.role, AgentRole::Planner(_)));
+        assert!(matches!(
+            change_agent(&db, &Agent { role: new_role("evaluator").unwrap(), ..stored }),
+            Err(DomainError::Refused(_))
+        ));
+        assert!(new_agent(&db, "Auditor", local, "auditor").is_err());
     }
 }

@@ -17,6 +17,7 @@
 //! ```
 
 use crate::objects::ai::agent::agent_store;
+use crate::objects::ai::agent_roles::agent_roles_store;
 use crate::objects::ai::api_key::api_key_store;
 use crate::objects::ai::chat::chat_store;
 use crate::objects::ai::integration::integration_store;
@@ -32,9 +33,10 @@ use crate::objects::user::user_data::user_data_store;
 use crate::objects::user::user_keys::user_keys_store;
 
 /// The tables of the database of the user (`users/<id>.v2.db`, encrypted).
-pub const USER_TABLES: [&str; 12] = [
+pub const USER_TABLES: [&str; 13] = [
     // objects/ai/
     agent_store::SCHEMA,
+    agent_roles_store::SCHEMA,
     api_key_store::SCHEMA,
     chat_store::SCHEMA,
     integration_store::SCHEMA,

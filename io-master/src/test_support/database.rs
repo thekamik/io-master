@@ -6,6 +6,7 @@ use crate::infrastructure::security::random::fill_random;
 use crate::infrastructure::storage::encryption::database_key::DatabaseKey;
 use crate::infrastructure::storage::user_database::{self, UserDatabase};
 use crate::objects::ai::agent::agent_model::Agent;
+use crate::objects::ai::agent_roles::agent_roles_rules::new_role;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_model::OscalStandardDocument;
@@ -88,8 +89,8 @@ pub fn integration() -> Integration {
     }
 }
 
-/// An agent of the integration `integration`, without knowledge, not
-/// stored yet.
+/// An evaluator of the integration `integration`, without knowledge, not
+/// stored yet, with the parameters a new evaluator starts from.
 pub fn agent(integration: i64) -> Agent {
     Agent {
         id: 0,
@@ -100,7 +101,15 @@ pub fn agent(integration: i64) -> Agent {
         glossary: Vec::new(),
         max_passages: 8,
         max_characters: 12_000,
+        max_answer_tokens: 16_000,
+        role: new_role("evaluator").unwrap(),
     }
+}
+
+/// A planner of the integration `integration`, as [`agent`] but of the role
+/// planner.
+pub fn planner(integration: i64) -> Agent {
+    Agent { name: "CC planner".to_owned(), role: new_role("planner").unwrap(), ..agent(integration) }
 }
 
 /// A work unit `id` depending on `dependencies`, never stored: for the

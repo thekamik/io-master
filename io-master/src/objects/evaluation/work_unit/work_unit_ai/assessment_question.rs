@@ -24,6 +24,8 @@ use serde_json::{Value, json};
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_ai::agent_question;
+use crate::objects::ai::agent::agent_store::read_agent;
+use crate::objects::ai::agent_roles::agent_roles_rules::evaluator_of;
 use crate::objects::ai::chat::chat_model::{Message, Speaker};
 use crate::objects::ai::integration::integration_ai::question::Question;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::EvaluationPlan;
@@ -36,62 +38,14 @@ use crate::objects::evaluation::product_document::product_document_store::{
 use crate::objects::evaluation::work_unit::work_unit_model::{Verdict, WorkUnit};
 use crate::objects::evaluation::work_unit::work_unit_store::{read_work_unit, read_work_units};
 
-/// The most passages of the documents given with a question when the
-/// documents do not fit whole.
-const DOCUMENT_PASSAGES: usize = 20;
-
-/// The longest findings of a dependency given with a question, in
-/// characters.
-const MAX_DEPENDENCY_FINDINGS: usize = 1000;
-
-/// What the two tasks of the assessment share (user, 2026-11-02): the scope of
-/// the work unit, substance before form, the care asked for about the
-/// substance, what the extracted text and the recorded version are, and the
-/// form of the answer, its verdict last so that it follows from the analysis.
+/// The form of the answer the program reads (user, 2026-11-02): only the
+/// fields of its JSON and their order, the verdict last; what each field holds
+/// is told by the evaluator role of the agent (`EvaluatorRole::judgement`).
 /// `{verdicts}` is replaced by the verdicts of the plan.
-const ANSWER_FORM: &str = "Judge only what the requirement of this work unit asks. A fault that belongs to \
-another work unit, its dependencies among them, is judged there: tell it in the notes, never in the findings or the \
-verdict, unless this requirement itself rests on it.\n\
-Fail the work unit when the content its requirement asks for is missing, or is contradicted in a way that touches \
-the requirement. An editorial flaw (the format of a date, a broken cross-reference, numbering, layout) goes to the \
-notes and does not change the verdict.\n\
-Be careful about the substance: when the evidence does not show that the requirement is met, fail the work unit. \
-A false fail is corrected by the evaluator, a false pass may never be found (user, 2026-11-02).\n\
-The text of a document was extracted from its file: its tables may be broken and its formatting (italic, bold, \
-underline) is lost. That is no fault of the document; what cannot be decided because of it is told in the notes, \
-for the evaluator to check in the original. The version of a document written under its name was recorded by the \
-evaluator: it is no part of the document and never a reason for a verdict.\n\n\
-Answer with one JSON object and nothing else, its fields in this order:\n\
-{\"findings\": each thing the requirement asks for and the evidence does not give, one per line; empty when none,\n \
-\"analysis\": how the evidence meets or fails the requirement, briefly,\n \
-\"vulnerability_notes\": what an attacker could use, or an empty text,\n \
-\"notes\": anything else the evaluator should know, or an empty text,\n \
-\"quotes\": [{\"document\": the name of a document given, \"text\": a fragment of it, word for word}],\n \
-\"verdict\": one of {verdicts}, decided last, from your findings and analysis}\n\
-Point with quotes to the places your verdict rests on; a quote is help for the evaluator, not a condition of the \
-verdict. Write briefly and to the point: no repetition of the requirement, no general remarks.";
-
-/// The task of the assessment of a work unit of the documentation (one
-/// without proofs of the laboratory), given last in the instructions.
-const DOCUMENTATION_TASK: &str = "You assess one work unit of a security evaluation as an experienced evaluator: \
-does the product, as its documents describe it, meet the requirement of the work unit? Judge by the substance of \
-the documents, as the evaluation methodology means the requirement; evaluations differ, and a requirement met in \
-other words or in another place of the document is met.\n\n\
-The documents of the product given in the question are the evidence. The knowledge given above, if any, is help \
-in reading the requirement: interpretations of the standard come first, then examples of earlier evaluations and \
-the guidance of the laboratory; it is never evidence about this product.\n\n";
-
-/// The task of the assessment of a work unit of a functional test (one with
-/// proofs of the laboratory), given last in the instructions.
-const FUNCTIONAL_TASK: &str = "You assess one work unit of a security evaluation as an experienced evaluator: do \
-the documents of the product and the proofs of the laboratory show that the requirement of the work unit is met? \
-Judge by the substance of the evidence, as the evaluation methodology means the requirement; evaluations differ, \
-and a requirement met in other words or in another place is met.\n\n\
-The documents of the product and the proofs of the laboratory (the record of each test: who performed it, when and \
-with what) given in the question are the evidence. The knowledge given above, if any, is help in reading the \
-requirement: interpretations of the standard come first, then examples of earlier evaluations and the guidance of \
-the laboratory; it is never evidence about this product. In the quotes, \"document\" may also be the name of a proof \
-given.\n\n";
+const ANSWER_FORM: &str = "Answer with one JSON object and nothing else, its fields in this order:\n\
+{\"findings\": text, \"analysis\": text, \"vulnerability_notes\": text, \"notes\": text,\n \
+\"quotes\": [{\"document\": the name of a document or a proof given, \"text\": text}],\n \
+\"verdict\": one of {verdicts}}";
 
 /// The name of a verdict, as the question and the answer write it:
 /// `Verdict::Pass` is "pass".
@@ -198,24 +152,23 @@ fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<V
 }
 
 /// The dependencies of the work unit `unit`, one paragraph each: its label,
-/// its verdict and its findings (at most [`MAX_DEPENDENCY_FINDINGS`]
-/// characters).
+/// its verdict and its findings (at most `limit` characters, the agent's).
 ///
 /// Input: `unit`, the work unit assessed; `units`, the work units of its
-/// evaluation.
+/// evaluation; `limit`, `EvaluatorRole::dependency_findings` of its agent.
 /// Output: the text ("ADV_ARC.1-1: pass\n...\n\n"); empty without
 /// dependencies.
 ///
 /// Called by: [`question_of`].
 /// Calls: [`label_of`], [`verdict_name`].
-fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit]) -> String {
+fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit], limit: usize) -> String {
     let mut text = String::new();
 
     for id in &unit.dependencies {
         for other in units {
             if other.id == *id {
                 let verdict = other.verdict.map_or("not assessed", verdict_name);
-                let findings: String = other.findings.chars().take(MAX_DEPENDENCY_FINDINGS).collect();
+                let findings: String = other.findings.chars().take(limit).collect();
 
                 text.push_str(&format!("{}: {verdict}\n{findings}\n\n", label_of(units, *id)));
             }
@@ -230,14 +183,15 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit]) -> String {
 /// and the version of its document.
 ///
 /// Input: `unit`, the work unit assessed; `whole`, whether the documents go
-/// whole.
+/// whole; `passages`, `EvaluatorRole::document_passages` of its agent, the
+/// most passages when they do not.
 /// Output: the text ("=== ST ===\n(the version recorded by the evaluator:
 /// 1.2)\n..."); an error of the database.
 ///
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
 /// `read_document_text`, `read_document_passages`.
-fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<String, AiError> {
+fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool, passages: usize) -> Result<String, AiError> {
     let mut text = String::new();
 
     if whole {
@@ -256,7 +210,7 @@ fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<Str
     } else {
         let wanted = format!("{} {}", unit.requirement, unit.guidance);
 
-        for (id, passage) in read_document_passages(db, &unit.input_product_documents, &wanted, DOCUMENT_PASSAGES)? {
+        for (id, passage) in read_document_passages(db, &unit.input_product_documents, &wanted, passages)? {
             text.push_str(&format!("=== a passage of {} ===\n{passage}\n\n", read_product_document(db, id)?.name));
         }
     }
@@ -318,12 +272,15 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
 /// Input: `evaluation`, an evaluation in progress; `unit`, one of its work
 /// units; `agent`, the agent that assesses it; `whole`, whether its documents
 /// go whole.
-/// Output: the question with the task of its kind (of the documentation, or
-/// of a functional test when the work unit has proofs) and the work unit
-/// with its evidence; an error of the database or of the agent.
+/// Output: the question with the task of its kind from the evaluator role of
+/// the agent (of the documentation, or of a functional test when the work
+/// unit has proofs), its judgement and the form of the answer, and the work
+/// unit with its evidence; `AiError::Domain` for an agent that is no
+/// evaluator, an error of the database or of the agent.
 ///
 /// Called by: [`assessment_question`].
-/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`unit_json`],
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/agent_roles/agent_roles_rules.rs`:
+/// `evaluator_of`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`unit_json`],
 /// [`dependencies_text`], [`documents_text`], [`proofs_text`], [`verdict_name`]; `objects/ai/agent/agent_ai.rs`:
 /// `agent_question`.
 fn question_of(
@@ -334,6 +291,10 @@ fn question_of(
     whole: bool,
 ) -> Result<Question, AiError> {
     let units = read_work_units(db, evaluation.id)?;
+    let stored = read_agent(db, agent)?;
+    let role = evaluator_of(&stored.role, &stored.name)?;
+    let findings = usize::try_from(role.dependency_findings).map_err(|error| AiError::Refused(error.to_string()))?;
+    let passages = usize::try_from(role.document_passages).map_err(|error| AiError::Refused(error.to_string()))?;
     let mut verdicts = Vec::with_capacity(evaluation.possible_verdicts.len());
 
     for verdict in &evaluation.possible_verdicts {
@@ -343,14 +304,13 @@ fn question_of(
     // A work unit with proofs is a functional test; one without asks only for
     // its documents, and its question names no proofs (user, 2026-11-02).
     let functional = unit.input_functional.is_some();
-    let task = if functional { FUNCTIONAL_TASK } else { DOCUMENTATION_TASK };
-    let task = format!("{task}{}", ANSWER_FORM.replace("{verdicts}", &verdicts.join(", ")));
+    let kind = if functional { &role.functional_task } else { &role.documentation_task };
+    let task = format!("{kind}\n\n{}\n\n{}", role.judgement, ANSWER_FORM.replace("{verdicts}", &verdicts.join(", ")));
     let mut text = format!(
-        "The work unit:\n{}\n\nIts dependencies (their results are given for context; a fault of a \
-         dependency is judged in its own work unit):\n{}\nIts documents of the product:\n{}",
+        "The work unit:\n{}\n\nIts dependencies, with their results:\n{}\nIts documents of the product:\n{}",
         unit_json(db, unit, &units)?,
-        dependencies_text(unit, &units),
-        documents_text(db, unit, whole)?,
+        dependencies_text(unit, &units, findings),
+        documents_text(db, unit, whole, passages)?,
     );
 
     if functional {
@@ -445,7 +405,8 @@ mod tests {
         assert!(text.contains("ASE_INT.1-1: fail\nThe ST names no TOE."));
         assert!(text.contains("=== ST ===\n(the version recorded by the evaluator: 1.0)"));
         assert!(text.contains("Its TSF filters packets."));
-        assert!(question.system.contains("\"verdict\": one of \"pass\", \"fail\", decided last"));
+        assert!(question.system.contains("\"verdict\": one of \"pass\", \"fail\"}"));
+        assert!(question.system.contains("Decide the verdict last") && question.system.contains("Judge only what"));
         assert!(!text.contains("An earlier analysis.") && !text.contains("\"verdict\""));
         assert!(question.system.contains("as its documents describe it") && !text.contains("proofs of the laboratory"));
 

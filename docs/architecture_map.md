@@ -18,6 +18,28 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ## The models
 
+### `objects/ai/agent_roles/agent_roles_model.rs`: `AgentRole`, `EvaluatorRole`, `PlannerRole`
+
+- **Stored** (`objects/ai/agent_roles/agent_roles_store.rs`, in the transaction of the agent): `check_agent_role`, `read_agent_role`, `read_evaluator`, `read_planner`, `role_name`, `write_agent_role`
+- **Processed, the rules of the data**:
+  - `objects/ai/agent_roles/agent_roles_rules.rs`: `checked_evaluator`, `checked_planner`, `checked_role`, `evaluator_of`, `new_role`, `planner_of`
+  - `objects/ai/agent/agent_rules.rs`: `change_agent`, `checked`, `new_agent`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`, `new_evaluation`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`, `update_plan`
+  - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`
+- **Processed, the AI**:
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`, `planner_role`
+- **Commands** (`panels/views/`):
+  - `agents/agent.rs`: `agent_list`, `agent_create`, `agent_get`, `agent_save`
+  - `evaluation/evaluations.rs`: `evaluation_get`
+  - `evaluation_plan/plans.rs`: `plan_get`
+  - `evaluation_plan/work_units.rs`: `work_unit_get`
+- **Shown** (`ui/src/`):
+  - `views/agents/AgentEditor.svelte` ← `agent_get`, `agent_save`
+  - `views/agents/AgentList.svelte` ← `agent_list`, `agent_create`
+  - `views/evaluation/Evaluations.svelte` ← `agent_list` (the evaluators only)
+
 ### `objects/ai/agent/agent_model.rs`: `Agent`, `GlossaryEntry`
 
 - **Stored** (`objects/ai/agent/agent_store.rs`): `create_agent`, `read_agent`, `read_agents`, `update_agent`

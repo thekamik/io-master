@@ -13,6 +13,7 @@
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_store::read_agent;
+use crate::objects::ai::agent_roles::agent_roles_rules::planner_of;
 use crate::objects::error::DomainError;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::{
@@ -64,18 +65,23 @@ pub fn plan_in_planning(db: &UserDatabase, plan: i64) -> Result<EvaluationPlan, 
 ///
 /// Input: `plan`, the id of a stored plan.
 /// Output: the plan and the id of its agent of the planner (`(plan, 2)`);
-/// refused unless it is in planning and names an agent of the planner.
+/// refused unless it is in planning and names an agent of the planner, of
+/// the role planner.
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_units`,
 /// `fill_preview`; `objects/evaluation/work_unit/work_unit_ai/proposal.rs`:
-/// `question_of`, `parameters_question`, `apply_parameters`, `apply_dependencies`.
-/// Calls: [`plan_in_planning`].
+/// `question_of`, `parameters_question`, `apply_parameters`, `apply_dependencies`, `planner_role`.
+/// Calls: [`plan_in_planning`]; `objects/ai/agent/agent_store.rs`: `read_agent`;
+/// `objects/ai/agent_roles/agent_roles_rules.rs`: `planner_of`.
 pub fn plan_to_fill(db: &UserDatabase, plan: i64) -> Result<(EvaluationPlan, i64), DomainError> {
     let stored = plan_in_planning(db, plan)?;
 
     let Some(agent) = stored.ai_agent else {
         return Err(DomainError::Refused("the plan has no agent of the planner: choose one in its data".to_owned()));
     };
+    let named = read_agent(db, agent)?;
+
+    planner_of(&named.role, &named.name)?;
 
     Ok((stored, agent))
 }
@@ -128,6 +134,7 @@ pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_save`.
 /// Calls: [`check_planning`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
 /// `read_evaluation_plan`, `update_evaluation_plan`; `objects/ai/agent/agent_store.rs`: `read_agent`;
+/// `objects/ai/agent_roles/agent_roles_rules.rs`: `planner_of`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`.
 pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), DomainError> {
     let stored = read_evaluation_plan(db, plan.id)?;
@@ -147,7 +154,10 @@ pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), Domai
     check_planning(&changed)?;
 
     if let Some(agent) = changed.ai_agent {
-        read_agent(db, agent)?;
+        // The agent of a plan in planning fills it: a planner (user, 2026-11-02).
+        let named = read_agent(db, agent)?;
+
+        planner_of(&named.role, &named.name)?;
     }
 
     for unit in read_work_units(db, plan.id)? {

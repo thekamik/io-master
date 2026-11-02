@@ -1,6 +1,9 @@
 //! An AI agent made in the program: which model it asks, what it is told
-//! to be, and which knowledge it draws on. A work unit names its agent
-//! (`WorkUnit::ai_agent`). Kept in the table `ai_agents`.
+//! to be, which knowledge it draws on, and its role with the parameters of
+//! its work (`objects/ai/agent_roles/agent_roles_model.rs`). A work unit names
+//! its agent (`WorkUnit::ai_agent`). Kept in the table `ai_agents`.
+
+use crate::objects::ai::agent_roles::agent_roles_model::AgentRole;
 
 /// An AI agent (user, 2026-10-28).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,6 +31,14 @@ pub struct Agent {
 
     /// The most characters of its knowledge given with one question.
     pub max_characters: u32,
+
+    /// The longest answer it asks for, in tokens; at most a fourth of the
+    /// context of its integration (user, 2026-11-02).
+    pub max_answer_tokens: u32,
+
+    /// What it is made for, with the parameters of that work (user,
+    /// 2026-11-02); given when it is made, never changed.
+    pub role: AgentRole,
 }
 
 /// A term of the glossary of an agent and what it means ("TSF" = "TOE

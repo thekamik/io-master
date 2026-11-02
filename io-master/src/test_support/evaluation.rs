@@ -23,7 +23,7 @@ use crate::objects::evaluation::product_document::product_document_store::{
 };
 use crate::objects::evaluation::work_unit::work_unit_model::WorkUnit;
 use crate::objects::evaluation::work_unit::work_unit_store::{create_work_unit, read_work_units, update_work_unit};
-use crate::test_support::database::{agent, integration, plan, unit};
+use crate::test_support::database::{agent, integration, plan, planner, unit};
 
 /// The text of the ST of the evaluation.
 pub const ST: &str = "This ST is the Security Target of the router R7.\n\nThe TOE is the router R7 with\nfirmware \
@@ -81,7 +81,8 @@ pub fn write(db: &UserDatabase, unit: &WorkUnit) {
 const NIST_SAMPLE: &str = include_str!("../../oscal/examples/basic-catalog.json");
 
 /// A plan of the sample of NIST with its four work units, a document "ST"
-/// and an agent of the planner; gives the plan and its work units.
+/// and an agent of the planner, beside an evaluator; gives the plan and its
+/// work units.
 pub fn plan_with_planner(db: &UserDatabase) -> (i64, Vec<i64>) {
     let standard = import_standard(db, NIST_SAMPLE).unwrap();
     let plan = create_plan(db, "Sample", "").unwrap();
@@ -92,7 +93,10 @@ pub fn plan_with_planner(db: &UserDatabase) -> (i64, Vec<i64>) {
     add_all_work_units(db, plan, standard).unwrap();
 
     let integration = create_integration(db, &integration()).unwrap();
-    let planner = create_agent(db, &agent(integration)).unwrap();
+    let planner = create_agent(db, &planner(integration)).unwrap();
+
+    // An evaluator the planner may give a work unit.
+    create_agent(db, &agent(integration)).unwrap();
     let stored = read_evaluation_plan(db, plan).unwrap();
 
     update_evaluation_plan(db, &EvaluationPlan { ai_agent: Some(planner), ..stored.clone() }).unwrap();

@@ -422,9 +422,7 @@ mod tests {
         assert_eq!(fill_units(&db, plan).unwrap().len(), 4);
         assert_eq!(
             fill_preview(&db, plan).unwrap(),
-            FillPreview {
-                questions: 4, agent: "CC evaluator".to_owned(), integration: "Ollama · llama3.1".to_owned()
-            }
+            FillPreview { questions: 4, agent: "CC planner".to_owned(), integration: "Ollama · llama3.1".to_owned() }
         );
 
         update_evaluation_plan(&db, &EvaluationPlan { ai_agent: None, ..stored }).unwrap();

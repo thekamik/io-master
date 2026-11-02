@@ -10,6 +10,7 @@
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_store::read_agent;
+use crate::objects::ai::agent_roles::agent_roles_rules::evaluator_of;
 use crate::objects::error::DomainError;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::order::check_order;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::planning::plan_in_planning;
@@ -51,8 +52,8 @@ pub struct WorkUnitParameters {
 /// `apply_parameters`, `apply_dependencies` (proposed by the AI).
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`;
-/// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/evaluation/work_unit/work_unit_store.rs`:
-/// `read_work_unit`, `update_work_unit`.
+/// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/agent_roles/agent_roles_rules.rs`:
+/// `evaluator_of`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`.
 pub fn update_work_unit_parameters(
     db: &UserDatabase,
     plan: i64,
@@ -64,7 +65,10 @@ pub fn update_work_unit_parameters(
     ensure!(stored.work_units.contains(&unit), DomainError::Refused("the work unit is not one of the plan".to_owned()));
 
     if let Some(agent) = parameters.ai_agent {
-        read_agent(db, agent)?;
+        // Only an evaluator assesses a work unit (user, 2026-11-02).
+        let named = read_agent(db, agent)?;
+
+        evaluator_of(&named.role, &named.name)?;
     }
 
     let changed = WorkUnit {

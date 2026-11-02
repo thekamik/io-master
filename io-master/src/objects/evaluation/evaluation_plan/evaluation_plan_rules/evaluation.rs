@@ -15,6 +15,7 @@
 use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_store::read_agent;
+use crate::objects::ai::agent_roles::agent_roles_rules::evaluator_of;
 use crate::objects::error::DomainError;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::{
@@ -39,7 +40,7 @@ use crate::objects::text::{MAX_NAME, checked_text};
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_create`.
 /// Calls: `objects/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`: `read_agent`;
-/// `infrastructure/clock.rs`: `now`; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
+/// `objects/ai/agent_roles/agent_roles_rules.rs`: `evaluator_of`; `infrastructure/clock.rs`: `now`; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
 /// `create_evaluation`.
 pub fn new_evaluation(db: &UserDatabase, plan: i64, identification: [&str; 3], agent: i64) -> Result<i64, DomainError> {
     let [product, client, evaluator] = identification;
@@ -47,7 +48,11 @@ pub fn new_evaluation(db: &UserDatabase, plan: i64, identification: [&str; 3], a
     let client = checked_text(client, "the client", MAX_NAME)?;
     let evaluator = checked_text(evaluator, "the evaluator", MAX_NAME)?;
 
-    read_agent(db, agent)?;
+    // The agent of an evaluation assesses its work units: an evaluator (user,
+    // 2026-11-02).
+    let named = read_agent(db, agent)?;
+
+    evaluator_of(&named.role, &named.name)?;
 
     let started = now().map_err(|error| DomainError::Refused(error.to_string()))?;
 
@@ -88,11 +93,16 @@ pub fn evaluation_in_progress(db: &UserDatabase, id: i64) -> Result<EvaluationPl
 ///
 /// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_set_agent`.
 /// Calls: [`evaluation_in_progress`]; `objects/ai/agent/agent_store.rs`: `read_agent`;
+/// `objects/ai/agent_roles/agent_roles_rules.rs`: `evaluator_of`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `update_evaluation_plan`.
 pub fn change_agent(db: &UserDatabase, evaluation: i64, agent: i64) -> Result<(), DomainError> {
     let stored = evaluation_in_progress(db, evaluation)?;
 
-    read_agent(db, agent)?;
+    // The agent of an evaluation assesses its work units: an evaluator (user,
+    // 2026-11-02).
+    let named = read_agent(db, agent)?;
+
+    evaluator_of(&named.role, &named.name)?;
 
     Ok(update_evaluation_plan(db, &EvaluationPlan { ai_agent: Some(agent), ..stored })?)
 }
@@ -130,7 +140,7 @@ mod tests {
     use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::create_evaluation_plan;
-    use crate::test_support::database::{agent, database, integration, plan};
+    use crate::test_support::database::{agent, database, integration, plan, planner};
 
     #[test]
     fn an_evaluation_begins_on_a_copy_of_a_plan_with_its_agent() {
@@ -153,5 +163,11 @@ mod tests {
         change_agent(&db, id, other).unwrap();
         assert_eq!(read_evaluation_plan(&db, id).unwrap().ai_agent, Some(other));
         assert!(matches!(change_agent(&db, source, other), Err(DomainError::Refused(_))));
+
+        // A planner fills plans; it never assesses an evaluation.
+        let filler = create_agent(&db, &planner(local)).unwrap();
+
+        assert!(matches!(change_agent(&db, id, filler), Err(DomainError::Refused(_))));
+        assert!(matches!(new_evaluation(&db, source, ["R7", "ACME", "K. K."], filler), Err(DomainError::Refused(_))));
     }
 }

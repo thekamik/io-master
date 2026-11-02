@@ -189,7 +189,14 @@ pub fn agent_question(
         system.push_str(task);
     }
 
-    Ok(Question { integration: stored.integration, agent: Some(agent), work_unit, system, messages })
+    Ok(Question {
+        integration: stored.integration,
+        agent: Some(agent),
+        work_unit,
+        system,
+        messages,
+        max_answer_tokens: stored.max_answer_tokens,
+    })
 }
 
 #[cfg(test)]

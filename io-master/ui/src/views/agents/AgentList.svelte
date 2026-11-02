@@ -2,13 +2,13 @@
   The tab Agents of the panel of the agents (its commands agent_list and
   agent_create in src/panels/views/agents/agent.rs, integration_list in
   src/panels/views/settings/integrations.rs for the choice): every agent
-  with its integration, and a new agent, made with its integration and
-  opened at once (onopen).
+  with its role and integration, and a new agent, made with its role and
+  integration and opened at once (onopen).
 -->
 <script lang="ts">
   import { onMount } from "svelte";
 
-  import { agentCreate, agentList, type AgentSummaryView } from "../../lib/api/agents";
+  import { agentCreate, agentList, type AgentSummaryView, type RoleName } from "../../lib/api/agents";
   import { sentence } from "../../lib/api/errors";
   import { integrationList, type IntegrationView } from "../../lib/api/settings";
 
@@ -18,6 +18,7 @@
   let integrations: IntegrationView[] = $state([]);
   let name = $state("");
   let integration: number | null = $state(null);
+  let role: RoleName = $state("evaluator");
   let problem = $state("");
   let busy = $state(false);
 
@@ -42,7 +43,7 @@
     busy = true;
 
     try {
-      onopen(await agentCreate(name, integration));
+      onopen(await agentCreate(name, integration, role));
     } catch (error) {
       problem = sentence(error);
     } finally {
@@ -58,17 +59,18 @@
 <section class="card">
   <h2>Agents</h2>
   <table class="data">
-    <thead><tr><th>Agent</th><th>Integration</th><th>Knowledge bases</th><th></th></tr></thead>
+    <thead><tr><th>Agent</th><th>Role</th><th>Integration</th><th>Knowledge bases</th><th></th></tr></thead>
     <tbody>
       {#each agents as agent (agent.id)}
         <tr>
           <td class="wrap">{agent.name}</td>
+          <td>{agent.role}</td>
           <td class="wrap">{agent.integration}</td>
           <td>{agent.knowledgeBases}</td>
           <td><button type="button" onclick={() => onopen(agent.id)}>Open</button></td>
         </tr>
       {:else}
-        <tr><td colspan="4" class="note">No agent yet: make the first one below.</td></tr>
+        <tr><td colspan="5" class="note">No agent yet: make the first one below.</td></tr>
       {/each}
     </tbody>
   </table>
@@ -81,6 +83,16 @@
   {:else}
     <form onsubmit={create}>
       <label>Name <input bind:value={name} required placeholder="agent_WU_1-1" /></label>
+      <label>
+        Role
+        <span class="note">What the agent is made for; it never changes. Its tasks start from the program's and are
+          tuned in the agent.</span>
+        <select bind:value={role}>
+          <option value="evaluator">Evaluator: assesses the work units of an evaluation</option>
+          <option value="planner">Planner: fills the work units of a plan</option>
+          <option value="chat">Chat: talks with you</option>
+        </select>
+      </label>
       <label>
         Integration
         <span class="note">The model that answers the questions of the agent; it can be changed later.</span>

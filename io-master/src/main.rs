@@ -91,6 +91,14 @@ mod objects {
             pub mod agent_rules;
             pub mod agent_store;
         }
+        // The roles of an agent: an evaluator, a planner, a chat; the
+        // parameters of each work, kept with the agent so that it is tuned
+        // without a change of the program.
+        pub mod agent_roles {
+            pub mod agent_roles_model;
+            pub mod agent_roles_rules;
+            pub mod agent_roles_store;
+        }
         // The API key of an integration: kept apart, masked in every text
         // taken from an answer.
         pub mod api_key {

@@ -411,6 +411,7 @@ mod tests {
             work_unit: None,
             system: "Be brief.".to_owned(),
             messages: vec![Message { speaker: Speaker::User, text: "Hi".to_owned(), time: 0 }],
+            max_answer_tokens: 16_000,
         };
 
         prepare(db, &question).unwrap()

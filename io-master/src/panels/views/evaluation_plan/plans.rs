@@ -16,6 +16,7 @@ use tauri::State;
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_store::read_agents;
+use crate::objects::ai::agent_roles::agent_roles_model::AgentRole;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::planning::{
     add_document_place, create_plan, update_plan,
@@ -183,8 +184,11 @@ fn plan_view(db: &UserDatabase, plan: EvaluationPlan) -> Result<PlanView, ViewEr
     let mut verdicts = Vec::with_capacity(plan.possible_verdicts.len());
     let mut agents = Vec::new();
 
+    // Only the agents of the role of this work: the agent of a plan in planning fills it (user, 2026-11-02).
     for agent in read_agents(db)? {
-        agents.push(AgentChoiceView { id: agent.id, name: agent.name });
+        if matches!(agent.role, AgentRole::Planner(_)) {
+            agents.push(AgentChoiceView { id: agent.id, name: agent.name });
+        }
     }
 
     for verdict in &plan.possible_verdicts {

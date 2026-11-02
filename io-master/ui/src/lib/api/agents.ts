@@ -8,11 +8,29 @@ import { invoke } from "@tauri-apps/api/core";
 import type { EndingName } from "./settings";
 
 /** An agent in the list (agent.rs, AgentSummaryView). */
+/** The role of an agent (agent_roles_model.rs, AgentRole). */
+export type RoleName = "evaluator" | "planner" | "chat";
+
 export interface AgentSummaryView {
   id: number;
   name: string;
   integration: string;
   knowledgeBases: number;
+  role: RoleName;
+}
+
+/** The role of an agent with the parameters of every role, those of another
+ * role empty (agent.rs, RoleView). */
+export interface RoleView {
+  kind: RoleName;
+  judgement: string;
+  documentationTask: string;
+  functionalTask: string;
+  documentPassages: number;
+  dependencyFindings: number;
+  parametersTask: string;
+  dependenciesTask: string;
+  summaryCharacters: number;
 }
 
 /** An integration or a knowledge base to choose (agent.rs, ChoiceView). */
@@ -37,6 +55,8 @@ export interface AgentView {
   glossary: TermView[];
   maxPassages: number;
   maxCharacters: number;
+  maxAnswerTokens: number;
+  role: RoleView;
   integrations: ChoiceView[];
   bases: ChoiceView[];
 }
@@ -51,6 +71,8 @@ export interface AgentFields {
   glossary: TermView[];
   maxPassages: number;
   maxCharacters: number;
+  maxAnswerTokens: number;
+  role: RoleView;
 }
 
 /** A knowledge base in the list (knowledge.rs, BaseView). */
@@ -93,8 +115,8 @@ export function agentList(): Promise<AgentSummaryView[]> {
 }
 
 /** Makes a new agent of an integration; gives its id. */
-export function agentCreate(name: string, integration: number): Promise<number> {
-  return invoke("agent_create", { name, integration });
+export function agentCreate(name: string, integration: number, role: RoleName): Promise<number> {
+  return invoke("agent_create", { name, integration, role });
 }
 
 /** An agent whole, with every integration and base to choose. */

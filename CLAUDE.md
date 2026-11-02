@@ -128,6 +128,7 @@ They bind **our code** (`src/`, `ui/`); the dependencies cannot follow them.
 - **The AI of the integration is the only way to an AI service**: `prepare` (under the lock of the session), `send` (without it), `record` (the journal), in `objects/ai/integration/integration_ai/question.rs`, `integration_ai/sending.rs` and `objects/ai/journal/journal_ai.rs`; the answer is read only after `record`.
 - **Every question of an agent is kept in the journal of that agent**; a question without an agent (the check of an integration) is not kept.
 - An agent is a layer of knowledge over the model of an integration; integrations are only in the AI settings, agents and knowledge bases in the panel Agents.
+- **Everything that shapes a question to a model and its result is in the agent and its role** (user, 2026-11-02; `docs/architecture.md`, P6): instructions, knowledge, tasks, judgement, limits; nothing of it is written into the code. A new parameter of the conversation is proposed as a field of the agent or of its role (a change of the model). The program keeps only its mechanics: the form of the answers it reads, the estimate of the tokens, the search, the limits of the memory.
 
 ## Security
 

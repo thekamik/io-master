@@ -26,7 +26,8 @@ pub const MAX_NAME: usize = 200;
 /// Output: the text trimmed ("Router R7"); `DomainError::Refused` ("the
 /// product is missing", "the product over 200 characters").
 ///
-/// Called by: `objects/ai/agent/agent_rules.rs`: `checked`; `objects/ai/chat/chat_rules.rs`:
+/// Called by: `objects/ai/agent/agent_rules.rs`: `checked`; `objects/ai/agent_roles/agent_roles_rules.rs`:
+/// `checked_evaluator`, `checked_planner`; `objects/ai/chat/chat_rules.rs`:
 /// `new_chat`, `rename_chat`, `checked_question`; `objects/ai/rag/rag_rules.rs`: `add_base`,
 /// `change_base`, `add_source`, `rename_source`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `new_evaluation`;

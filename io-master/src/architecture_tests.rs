@@ -80,12 +80,13 @@ const ALLOWED: [(&str, &[&str]); 11] = [
 /// What of `objects/` and `infrastructure/` the panels may use: every object,
 /// but of the AI of the integration only its question, its sending and the
 /// check of an address, never the connection or a protocol.
-const PANELS_SEE: [&str; 19] = [
+const PANELS_SEE: [&str; 20] = [
     AI_ERROR,
     "objects::error",
     "objects::text",
     "objects::schema",
     "objects::ai::agent",
+    "objects::ai::agent_roles",
     "objects::ai::api_key",
     "objects::ai::chat",
     "objects::ai::journal",
@@ -104,7 +105,7 @@ const PANELS_SEE: [&str; 19] = [
 
 /// What the commands of the page may use: what the panels see, the session
 /// and the work of the panels.
-const PANELS_SEE_AND_THE_SESSION: [&str; 21] = [
+const PANELS_SEE_AND_THE_SESSION: [&str; 22] = [
     PANELS_SEE[0],
     PANELS_SEE[1],
     PANELS_SEE[2],
@@ -124,6 +125,7 @@ const PANELS_SEE_AND_THE_SESSION: [&str; 21] = [
     PANELS_SEE[16],
     PANELS_SEE[17],
     PANELS_SEE[18],
+    PANELS_SEE[19],
     "panels::session",
     "panels::logic",
 ];

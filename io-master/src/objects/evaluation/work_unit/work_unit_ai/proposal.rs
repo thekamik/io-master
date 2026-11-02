@@ -32,7 +32,9 @@ use serde_json::{Value, json};
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_ai::agent_question;
-use crate::objects::ai::agent::agent_store::read_agents;
+use crate::objects::ai::agent::agent_store::{read_agent, read_agents};
+use crate::objects::ai::agent_roles::agent_roles_model::{AgentRole, PlannerRole};
+use crate::objects::ai::agent_roles::agent_roles_rules::planner_of;
 use crate::objects::ai::chat::chat_model::{Message, Speaker};
 use crate::objects::ai::integration::integration_ai::question::Question;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::EvaluationPlan;
@@ -55,31 +57,19 @@ const MAX_GUIDANCE: usize = 20_000;
 /// The longest name of a proof taken from an answer, in characters.
 const MAX_PROOF_NAME: usize = 200;
 
-/// The longest description of another work unit in a question of the
-/// dependencies, in characters.
-const MAX_SUMMARY: usize = 200;
-
 /// The name of the proof of a functional test the answer names none for.
 const DEFAULT_PROOF: &str = "Results of the functional test";
 
-/// The task of the parameters, given after the instructions of the agent.
-const PARAMETERS_TASK: &str = "You plan one work unit of a security evaluation. From its requirement, its parameters \
-now and your knowledge, propose its parameters. Answer with one JSON object and nothing else:\n\
-{\"documents\": [the names of the documents of the product it needs],\n \
-\"functional\": true when it needs a functional test of the laboratory, false for a test of the documentation,\n \
-\"proofs\": [the names of the proofs of the laboratory its functional test needs],\n \
-\"agent\": the name of the agent that should assess it, or null,\n \
-\"guidance\": the guidance for the evaluator on this work unit, as the methodology gives it, improved where your \
-knowledge helps; only the guidance itself, never remarks on this question, on what was given or on what is missing; \
-the guidance given unchanged when you have nothing to add}\n\
-Use only the documents and agents the question lists.";
+/// The form of the answer of the parameters the program reads (user,
+/// 2026-11-02): only the fields of its JSON; what each holds is told by the
+/// planner role of the agent (`PlannerRole::parameters_task`).
+const PARAMETERS_FORM: &str = "Answer with one JSON object and nothing else:\n\
+{\"documents\": [text], \"functional\": true or false, \"proofs\": [text], \"agent\": text or null, \
+\"guidance\": text}";
 
-/// The task of the dependencies, given after the instructions of the agent.
-const DEPENDENCIES_TASK: &str = "You plan the order of the work of a security evaluation. From the requirement of one \
-work unit, the other work units of the plan and your knowledge, name the work units whose results this one needs, so \
-that they are done before it. Answer with one JSON object and nothing else:\n\
-{\"dependencies\": [the labels of those work units]}\n\
-Use only the labels the question lists; an empty list when it needs none.";
+/// The form of the answer of the dependencies the program reads.
+const DEPENDENCIES_FORM: &str = "Answer with one JSON object and nothing else:\n\
+{\"dependencies\": [the labels of the work units]}";
 
 /// The parameters but the dependencies an answer proposes, as names,
 /// before they are checked against the plan.
@@ -137,8 +127,8 @@ fn named(ids: &[i64], names: &HashMap<i64, String>) -> Vec<String> {
     found
 }
 
-/// The names of the documents of the plan and of every agent, by their
-/// ids.
+/// The names of the documents of the plan and of every agent that may assess
+/// a work unit (an evaluator), by their ids.
 ///
 /// Input: `plan`, a plan in planning.
 /// Output: the names (`Names { documents: {9: "ST"}, agents: {2: "Planner"} }`);
@@ -155,11 +145,32 @@ fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, AiError> 
         documents.insert(*id, read_product_document(db, *id)?.name);
     }
 
+    // Only an evaluator may assess a work unit (user, 2026-11-02).
     for agent in read_agents(db)? {
-        agents.insert(agent.id, agent.name);
+        if matches!(agent.role, AgentRole::Evaluator(_)) {
+            agents.insert(agent.id, agent.name);
+        }
     }
 
     Ok(Names { documents, agents })
+}
+
+/// The planner role of the agent of the planner of the plan `plan`: the
+/// tasks it asks with and its limits.
+///
+/// Input: `plan`, the id of a plan to fill.
+/// Output: the parameters of its planner (`PlannerRole { summary_characters:
+/// 200, .. }`); the refusals of a plan not to fill or an agent that is no
+/// planner, an error of the database.
+///
+/// Called by: [`parameters_question`], [`dependencies_question`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
+/// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/agent_roles/agent_roles_rules.rs`: `planner_of`.
+fn planner_role(db: &UserDatabase, plan: i64) -> Result<PlannerRole, AiError> {
+    let (_, agent) = plan_to_fill(db, plan)?;
+    let stored = read_agent(db, agent)?;
+
+    Ok(planner_of(&stored.role, &stored.name)?.clone())
 }
 
 /// The question of the agent of the planner of the plan `plan` about its
@@ -167,7 +178,8 @@ fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, AiError> 
 /// knowledge that fits the work unit, and the text `text` of the question.
 ///
 /// Input: `plan`, the id of a plan to fill; `unit`, one of its work units;
-/// `task`, [`PARAMETERS_TASK`] or [`DEPENDENCIES_TASK`]; `text`, the question.
+/// `task`, the task of its planner role with the form of the answer; `text`,
+/// the question.
 /// Output: the question; the refusals of
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
 /// `plan_to_fill`, `AiError::Refused` for a work unit not of the plan, the
@@ -250,24 +262,27 @@ pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Qu
         agents.join(", "),
     );
 
-    question_of(db, plan, &this, PARAMETERS_TASK, text)
+    let task = format!("{}\n\n{PARAMETERS_FORM}", planner_role(db, plan)?.parameters_task);
+
+    question_of(db, plan, &this, &task, text)
 }
 
 /// One line about a work unit for the question of the dependencies: its
-/// label, the first sentence of its requirement (at most [`MAX_SUMMARY`]
-/// characters) and its kind of test.
+/// label, the first sentence of its requirement (at most `limit` characters,
+/// the planner's) and its kind of test.
 ///
-/// Input: `unit`, a work unit of the plan.
+/// Input: `unit`, a work unit of the plan; `limit`,
+/// `PlannerRole::summary_characters` of the planner.
 /// Output: the line ("ADV_ARC.1-1 (documentation): The developer shall ...").
 ///
 /// Called by: [`dependencies_question`].
-fn summary(unit: &WorkUnit) -> String {
+fn summary(unit: &WorkUnit, limit: usize) -> String {
     let requirement = unit.requirement.trim();
     let first = match requirement.split_once(". ") {
         Some((sentence, _)) => sentence,
         None => requirement,
     };
-    let short: String = first.chars().take(MAX_SUMMARY).collect();
+    let short: String = first.chars().take(limit).collect();
     let kind = if unit.input_functional.is_some() { "functional" } else { "documentation" };
 
     format!("{} ({kind}): {short}", unit.label)
@@ -286,13 +301,15 @@ fn summary(unit: &WorkUnit) -> String {
 /// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`; [`labels`],
 /// [`named`], [`summary`], [`question_of`].
 pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
+    let role = planner_role(db, plan)?;
+    let limit = usize::try_from(role.summary_characters).map_err(|error| AiError::Refused(error.to_string()))?;
     let units = read_work_units(db, plan)?;
     let this = read_work_unit(db, unit)?;
     let mut others = Vec::with_capacity(units.len());
 
     for other in &units {
         if other.id != unit {
-            others.push(summary(other));
+            others.push(summary(other, limit));
         }
     }
 
@@ -304,7 +321,9 @@ pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<
         others.join("\n"),
     );
 
-    question_of(db, plan, &this, DEPENDENCIES_TASK, text)
+    let task = format!("{}\n\n{DEPENDENCIES_FORM}", role.dependencies_task);
+
+    question_of(db, plan, &this, &task, text)
 }
 
 /// The JSON object of an answer: a fence of Markdown or words around it are

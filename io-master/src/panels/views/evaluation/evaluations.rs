@@ -14,6 +14,7 @@ use tauri::State;
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_store::read_agents;
+use crate::objects::ai::agent_roles::agent_roles_model::AgentRole;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::{change_agent, new_evaluation};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::{read_evaluation_plan, read_evaluation_plans};
@@ -246,8 +247,11 @@ pub fn evaluation_get(session: State<'_, Session>, id: i64) -> Result<Evaluation
     let (documents, proofs) = input_views(db, id)?;
     let mut agents = Vec::new();
 
+    // Only the agents of the role of this work: the agent of an evaluation assesses it (user, 2026-11-02).
     for agent in read_agents(db)? {
-        agents.push(AgentChoiceView { id: agent.id, name: agent.name });
+        if matches!(agent.role, AgentRole::Evaluator(_)) {
+            agents.push(AgentChoiceView { id: agent.id, name: agent.name });
+        }
     }
 
     Ok(EvaluationView { ai_agent: evaluation.ai_agent, summary: summary_of(evaluation), agents, documents, proofs })

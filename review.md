@@ -26,6 +26,8 @@ A file that changes after its approval goes back to "to review", with a note of 
 
 ## To review
 
+- The roles of an agent (2026-11-02, the change of the model agreed in the chat): new `objects/ai/agent_roles/` (`agent_roles_model.rs`, `agent_roles_store.rs`, `agent_roles_rules.rs`); `agent_model.rs` (`max_answer_tokens`, `role`) and `agent_store.rs` (the columns `max_answer_tokens` and `role`, the role written and read in the transaction of the agent, `update_agent` refusing another role) back from the approved files; `objects/schema.rs` lists the new tables.
+
 - `io-master/src/objects/evaluation/product_document/product_document_store.rs`, back from the approved stores (2026-11-02, the change approved in the chat): `check_indexed` added, called by `read_document_text` and `read_document_passages`, so that a given file without passages is `DbError::Corrupt` and a missing document `DbError::NoRow` (it read as an empty text, and the AI assessed an empty ST); a test added, one assertion of a test changed (a missing document is now refused).
 
 Everything else in `io-master/src/` and `io-master/ui/src/`, from the bottom of the groups up (`docs/code_structure.md`): `infrastructure/` (`security/`, `pdf/`, `storage/connection.rs`, `storage/encryption/generate_key.rs`, `clock.rs`, `data_folder.rs`); in `objects/` the rules and the AI of every object (`<object>_rules.rs`, `<object>_ai.rs` and their folders), `error.rs`, `ai_error.rs`, `text.rs`; `panels/session.rs`, `panels/logic/`, `panels/views/`, `main.rs`, `architecture_tests.rs`, `ui/`.

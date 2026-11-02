@@ -2,14 +2,22 @@
   One agent (its commands agent_get, agent_save and agent_knowledge_test in
   src/panels/views/agents/agent.rs): its name, its integration, its
   instructions, its knowledge bases (shared with other agents), its
-  glossary and its limits; the test of the knowledge it would give with a
+  glossary, its limits and the parameters of its role (the tasks it asks
+  with: everything that shapes a question is tuned here); the test of the knowledge it would give with a
   question (nothing is sent to an AI service); its journal (AgentJournal).
   The rows of the glossary are edited in the page and sent whole with
   "Save"; empty rows are left out by the program.
 -->
 <script lang="ts">
   import SaveStatus from "../../components/save_status/SaveStatus.svelte";
-  import { agentGet, agentKnowledgeTest, agentSave, type AgentView, type TermView } from "../../lib/api/agents";
+  import {
+    agentGet,
+    agentKnowledgeTest,
+    agentSave,
+    type AgentView,
+    type RoleView,
+    type TermView,
+  } from "../../lib/api/agents";
   import { sentence } from "../../lib/api/errors";
   import AgentJournal from "./AgentJournal.svelte";
 
@@ -23,6 +31,8 @@
   let glossary: TermView[] = $state([]);
   let maxPassages = $state(8);
   let maxCharacters = $state(12000);
+  let maxAnswerTokens = $state(16000);
+  let role: RoleView | null = $state(null);
   let question = $state("");
   let passages: string[] | null = $state(null);
   let problem = $state("");
@@ -41,6 +51,8 @@
       glossary = view.glossary.map((entry) => ({ ...entry }));
       maxPassages = view.maxPassages;
       maxCharacters = view.maxCharacters;
+      maxAnswerTokens = view.maxAnswerTokens;
+      role = { ...view.role };
     } catch (error) {
       problem = sentence(error);
     }
@@ -59,8 +71,24 @@
     problem = "";
     busy = true;
 
+    if (role === null) {
+      busy = false;
+      return;
+    }
+
     try {
-      await agentSave({ id: agent, name, integration, instructions, knowledgeBases: bases, glossary, maxPassages, maxCharacters });
+      await agentSave({
+        id: agent,
+        name,
+        integration,
+        instructions,
+        knowledgeBases: bases,
+        glossary,
+        maxPassages,
+        maxCharacters,
+        maxAnswerTokens,
+        role,
+      });
       savedAt = new Date();
       await load(agent);
     } catch (error) {
@@ -145,7 +173,43 @@
           Characters, at most
           <input type="number" min="1500" max="40000" step="500" bind:value={maxCharacters} required />
         </label>
+        <label>
+          Answer, at most (tokens)
+          <input type="number" min="256" max="64000" step="256" bind:value={maxAnswerTokens} required />
+        </label>
       </div>
+
+      {#if role !== null && role.kind === "evaluator"}
+        <h3>The role: evaluator</h3>
+        <p class="note">How it judges and what it is asked; the form of the answer (its fields) is the program's.</p>
+        <label>Judgement <textarea rows="10" bind:value={role.judgement}></textarea></label>
+        <label>
+          Task of a work unit of the documentation <textarea rows="6" bind:value={role.documentationTask}></textarea>
+        </label>
+        <label>Task of a functional test <textarea rows="6" bind:value={role.functionalTask}></textarea></label>
+        <div class="row">
+          <label>
+            Passages of the documents, at most (when they do not fit whole)
+            <input type="number" min="1" max="50" bind:value={role.documentPassages} required />
+          </label>
+          <label>
+            Findings of a dependency, at most (characters)
+            <input type="number" min="0" max="20000" step="100" bind:value={role.dependencyFindings} required />
+          </label>
+        </div>
+      {:else if role !== null && role.kind === "planner"}
+        <h3>The role: planner</h3>
+        <p class="note">What it is asked when it fills a plan; the form of the answer (its fields) is the program's.</p>
+        <label>Task of the parameters <textarea rows="8" bind:value={role.parametersTask}></textarea></label>
+        <label>Task of the dependencies <textarea rows="5" bind:value={role.dependenciesTask}></textarea></label>
+        <label>
+          Line about another work unit, at most (characters)
+          <input type="number" min="1" max="2000" step="50" bind:value={role.summaryCharacters} required />
+        </label>
+      {:else if role !== null}
+        <h3>The role: chat</h3>
+        <p class="note">It talks with you; it has no task of its own.</p>
+      {/if}
 
       <div class="buttons"><button type="submit" disabled={busy}>Save</button></div>
     </form>

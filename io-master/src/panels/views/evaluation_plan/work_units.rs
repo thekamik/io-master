@@ -17,6 +17,7 @@ use tauri::State;
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_store::read_agents;
+use crate::objects::ai::agent_roles::agent_roles_model::AgentRole;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::work_units::{
     add_all_work_units, add_work_unit, available_controls, remove_work_unit,
 };
@@ -255,8 +256,11 @@ pub fn work_unit_get(session: State<'_, Session>, unit: i64) -> Result<WorkUnitV
         proofs.push(ProofView { id, name: read_lab_proof(db, id)?.name });
     }
 
+    // Only the agents of the role of this work: the agent of a work unit assesses it (user, 2026-11-02).
     for agent in read_agents(db)? {
-        agents.push(AgentChoiceView { id: agent.id, name: agent.name });
+        if matches!(agent.role, AgentRole::Evaluator(_)) {
+            agents.push(AgentChoiceView { id: agent.id, name: agent.name });
+        }
     }
 
     Ok(WorkUnitView {

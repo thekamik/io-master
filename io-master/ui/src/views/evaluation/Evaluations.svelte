@@ -35,7 +35,8 @@
     try {
       evaluations = await evaluationList();
       plans = await planList();
-      agents = await agentList();
+      // Only an evaluator assesses an evaluation (user, 2026-11-02).
+      agents = (await agentList()).filter((one) => one.role === "evaluator");
       plan = plan ?? ready[0]?.id ?? null;
       agent = agent ?? agents[0]?.id ?? null;
     } catch (error) {
