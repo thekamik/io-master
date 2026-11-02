@@ -254,18 +254,15 @@ mod tests {
 
     use crate::objects::ai::agent_roles::agent_roles_model::AgentRole;
     use crate::objects::ai::integration::integration_store::create_integration;
-    use crate::objects::ai::rag::rag_model::KnowledgeBase;
     use crate::objects::ai::rag::rag_store::create_knowledge_base;
-    use crate::test_support::database::{database, integration};
+    use crate::test_support::database::{database, integration, knowledge_base};
 
     #[test]
     fn an_agent_is_made_checked_and_changed() {
         let (_directory, db) = database();
         let local = create_integration(&db, &integration()).unwrap();
         let id = new_agent(&db, "  agent_WU_1-1 ", local, "evaluator").unwrap();
-        let base =
-            create_knowledge_base(&db, &KnowledgeBase { id: 0, name: "CEM".to_owned(), description: String::new() })
-                .unwrap();
+        let base = create_knowledge_base(&db, &knowledge_base("CEM")).unwrap();
         let mut agent = read_agent(&db, id).unwrap();
 
         assert_eq!((agent.name.as_str(), agent.instructions.as_str()), ("agent_WU_1-1", NEW_INSTRUCTIONS));

@@ -2,8 +2,9 @@
   One knowledge base (its commands knowledge_base_list, knowledge_base_save,
   knowledge_source_list, knowledge_source_add, knowledge_source_replace,
   knowledge_source_rename and knowledge_search in
-  src/panels/views/agents/knowledge.rs): its name and description, its
-  sources (a .txt, .md or .pdf file chosen in the dialog of the system; a
+  src/panels/views/agents/knowledge.rs): its name and description, the
+  length of its passages (its sources indexed anew when it changes) and its
+  stop words, its sources (a .txt, .md or .pdf file chosen in the dialog of the system; a
   source is never removed, but its text may be replaced by a newer file and
   its name changed), and the search in the base.
 -->
@@ -17,14 +18,18 @@
     knowledgeSourceList,
     knowledgeSourceRename,
     knowledgeSourceReplace,
+    type BaseView,
     type SourceView,
   } from "../../lib/api/agents";
   import { sentence } from "../../lib/api/errors";
 
   let { base, onback }: { base: number; onback: () => void } = $props();
 
+  let view: BaseView | null = $state(null);
   let name = $state("");
   let description = $state("");
+  let passageCharacters: number | null = $state(null);
+  let stopWords = $state("");
   let sources: SourceView[] = $state([]);
   /** The source being renamed, and its new name. */
   let renaming: number | null = $state(null);
@@ -39,9 +44,11 @@
     problem = "";
 
     try {
-      const view = (await knowledgeBaseList()).find((one) => one.id === id);
+      view = (await knowledgeBaseList()).find((one) => one.id === id) ?? null;
       name = view?.name ?? "";
       description = view?.description ?? "";
+      passageCharacters = view?.passageCharacters ?? null;
+      stopWords = view?.stopWords ?? "";
       sources = await knowledgeSourceList(id);
     } catch (error) {
       problem = sentence(error);
@@ -72,8 +79,16 @@
 
   function save(event: SubmitEvent) {
     event.preventDefault();
+
+    // The field is required: nothing is sent until it is given.
+    if (passageCharacters === null) {
+      return;
+    }
+
+    const fields = { id: base, name, description, passageCharacters, stopWords };
+
     void write(async () => {
-      await knowledgeBaseSave(base, name, description);
+      await knowledgeBaseSave(fields);
       return true;
     });
   }
@@ -108,6 +123,25 @@
       <label>Name <input bind:value={name} required /></label>
       <label>Description <input bind:value={description} /></label>
     </div>
+    {#if view}
+      <label>
+        Passage, at most (characters)
+        <span class="note">The sources are cut into passages of this length; a change indexes them anew.</span>
+        <input
+          type="number"
+          min={view.minPassageCharacters}
+          max={view.maxPassageCharacters}
+          step="1"
+          bind:value={passageCharacters}
+          required
+        />
+      </label>
+    {/if}
+    <label>
+      Stop words
+      <span class="note">Words a search passes over, parted by spaces: they are in almost every passage.</span>
+      <textarea rows="4" bind:value={stopWords}></textarea>
+    </label>
     <div class="buttons"><button type="submit" disabled={busy}>Save</button></div>
   </form>
 

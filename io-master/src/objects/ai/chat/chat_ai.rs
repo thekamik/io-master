@@ -217,10 +217,10 @@ mod tests {
     use crate::objects::ai::chat::chat_store::create_chat;
     use crate::objects::ai::integration::integration_model::Integration;
     use crate::objects::ai::integration::integration_store::create_integration;
-    use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
+    use crate::objects::ai::rag::rag_model::Source;
     use crate::objects::ai::rag::rag_store::{create_knowledge_base, create_source};
     use crate::objects::error::DomainError;
-    use crate::test_support::database::{agent, database, integration};
+    use crate::test_support::database::{agent, database, integration, knowledge_base};
 
     fn answer(text: &str, ending: Ending) -> Answer {
         Answer {
@@ -267,9 +267,7 @@ mod tests {
     fn the_question_carries_the_instructions_the_knowledge_and_the_conversation() {
         let (_directory, db) = database();
         let local = create_integration(&db, &integration()).unwrap();
-        let base =
-            create_knowledge_base(&db, &KnowledgeBase { id: 0, name: "CC".to_owned(), description: String::new() })
-                .unwrap();
+        let base = create_knowledge_base(&db, &knowledge_base("CC")).unwrap();
         let source =
             Source { id: 0, knowledge_base: base, name: "notes".to_owned(), text: "The TSF is ...".to_owned() };
 

@@ -24,7 +24,7 @@ use rusqlite::{Connection, named_params};
 
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::ai::rag::rag_store::{MAX_FOUND, passages, query_of};
+use crate::objects::ai::rag::rag_store::{MAX_FOUND, PASSAGE_CHARS, STOP_WORDS, passages, query_of};
 use crate::objects::evaluation::product_document::product_document_model::ProductDocument;
 
 /// The most passages of one document (a text of 20 million characters).
@@ -134,7 +134,7 @@ pub fn read_product_document(db: &UserDatabase, id: i64) -> Result<ProductDocume
 /// Called by: [`update_product_document`].
 /// Calls: `objects/ai/rag/rag_store.rs`: `passages`.
 fn write_passages(connection: &Connection, id: i64, text: &str) -> Result<(), DbError> {
-    let cut = passages(text);
+    let cut = passages(text, PASSAGE_CHARS);
 
     ensure!(
         cut.len() <= MAX_PASSAGES,
@@ -312,7 +312,7 @@ pub fn read_document_passages(
         check_indexed(db.connection(), *document)?;
     }
 
-    let Some(query) = query_of(question) else {
+    let Some(query) = query_of(question, &STOP_WORDS) else {
         return Ok(Vec::new());
     };
     let wanted = count.min(MAX_FOUND);

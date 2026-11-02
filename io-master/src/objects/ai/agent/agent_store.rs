@@ -386,15 +386,14 @@ mod tests {
     use super::*;
 
     use crate::objects::ai::integration::integration_store::create_integration;
-    use crate::objects::ai::rag::rag_model::KnowledgeBase;
     use crate::objects::ai::rag::rag_store::create_knowledge_base;
-    use crate::test_support::database::{agent, database, integration, planner};
+    use crate::test_support::database::{agent, database, integration, knowledge_base, planner};
 
     #[test]
     fn an_agent_is_stored_with_its_lists_read_and_changed() {
         let (_directory, db) = database();
         let integration = create_integration(&db, &integration()).unwrap();
-        let base = KnowledgeBase { id: 0, name: "CEM".to_owned(), description: String::new() };
+        let base = knowledge_base("CEM");
         let new = Agent {
             knowledge_bases: vec![create_knowledge_base(&db, &base).unwrap()],
             glossary: vec![GlossaryEntry { term: "TSF".to_owned(), meaning: "TOE Security Functionality".to_owned() }],

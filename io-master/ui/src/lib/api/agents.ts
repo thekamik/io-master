@@ -111,6 +111,21 @@ export interface BaseView {
   name: string;
   description: string;
   sources: number;
+  passageCharacters: number;
+  /** The stop words, parted by spaces. */
+  stopWords: string;
+  minPassageCharacters: number;
+  maxPassageCharacters: number;
+}
+
+/** The fields of a base as its editor sends them (knowledge.rs, BaseFields). */
+export interface BaseFields {
+  id: number;
+  name: string;
+  description: string;
+  passageCharacters: number;
+  /** The stop words, parted by spaces or lines. */
+  stopWords: string;
 }
 
 /** A source of a base, without its text (knowledge.rs, SourceView). */
@@ -174,9 +189,9 @@ export function knowledgeBaseCreate(name: string, description: string): Promise<
   return invoke("knowledge_base_create", { name, description });
 }
 
-/** Saves the name and the description of a base. */
-export function knowledgeBaseSave(id: number, name: string, description: string): Promise<void> {
-  return invoke("knowledge_base_save", { id, name, description });
+/** Saves a base: its name, description, length of a passage, stop words. */
+export function knowledgeBaseSave(fields: BaseFields): Promise<void> {
+  return invoke("knowledge_base_save", { fields });
 }
 
 /** The sources of a base. */

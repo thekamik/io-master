@@ -292,18 +292,16 @@ mod tests {
     use crate::objects::ai::agent::agent_store::{create_agent, update_agent};
     use crate::objects::ai::chat::chat_model::Speaker;
     use crate::objects::ai::integration::integration_store::create_integration;
-    use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
+    use crate::objects::ai::rag::rag_model::Source;
     use crate::objects::ai::rag::rag_store::{create_knowledge_base, create_source};
-    use crate::test_support::database::{agent, database, integration};
+    use crate::test_support::database::{agent, database, integration, knowledge_base};
 
     #[test]
     fn the_knowledge_of_an_agent_is_found_with_its_glossary_and_fits_its_limit() {
         let (_directory, db) = database();
         let local = create_integration(&db, &integration()).unwrap();
         let id = create_agent(&db, &agent(local)).unwrap();
-        let base =
-            create_knowledge_base(&db, &KnowledgeBase { id: 0, name: "CEM".to_owned(), description: String::new() })
-                .unwrap();
+        let base = create_knowledge_base(&db, &knowledge_base("CEM")).unwrap();
         let paragraph = "The TOE Security Functionality enforces the policy.";
         let text = format!("{paragraph}\n\n{}\n\nUnrelated words about routers.", "x".repeat(1400));
 
@@ -345,9 +343,7 @@ mod tests {
         let (_directory, db) = database();
         let local = create_integration(&db, &integration()).unwrap();
         let id = create_agent(&db, &agent(local)).unwrap();
-        let base =
-            create_knowledge_base(&db, &KnowledgeBase { id: 0, name: "CEM".to_owned(), description: String::new() })
-                .unwrap();
+        let base = create_knowledge_base(&db, &knowledge_base("CEM")).unwrap();
         let text = "The developer shall describe the security architecture.".to_owned();
 
         create_source(&db, &Source { id: 0, knowledge_base: base, name: "notes".to_owned(), text }).unwrap();

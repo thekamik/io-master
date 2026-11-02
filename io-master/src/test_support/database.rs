@@ -9,6 +9,8 @@ use crate::objects::ai::agent::agent_model::Agent;
 use crate::objects::ai::agent::agent_rules::{NEW_KNOWLEDGE_TEMPLATE, NEW_PASSAGE_TEMPLATE, NEW_SYSTEM_TEMPLATE};
 use crate::objects::ai::agent_roles::agent_roles_rules::new_role;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
+use crate::objects::ai::rag::rag_model::KnowledgeBase;
+use crate::objects::ai::rag::rag_store::{PASSAGE_CHARS, STOP_WORDS};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_model::OscalStandardDocument;
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::create_oscal_standard_document;
@@ -90,6 +92,18 @@ pub fn integration() -> Integration {
         characters_per_token: 3,
         connect_timeout_seconds: 15,
         stream_silence_seconds: 300,
+    }
+}
+
+/// A knowledge base named `name`, empty, not stored yet, its passages and
+/// stop words those of the program.
+pub fn knowledge_base(name: &str) -> KnowledgeBase {
+    KnowledgeBase {
+        id: 0,
+        name: name.to_owned(),
+        description: String::new(),
+        passage_characters: u32::try_from(PASSAGE_CHARS).unwrap(),
+        stop_words: STOP_WORDS.iter().map(|word| (*word).to_owned()).collect(),
     }
 }
 

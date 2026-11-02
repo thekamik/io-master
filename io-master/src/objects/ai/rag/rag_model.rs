@@ -32,6 +32,16 @@ pub struct KnowledgeBase {
 
     /// What the base is for.
     pub description: String,
+
+    /// The longest passage its sources are cut into for the index, in
+    /// characters (user, 2026-11-02); its sources are indexed anew when it
+    /// changes.
+    pub passage_characters: u32,
+
+    /// The words a search of the base passes over, in lower case ("the",
+    /// "shall"): words in almost every passage, which would find passages by
+    /// themselves instead of by the terms that matter.
+    pub stop_words: Vec<String>,
 }
 
 /// A source of knowledge: one text of a base (user, 2026-10-28). Kept in

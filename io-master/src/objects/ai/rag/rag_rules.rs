@@ -16,7 +16,8 @@ use crate::infrastructure::pdf::poppler::{self, MAX_FILE};
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
 use crate::objects::ai::rag::rag_store::{
-    MAX_BASES, MAX_FOUND, MAX_SOURCE_CHARS, MAX_SOURCES, create_knowledge_base, create_source, read_knowledge_base,
+    MAX_BASES, MAX_FOUND, MAX_PASSAGE_CHARS, MAX_SOURCE_CHARS, MAX_SOURCES, MAX_STOP_WORD, MAX_STOP_WORDS,
+    MIN_PASSAGE_CHARS, PASSAGE_CHARS, STOP_WORDS, create_knowledge_base, create_source, read_knowledge_base,
     read_knowledge_bases, read_passages, read_source, read_sources, update_knowledge_base, update_source,
 };
 use crate::objects::error::DomainError;
@@ -32,7 +33,8 @@ const MAX_DESCRIPTION: usize = 2000;
 /// character of the longest text of a source.
 const MAX_TEXT_FILE: u64 = 64 * 1024 * 1024;
 
-/// Makes a new knowledge base.
+/// Makes a new knowledge base, its passages and stop words those of the
+/// program (`PASSAGE_CHARS`, `STOP_WORDS`), to be tuned in the base.
 ///
 /// Input: `name`, the name typed ("Common Criteria"); `description`, what it
 /// holds, may be empty.
@@ -52,18 +54,63 @@ pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64,
         DomainError::Refused(format!("a description over {MAX_DESCRIPTION} characters"))
     );
 
-    Ok(create_knowledge_base(db, &KnowledgeBase { id: 0, name, description: description.trim().to_owned() })?)
+    let mut stop_words = Vec::with_capacity(STOP_WORDS.len());
+
+    for word in STOP_WORDS {
+        stop_words.push(word.to_owned());
+    }
+
+    let base = KnowledgeBase {
+        id: 0,
+        name,
+        description: description.trim().to_owned(),
+        passage_characters: u32::try_from(PASSAGE_CHARS).map_err(|error| DomainError::Refused(error.to_string()))?,
+        stop_words,
+    };
+
+    Ok(create_knowledge_base(db, &base)?)
 }
 
-/// Writes the name and the description of the base `base.id` anew.
+/// The stop words as typed, each trimmed and in lower case, an empty one or
+/// one given twice left out.
+///
+/// Input: `words`, the stop words of a base as the page sends them.
+/// Output: the words to keep (`["the", "shall"]`); `DomainError::Refused` for
+/// more than `MAX_STOP_WORDS` or one over `MAX_STOP_WORD` characters.
+///
+/// Called by: [`change_base`].
+fn checked_stop_words(words: &[String]) -> Result<Vec<String>, DomainError> {
+    ensure!(words.len() <= MAX_STOP_WORDS, DomainError::Refused(format!("more than {MAX_STOP_WORDS} stop words")));
+
+    let mut kept: Vec<String> = Vec::with_capacity(words.len());
+
+    for word in words {
+        let word = word.trim().to_lowercase();
+
+        ensure!(
+            word.chars().count() <= MAX_STOP_WORD,
+            DomainError::Refused(format!("a stop word over {MAX_STOP_WORD} characters"))
+        );
+
+        if !word.is_empty() && !kept.contains(&word) {
+            kept.push(word);
+        }
+    }
+
+    Ok(kept)
+}
+
+/// Writes the base `base.id` anew: its name, description, length of a
+/// passage (its sources indexed anew when it changes) and stop words.
 ///
 /// Input: `base`, the base as changed, its id that of a stored base.
 /// Output: nothing; `DomainError::Refused` for a name or a description
-/// refused, an error of the database for a base missing.
+/// refused, a passage out of `MIN_PASSAGE_CHARS` to `MAX_PASSAGE_CHARS`, stop
+/// words refused, an error of the database for a base missing.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_base_save`.
 /// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`,
-/// `update_knowledge_base`.
+/// `update_knowledge_base`; [`checked_stop_words`].
 pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), DomainError> {
     let name = checked_text(&base.name, "the name of the base", MAX_NAME)?;
 
@@ -73,10 +120,20 @@ pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), Domain
         DomainError::Refused(format!("a description over {MAX_DESCRIPTION} characters"))
     );
 
-    Ok(update_knowledge_base(
-        db,
-        &KnowledgeBase { id: base.id, name, description: base.description.trim().to_owned() },
-    )?)
+    ensure!(
+        (MIN_PASSAGE_CHARS..=MAX_PASSAGE_CHARS).contains(&base.passage_characters),
+        DomainError::Refused(format!("a passage: from {MIN_PASSAGE_CHARS} to {MAX_PASSAGE_CHARS} characters"))
+    );
+
+    let changed = KnowledgeBase {
+        id: base.id,
+        name,
+        description: base.description.trim().to_owned(),
+        passage_characters: base.passage_characters,
+        stop_words: checked_stop_words(&base.stop_words)?,
+    };
+
+    Ok(update_knowledge_base(db, &changed)?)
 }
 
 /// The text of the file `path` for a source: a `.txt` or `.md` file as

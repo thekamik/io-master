@@ -14,7 +14,7 @@
 //!                       ──knowledge_search(base, q)───► search_base ──► the passages found
 //! ```
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::DialogExt;
 
@@ -22,7 +22,9 @@ use crate::objects::ai::rag::rag_model::KnowledgeBase;
 use crate::objects::ai::rag::rag_rules::{
     add_base, add_source, change_base, rename_source, replace_source_text, search_base, source_text,
 };
-use crate::objects::ai::rag::rag_store::{read_knowledge_bases, read_sources};
+use crate::objects::ai::rag::rag_store::{
+    MAX_PASSAGE_CHARS, MAX_STOP_WORD, MAX_STOP_WORDS, MIN_PASSAGE_CHARS, read_knowledge_bases, read_sources,
+};
 use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
@@ -30,13 +32,33 @@ use crate::panels::views::opened::database;
 /// The longest name, description or question from the page, in bytes.
 const MAX_FIELD: usize = 8192;
 
-/// A knowledge base, as the list shows it.
+/// A knowledge base, as the list shows it and its editor changes it, with
+/// the limits of the length of a passage (user, 2026-11-02: the page holds no
+/// number of its own).
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct BaseView {
     id: i64,
     name: String,
     description: String,
     sources: usize,
+    passage_characters: u32,
+    /// The stop words, parted by spaces ("a about all").
+    stop_words: String,
+    min_passage_characters: u32,
+    max_passage_characters: u32,
+}
+
+/// The fields of a base as its editor sends them.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BaseFields {
+    id: i64,
+    name: String,
+    description: String,
+    passage_characters: u32,
+    /// The stop words, parted by spaces or lines, as typed.
+    stop_words: String,
 }
 
 /// A source of a base, without its text.
@@ -66,7 +88,16 @@ pub fn knowledge_base_list(session: State<'_, Session>) -> Result<Vec<BaseView>,
     for base in read_knowledge_bases(db)? {
         let sources = read_sources(db, base.id)?.len();
 
-        bases.push(BaseView { id: base.id, name: base.name, description: base.description, sources });
+        bases.push(BaseView {
+            id: base.id,
+            name: base.name,
+            description: base.description,
+            sources,
+            passage_characters: base.passage_characters,
+            stop_words: base.stop_words.join(" "),
+            min_passage_characters: MIN_PASSAGE_CHARS,
+            max_passage_characters: MAX_PASSAGE_CHARS,
+        });
     }
 
     Ok(bases)
@@ -92,29 +123,45 @@ pub fn knowledge_base_create(session: State<'_, Session>, name: String, descript
     Ok(add_base(database(opened.as_ref())?, &name, &description)?)
 }
 
-/// Saves the name and the description of the base `id`.
+/// Saves the base `fields.id`: its name, description, length of a passage
+/// and stop words.
 ///
-/// Input: `session`, the session of the window, someone logged in; `id`, the id
-/// of a base; `name`, `description`, as typed.
-/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in, the
-/// refusals of the base.
+/// Input: `session`, the session of the window, someone logged in; `fields`,
+/// the fields of the editor, the stop words parted by spaces or lines.
+/// Output: nothing; `ViewError::NotLoggedIn` when nobody is logged in,
+/// `ViewError::Invalid` for a text too long, the refusals of the base.
 ///
 /// Called by: `ui/src/lib/api/agents.ts`: `knowledgeBaseSave`, from `ui/src/views/agents/BaseEditor.svelte`,
 /// "Save".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/rag/rag_rules.rs`: `change_base`.
 #[tauri::command]
-pub fn knowledge_base_save(
-    session: State<'_, Session>,
-    id: i64,
-    name: String,
-    description: String,
-) -> Result<(), ViewError> {
-    ensure!(name.len() + description.len() <= MAX_FIELD, ViewError::Invalid("the text is too long".to_owned()));
+pub fn knowledge_base_save(session: State<'_, Session>, fields: BaseFields) -> Result<(), ViewError> {
+    ensure!(
+        fields.name.len() + fields.description.len() <= MAX_FIELD,
+        ViewError::Invalid("the text is too long".to_owned())
+    );
+    ensure!(
+        fields.stop_words.len() <= MAX_STOP_WORDS * (MAX_STOP_WORD * 4 + 1),
+        ViewError::Invalid("the stop words are too long".to_owned())
+    );
 
+    let mut stop_words = Vec::new();
+
+    for word in fields.stop_words.split_whitespace() {
+        stop_words.push(word.to_owned());
+    }
+
+    let base = KnowledgeBase {
+        id: fields.id,
+        name: fields.name,
+        description: fields.description,
+        passage_characters: fields.passage_characters,
+        stop_words,
+    };
     let opened = session.lock()?;
 
-    Ok(change_base(database(opened.as_ref())?, &KnowledgeBase { id, name, description })?)
+    Ok(change_base(database(opened.as_ref())?, &base)?)
 }
 
 /// The sources of the base `base`, by their names, without their texts.

@@ -112,7 +112,8 @@ objects/ai/
   journal/       journal_model.rs (JournalEntry, Ending), journal_store.rs,
                  journal_ai.rs (record ──► Answer: the journal of the agent written before the answer is given)
   rag/           rag_model.rs (KnowledgeBase, Source), rag_store.rs,
-                 rag_rules.rs (add_base, change_base; source_text: .txt, .md, .pdf within its limit; add_source,
+                 rag_rules.rs (add_base: the passages and stop words of the program; change_base, checked_stop_words;
+                 source_text: .txt, .md, .pdf within its limit; add_source,
                  replace_source_text, rename_source; search_base, the test of a base)
 objects/evaluation/
   evaluation_plan/  evaluation_plan_model.rs (EvaluationPlan, PlanState), evaluation_plan_store.rs,
