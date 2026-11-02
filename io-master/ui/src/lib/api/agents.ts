@@ -47,6 +47,12 @@ export interface RoleView {
   defaultProofName: string;
   /** What the knowledge is searched with, of either role. */
   knowledgeSearch: string;
+  /** The text of an empty list, of either role. */
+  nothingText: string;
+  /** The words of an evaluator and of a planner. */
+  notAssessedText: string;
+  documentationKind: string;
+  functionalKind: string;
 }
 
 /** An integration or a knowledge base to choose (agent.rs, ChoiceView). */

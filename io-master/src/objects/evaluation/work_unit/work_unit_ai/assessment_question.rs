@@ -166,8 +166,9 @@ fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<V
 /// Input: `unit`, the work unit assessed; `units`, the work units of its
 /// evaluation; `role`, the evaluator role of its agent; `limit`,
 /// `EvaluatorRole::dependency_findings`.
-/// Output: the text ("ADV_ARC.1-1: pass\n..."); "none" without
-/// dependencies.
+/// Output: the text ("ADV_ARC.1-1: pass\n..."); `EvaluatorRole::nothing_text`
+/// without dependencies; a dependency not assessed has
+/// `EvaluatorRole::not_assessed_text` for its verdict.
 ///
 /// Called by: [`question_of`].
 /// Calls: [`label_of`], [`verdict_name`]; `objects/ai/agent/agent_ai.rs`: `filled`.
@@ -180,7 +181,13 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit], role: &EvaluatorRole, 
                 let findings: String = other.findings.chars().take(limit).collect();
                 let values = [
                     ("label", label_of(units, *id)),
-                    ("verdict", other.verdict.map_or("not assessed", verdict_name).to_owned()),
+                    (
+                        "verdict",
+                        match other.verdict {
+                            Some(verdict) => verdict_name(verdict).to_owned(),
+                            None => role.not_assessed_text.clone(),
+                        },
+                    ),
                     ("findings", findings),
                 ];
 
@@ -189,7 +196,7 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit], role: &EvaluatorRole, 
         }
     }
 
-    if written.is_empty() { "none".to_owned() } else { written.join("\n\n") }
+    if written.is_empty() { role.nothing_text.clone() } else { written.join("\n\n") }
 }
 
 /// The documents of the work unit `unit`: each whole with `whole`, by the
@@ -200,7 +207,8 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit], role: &EvaluatorRole, 
 /// agent; `whole`, whether the documents go whole; `passages`,
 /// `EvaluatorRole::document_passages`, the most passages when they do not.
 /// Output: the text ("=== ST ===\n(the version recorded by the evaluator:
-/// 1.2)\n..."); "none" without documents; an error of the database.
+/// 1.2)\n..."); `EvaluatorRole::nothing_text` without documents; an error of
+/// the database.
 ///
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
@@ -236,7 +244,7 @@ fn documents_text(
         }
     }
 
-    Ok(if written.is_empty() { "none".to_owned() } else { written.join("\n\n") })
+    Ok(if written.is_empty() { role.nothing_text.clone() } else { written.join("\n\n") })
 }
 
 /// The placeholders of a search of the work unit `unit`: `{label}`,
@@ -274,8 +282,8 @@ fn day_of(seconds: i64) -> String {
 /// Input: `unit`, the work unit assessed; `role`, the evaluator role of its
 /// agent.
 /// Output: the text ("=== Test 3 (performed 2026-10-30 by K. K. with ...)
-/// ===\n..."); "none" without proofs; an error of the database for a proof
-/// missing.
+/// ===\n..."); `EvaluatorRole::nothing_text` without proofs; an error of the
+/// database for a proof missing.
 ///
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`day_of`];
@@ -297,7 +305,7 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit, role: &EvaluatorRole) -> Resu
         written.push(filled(&role.proof_template, &values));
     }
 
-    Ok(if written.is_empty() { "none".to_owned() } else { written.join("\n\n") })
+    Ok(if written.is_empty() { role.nothing_text.clone() } else { written.join("\n\n") })
 }
 
 /// The task the agent is told for the work unit `unit`: the

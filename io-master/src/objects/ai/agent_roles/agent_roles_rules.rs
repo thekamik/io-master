@@ -7,7 +7,7 @@
 //! ```text
 //! new_role("evaluator")  ──► Evaluator: the judgement, the two tasks, 20 passages, 1000 characters, the templates
 //! new_role("planner")    ──► Planner: the tasks of the parameters and of the dependencies, 200 characters,
-//!                            the templates, the name of a proof
+//!                            the templates, the name of a proof, the words of an empty list and of the kinds
 //! new_role("chat")       ──► Chat
 //! checked_role(role)     ──► the texts trimmed and given, the limits in their ranges
 //! role_warnings(role)    ──► a template without a placeholder its question needs (saved all the same)
@@ -55,6 +55,13 @@ const NEW_SUMMARY_TEMPLATE: &str = "{label} ({kind}): {sentence}";
 /// The name of the proof a new planner gives a functional test whose answer
 /// names none.
 const NEW_DEFAULT_PROOF_NAME: &str = "Results of the functional test";
+
+/// What a new agent writes for an empty list and for a dependency not yet
+/// assessed, and the kinds of work unit in the line of a new planner.
+const NEW_NOTHING_TEXT: &str = "none";
+const NEW_NOT_ASSESSED_TEXT: &str = "not assessed";
+const NEW_DOCUMENTATION_KIND: &str = "documentation";
+const NEW_FUNCTIONAL_KIND: &str = "functional";
 
 /// The placeholders without which each question of an evaluator loses its
 /// sense: a template without one of them is saved with a warning (user,
@@ -162,6 +169,8 @@ pub fn new_role(name: &str) -> Result<AgentRole, DomainError> {
             proof_template: NEW_PROOF_TEMPLATE.to_owned(),
             knowledge_search: NEW_KNOWLEDGE_SEARCH.to_owned(),
             document_search: NEW_DOCUMENT_SEARCH.to_owned(),
+            nothing_text: NEW_NOTHING_TEXT.to_owned(),
+            not_assessed_text: NEW_NOT_ASSESSED_TEXT.to_owned(),
         })),
         "planner" => Ok(AgentRole::Planner(PlannerRole {
             parameters_task: NEW_PARAMETERS_TASK.to_owned(),
@@ -172,6 +181,9 @@ pub fn new_role(name: &str) -> Result<AgentRole, DomainError> {
             summary_template: NEW_SUMMARY_TEMPLATE.to_owned(),
             knowledge_search: NEW_KNOWLEDGE_SEARCH.to_owned(),
             default_proof_name: NEW_DEFAULT_PROOF_NAME.to_owned(),
+            nothing_text: NEW_NOTHING_TEXT.to_owned(),
+            documentation_kind: NEW_DOCUMENTATION_KIND.to_owned(),
+            functional_kind: NEW_FUNCTIONAL_KIND.to_owned(),
         })),
         "chat" => Ok(AgentRole::Chat),
         _ => Err(DomainError::Refused(format!("no role \"{name}\" of an agent"))),
@@ -220,6 +232,8 @@ fn checked_evaluator(role: &EvaluatorRole) -> Result<EvaluatorRole, DomainError>
         proof_template: checked_text(&role.proof_template, "the template of a proof", MAX_TASK)?,
         knowledge_search: checked_text(&role.knowledge_search, "the search of the knowledge", MAX_TASK)?,
         document_search: checked_text(&role.document_search, "the search of the documents", MAX_TASK)?,
+        nothing_text: checked_text(&role.nothing_text, "the text of an empty list", MAX_TASK)?,
+        not_assessed_text: checked_text(&role.not_assessed_text, "the text of a work unit not assessed", MAX_TASK)?,
     })
 }
 
@@ -247,6 +261,9 @@ fn checked_planner(role: &PlannerRole) -> Result<PlannerRole, DomainError> {
         summary_template: checked_text(&role.summary_template, "the line about a work unit", MAX_TASK)?,
         knowledge_search: checked_text(&role.knowledge_search, "the search of the knowledge", MAX_TASK)?,
         default_proof_name: checked_text(&role.default_proof_name, "the name of a proof", MAX_TASK)?,
+        nothing_text: checked_text(&role.nothing_text, "the text of an empty list", MAX_TASK)?,
+        documentation_kind: checked_text(&role.documentation_kind, "the kind of the documentation", MAX_TASK)?,
+        functional_kind: checked_text(&role.functional_kind, "the kind of a functional test", MAX_TASK)?,
     })
 }
 

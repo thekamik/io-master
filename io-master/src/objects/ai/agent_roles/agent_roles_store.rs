@@ -9,9 +9,10 @@
 //! ai_agent_evaluators   (agent, judgement, documentation_task, functional_task, document_passages,
 //!                        dependency_findings, task_template, documentation_question, functional_question,
 //!                        dependency_template, document_template, document_passage_template, proof_template,
-//!                        knowledge_search, document_search)
+//!                        knowledge_search, document_search, nothing_text, not_assessed_text)
 //! ai_agent_planners     (agent, parameters_task, dependencies_task, summary_characters, parameters_question,
-//!                        dependencies_question, summary_template, knowledge_search, default_proof_name)
+//!                        dependencies_question, summary_template, knowledge_search, default_proof_name,
+//!                        nothing_text, documentation_kind, functional_kind)
 //! ```
 
 use rusqlite::{Connection, named_params};
@@ -51,7 +52,9 @@ pub const SCHEMA: &str = "
         document_passage_template TEXT NOT NULL,
         proof_template            TEXT NOT NULL,
         knowledge_search          TEXT NOT NULL,
-        document_search           TEXT NOT NULL
+        document_search           TEXT NOT NULL,
+        nothing_text              TEXT NOT NULL,
+        not_assessed_text         TEXT NOT NULL
     );
 
     CREATE TABLE IF NOT EXISTS ai_agent_planners (
@@ -63,7 +66,10 @@ pub const SCHEMA: &str = "
         dependencies_question TEXT NOT NULL,
         summary_template      TEXT NOT NULL,
         knowledge_search      TEXT NOT NULL,
-        default_proof_name    TEXT NOT NULL
+        default_proof_name    TEXT NOT NULL,
+        nothing_text          TEXT NOT NULL,
+        documentation_kind    TEXT NOT NULL,
+        functional_kind       TEXT NOT NULL
     );
 ";
 
@@ -104,6 +110,8 @@ pub fn check_agent_role(role: &AgentRole) -> Result<(), DbError> {
                 &evaluator.proof_template,
                 &evaluator.knowledge_search,
                 &evaluator.document_search,
+                &evaluator.nothing_text,
+                &evaluator.not_assessed_text,
             ],
             (1..=MAX_DOCUMENT_PASSAGES).contains(&evaluator.document_passages)
                 && evaluator.dependency_findings <= MAX_DEPENDENCY_FINDINGS,
@@ -117,6 +125,9 @@ pub fn check_agent_role(role: &AgentRole) -> Result<(), DbError> {
                 &planner.summary_template,
                 &planner.knowledge_search,
                 &planner.default_proof_name,
+                &planner.nothing_text,
+                &planner.documentation_kind,
+                &planner.functional_kind,
             ],
             (1..=MAX_SUMMARY_CHARACTERS).contains(&planner.summary_characters),
         ),
@@ -154,10 +165,11 @@ pub fn write_agent_role(connection: &Connection, agent: i64, role: &AgentRole) -
                      (agent, judgement, documentation_task, functional_task, document_passages, dependency_findings,
                       task_template, documentation_question, functional_question, dependency_template,
                       document_template, document_passage_template, proof_template, knowledge_search,
-                      document_search)
+                      document_search, nothing_text, not_assessed_text)
                  VALUES (:agent, :judgement, :documentation, :functional, :passages, :findings, :task_template,
                          :documentation_question, :functional_question, :dependency_template, :document_template,
-                         :document_passage_template, :proof_template, :knowledge_search, :document_search)",
+                         :document_passage_template, :proof_template, :knowledge_search, :document_search,
+                         :nothing_text, :not_assessed_text)",
                 named_params! {
                     ":agent": agent,
                     ":judgement": evaluator.judgement,
@@ -174,6 +186,8 @@ pub fn write_agent_role(connection: &Connection, agent: i64, role: &AgentRole) -
                     ":proof_template": evaluator.proof_template,
                     ":knowledge_search": evaluator.knowledge_search,
                     ":document_search": evaluator.document_search,
+                    ":nothing_text": evaluator.nothing_text,
+                    ":not_assessed_text": evaluator.not_assessed_text,
                 },
             )?;
         }
@@ -181,9 +195,11 @@ pub fn write_agent_role(connection: &Connection, agent: i64, role: &AgentRole) -
             connection.execute(
                 "INSERT INTO ai_agent_planners
                      (agent, parameters_task, dependencies_task, summary_characters, parameters_question,
-                      dependencies_question, summary_template, knowledge_search, default_proof_name)
+                      dependencies_question, summary_template, knowledge_search, default_proof_name, nothing_text,
+                      documentation_kind, functional_kind)
                  VALUES (:agent, :parameters, :dependencies, :summary, :parameters_question, :dependencies_question,
-                         :summary_template, :knowledge_search, :default_proof_name)",
+                         :summary_template, :knowledge_search, :default_proof_name, :nothing_text,
+                         :documentation_kind, :functional_kind)",
                 named_params! {
                     ":agent": agent,
                     ":parameters": planner.parameters_task,
@@ -194,6 +210,9 @@ pub fn write_agent_role(connection: &Connection, agent: i64, role: &AgentRole) -
                     ":summary_template": planner.summary_template,
                     ":knowledge_search": planner.knowledge_search,
                     ":default_proof_name": planner.default_proof_name,
+                    ":nothing_text": planner.nothing_text,
+                    ":documentation_kind": planner.documentation_kind,
+                    ":functional_kind": planner.functional_kind,
                 },
             )?;
         }
@@ -214,7 +233,8 @@ fn read_evaluator(connection: &Connection, agent: i64) -> Result<EvaluatorRole, 
     let mut statement = connection.prepare(
         "SELECT judgement, documentation_task, functional_task, document_passages, dependency_findings,
                 task_template, documentation_question, functional_question, dependency_template, document_template,
-                document_passage_template, proof_template, knowledge_search, document_search
+                document_passage_template, proof_template, knowledge_search, document_search, nothing_text,
+                not_assessed_text
          FROM ai_agent_evaluators WHERE agent = :agent",
     )?;
     let mut rows = statement.query(named_params! { ":agent": agent })?;
@@ -237,6 +257,8 @@ fn read_evaluator(connection: &Connection, agent: i64) -> Result<EvaluatorRole, 
         proof_template: row.get("proof_template")?,
         knowledge_search: row.get("knowledge_search")?,
         document_search: row.get("document_search")?,
+        nothing_text: row.get("nothing_text")?,
+        not_assessed_text: row.get("not_assessed_text")?,
     })
 }
 
@@ -250,7 +272,8 @@ fn read_evaluator(connection: &Connection, agent: i64) -> Result<EvaluatorRole, 
 fn read_planner(connection: &Connection, agent: i64) -> Result<PlannerRole, DbError> {
     let mut statement = connection.prepare(
         "SELECT parameters_task, dependencies_task, summary_characters, parameters_question, dependencies_question,
-                summary_template, knowledge_search, default_proof_name
+                summary_template, knowledge_search, default_proof_name, nothing_text, documentation_kind,
+                functional_kind
          FROM ai_agent_planners WHERE agent = :agent",
     )?;
     let mut rows = statement.query(named_params! { ":agent": agent })?;
@@ -267,6 +290,9 @@ fn read_planner(connection: &Connection, agent: i64) -> Result<PlannerRole, DbEr
         summary_template: row.get("summary_template")?,
         knowledge_search: row.get("knowledge_search")?,
         default_proof_name: row.get("default_proof_name")?,
+        nothing_text: row.get("nothing_text")?,
+        documentation_kind: row.get("documentation_kind")?,
+        functional_kind: row.get("functional_kind")?,
     })
 }
 

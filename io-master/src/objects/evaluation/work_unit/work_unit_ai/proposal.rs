@@ -128,6 +128,18 @@ fn named(ids: &[i64], names: &HashMap<i64, String>) -> Vec<String> {
     found
 }
 
+/// The names `names` as the question lists them: parted by commas, or the
+/// `PlannerRole::nothing_text` of the planner for none.
+///
+/// Input: `names`, names of documents, agents or work units; `nothing`, the
+/// text of an empty list ("none").
+/// Output: the list ("ST, IXIT"; "none").
+///
+/// Called by: [`parameters_question`], [`dependencies_question`].
+fn listed(names: &[String], nothing: &str) -> String {
+    if names.is_empty() { nothing.to_owned() } else { names.join(", ") }
+}
+
 /// The names of the documents of the plan and of every agent that may assess
 /// a work unit (an evaluator), by their ids.
 ///
@@ -252,7 +264,7 @@ fn current_parameters(db: &UserDatabase, unit: &WorkUnit, names: &Names) -> Resu
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
 /// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`: `read_oscal_standard_document`;
-/// [`names_of`], [`planner_role`], [`current_parameters`], [`named`], [`question_of`]; `objects/ai/agent/agent_ai.rs`:
+/// [`names_of`], [`planner_role`], [`current_parameters`], [`named`], [`listed`], [`question_of`]; `objects/ai/agent/agent_ai.rs`:
 /// `filled`.
 pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let (stored, _) = plan_to_fill(db, plan)?;
@@ -268,8 +280,8 @@ pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Qu
         ("standard", read_oscal_standard_document(db, this.reference)?.title),
         ("requirement", this.requirement.clone()),
         ("parameters", current_parameters(db, &this, &names)?.to_string()),
-        ("documents", named(&stored.product_documents, &names.documents).join(", ")),
-        ("agents", agents.join(", ")),
+        ("documents", listed(&named(&stored.product_documents, &names.documents), &role.nothing_text)),
+        ("agents", listed(&agents, &role.nothing_text)),
     ];
     let text = filled(&role.parameters_question, &values);
     let task = format!("{}\n\n{PARAMETERS_FORM}", role.parameters_task);
@@ -295,9 +307,12 @@ fn summary(unit: &WorkUnit, role: &PlannerRole, limit: usize) -> String {
         None => requirement,
     };
     let short: String = first.chars().take(limit).collect();
-    let kind = if unit.input_functional.is_some() { "functional" } else { "documentation" };
+    let kind = if unit.input_functional.is_some() { &role.functional_kind } else { &role.documentation_kind };
 
-    filled(&role.summary_template, &[("label", unit.label.as_str()), ("kind", kind), ("sentence", short.as_str())])
+    filled(
+        &role.summary_template,
+        &[("label", unit.label.as_str()), ("kind", kind.as_str()), ("sentence", short.as_str())],
+    )
 }
 
 /// The question of the dependencies of the work unit `unit` of the plan
@@ -311,7 +326,7 @@ fn summary(unit: &WorkUnit, role: &PlannerRole, limit: usize) -> String {
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
 /// Calls: [`planner_role`]; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`;
-/// [`labels`], [`named`], [`summary`], [`question_of`]; `objects/ai/agent/agent_ai.rs`: `filled`.
+/// [`labels`], [`named`], [`listed`], [`summary`], [`question_of`]; `objects/ai/agent/agent_ai.rs`: `filled`.
 pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let role = planner_role(db, plan)?;
     let limit = usize::try_from(role.summary_characters).map_err(|error| AiError::Refused(error.to_string()))?;
@@ -328,7 +343,7 @@ pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<
     let values = [
         ("label", this.label.clone()),
         ("requirement", this.requirement.clone()),
-        ("dependencies", named(&this.dependencies, &labels(&units)).join(", ")),
+        ("dependencies", listed(&named(&this.dependencies, &labels(&units)), &role.nothing_text)),
         ("others", others.join("\n")),
     ];
     let text = filled(&role.dependencies_question, &values);

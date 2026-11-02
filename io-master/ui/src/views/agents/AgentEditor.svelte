@@ -286,6 +286,16 @@
               <input class="mono" bind:value={role.documentSearch} required />
             </label>
           </div>
+          <div class="row">
+            <label>
+              An empty list <span class="note">no dependencies, documents or proofs</span>
+              <input bind:value={role.nothingText} required />
+            </label>
+            <label>
+              The verdict of a dependency not assessed
+              <input bind:value={role.notAssessedText} required />
+            </label>
+          </div>
         {:else if role !== null && role.kind === "planner"}
           <label>
             The question of the parameters <span class="note">{"{label}"}, {"{standard}"}, {"{requirement}"},
@@ -309,6 +319,20 @@
             <label>
               The proof of a functional test the answer names none for
               <input bind:value={role.defaultProofName} required />
+            </label>
+          </div>
+          <div class="row">
+            <label>
+              An empty list <span class="note">no dependencies, documents or agents</span>
+              <input bind:value={role.nothingText} required />
+            </label>
+            <label>
+              {"{kind}"} of the documentation
+              <input bind:value={role.documentationKind} required />
+            </label>
+            <label>
+              {"{kind}"} of a functional test
+              <input bind:value={role.functionalKind} required />
             </label>
           </div>
         {/if}

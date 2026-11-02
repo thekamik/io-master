@@ -87,6 +87,14 @@ pub struct EvaluatorRole {
     /// What the passages of the documents are searched with: `{label}`,
     /// `{requirement}`, `{guidance}`.
     pub document_search: String,
+
+    /// What the question writes for a list with nothing in it (no
+    /// dependencies, documents or proofs): "none".
+    pub nothing_text: String,
+
+    /// What the question writes for the verdict of a dependency not yet
+    /// assessed: "not assessed".
+    pub not_assessed_text: String,
 }
 
 /// The parameters of the filling of a plan by an agent ("Fill with AI").
@@ -113,8 +121,8 @@ pub struct PlannerRole {
     pub dependencies_question: String,
 
     /// The line about each other work unit: `{label}`, `{kind}`
-    /// ("documentation" or "functional"), `{sentence}` (the first sentence of
-    /// its requirement).
+    /// (`documentation_kind` or `functional_kind`), `{sentence}` (the first
+    /// sentence of its requirement).
     pub summary_template: String,
 
     /// What the knowledge of the agent is searched with: `{label}`,
@@ -123,4 +131,16 @@ pub struct PlannerRole {
 
     /// The name of the proof of a functional test whose answer names none.
     pub default_proof_name: String,
+
+    /// What the question writes for a list with nothing in it (no
+    /// dependencies, documents or agents): "none".
+    pub nothing_text: String,
+
+    /// `{kind}` of the line about a work unit of the documentation:
+    /// "documentation".
+    pub documentation_kind: String,
+
+    /// `{kind}` of the line about a work unit of a functional test:
+    /// "functional".
+    pub functional_kind: String,
 }

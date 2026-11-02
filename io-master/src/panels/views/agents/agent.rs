@@ -77,6 +77,12 @@ pub struct RoleView {
     default_proof_name: String,
     /// What the knowledge is searched with, of either role.
     knowledge_search: String,
+    /// The text of an empty list, of either role.
+    nothing_text: String,
+    /// The words of an evaluator and of a planner.
+    not_assessed_text: String,
+    documentation_kind: String,
+    functional_kind: String,
 }
 
 /// A choice of the editor: an integration or a knowledge base.
@@ -170,6 +176,10 @@ fn role_view(role: AgentRole) -> RoleView {
         summary_template: String::new(),
         default_proof_name: String::new(),
         knowledge_search: String::new(),
+        nothing_text: String::new(),
+        not_assessed_text: String::new(),
+        documentation_kind: String::new(),
+        functional_kind: String::new(),
     };
 
     match role {
@@ -188,6 +198,8 @@ fn role_view(role: AgentRole) -> RoleView {
             view.proof_template = evaluator.proof_template;
             view.document_search = evaluator.document_search;
             view.knowledge_search = evaluator.knowledge_search;
+            view.nothing_text = evaluator.nothing_text;
+            view.not_assessed_text = evaluator.not_assessed_text;
         }
         AgentRole::Planner(planner) => {
             view.parameters_task = planner.parameters_task;
@@ -198,6 +210,9 @@ fn role_view(role: AgentRole) -> RoleView {
             view.summary_template = planner.summary_template;
             view.default_proof_name = planner.default_proof_name;
             view.knowledge_search = planner.knowledge_search;
+            view.nothing_text = planner.nothing_text;
+            view.documentation_kind = planner.documentation_kind;
+            view.functional_kind = planner.functional_kind;
         }
         AgentRole::Chat => {}
     }
@@ -233,6 +248,10 @@ fn role_of(view: RoleView) -> Result<AgentRole, ViewError> {
         &view.summary_template,
         &view.default_proof_name,
         &view.knowledge_search,
+        &view.nothing_text,
+        &view.not_assessed_text,
+        &view.documentation_kind,
+        &view.functional_kind,
     ] {
         ensure!(text.len() <= MAX_TASK * 4, ViewError::Invalid(format!("a text of a role over {MAX_TASK} characters")));
     }
@@ -253,6 +272,8 @@ fn role_of(view: RoleView) -> Result<AgentRole, ViewError> {
             proof_template: view.proof_template,
             knowledge_search: view.knowledge_search,
             document_search: view.document_search,
+            nothing_text: view.nothing_text,
+            not_assessed_text: view.not_assessed_text,
         })),
         "planner" => Ok(AgentRole::Planner(PlannerRole {
             parameters_task: view.parameters_task,
@@ -263,6 +284,9 @@ fn role_of(view: RoleView) -> Result<AgentRole, ViewError> {
             summary_template: view.summary_template,
             knowledge_search: view.knowledge_search,
             default_proof_name: view.default_proof_name,
+            nothing_text: view.nothing_text,
+            documentation_kind: view.documentation_kind,
+            functional_kind: view.functional_kind,
         })),
         "chat" => Ok(AgentRole::Chat),
         _ => Err(ViewError::Invalid(format!("no role \"{}\" of an agent", view.kind))),
