@@ -14,8 +14,8 @@ use tauri::State;
 
 use crate::objects::ai::agent::agent_ai::agent_knowledge;
 use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
-use crate::objects::ai::agent::agent_rules::{MAX_INSTRUCTIONS, change_agent, new_agent};
-use crate::objects::ai::agent::agent_store::{read_agent, read_agents};
+use crate::objects::ai::agent::agent_rules::{MAX_INSTRUCTIONS, agent_warnings, change_agent, new_agent};
+use crate::objects::ai::agent::agent_store::{MAX_TEMPLATE, read_agent, read_agents};
 use crate::objects::ai::agent_roles::agent_roles_model::{AgentRole, EvaluatorRole, PlannerRole};
 use crate::objects::ai::agent_roles::agent_roles_store::{MAX_TASK, role_name};
 use crate::objects::ai::integration::integration_store::{read_integration, read_integrations};
@@ -61,6 +61,22 @@ pub struct RoleView {
     parameters_task: String,
     dependencies_task: String,
     summary_characters: u32,
+    /// The templates of an evaluator (`EvaluatorRole`).
+    task_template: String,
+    documentation_question: String,
+    functional_question: String,
+    dependency_template: String,
+    document_template: String,
+    document_passage_template: String,
+    proof_template: String,
+    document_search: String,
+    /// The templates of a planner (`PlannerRole`).
+    parameters_question: String,
+    dependencies_question: String,
+    summary_template: String,
+    default_proof_name: String,
+    /// What the knowledge is searched with, of either role.
+    knowledge_search: String,
 }
 
 /// A choice of the editor: an integration or a knowledge base.
@@ -90,7 +106,13 @@ pub struct AgentView {
     max_passages: u32,
     max_characters: u32,
     max_answer_tokens: u32,
+    system_template: String,
+    knowledge_template: String,
+    passage_template: String,
     role: RoleView,
+    /// Each placeholder a template needs and does not hold ("the template of
+    /// the message has no {task}"): saved all the same (user, 2026-11-02).
+    warnings: Vec<String>,
     /// Every integration of the user ("name · model").
     integrations: Vec<ChoiceView>,
     /// Every knowledge base of the user.
@@ -110,6 +132,9 @@ pub struct AgentFields {
     max_passages: u32,
     max_characters: u32,
     max_answer_tokens: u32,
+    system_template: String,
+    knowledge_template: String,
+    passage_template: String,
     role: RoleView,
 }
 
@@ -132,6 +157,19 @@ fn role_view(role: AgentRole) -> RoleView {
         parameters_task: String::new(),
         dependencies_task: String::new(),
         summary_characters: 0,
+        task_template: String::new(),
+        documentation_question: String::new(),
+        functional_question: String::new(),
+        dependency_template: String::new(),
+        document_template: String::new(),
+        document_passage_template: String::new(),
+        proof_template: String::new(),
+        document_search: String::new(),
+        parameters_question: String::new(),
+        dependencies_question: String::new(),
+        summary_template: String::new(),
+        default_proof_name: String::new(),
+        knowledge_search: String::new(),
     };
 
     match role {
@@ -141,11 +179,25 @@ fn role_view(role: AgentRole) -> RoleView {
             view.functional_task = evaluator.functional_task;
             view.document_passages = evaluator.document_passages;
             view.dependency_findings = evaluator.dependency_findings;
+            view.task_template = evaluator.task_template;
+            view.documentation_question = evaluator.documentation_question;
+            view.functional_question = evaluator.functional_question;
+            view.dependency_template = evaluator.dependency_template;
+            view.document_template = evaluator.document_template;
+            view.document_passage_template = evaluator.document_passage_template;
+            view.proof_template = evaluator.proof_template;
+            view.document_search = evaluator.document_search;
+            view.knowledge_search = evaluator.knowledge_search;
         }
         AgentRole::Planner(planner) => {
             view.parameters_task = planner.parameters_task;
             view.dependencies_task = planner.dependencies_task;
             view.summary_characters = planner.summary_characters;
+            view.parameters_question = planner.parameters_question;
+            view.dependencies_question = planner.dependencies_question;
+            view.summary_template = planner.summary_template;
+            view.default_proof_name = planner.default_proof_name;
+            view.knowledge_search = planner.knowledge_search;
         }
         AgentRole::Chat => {}
     }
@@ -168,8 +220,21 @@ fn role_of(view: RoleView) -> Result<AgentRole, ViewError> {
         &view.functional_task,
         &view.parameters_task,
         &view.dependencies_task,
+        &view.task_template,
+        &view.documentation_question,
+        &view.functional_question,
+        &view.dependency_template,
+        &view.document_template,
+        &view.document_passage_template,
+        &view.proof_template,
+        &view.document_search,
+        &view.parameters_question,
+        &view.dependencies_question,
+        &view.summary_template,
+        &view.default_proof_name,
+        &view.knowledge_search,
     ] {
-        ensure!(text.len() <= MAX_TASK * 4, ViewError::Invalid(format!("a task over {MAX_TASK} characters")));
+        ensure!(text.len() <= MAX_TASK * 4, ViewError::Invalid(format!("a text of a role over {MAX_TASK} characters")));
     }
 
     match view.kind.as_str() {
@@ -179,11 +244,25 @@ fn role_of(view: RoleView) -> Result<AgentRole, ViewError> {
             functional_task: view.functional_task,
             document_passages: view.document_passages,
             dependency_findings: view.dependency_findings,
+            task_template: view.task_template,
+            documentation_question: view.documentation_question,
+            functional_question: view.functional_question,
+            dependency_template: view.dependency_template,
+            document_template: view.document_template,
+            document_passage_template: view.document_passage_template,
+            proof_template: view.proof_template,
+            knowledge_search: view.knowledge_search,
+            document_search: view.document_search,
         })),
         "planner" => Ok(AgentRole::Planner(PlannerRole {
             parameters_task: view.parameters_task,
             dependencies_task: view.dependencies_task,
             summary_characters: view.summary_characters,
+            parameters_question: view.parameters_question,
+            dependencies_question: view.dependencies_question,
+            summary_template: view.summary_template,
+            knowledge_search: view.knowledge_search,
+            default_proof_name: view.default_proof_name,
         })),
         "chat" => Ok(AgentRole::Chat),
         _ => Err(ViewError::Invalid(format!("no role \"{}\" of an agent", view.kind))),
@@ -257,16 +336,18 @@ pub fn agent_create(
 ///
 /// Input: `session`, the session of the window, someone logged in; `id`, the id
 /// of an agent.
-/// Output: the agent with what its editor offers (`{"id": 3, "name": ...,
-/// "role": {"kind": "evaluator", ...}, "integrations": [...], "bases":
-/// [...]}`); `ViewError::NotLoggedIn` when
-/// nobody is logged in, an error of the database.
+/// Output: the agent with what its editor offers and the warnings of its
+/// templates (`{"id": 3, "name": ..., "role": {"kind": "evaluator", ...},
+/// "warnings": [], "integrations": [...], "bases": [...]}`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, an error of the
+/// database.
 ///
 /// Called by: `ui/src/lib/api/agents.ts`: `agentGet`, from `ui/src/views/agents/AgentEditor.svelte`, when an agent
 /// is opened and after a save.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/integration/integration_store.rs`:
-/// `read_integrations`; `objects/ai/rag/rag_store.rs`: `read_knowledge_bases`.
+/// `read_integrations`; `objects/ai/rag/rag_store.rs`: `read_knowledge_bases`; `objects/ai/agent/agent_rules.rs`:
+/// `agent_warnings`; [`role_view`].
 #[tauri::command]
 pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, ViewError> {
     let opened = session.lock()?;
@@ -285,6 +366,8 @@ pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, View
         bases.push(ChoiceView { id: base.id, name: base.name });
     }
 
+    let warnings = agent_warnings(&agent);
+
     for entry in agent.glossary {
         glossary.push(TermView { term: entry.term, meaning: entry.meaning });
     }
@@ -299,7 +382,11 @@ pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, View
         max_passages: agent.max_passages,
         max_characters: agent.max_characters,
         max_answer_tokens: agent.max_answer_tokens,
+        system_template: agent.system_template,
+        knowledge_template: agent.knowledge_template,
+        passage_template: agent.passage_template,
         role: role_view(agent.role),
+        warnings,
         integrations,
         bases,
     })
@@ -322,6 +409,13 @@ fn agent_of(fields: AgentFields) -> Result<Agent, ViewError> {
     );
     ensure!(fields.glossary.len() <= MAX_TERMS, ViewError::Invalid(format!("more than {MAX_TERMS} terms")));
 
+    for template in [&fields.system_template, &fields.knowledge_template, &fields.passage_template] {
+        ensure!(
+            template.len() <= MAX_TEMPLATE * 4,
+            ViewError::Invalid(format!("a template over {MAX_TEMPLATE} characters"))
+        );
+    }
+
     let mut glossary = Vec::with_capacity(fields.glossary.len());
 
     for entry in fields.glossary {
@@ -342,6 +436,9 @@ fn agent_of(fields: AgentFields) -> Result<Agent, ViewError> {
         max_passages: fields.max_passages,
         max_characters: fields.max_characters,
         max_answer_tokens: fields.max_answer_tokens,
+        system_template: fields.system_template,
+        knowledge_template: fields.knowledge_template,
+        passage_template: fields.passage_template,
         role: role_of(fields.role)?,
     })
 }

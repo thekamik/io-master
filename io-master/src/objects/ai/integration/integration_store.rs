@@ -4,7 +4,7 @@
 //! (`objects/ai/api_key/api_key_store.rs`).
 //!
 //! ```text
-//! ai_integrations   id, name (unique), url, model, protocol, ca_certificate, context_size
+//! ai_integrations   id, name (unique), url, model, protocol, ca_certificate, context_size, characters_per_token
 //! ```
 
 use rusqlite::{Row, named_params};
@@ -16,6 +16,10 @@ use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 /// The most integrations of the user.
 pub const MAX_INTEGRATIONS: usize = 50;
 
+/// The most characters of a token an integration may count: no model reads
+/// more than about five on average.
+pub const MAX_CHARACTERS_PER_TOKEN: u32 = 10;
+
 /// The table, made when it is missing (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_integrations (
@@ -25,12 +29,13 @@ pub const SCHEMA: &str = "
         model          TEXT NOT NULL,
         protocol       TEXT NOT NULL CHECK (protocol IN ('openai_chat', 'anthropic_messages')),
         ca_certificate TEXT,
-        context_size   INTEGER NOT NULL
+        context_size   INTEGER NOT NULL,
+        characters_per_token INTEGER NOT NULL
     );
 ";
 
 /// The columns every read selects.
-const COLUMNS: &str = "id, name, url, model, protocol, ca_certificate, context_size";
+const COLUMNS: &str = "id, name, url, model, protocol, ca_certificate, context_size, characters_per_token";
 
 /// The name of a protocol in the column `protocol` (`Protocol::OpenAiChat` →
 /// `"openai_chat"`).
@@ -56,8 +61,9 @@ fn protocol_of(name: &str) -> Result<Protocol, DbError> {
     }
 }
 
-/// Refuses an integration without a name or an address, or with no room
-/// for a question (a context of 0 tokens).
+/// Refuses an integration without a name or an address, with no room for a
+/// question (a context of 0 tokens), or characters of a token out of 1 to
+/// [`MAX_CHARACTERS_PER_TOKEN`].
 ///
 /// Input: `integration`, the integration to be stored.
 ///
@@ -68,6 +74,10 @@ fn check_integration(integration: &Integration) -> Result<(), DbError> {
     ensure!(!integration.name.is_empty(), DbError::Inconsistent("an integration without a name".to_owned()));
     ensure!(!integration.url.is_empty(), DbError::Inconsistent("an integration without an address".to_owned()));
     ensure!(integration.context_size > 0, DbError::Inconsistent("an integration without a context".to_owned()));
+    ensure!(
+        (1..=MAX_CHARACTERS_PER_TOKEN).contains(&integration.characters_per_token),
+        DbError::Inconsistent(format!("characters of a token out of 1 to {MAX_CHARACTERS_PER_TOKEN}"))
+    );
 
     Ok(())
 }
@@ -100,8 +110,8 @@ pub fn create_integration(db: &UserDatabase, integration: &Integration) -> Resul
     );
 
     connection.execute(
-        "INSERT INTO ai_integrations (name, url, model, protocol, ca_certificate, context_size)
-         VALUES (:name, :url, :model, :protocol, :ca_certificate, :context_size)",
+        "INSERT INTO ai_integrations (name, url, model, protocol, ca_certificate, context_size, characters_per_token)
+         VALUES (:name, :url, :model, :protocol, :ca_certificate, :context_size, :characters_per_token)",
         named_params! {
             ":name": integration.name,
             ":url": integration.url,
@@ -109,6 +119,7 @@ pub fn create_integration(db: &UserDatabase, integration: &Integration) -> Resul
             ":protocol": protocol_name(integration.protocol),
             ":ca_certificate": integration.ca_certificate,
             ":context_size": integration.context_size,
+            ":characters_per_token": integration.characters_per_token,
         },
     )?;
 
@@ -130,6 +141,7 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
         protocol: protocol_of(&protocol)?,
         ca_certificate: row.get("ca_certificate")?,
         context_size: row.get("context_size")?,
+        characters_per_token: row.get("characters_per_token")?,
     })
 }
 
@@ -207,7 +219,8 @@ pub fn update_integration(db: &UserDatabase, integration: &Integration) -> Resul
 
     let changed = db.connection().execute(
         "UPDATE ai_integrations SET name = :name, url = :url, model = :model, protocol = :protocol,
-                ca_certificate = :ca_certificate, context_size = :context_size
+                ca_certificate = :ca_certificate, context_size = :context_size,
+                characters_per_token = :characters_per_token
          WHERE id = :id",
         named_params! {
             ":id": integration.id,
@@ -217,6 +230,7 @@ pub fn update_integration(db: &UserDatabase, integration: &Integration) -> Resul
             ":protocol": protocol_name(integration.protocol),
             ":ca_certificate": integration.ca_certificate,
             ":context_size": integration.context_size,
+            ":characters_per_token": integration.characters_per_token,
         },
     )?;
 

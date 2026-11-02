@@ -29,6 +29,11 @@ pub struct Integration {
     /// question that does not fit is refused before it is sent, never
     /// shortened in silence.
     pub context_size: u32,
+
+    /// How many characters of a text the model reads as one token, on
+    /// average: the estimate by which a question is measured against the
+    /// context (user, 2026-11-02).
+    pub characters_per_token: u32,
 }
 
 /// The way the program speaks with an AI service.

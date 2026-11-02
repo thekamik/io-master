@@ -22,14 +22,14 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`objects/ai/agent_roles/agent_roles_store.rs`, in the transaction of the agent): `check_agent_role`, `read_agent_role`, `read_evaluator`, `read_planner`, `role_name`, `write_agent_role`
 - **Processed, the rules of the data**:
-  - `objects/ai/agent_roles/agent_roles_rules.rs`: `checked_evaluator`, `checked_planner`, `checked_role`, `evaluator_of`, `new_role`, `planner_of`
-  - `objects/ai/agent/agent_rules.rs`: `change_agent`, `checked`, `new_agent`
+  - `objects/ai/agent_roles/agent_roles_rules.rs`: `checked_evaluator`, `checked_planner`, `checked_role`, `evaluator_of`, `new_role`, `planner_of`, `role_warnings`, `template_warnings`
+  - `objects/ai/agent/agent_rules.rs`: `agent_warnings`, `change_agent`, `checked`, `new_agent`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`, `new_evaluation`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`, `update_plan`
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`
 - **Processed, the AI**:
-  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`
-  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`, `planner_role`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `dependencies_text`, `documents_text`, `proofs_text`, `task_of`, `question_of`
+  - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`, `planner_role`, `question_of`, `parameters_question`, `summary`, `dependencies_question`, `apply_parameters`, `chosen_proofs`
 - **Commands** (`panels/views/`):
   - `agents/agent.rs`: `agent_list`, `agent_create`, `agent_get`, `agent_save`
   - `evaluation/evaluations.rs`: `evaluation_get`
@@ -44,13 +44,13 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`objects/ai/agent/agent_store.rs`): `create_agent`, `read_agent`, `read_agents`, `update_agent`
 - **Processed, the rules of the data**:
-  - `objects/ai/agent/agent_rules.rs`: `change_agent`, `checked`, `checked_glossary`, `new_agent`
+  - `objects/ai/agent/agent_rules.rs`: `agent_warnings`, `change_agent`, `checked`, `checked_glossary`, `new_agent`
   - `objects/ai/chat/chat_rules.rs`: `new_chat`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`, `new_evaluation`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `update_plan`
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`
 - **Processed, the AI**:
-  - `objects/ai/agent/agent_ai.rs`: `agent_knowledge`, `agent_question`, `widened`
+  - `objects/ai/agent/agent_ai.rs`: `agent_knowledge`, `agent_question`, `widened` (with `filled`, `tidied`: its templates)
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`, `preview`
   - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`
 - **Commands** (`panels/views/`):
@@ -125,7 +125,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the AI**:
   - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`
   - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`
-  - `objects/ai/integration/integration_ai/question.rs`: `answer_tokens`, `check_size`, `context_warning`, `prepare`
+  - `objects/ai/integration/integration_ai/question.rs`: `answer_tokens`, `check_size`, `context_warning`, `needed_context`, `prepare`
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`
 - **Commands** (`panels/views/`):
   - `agents/agent.rs`: `agent_list`, `agent_create`, `agent_get`, `agent_save`

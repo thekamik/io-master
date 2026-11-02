@@ -44,8 +44,11 @@
   let url = $state(start?.url ?? "");
   let model = $state(start?.model ?? "");
   // 128 000 tokens hold an ST of 100 pages with its requirement, a page of
-  // knowledge and the answer (src/objects/ai/integration/integration_ai/question.rs, NEEDED_CONTEXT).
+  // knowledge and the answer, at three characters of a token: fewer than most
+  // models use, so a question is rather refused than cut by the service
+  // (src/objects/ai/integration/integration_ai/question.rs, needed_context).
   let contextSize = $state(start?.contextSize ?? 128000);
+  let charactersPerToken = $state(start?.charactersPerToken ?? 3);
   let caCertificate = $state(start?.caCertificate ?? "");
   let key = $state("");
   let check: CheckView | null = $state(null);
@@ -74,7 +77,7 @@
   function save(event: SubmitEvent) {
     event.preventDefault();
 
-    const fields = { id: integration?.id ?? 0, name, url, model, protocol, caCertificate, contextSize };
+    const fields = { id: integration?.id ?? 0, name, url, model, protocol, caCertificate, contextSize, charactersPerToken };
 
     void write(async () => {
       if (fields.id === 0) {
@@ -133,6 +136,10 @@
       <label>
         Context, in tokens
         <input type="number" min="512" step="1" bind:value={contextSize} required />
+      </label>
+      <label>
+        Characters of a token
+        <input type="number" min="1" max="10" step="1" bind:value={charactersPerToken} required />
       </label>
     </div>
     <details>

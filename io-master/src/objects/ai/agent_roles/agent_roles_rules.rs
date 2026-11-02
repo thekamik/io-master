@@ -5,10 +5,12 @@
 //! change of the program.
 //!
 //! ```text
-//! new_role("evaluator")  ──► Evaluator: the judgement, the two tasks, 20 passages, 1000 characters
-//! new_role("planner")    ──► Planner: the tasks of the parameters and of the dependencies, 200 characters
+//! new_role("evaluator")  ──► Evaluator: the judgement, the two tasks, 20 passages, 1000 characters, the templates
+//! new_role("planner")    ──► Planner: the tasks of the parameters and of the dependencies, 200 characters,
+//!                            the templates, the name of a proof
 //! new_role("chat")       ──► Chat
 //! checked_role(role)     ──► the texts trimmed and given, the limits in their ranges
+//! role_warnings(role)    ──► a template without a placeholder its question needs (saved all the same)
 //! ```
 
 use crate::objects::ai::agent_roles::agent_roles_model::{AgentRole, EvaluatorRole, PlannerRole};
@@ -17,6 +19,56 @@ use crate::objects::ai::agent_roles::agent_roles_store::{
 };
 use crate::objects::error::DomainError;
 use crate::objects::text::checked_text;
+
+/// How a new evaluator is told its task: the task of the kind of the work
+/// unit, the judgement, the form of the answer last, so that the form is the
+/// last thing the model reads before the question.
+const NEW_TASK_TEMPLATE: &str = "{task}\n\n{judgement}\n\n{form}";
+
+/// The question of a work unit of the documentation for a new evaluator.
+const NEW_DOCUMENTATION_QUESTION: &str = "The work unit:\n{work_unit}\n\nIts dependencies, with their \
+results:\n{dependencies}\n\nIts documents of the product:\n{documents}";
+
+/// The question of a work unit of a functional test for a new evaluator.
+const NEW_FUNCTIONAL_QUESTION: &str = "The work unit:\n{work_unit}\n\nIts dependencies, with their \
+results:\n{dependencies}\n\nIts documents of the product:\n{documents}\n\nIts proofs of the laboratory:\n{proofs}";
+
+/// Each dependency, document, passage and proof in the question of a new
+/// evaluator; the version of a document is the evaluator's record, apart
+/// from its name the quotes give and from its text.
+const NEW_DEPENDENCY_TEMPLATE: &str = "{label}: {verdict}\n{findings}";
+const NEW_DOCUMENT_TEMPLATE: &str = "=== {name} ===\n(the version recorded by the evaluator: {version})\n{text}";
+const NEW_DOCUMENT_PASSAGE_TEMPLATE: &str = "=== a passage of {name} ===\n{text}";
+const NEW_PROOF_TEMPLATE: &str = "=== {name} (performed {date} by {tester} with {equipment}) ===\n{text}";
+
+/// What a new evaluator searches its knowledge and the documents with.
+const NEW_KNOWLEDGE_SEARCH: &str = "{label} {requirement}";
+const NEW_DOCUMENT_SEARCH: &str = "{requirement} {guidance}";
+
+/// The questions of a new planner, and the line about each other work unit.
+const NEW_PARAMETERS_QUESTION: &str = "Work unit: {label}\nStandard: {standard}\n\nRequirement:\n{requirement}\n\n\
+Its parameters now:\n{parameters}\n\nThe documents of the product: {documents}\nThe agents: {agents}";
+const NEW_DEPENDENCIES_QUESTION: &str = "Work unit: {label}\n\nRequirement:\n{requirement}\n\nIts dependencies \
+now: {dependencies}\n\nThe other work units of the plan:\n{others}";
+const NEW_SUMMARY_TEMPLATE: &str = "{label} ({kind}): {sentence}";
+
+/// The name of the proof a new planner gives a functional test whose answer
+/// names none.
+const NEW_DEFAULT_PROOF_NAME: &str = "Results of the functional test";
+
+/// The placeholders without which each question of an evaluator loses its
+/// sense: a template without one of them is saved with a warning (user,
+/// 2026-11-02: the laboratory may have its reason).
+const TASK_NEEDS: [&str; 3] = ["task", "judgement", "form"];
+const DOCUMENTATION_NEEDS: [&str; 2] = ["work_unit", "documents"];
+const FUNCTIONAL_NEEDS: [&str; 3] = ["work_unit", "documents", "proofs"];
+const DEPENDENCY_NEEDS: [&str; 2] = ["label", "verdict"];
+const DOCUMENT_NEEDS: [&str; 2] = ["name", "text"];
+
+/// The placeholders without which each question of a planner loses its sense.
+const PARAMETERS_NEEDS: [&str; 2] = ["requirement", "parameters"];
+const DEPENDENCIES_NEEDS: [&str; 2] = ["requirement", "others"];
+const SUMMARY_NEEDS: [&str; 1] = ["label"];
 
 /// How a new evaluator judges a work unit: its scope, substance before form,
 /// care about the substance (user, 2026-11-02), what the extracted text and
@@ -101,11 +153,25 @@ pub fn new_role(name: &str) -> Result<AgentRole, DomainError> {
             functional_task: NEW_FUNCTIONAL_TASK.to_owned(),
             document_passages: NEW_DOCUMENT_PASSAGES,
             dependency_findings: NEW_DEPENDENCY_FINDINGS,
+            task_template: NEW_TASK_TEMPLATE.to_owned(),
+            documentation_question: NEW_DOCUMENTATION_QUESTION.to_owned(),
+            functional_question: NEW_FUNCTIONAL_QUESTION.to_owned(),
+            dependency_template: NEW_DEPENDENCY_TEMPLATE.to_owned(),
+            document_template: NEW_DOCUMENT_TEMPLATE.to_owned(),
+            document_passage_template: NEW_DOCUMENT_PASSAGE_TEMPLATE.to_owned(),
+            proof_template: NEW_PROOF_TEMPLATE.to_owned(),
+            knowledge_search: NEW_KNOWLEDGE_SEARCH.to_owned(),
+            document_search: NEW_DOCUMENT_SEARCH.to_owned(),
         })),
         "planner" => Ok(AgentRole::Planner(PlannerRole {
             parameters_task: NEW_PARAMETERS_TASK.to_owned(),
             dependencies_task: NEW_DEPENDENCIES_TASK.to_owned(),
             summary_characters: NEW_SUMMARY_CHARACTERS,
+            parameters_question: NEW_PARAMETERS_QUESTION.to_owned(),
+            dependencies_question: NEW_DEPENDENCIES_QUESTION.to_owned(),
+            summary_template: NEW_SUMMARY_TEMPLATE.to_owned(),
+            knowledge_search: NEW_KNOWLEDGE_SEARCH.to_owned(),
+            default_proof_name: NEW_DEFAULT_PROOF_NAME.to_owned(),
         })),
         "chat" => Ok(AgentRole::Chat),
         _ => Err(DomainError::Refused(format!("no role \"{name}\" of an agent"))),
@@ -137,6 +203,23 @@ fn checked_evaluator(role: &EvaluatorRole) -> Result<EvaluatorRole, DomainError>
         functional_task: checked_text(&role.functional_task, "the task of a functional test", MAX_TASK)?,
         document_passages: role.document_passages,
         dependency_findings: role.dependency_findings,
+        task_template: checked_text(&role.task_template, "the template of the task", MAX_TASK)?,
+        documentation_question: checked_text(
+            &role.documentation_question,
+            "the question of the documentation",
+            MAX_TASK,
+        )?,
+        functional_question: checked_text(&role.functional_question, "the question of a functional test", MAX_TASK)?,
+        dependency_template: checked_text(&role.dependency_template, "the template of a dependency", MAX_TASK)?,
+        document_template: checked_text(&role.document_template, "the template of a document", MAX_TASK)?,
+        document_passage_template: checked_text(
+            &role.document_passage_template,
+            "the template of a passage of the documents",
+            MAX_TASK,
+        )?,
+        proof_template: checked_text(&role.proof_template, "the template of a proof", MAX_TASK)?,
+        knowledge_search: checked_text(&role.knowledge_search, "the search of the knowledge", MAX_TASK)?,
+        document_search: checked_text(&role.document_search, "the search of the documents", MAX_TASK)?,
     })
 }
 
@@ -159,6 +242,11 @@ fn checked_planner(role: &PlannerRole) -> Result<PlannerRole, DomainError> {
         parameters_task: checked_text(&role.parameters_task, "the task of the parameters", MAX_TASK)?,
         dependencies_task: checked_text(&role.dependencies_task, "the task of the dependencies", MAX_TASK)?,
         summary_characters: role.summary_characters,
+        parameters_question: checked_text(&role.parameters_question, "the question of the parameters", MAX_TASK)?,
+        dependencies_question: checked_text(&role.dependencies_question, "the question of the dependencies", MAX_TASK)?,
+        summary_template: checked_text(&role.summary_template, "the line about a work unit", MAX_TASK)?,
+        knowledge_search: checked_text(&role.knowledge_search, "the search of the knowledge", MAX_TASK)?,
+        default_proof_name: checked_text(&role.default_proof_name, "the name of a proof", MAX_TASK)?,
     })
 }
 
@@ -176,6 +264,70 @@ pub fn checked_role(role: &AgentRole) -> Result<AgentRole, DomainError> {
         AgentRole::Planner(planner) => Ok(AgentRole::Planner(checked_planner(planner)?)),
         AgentRole::Chat => Ok(AgentRole::Chat),
     }
+}
+
+/// A warning for each placeholder of `needs` the template `template` does
+/// not hold: its question would lose its sense, but the template is saved
+/// (user, 2026-11-02).
+///
+/// Input: `field`, the name of the template for the warning ("the question
+/// of a functional test"); `template`, its text; `needs`, the placeholders
+/// without braces.
+/// Output: the warnings (`["the question of a functional test has no
+/// {proofs}"]`); none when every placeholder is there.
+///
+/// Called by: [`role_warnings`]; `objects/ai/agent/agent_rules.rs`: `agent_warnings`.
+pub fn template_warnings(field: &str, template: &str, needs: &[&str]) -> Vec<String> {
+    let mut warnings = Vec::new();
+
+    for need in needs {
+        if !template.contains(&format!("{{{need}}}")) {
+            warnings.push(format!("{field} has no {{{need}}}"));
+        }
+    }
+
+    warnings
+}
+
+/// The warnings of the templates of the role `role`: each placeholder a
+/// question needs and its template does not hold.
+///
+/// Input: `role`, the role of a stored agent.
+/// Output: the warnings (`["the template of the task has no {form}"]`); none
+/// for a chat or templates that hold what they need.
+///
+/// Called by: `objects/ai/agent/agent_rules.rs`: `agent_warnings`.
+/// Calls: [`template_warnings`].
+pub fn role_warnings(role: &AgentRole) -> Vec<String> {
+    let mut warnings = Vec::new();
+
+    match role {
+        AgentRole::Evaluator(evaluator) => {
+            for (field, template, needs) in [
+                ("the template of the task", &evaluator.task_template, &TASK_NEEDS[..]),
+                ("the question of the documentation", &evaluator.documentation_question, &DOCUMENTATION_NEEDS[..]),
+                ("the question of a functional test", &evaluator.functional_question, &FUNCTIONAL_NEEDS[..]),
+                ("the template of a dependency", &evaluator.dependency_template, &DEPENDENCY_NEEDS[..]),
+                ("the template of a document", &evaluator.document_template, &DOCUMENT_NEEDS[..]),
+                ("the template of a passage", &evaluator.document_passage_template, &DOCUMENT_NEEDS[..]),
+                ("the template of a proof", &evaluator.proof_template, &DOCUMENT_NEEDS[..]),
+            ] {
+                warnings.extend(template_warnings(field, template, needs));
+            }
+        }
+        AgentRole::Planner(planner) => {
+            for (field, template, needs) in [
+                ("the question of the parameters", &planner.parameters_question, &PARAMETERS_NEEDS[..]),
+                ("the question of the dependencies", &planner.dependencies_question, &DEPENDENCIES_NEEDS[..]),
+                ("the line about a work unit", &planner.summary_template, &SUMMARY_NEEDS[..]),
+            ] {
+                warnings.extend(template_warnings(field, template, needs));
+            }
+        }
+        AgentRole::Chat => {}
+    }
+
+    warnings
 }
 
 /// The parameters of the evaluator `role`, refused for an agent of another
@@ -256,5 +408,22 @@ mod tests {
 
         assert!(evaluator_of(&new_role("planner").unwrap(), "Planner").is_err());
         assert!(planner_of(&new_role("evaluator").unwrap(), "Evaluator").is_err());
+    }
+
+    #[test]
+    fn a_template_without_a_placeholder_its_question_needs_is_warned_about() {
+        let AgentRole::Evaluator(evaluator) = new_role("evaluator").unwrap() else {
+            panic!("an evaluator was asked for");
+        };
+
+        assert!(role_warnings(&AgentRole::Evaluator(evaluator.clone())).is_empty());
+        assert!(role_warnings(&new_role("planner").unwrap()).is_empty());
+
+        let changed = EvaluatorRole { functional_question: "{work_unit} {documents}".to_owned(), ..evaluator };
+
+        assert_eq!(
+            role_warnings(&AgentRole::Evaluator(changed)),
+            vec!["the question of a functional test has no {proofs}"]
+        );
     }
 }

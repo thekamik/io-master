@@ -18,8 +18,11 @@
 //!   apply_dependencies    ──► only the work units of the plan ──► update_work_unit_parameters
 //! ```
 //!
-//! Every question also carries the instructions of the agent, its task and
-//! the knowledge of the agent that fits the work unit; it is asked through
+//! Every text of the two questions is a template of the planner role of the
+//! agent (`PlannerRole`: `parameters_question`, `dependencies_question`,
+//! `summary_template`, `knowledge_search`), filled by the program. Every
+//! question also carries the instructions of the agent, its task and the
+//! knowledge of the agent that fits the work unit; it is asked through
 //! the integration of the agent and kept in the journal of the agent. **A dependency that
 //! closes a cycle is written as proposed** (user, 2026-10-29): the planner
 //! decides; the work units of the cycle are marked `cross_reference`, the
@@ -31,7 +34,7 @@ use std::collections::HashMap;
 use serde_json::{Value, json};
 
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::ai::agent::agent_ai::agent_question;
+use crate::objects::ai::agent::agent_ai::{agent_question, filled};
 use crate::objects::ai::agent::agent_store::{read_agent, read_agents};
 use crate::objects::ai::agent_roles::agent_roles_model::{AgentRole, PlannerRole};
 use crate::objects::ai::agent_roles::agent_roles_rules::planner_of;
@@ -57,12 +60,10 @@ const MAX_GUIDANCE: usize = 20_000;
 /// The longest name of a proof taken from an answer, in characters.
 const MAX_PROOF_NAME: usize = 200;
 
-/// The name of the proof of a functional test the answer names none for.
-const DEFAULT_PROOF: &str = "Results of the functional test";
-
 /// The form of the answer of the parameters the program reads (user,
 /// 2026-11-02): only the fields of its JSON; what each holds is told by the
-/// planner role of the agent (`PlannerRole::parameters_task`).
+/// planner role of the agent (`PlannerRole::parameters_task`), after which
+/// the form comes.
 const PARAMETERS_FORM: &str = "Answer with one JSON object and nothing else:\n\
 {\"documents\": [text], \"functional\": true or false, \"proofs\": [text], \"agent\": text or null, \
 \"guidance\": text}";
@@ -163,7 +164,7 @@ fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, AiError> 
 /// 200, .. }`); the refusals of a plan not to fill or an agent that is no
 /// planner, an error of the database.
 ///
-/// Called by: [`parameters_question`], [`dependencies_question`].
+/// Called by: [`parameters_question`], [`dependencies_question`], [`apply_parameters`].
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
 /// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/agent_roles/agent_roles_rules.rs`: `planner_of`.
 fn planner_role(db: &UserDatabase, plan: i64) -> Result<PlannerRole, AiError> {
@@ -175,11 +176,12 @@ fn planner_role(db: &UserDatabase, plan: i64) -> Result<PlannerRole, AiError> {
 
 /// The question of the agent of the planner of the plan `plan` about its
 /// work unit `unit`: its instructions and the task `task`, with its
-/// knowledge that fits the work unit, and the text `text` of the question.
+/// knowledge found by the `knowledge_search` of its role, and the text
+/// `text` of the question.
 ///
 /// Input: `plan`, the id of a plan to fill; `unit`, one of its work units;
-/// `task`, the task of its planner role with the form of the answer; `text`,
-/// the question.
+/// `role`, the planner role of the agent; `task`, the task of its role with
+/// the form of the answer; `text`, the question.
 /// Output: the question; the refusals of
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
 /// `plan_to_fill`, `AiError::Refused` for a work unit not of the plan, the
@@ -187,13 +189,21 @@ fn planner_role(db: &UserDatabase, plan: i64) -> Result<PlannerRole, AiError> {
 ///
 /// Called by: [`parameters_question`], [`dependencies_question`].
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
-/// `objects/ai/agent/agent_ai.rs`: `agent_question`.
-fn question_of(db: &UserDatabase, plan: i64, unit: &WorkUnit, task: &str, text: String) -> Result<Question, AiError> {
+/// `objects/ai/agent/agent_ai.rs`: `filled`, `agent_question`.
+fn question_of(
+    db: &UserDatabase,
+    plan: i64,
+    unit: &WorkUnit,
+    role: &PlannerRole,
+    task: &str,
+    text: String,
+) -> Result<Question, AiError> {
     let (stored, agent_id) = plan_to_fill(db, plan)?;
 
     ensure!(stored.work_units.contains(&unit.id), AiError::Refused("the work unit is not one of the plan".to_owned()));
 
-    let search = format!("{} {}", unit.label, unit.requirement);
+    let search =
+        filled(&role.knowledge_search, &[("label", unit.label.as_str()), ("requirement", unit.requirement.as_str())]);
     let messages = vec![Message { speaker: Speaker::User, text, time: 0 }];
 
     agent_question(db, agent_id, task, &search, Some(unit.id), messages)
@@ -230,8 +240,8 @@ fn current_parameters(db: &UserDatabase, unit: &WorkUnit, names: &Names) -> Resu
 }
 
 /// The question of the parameters of the work unit `unit` of the plan
-/// `plan`: its requirement, its parameters now, the documents of the plan
-/// and the agents.
+/// `plan`, by the `parameters_question` of the planner: its requirement, its
+/// parameters now, the documents of the plan and the agents.
 ///
 /// Input: `plan`, the id of a plan to fill; `unit`, the id of one of its work
 /// units.
@@ -242,41 +252,43 @@ fn current_parameters(db: &UserDatabase, unit: &WorkUnit, names: &Names) -> Resu
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
 /// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`: `read_oscal_standard_document`;
-/// [`names_of`], [`current_parameters`], [`named`], [`question_of`].
+/// [`names_of`], [`planner_role`], [`current_parameters`], [`named`], [`question_of`]; `objects/ai/agent/agent_ai.rs`:
+/// `filled`.
 pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let (stored, _) = plan_to_fill(db, plan)?;
     let this = read_work_unit(db, unit)?;
     let names = names_of(db, &stored)?;
+    let role = planner_role(db, plan)?;
     let mut agents: Vec<String> = names.agents.values().cloned().collect();
 
     agents.sort();
 
-    let text = format!(
-        "Work unit: {}\nStandard: {}\n\nRequirement:\n{}\n\nIts parameters now:\n{}\n\nThe documents of the product: \
-         {}\nThe agents: {}",
-        this.label,
-        read_oscal_standard_document(db, this.reference)?.title,
-        this.requirement,
-        current_parameters(db, &this, &names)?,
-        named(&stored.product_documents, &names.documents).join(", "),
-        agents.join(", "),
-    );
+    let values = [
+        ("label", this.label.clone()),
+        ("standard", read_oscal_standard_document(db, this.reference)?.title),
+        ("requirement", this.requirement.clone()),
+        ("parameters", current_parameters(db, &this, &names)?.to_string()),
+        ("documents", named(&stored.product_documents, &names.documents).join(", ")),
+        ("agents", agents.join(", ")),
+    ];
+    let text = filled(&role.parameters_question, &values);
+    let task = format!("{}\n\n{PARAMETERS_FORM}", role.parameters_task);
 
-    let task = format!("{}\n\n{PARAMETERS_FORM}", planner_role(db, plan)?.parameters_task);
-
-    question_of(db, plan, &this, &task, text)
+    question_of(db, plan, &this, &role, &task, text)
 }
 
-/// One line about a work unit for the question of the dependencies: its
-/// label, the first sentence of its requirement (at most `limit` characters,
-/// the planner's) and its kind of test.
+/// One line about a work unit for the question of the dependencies, by the
+/// `summary_template` of the planner: its label, its kind of test and the
+/// first sentence of its requirement (at most `limit` characters, the
+/// planner's).
 ///
-/// Input: `unit`, a work unit of the plan; `limit`,
-/// `PlannerRole::summary_characters` of the planner.
+/// Input: `unit`, a work unit of the plan; `role`, the planner role of the
+/// agent; `limit`, `PlannerRole::summary_characters`.
 /// Output: the line ("ADV_ARC.1-1 (documentation): The developer shall ...").
 ///
 /// Called by: [`dependencies_question`].
-fn summary(unit: &WorkUnit, limit: usize) -> String {
+/// Calls: `objects/ai/agent/agent_ai.rs`: `filled`.
+fn summary(unit: &WorkUnit, role: &PlannerRole, limit: usize) -> String {
     let requirement = unit.requirement.trim();
     let first = match requirement.split_once(". ") {
         Some((sentence, _)) => sentence,
@@ -285,12 +297,12 @@ fn summary(unit: &WorkUnit, limit: usize) -> String {
     let short: String = first.chars().take(limit).collect();
     let kind = if unit.input_functional.is_some() { "functional" } else { "documentation" };
 
-    format!("{} ({kind}): {short}", unit.label)
+    filled(&role.summary_template, &[("label", unit.label.as_str()), ("kind", kind), ("sentence", short.as_str())])
 }
 
 /// The question of the dependencies of the work unit `unit` of the plan
-/// `plan`: its requirement, its dependencies now, and every other work unit
-/// of the plan in one line.
+/// `plan`, by the `dependencies_question` of the planner: its requirement,
+/// its dependencies now, and every other work unit of the plan in one line.
 ///
 /// Input: `plan`, the id of a plan to fill; `unit`, the id of one of its work
 /// units.
@@ -298,8 +310,8 @@ fn summary(unit: &WorkUnit, limit: usize) -> String {
 /// database.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
-/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`; [`labels`],
-/// [`named`], [`summary`], [`question_of`].
+/// Calls: [`planner_role`]; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`;
+/// [`labels`], [`named`], [`summary`], [`question_of`]; `objects/ai/agent/agent_ai.rs`: `filled`.
 pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let role = planner_role(db, plan)?;
     let limit = usize::try_from(role.summary_characters).map_err(|error| AiError::Refused(error.to_string()))?;
@@ -309,21 +321,20 @@ pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<
 
     for other in &units {
         if other.id != unit {
-            others.push(summary(other, limit));
+            others.push(summary(other, &role, limit));
         }
     }
 
-    let text = format!(
-        "Work unit: {}\n\nRequirement:\n{}\n\nIts dependencies now: {}\n\nThe other work units of the plan:\n{}",
-        this.label,
-        this.requirement,
-        named(&this.dependencies, &labels(&units)).join(", "),
-        others.join("\n"),
-    );
-
+    let values = [
+        ("label", this.label.clone()),
+        ("requirement", this.requirement.clone()),
+        ("dependencies", named(&this.dependencies, &labels(&units)).join(", ")),
+        ("others", others.join("\n")),
+    ];
+    let text = filled(&role.dependencies_question, &values);
     let task = format!("{}\n\n{DEPENDENCIES_FORM}", role.dependencies_task);
 
-    question_of(db, plan, &this, &task, text)
+    question_of(db, plan, &this, &role, &task, text)
 }
 
 /// The JSON object of an answer: a fence of Markdown or words around it are
@@ -380,7 +391,7 @@ fn strings(answer: &Value, field: &str, max: usize) -> Vec<String> {
 /// refusals of [`answer_object`], `AiError::Refused` for a guidance over
 /// [`MAX_GUIDANCE`].
 ///
-/// Called by: {FI}: `applied`.
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `applied`.
 /// Calls: [`answer_object`], [`strings`].
 pub fn read_parameters(answer: &str) -> Result<ParametersProposal, AiError> {
     let value = answer_object(answer)?;
@@ -451,13 +462,19 @@ fn proof_named(db: &UserDatabase, unit: &WorkUnit, name: &str) -> Result<Option<
 /// the same name is kept, a new name gets a new place.
 ///
 /// Input: `unit`, a work unit of the plan; `proposed`, the names of proofs
-/// the answer gives.
-/// Output: the ids of the proofs (`[6, 15]`), [`DEFAULT_PROOF`] when no name
-/// is usable; an error of the database.
+/// the answer gives; `default_name`, `PlannerRole::default_proof_name` of the
+/// planner.
+/// Output: the ids of the proofs (`[6, 15]`), one of `default_name` when no
+/// name is usable; an error of the database.
 ///
 /// Called by: [`apply_parameters`].
 /// Calls: [`proof_named`]; `objects/evaluation/lab_proof/lab_proof_store.rs`: `create_lab_proof`.
-fn chosen_proofs(db: &UserDatabase, unit: &WorkUnit, proposed: &[String]) -> Result<Vec<i64>, AiError> {
+fn chosen_proofs(
+    db: &UserDatabase,
+    unit: &WorkUnit,
+    proposed: &[String],
+    default_name: &str,
+) -> Result<Vec<i64>, AiError> {
     let mut names = Vec::with_capacity(proposed.len());
 
     for name in proposed {
@@ -467,7 +484,7 @@ fn chosen_proofs(db: &UserDatabase, unit: &WorkUnit, proposed: &[String]) -> Res
     }
 
     if names.is_empty() {
-        names.push(DEFAULT_PROOF.to_owned());
+        names.push(default_name.to_owned());
     }
 
     let mut proofs = Vec::with_capacity(names.len());
@@ -524,8 +541,9 @@ fn chosen_agent(agents: &HashMap<i64, String>, proposed: Option<&String>, notes:
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `applied`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
-/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`names_of`], [`id_of`], [`chosen_agent`],
-/// [`chosen_proofs`]; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`names_of`], [`planner_role`], [`id_of`],
+/// [`chosen_agent`], [`chosen_proofs`]; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
+/// `update_work_unit_parameters`.
 pub fn apply_parameters(
     db: &UserDatabase,
     plan: i64,
@@ -535,6 +553,7 @@ pub fn apply_parameters(
     let (stored, _) = plan_to_fill(db, plan)?;
     let this = read_work_unit(db, unit)?;
     let names = names_of(db, &stored)?;
+    let default_proof = planner_role(db, plan)?.default_proof_name;
     let mut notes = Vec::new();
     let mut documents = Vec::with_capacity(proposal.documents.len());
 
@@ -549,7 +568,11 @@ pub fn apply_parameters(
     let parameters = WorkUnitParameters {
         dependencies: this.dependencies.clone(),
         input_product_documents: documents,
-        input_functional: if proposal.functional { chosen_proofs(db, &this, &proposal.proofs)? } else { Vec::new() },
+        input_functional: if proposal.functional {
+            chosen_proofs(db, &this, &proposal.proofs, &default_proof)?
+        } else {
+            Vec::new()
+        },
         ai_agent: chosen_agent(&names.agents, proposal.agent.as_ref(), &mut notes),
         guidance: proposal.guidance.clone(),
     };

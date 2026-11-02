@@ -30,16 +30,10 @@ use crate::objects::ai::integration::integration_store::read_integration;
 use crate::objects::ai_error::AiError;
 
 /// The longest answer of a question without an agent (the check of an
-/// integration), and the one [`NEEDED_CONTEXT`] counts, in tokens; a question
+/// integration), and the one [`needed_context`] counts, in tokens; a question
 /// of an agent asks for the longest answer of its agent
 /// (`Agent::max_answer_tokens`).
 pub const MAX_ANSWER_TOKENS: u32 = 16_000;
-
-/// The characters of a token, as the size of a question is estimated
-/// before it is sent: three is fewer than most models use (about four for
-/// English), so the estimate errs on the side of a question that does not
-/// fit, which is refused rather than shortened by the service in silence.
-const CHARACTERS_PER_TOKEN: u64 = 3;
 
 /// The most messages of one question.
 pub const MAX_MESSAGES: usize = 1000;
@@ -61,12 +55,23 @@ const OTHER_PAGES: u64 = 2;
 const TASK_TOKENS: u64 = 2000;
 
 /// The context a model needs for a question of [`DOCUMENT_PAGES`] and
-/// [`OTHER_PAGES`] pages and
-/// its longest answer, in tokens, counted as [`prepare`] counts: 120 000.
-/// The integrations are made with a context of 128 000 by default (the page:
-/// `ui/src/views/settings/IntegrationForm.svelte`).
-pub const NEEDED_CONTEXT: u64 =
-    (DOCUMENT_PAGES + OTHER_PAGES) * PAGE_CHARACTERS / CHARACTERS_PER_TOKEN + TASK_TOKENS + MAX_ANSWER_TOKENS as u64;
+/// [`OTHER_PAGES`] pages and its longest answer, in tokens, counted as
+/// [`prepare`] counts, by the characters of a token of the integration.
+///
+/// Input: `integration`, an integration, its `characters_per_token` checked
+/// when it was written (1 to 10).
+/// Output: the tokens (`Some(120000)` for three characters of a token; the
+/// integrations are made with a context of 128 000 and three characters of a
+/// token by default, the page: `ui/src/views/settings/IntegrationForm.svelte`);
+/// `None` for no characters of a token (a damaged integration).
+///
+/// Called by: [`context_warning`].
+fn needed_context(integration: &Integration) -> Option<u64> {
+    let pages =
+        ((DOCUMENT_PAGES + OTHER_PAGES) * PAGE_CHARACTERS).checked_div(u64::from(integration.characters_per_token))?;
+
+    Some(pages + TASK_TOKENS + u64::from(MAX_ANSWER_TOKENS))
+}
 
 /// A question to ask.
 pub struct Question {
@@ -106,7 +111,9 @@ fn answer_tokens(integration: &Integration, limit: u32) -> u32 {
 }
 
 /// Refuses a question that does not fit into the context of the model
-/// beside its answer (the estimate of [`CHARACTERS_PER_TOKEN`]).
+/// beside its answer, estimated by `Integration::characters_per_token`: a
+/// question that does not fit is refused rather than shortened by the
+/// service in silence.
 ///
 /// Input: `integration`, the integration asked; `system`, the instructions;
 /// `turns`, the conversation; `limit`, the longest answer asked for.
@@ -122,7 +129,14 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn], limit: u3
         characters += turn.text.chars().count();
     }
 
-    let estimated = u64::try_from(characters).unwrap_or(u64::MAX).div_ceil(CHARACTERS_PER_TOKEN);
+    // The ratio was checked when the integration was written (1 to 10); a
+    // zero would be a damaged integration, refused rather than divided by.
+    ensure!(
+        integration.characters_per_token > 0,
+        AiError::Refused(format!("the integration {} has no characters of a token", integration.name))
+    );
+
+    let estimated = u64::try_from(characters).unwrap_or(u64::MAX).div_ceil(u64::from(integration.characters_per_token));
     let room = u64::from(integration.context_size.saturating_sub(answer_tokens(integration, limit)));
 
     ensure!(estimated <= room, AiError::TooLong { estimated, room });
@@ -201,26 +215,29 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
 ///
 /// Input: `integration`, an integration of the user.
 /// Output: the warning ("The context of Ollama (32768 tokens) holds about 15
-/// pages ..."); `None` when the context holds [`NEEDED_CONTEXT`].
+/// pages ..."); `None` when the context holds [`needed_context`].
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_list`,
 /// `integration_check`.
-/// Calls: [`answer_tokens`].
+/// Calls: [`needed_context`], [`answer_tokens`].
 pub fn context_warning(integration: &Integration) -> Option<String> {
     let context = u64::from(integration.context_size);
+    let Some(needed) = needed_context(integration) else {
+        return Some(format!("The integration {} counts no characters of a token: set them.", integration.name));
+    };
 
-    if context >= NEEDED_CONTEXT {
+    if context >= needed {
         return None;
     }
 
     // The pages left after the answer, the task, the requirement and the
     // knowledge: the pages of the documents the model can read whole.
     let room = context.saturating_sub(u64::from(answer_tokens(integration, MAX_ANSWER_TOKENS)) + TASK_TOKENS);
-    let pages = (room * CHARACTERS_PER_TOKEN / PAGE_CHARACTERS).saturating_sub(OTHER_PAGES);
+    let pages = (room * u64::from(integration.characters_per_token) / PAGE_CHARACTERS).saturating_sub(OTHER_PAGES);
 
     Some(format!(
         "The context of {} ({context} tokens) holds about {pages} pages of documents; an ST of {DOCUMENT_PAGES} pages needs \
-         {NEEDED_CONTEXT}. Larger documents go to the model as their passages that fit each work unit, so it may miss \
+         {needed}. Larger documents go to the model as their passages that fit each work unit, so it may miss \
          what it needs: split the documents into smaller parts, or choose a model with a larger context.",
         integration.name
     ))
@@ -242,7 +259,8 @@ mod tests {
 
         assert!(warning.contains("(32768 tokens) holds about 20 pages") && warning.contains("needs 120000"));
         assert!(context_warning(&Integration { context_size: 128_000, ..integration() }).is_none());
-        assert_eq!(NEEDED_CONTEXT, 120_000);
+        assert_eq!(needed_context(&integration()), Some(120_000));
+        assert_eq!(needed_context(&Integration { characters_per_token: 4, ..integration() }), Some(94_500));
     }
 
     /// A question without an agent to the integration `integration`.

@@ -11,7 +11,9 @@
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::integration::integration_model::Integration;
 use crate::objects::ai::integration::integration_rules::address::{check_address, check_certificate};
-use crate::objects::ai::integration::integration_store::{create_integration, read_integration, update_integration};
+use crate::objects::ai::integration::integration_store::{
+    MAX_CHARACTERS_PER_TOKEN, create_integration, read_integration, update_integration,
+};
 use crate::objects::error::DomainError;
 use crate::objects::user::program_data::program_data_model::Settings;
 use crate::objects::user::program_data::program_data_store::{read_settings, update_settings};
@@ -24,13 +26,14 @@ const MAX_NAME: usize = 100;
 const MIN_CONTEXT: u32 = 512;
 
 /// The integration with its text trimmed, checked: a name, an address the
-/// program sends to, a model, a context, a CA certificate the connection can
-/// use (an empty one is none).
+/// program sends to, a model, a context, the characters of a token, a CA
+/// certificate the connection can use (an empty one is none).
 ///
 /// Input: `integration`, the integration as given by the page.
 /// Output: the integration to write; `DomainError::Refused` for an empty or
-/// too long name, no model, a context under [`MIN_CONTEXT`], an address or a
-/// certificate refused.
+/// too long name, no model, a context under [`MIN_CONTEXT`], characters of a
+/// token out of 1 to `MAX_CHARACTERS_PER_TOKEN`, an address or a certificate
+/// refused.
 ///
 /// Called by: [`add_integration`], [`change_integration`].
 /// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`, `check_certificate`.
@@ -44,6 +47,10 @@ fn checked(integration: &Integration) -> Result<Integration, DomainError> {
     ensure!(
         integration.context_size >= MIN_CONTEXT,
         DomainError::Refused(format!("a context of fewer than {MIN_CONTEXT} tokens"))
+    );
+    ensure!(
+        (1..=MAX_CHARACTERS_PER_TOKEN).contains(&integration.characters_per_token),
+        DomainError::Refused(format!("the characters of a token: from 1 to {MAX_CHARACTERS_PER_TOKEN}"))
     );
     check_address(integration.url.trim())?;
 
@@ -59,6 +66,7 @@ fn checked(integration: &Integration) -> Result<Integration, DomainError> {
         protocol: integration.protocol,
         ca_certificate: if certificate.is_empty() { None } else { Some(certificate.to_owned()) },
         context_size: integration.context_size,
+        characters_per_token: integration.characters_per_token,
     })
 }
 
@@ -162,6 +170,10 @@ mod tests {
         assert!(matches!(refused_certificate, Err(DomainError::Refused(reason)) if reason.contains("CA certificate")));
         assert!(matches!(
             add_integration(&db, &Integration { name: " ".to_owned(), ..integration() }),
+            Err(DomainError::Refused(_))
+        ));
+        assert!(matches!(
+            add_integration(&db, &Integration { characters_per_token: 0, ..integration() }),
             Err(DomainError::Refused(_))
         ));
     }

@@ -14,9 +14,9 @@
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
 use crate::objects::ai::agent::agent_store::{
-    MAX_ANSWER_TOKENS, MAX_CHARACTERS, MAX_TERMS, create_agent, read_agent, update_agent,
+    MAX_ANSWER_TOKENS, MAX_CHARACTERS, MAX_TEMPLATE, MAX_TERMS, create_agent, read_agent, update_agent,
 };
-use crate::objects::ai::agent_roles::agent_roles_rules::{checked_role, new_role};
+use crate::objects::ai::agent_roles::agent_roles_rules::{checked_role, new_role, role_warnings, template_warnings};
 use crate::objects::ai::agent_roles::agent_roles_store::role_name;
 use crate::objects::ai::integration::integration_store::read_integration;
 use crate::objects::ai::rag::rag_store::{MAX_BASES, MAX_FOUND, read_knowledge_base};
@@ -50,6 +50,23 @@ const NEW_INSTRUCTIONS: &str = "You are an experienced evaluator of the security
 given with a question, when there is any, to read the requirement as the standard and the laboratory mean it; judge \
 the product only by its own documents and proofs. Be precise and brief.";
 
+/// How a new agent lays out its message to the model: its instructions, its
+/// knowledge, its task last, so that the form of the answer is the last thing
+/// the model reads before the question; a part left empty takes no room
+/// (`objects/ai/agent/agent_ai.rs`: `agent_question`).
+pub const NEW_SYSTEM_TEMPLATE: &str = "{instructions}\n\n{knowledge}\n\n{task}";
+
+/// How a new agent introduces its knowledge, and each passage of it under the
+/// name of its source, so that the model can say what it relied on.
+pub const NEW_KNOWLEDGE_TEMPLATE: &str = "Your knowledge for this question:\n\n{passages}";
+pub const NEW_PASSAGE_TEMPLATE: &str = "=== {source} ===\n{text}";
+
+/// The placeholders without which the message of an agent loses its sense: a
+/// template without one of them is saved with a warning (user, 2026-11-02).
+const SYSTEM_NEEDS: [&str; 3] = ["instructions", "knowledge", "task"];
+const KNOWLEDGE_NEEDS: [&str; 1] = ["passages"];
+const PASSAGE_NEEDS: [&str; 2] = ["source", "text"];
+
 /// Makes a new agent of the integration `integration` with the role `role`,
 /// with the default instructions, limits and parameters of its role, and no
 /// knowledge yet.
@@ -78,6 +95,9 @@ pub fn new_agent(db: &UserDatabase, name: &str, integration: i64, role: &str) ->
         max_passages: NEW_PASSAGES,
         max_characters: NEW_CHARACTERS,
         max_answer_tokens: NEW_ANSWER_TOKENS,
+        system_template: NEW_SYSTEM_TEMPLATE.to_owned(),
+        knowledge_template: NEW_KNOWLEDGE_TEMPLATE.to_owned(),
+        passage_template: NEW_PASSAGE_TEMPLATE.to_owned(),
         role: new_role(role)?,
     };
 
@@ -199,8 +219,31 @@ fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
         max_passages: agent.max_passages,
         max_characters: agent.max_characters,
         max_answer_tokens: agent.max_answer_tokens,
+        system_template: checked_text(&agent.system_template, "the template of the message", MAX_TEMPLATE)?,
+        knowledge_template: checked_text(&agent.knowledge_template, "the template of the knowledge", MAX_TEMPLATE)?,
+        passage_template: checked_text(&agent.passage_template, "the template of a passage", MAX_TEMPLATE)?,
         role: checked_role(&agent.role)?,
     })
+}
+
+/// The warnings of the templates of the agent `agent` and of its role: each
+/// placeholder a message or a question needs and its template does not hold
+/// (user, 2026-11-02: saved all the same, shown in the editor).
+///
+/// Input: `agent`, a stored agent.
+/// Output: the warnings (`["the template of the message has no {task}"]`);
+/// none when every template holds what it needs.
+///
+/// Called by: `panels/views/agents/agent.rs`: `agent_get`.
+/// Calls: `objects/ai/agent_roles/agent_roles_rules.rs`: `template_warnings`, `role_warnings`.
+pub fn agent_warnings(agent: &Agent) -> Vec<String> {
+    let mut warnings = template_warnings("the template of the message", &agent.system_template, &SYSTEM_NEEDS);
+
+    warnings.extend(template_warnings("the template of the knowledge", &agent.knowledge_template, &KNOWLEDGE_NEEDS));
+    warnings.extend(template_warnings("the template of a passage", &agent.passage_template, &PASSAGE_NEEDS));
+    warnings.extend(role_warnings(&agent.role));
+
+    warnings
 }
 
 #[cfg(test)]
@@ -246,6 +289,7 @@ mod tests {
             Agent { name: " ".to_owned(), ..stored.clone() },
             Agent { max_passages: 0, ..stored.clone() },
             Agent { max_characters: 10, ..stored.clone() },
+            Agent { system_template: " ".to_owned(), ..stored.clone() },
             Agent { glossary: vec![GlossaryEntry { term: "ST".to_owned(), meaning: String::new() }], ..stored.clone() },
         ];
 
@@ -258,6 +302,21 @@ mod tests {
             Err(DomainError::Db(_))
         ));
         assert!(new_agent(&db, "Another", local + 1, "evaluator").is_err());
+    }
+
+    #[test]
+    fn a_template_of_an_agent_without_its_placeholder_is_warned_about() {
+        let (_directory, db) = database();
+        let local = create_integration(&db, &integration()).unwrap();
+        let id = new_agent(&db, "Evaluator", local, "evaluator").unwrap();
+        let stored = read_agent(&db, id).unwrap();
+
+        assert!(agent_warnings(&stored).is_empty());
+
+        let changed = Agent { system_template: "{instructions}\n\n{knowledge}".to_owned(), ..stored };
+
+        change_agent(&db, &changed).unwrap();
+        assert_eq!(agent_warnings(&read_agent(&db, id).unwrap()), vec!["the template of the message has no {task}"]);
     }
 
     #[test]

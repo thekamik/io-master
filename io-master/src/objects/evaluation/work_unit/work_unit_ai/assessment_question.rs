@@ -2,16 +2,22 @@
 //! 2026-10-30), asked of its agent, or of the agent of the evaluation when
 //! it has none of its own.
 //!
+//! Every text of the question is a template of the evaluator role of the
+//! agent (`EvaluatorRole`); the program fills it with the parts below.
+//!
 //! ```text
-//! the instructions of the agent
-//!   + the knowledge of the agent that fits the work unit (RAG, optional), each passage under its source
-//!   + the task: of the documentation, or of a functional test (a work unit with proofs); the form of the answer
-//! the question:
-//!   the work unit as JSON: its requirement, guidance and parameters, its ids written as names; never its
-//!     results, so that an assessment made again is not led by the one before
-//!   its dependencies: their labels, verdicts and findings, for the model to weigh
-//!   its documents: their text whole, or the passages that fit the work unit best
-//!   its proofs (a functional test only): their text with the record of the test
+//! the message of the agent (objects/ai/agent/agent_ai.rs: agent_question):
+//!   its instructions, its knowledge found with knowledge_search (RAG, optional),
+//!   the task: task_template with {task} (of the documentation, or of a functional test: a work unit with
+//!     proofs), {judgement} and {form} (the form of the answer the program reads)
+//! the question: documentation_question or functional_question with
+//!   {work_unit}     the work unit as JSON: its requirement, guidance and parameters, its ids written as names;
+//!                   never its results, so that an assessment made again is not led by the one before
+//!   {dependencies}  each by dependency_template: its label, verdict and findings, for the model to weigh
+//!   {documents}     each whole by document_template, or the passages found with document_search, each by
+//!                   document_passage_template
+//!   {proofs}        each by proof_template: its text with the record of the test
+//!   {label}, {standard}, {requirement}, {guidance}
 //! ```
 //!
 //! Whether the documents fit whole into the context of the model is told by
@@ -23,8 +29,9 @@ use crate::objects::ai_error::AiError;
 use serde_json::{Value, json};
 
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::ai::agent::agent_ai::agent_question;
+use crate::objects::ai::agent::agent_ai::{agent_question, filled};
 use crate::objects::ai::agent::agent_store::read_agent;
+use crate::objects::ai::agent_roles::agent_roles_model::EvaluatorRole;
 use crate::objects::ai::agent_roles::agent_roles_rules::evaluator_of;
 use crate::objects::ai::chat::chat_model::{Message, Speaker};
 use crate::objects::ai::integration::integration_ai::question::Question;
@@ -41,7 +48,8 @@ use crate::objects::evaluation::work_unit::work_unit_store::{read_work_unit, rea
 /// The form of the answer the program reads (user, 2026-11-02): only the
 /// fields of its JSON and their order, the verdict last; what each field holds
 /// is told by the evaluator role of the agent (`EvaluatorRole::judgement`).
-/// `{verdicts}` is replaced by the verdicts of the plan.
+/// `{verdicts}` is replaced by the verdicts of the plan. It is given to the
+/// agent as `{form}` of its `EvaluatorRole::task_template`.
 const ANSWER_FORM: &str = "Answer with one JSON object and nothing else, its fields in this order:\n\
 {\"findings\": text, \"analysis\": text, \"vulnerability_notes\": text, \"notes\": text,\n \
 \"quotes\": [{\"document\": the name of a document or a proof given, \"text\": text}],\n \
@@ -53,7 +61,7 @@ const ANSWER_FORM: &str = "Answer with one JSON object and nothing else, its fie
 /// Input: `verdict`, a verdict.
 /// Output: its name (`"pass"`).
 ///
-/// Called by: [`unit_json`], [`dependencies_text`], [`question_of`];
+/// Called by: [`unit_json`], [`dependencies_text`], [`task_of`];
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `verdict_of`;
 /// `panels/views/evaluation/work_units.rs`: `row_of`, `needs_of`,
 /// `unit_view`; `panels/views/progress.rs`: `progress_view`.
@@ -151,71 +159,92 @@ fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<V
     }))
 }
 
-/// The dependencies of the work unit `unit`, one paragraph each: its label,
-/// its verdict and its findings (at most `limit` characters, the agent's).
+/// The dependencies of the work unit `unit`, each written by the
+/// `dependency_template` of the agent: its label, its verdict and its
+/// findings (at most `limit` characters, the agent's).
 ///
 /// Input: `unit`, the work unit assessed; `units`, the work units of its
-/// evaluation; `limit`, `EvaluatorRole::dependency_findings` of its agent.
-/// Output: the text ("ADV_ARC.1-1: pass\n...\n\n"); empty without
+/// evaluation; `role`, the evaluator role of its agent; `limit`,
+/// `EvaluatorRole::dependency_findings`.
+/// Output: the text ("ADV_ARC.1-1: pass\n..."); "none" without
 /// dependencies.
 ///
 /// Called by: [`question_of`].
-/// Calls: [`label_of`], [`verdict_name`].
-fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit], limit: usize) -> String {
-    let mut text = String::new();
+/// Calls: [`label_of`], [`verdict_name`]; `objects/ai/agent/agent_ai.rs`: `filled`.
+fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit], role: &EvaluatorRole, limit: usize) -> String {
+    let mut written = Vec::with_capacity(unit.dependencies.len());
 
     for id in &unit.dependencies {
         for other in units {
             if other.id == *id {
-                let verdict = other.verdict.map_or("not assessed", verdict_name);
                 let findings: String = other.findings.chars().take(limit).collect();
+                let values = [
+                    ("label", label_of(units, *id)),
+                    ("verdict", other.verdict.map_or("not assessed", verdict_name).to_owned()),
+                    ("findings", findings),
+                ];
 
-                text.push_str(&format!("{}: {verdict}\n{findings}\n\n", label_of(units, *id)));
+                written.push(filled(&role.dependency_template, &values));
             }
         }
     }
 
-    if text.is_empty() { "none\n".to_owned() } else { text }
+    if written.is_empty() { "none".to_owned() } else { written.join("\n\n") }
 }
 
-/// The documents of the work unit `unit`: each whole with `whole`, otherwise
-/// the passages of them all that fit the work unit best, each under the name
-/// and the version of its document.
+/// The documents of the work unit `unit`: each whole with `whole`, by the
+/// `document_template` of the agent, otherwise the passages of them all
+/// found with its `document_search`, by its `document_passage_template`.
 ///
-/// Input: `unit`, the work unit assessed; `whole`, whether the documents go
-/// whole; `passages`, `EvaluatorRole::document_passages` of its agent, the
-/// most passages when they do not.
+/// Input: `unit`, the work unit assessed; `role`, the evaluator role of its
+/// agent; `whole`, whether the documents go whole; `passages`,
+/// `EvaluatorRole::document_passages`, the most passages when they do not.
 /// Output: the text ("=== ST ===\n(the version recorded by the evaluator:
-/// 1.2)\n..."); an error of the database.
+/// 1.2)\n..."); "none" without documents; an error of the database.
 ///
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
-/// `read_document_text`, `read_document_passages`.
-fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool, passages: usize) -> Result<String, AiError> {
-    let mut text = String::new();
+/// `read_document_text`, `read_document_passages`; [`search_values`]; `objects/ai/agent/agent_ai.rs`:
+/// `filled`.
+fn documents_text(
+    db: &UserDatabase,
+    unit: &WorkUnit,
+    role: &EvaluatorRole,
+    whole: bool,
+    passages: usize,
+) -> Result<String, AiError> {
+    let mut written = Vec::with_capacity(unit.input_product_documents.len());
 
     if whole {
         for id in &unit.input_product_documents {
             let document = read_product_document(db, *id)?;
-            let version = document.version.unwrap_or_default();
+            let values = [
+                ("name", document.name),
+                ("version", document.version.unwrap_or_default()),
+                ("text", read_document_text(db, *id)?),
+            ];
 
-            // The version is the evaluator's record, apart from the name the
-            // quotes give and apart from the text of the document.
-            text.push_str(&format!(
-                "=== {} ===\n(the version recorded by the evaluator: {version})\n{}\n",
-                document.name,
-                read_document_text(db, *id)?
-            ));
+            written.push(filled(&role.document_template, &values));
         }
     } else {
-        let wanted = format!("{} {}", unit.requirement, unit.guidance);
+        let wanted = filled(&role.document_search, &search_values(unit));
 
         for (id, passage) in read_document_passages(db, &unit.input_product_documents, &wanted, passages)? {
-            text.push_str(&format!("=== a passage of {} ===\n{passage}\n\n", read_product_document(db, id)?.name));
+            let values = [("name", read_product_document(db, id)?.name), ("text", passage)];
+
+            written.push(filled(&role.document_passage_template, &values));
         }
     }
 
-    Ok(if text.is_empty() { "none\n".to_owned() } else { text })
+    Ok(if written.is_empty() { "none".to_owned() } else { written.join("\n\n") })
+}
+
+/// The placeholders of a search of the work unit `unit`: `{label}`,
+/// `{requirement}`, `{guidance}`.
+///
+/// Called by: [`documents_text`], [`question_of`].
+fn search_values(unit: &WorkUnit) -> [(&str, &str); 3] {
+    [("label", &unit.label), ("requirement", &unit.requirement), ("guidance", &unit.guidance)]
 }
 
 /// The day of `seconds` since 1970 (UTC), as YYYY-MM-DD (the civil calendar
@@ -239,31 +268,66 @@ fn day_of(seconds: i64) -> String {
     format!("{year:04}-{month:02}-{day:02}")
 }
 
-/// The proofs of the work unit `unit`, each with the record of its test.
+/// The proofs of the work unit `unit`, each with the record of its test, by
+/// the `proof_template` of the agent.
 ///
-/// Input: `unit`, the work unit assessed.
+/// Input: `unit`, the work unit assessed; `role`, the evaluator role of its
+/// agent.
 /// Output: the text ("=== Test 3 (performed 2026-10-30 by K. K. with ...)
-/// ===\n..."); an error of the database for a proof missing.
+/// ===\n..."); "none" without proofs; an error of the database for a proof
+/// missing.
 ///
 /// Called by: [`question_of`].
-/// Calls: `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`day_of`].
-fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
-    let mut text = String::new();
+/// Calls: `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`day_of`];
+/// `objects/ai/agent/agent_ai.rs`: `filled`.
+fn proofs_text(db: &UserDatabase, unit: &WorkUnit, role: &EvaluatorRole) -> Result<String, AiError> {
+    let ids = unit.input_functional.as_deref().unwrap_or_default();
+    let mut written = Vec::with_capacity(ids.len());
 
-    for id in unit.input_functional.as_deref().unwrap_or_default() {
+    for id in ids {
         let proof = read_lab_proof(db, *id)?;
+        let values = [
+            ("name", proof.name),
+            ("date", day_of(proof.performed.unwrap_or_default())),
+            ("tester", proof.tester.unwrap_or_default()),
+            ("equipment", proof.equipment.unwrap_or_default()),
+            ("text", proof.proof.unwrap_or_default()),
+        ];
 
-        text.push_str(&format!(
-            "=== {} (performed {} by {} with {}) ===\n{}\n\n",
-            proof.name,
-            day_of(proof.performed.unwrap_or_default()),
-            proof.tester.unwrap_or_default(),
-            proof.equipment.unwrap_or_default(),
-            proof.proof.unwrap_or_default(),
-        ));
+        written.push(filled(&role.proof_template, &values));
     }
 
-    Ok(if text.is_empty() { "none\n".to_owned() } else { text })
+    Ok(if written.is_empty() { "none".to_owned() } else { written.join("\n\n") })
+}
+
+/// The task the agent is told for the work unit `unit`: the
+/// `task_template` of its role with the task of the kind of the work unit
+/// (of the documentation, or of a functional test when it has proofs), the
+/// judgement and the form of the answer with the verdicts of the evaluation.
+///
+/// Input: `evaluation`, the evaluation of the work unit; `unit`, the work
+/// unit assessed; `role`, the evaluator role of its agent.
+/// Output: the task ("You assess one work unit ... Answer with one JSON
+/// object ...").
+///
+/// Called by: [`question_of`].
+/// Calls: [`verdict_name`]; `objects/ai/agent/agent_ai.rs`: `filled`.
+fn task_of(evaluation: &EvaluationPlan, unit: &WorkUnit, role: &EvaluatorRole) -> String {
+    let mut verdicts = Vec::with_capacity(evaluation.possible_verdicts.len());
+
+    for verdict in &evaluation.possible_verdicts {
+        verdicts.push(format!("\"{}\"", verdict_name(*verdict)));
+    }
+
+    // A work unit with proofs is a functional test; one without asks only for
+    // its documents (user, 2026-11-02).
+    let kind = if unit.input_functional.is_some() { &role.functional_task } else { &role.documentation_task };
+    let form = ANSWER_FORM.replace("{verdicts}", &verdicts.join(", "));
+
+    filled(
+        &role.task_template,
+        &[("task", kind.as_str()), ("judgement", role.judgement.as_str()), ("form", form.as_str())],
+    )
 }
 
 /// The question about the work unit `unit` of the evaluation `evaluation`,
@@ -273,16 +337,18 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
 /// units; `agent`, the agent that assesses it; `whole`, whether its documents
 /// go whole.
 /// Output: the question with the task of its kind from the evaluator role of
-/// the agent (of the documentation, or of a functional test when the work
-/// unit has proofs), its judgement and the form of the answer, and the work
-/// unit with its evidence; `AiError::Domain` for an agent that is no
-/// evaluator, an error of the database or of the agent.
+/// the agent ([`task_of`]), and the work unit with its evidence written by
+/// the question of its kind (`documentation_question`, or
+/// `functional_question` when the work unit has proofs); `AiError::Domain`
+/// for an agent that is no evaluator, an error of the database or of the
+/// agent.
 ///
 /// Called by: [`assessment_question`].
 /// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/agent_roles/agent_roles_rules.rs`:
-/// `evaluator_of`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`unit_json`],
-/// [`dependencies_text`], [`documents_text`], [`proofs_text`], [`verdict_name`]; `objects/ai/agent/agent_ai.rs`:
-/// `agent_question`.
+/// `evaluator_of`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
+/// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`: `read_oscal_standard_document`;
+/// [`unit_json`], [`dependencies_text`], [`documents_text`], [`proofs_text`], [`task_of`],
+/// [`search_values`]; `objects/ai/agent/agent_ai.rs`: `filled`, `agent_question`.
 fn question_of(
     db: &UserDatabase,
     evaluation: &EvaluationPlan,
@@ -295,32 +361,23 @@ fn question_of(
     let role = evaluator_of(&stored.role, &stored.name)?;
     let findings = usize::try_from(role.dependency_findings).map_err(|error| AiError::Refused(error.to_string()))?;
     let passages = usize::try_from(role.document_passages).map_err(|error| AiError::Refused(error.to_string()))?;
-    let mut verdicts = Vec::with_capacity(evaluation.possible_verdicts.len());
-
-    for verdict in &evaluation.possible_verdicts {
-        verdicts.push(format!("\"{}\"", verdict_name(*verdict)));
-    }
-
-    // A work unit with proofs is a functional test; one without asks only for
-    // its documents, and its question names no proofs (user, 2026-11-02).
-    let functional = unit.input_functional.is_some();
-    let kind = if functional { &role.functional_task } else { &role.documentation_task };
-    let task = format!("{kind}\n\n{}\n\n{}", role.judgement, ANSWER_FORM.replace("{verdicts}", &verdicts.join(", ")));
-    let mut text = format!(
-        "The work unit:\n{}\n\nIts dependencies, with their results:\n{}\nIts documents of the product:\n{}",
-        unit_json(db, unit, &units)?,
-        dependencies_text(unit, &units, findings),
-        documents_text(db, unit, whole, passages)?,
-    );
-
-    if functional {
-        text.push_str(&format!("\nIts proofs of the laboratory:\n{}", proofs_text(db, unit)?));
-    }
-
-    let search = format!("{} {}", unit.label, unit.requirement);
+    let values = [
+        ("work_unit", unit_json(db, unit, &units)?.to_string()),
+        ("label", unit.label.clone()),
+        ("standard", read_oscal_standard_document(db, unit.reference)?.title),
+        ("requirement", unit.requirement.clone()),
+        ("guidance", unit.guidance.clone()),
+        ("dependencies", dependencies_text(unit, &units, role, findings)),
+        ("documents", documents_text(db, unit, role, whole, passages)?),
+        ("proofs", proofs_text(db, unit, role)?),
+    ];
+    let template =
+        if unit.input_functional.is_some() { &role.functional_question } else { &role.documentation_question };
+    let text = filled(template, &values);
+    let search = filled(&role.knowledge_search, &search_values(unit));
     let messages = vec![Message { speaker: Speaker::User, text, time: 0 }];
 
-    agent_question(db, agent, &task, &search, Some(unit.id), messages)
+    agent_question(db, agent, &task_of(evaluation, unit, role), &search, Some(unit.id), messages)
         .map_err(|error| AiError::Refused(format!("the question of the agent: {error}")))
 }
 

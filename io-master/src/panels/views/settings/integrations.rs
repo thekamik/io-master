@@ -54,6 +54,7 @@ pub struct IntegrationView {
     /// Empty: the trusted certificates of the system.
     ca_certificate: String,
     context_size: u32,
+    characters_per_token: u32,
     /// Why the context is too small for an ST of 100 pages; `None` when it
     /// is not.
     context_warning: Option<String>,
@@ -149,6 +150,7 @@ fn integration_of(fields: IntegrationFields) -> Result<Integration, ViewError> {
         protocol: protocol_of(&fields.protocol)?,
         ca_certificate: Some(fields.ca_certificate),
         context_size: fields.context_size,
+        characters_per_token: fields.characters_per_token,
     })
 }
 
@@ -164,6 +166,7 @@ pub struct IntegrationFields {
     protocol: String,
     ca_certificate: String,
     context_size: u32,
+    characters_per_token: u32,
 }
 
 /// Every integration of the user, the active one marked, whether each has a
@@ -200,6 +203,7 @@ pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationVi
             protocol: protocol_name(integration.protocol),
             ca_certificate: integration.ca_certificate.unwrap_or_default(),
             context_size: integration.context_size,
+            characters_per_token: integration.characters_per_token,
         });
     }
 

@@ -20,6 +20,8 @@ export interface IntegrationView {
   protocol: ProtocolName;
   caCertificate: string;
   contextSize: number;
+  /** The characters of a token, by which a question is measured. */
+  charactersPerToken: number;
   /** Why the context is too small for an ST of 100 pages; null when it is not. */
   contextWarning: string | null;
   hasKey: boolean;
@@ -36,6 +38,7 @@ export interface IntegrationFields {
   protocol: ProtocolName;
   caCertificate: string;
   contextSize: number;
+  charactersPerToken: number;
 }
 
 /** What the check of an integration found (integrations.rs, CheckView). */

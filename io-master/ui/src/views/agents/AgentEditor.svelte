@@ -3,10 +3,13 @@
   src/panels/views/agents/agent.rs): its name, its integration, its
   instructions, its knowledge bases (shared with other agents), its
   glossary, its limits and the parameters of its role (the tasks it asks
-  with: everything that shapes a question is tuned here); the test of the knowledge it would give with a
-  question (nothing is sent to an AI service); its journal (AgentJournal).
-  The rows of the glossary are edited in the page and sent whole with
-  "Save"; empty rows are left out by the program.
+  with: everything that shapes a question is tuned here), and under
+  "Advanced" the templates of its questions, with the warnings of a
+  template that lacks a placeholder its question needs (saved all the same);
+  the test of the knowledge it would give with a question (nothing is sent
+  to an AI service); its journal (AgentJournal). The rows of the glossary
+  are edited in the page and sent whole with "Save"; empty rows are left out
+  by the program.
 -->
 <script lang="ts">
   import SaveStatus from "../../components/save_status/SaveStatus.svelte";
@@ -32,6 +35,9 @@
   let maxPassages = $state(8);
   let maxCharacters = $state(12000);
   let maxAnswerTokens = $state(16000);
+  let systemTemplate = $state("");
+  let knowledgeTemplate = $state("");
+  let passageTemplate = $state("");
   let role: RoleView | null = $state(null);
   let question = $state("");
   let passages: string[] | null = $state(null);
@@ -52,6 +58,9 @@
       maxPassages = view.maxPassages;
       maxCharacters = view.maxCharacters;
       maxAnswerTokens = view.maxAnswerTokens;
+      systemTemplate = view.systemTemplate;
+      knowledgeTemplate = view.knowledgeTemplate;
+      passageTemplate = view.passageTemplate;
       role = { ...view.role };
     } catch (error) {
       problem = sentence(error);
@@ -87,6 +96,9 @@
         maxPassages,
         maxCharacters,
         maxAnswerTokens,
+        systemTemplate,
+        knowledgeTemplate,
+        passageTemplate,
         role,
       });
       savedAt = new Date();
@@ -117,6 +129,9 @@
 {#if view}
   <section class="card ai-config">
     <h2>{view.name}</h2>
+    {#each view.warnings as warning (warning)}
+      <p class="note"><span class="badge warning">template</span> {warning}: its question may lose its sense.</p>
+    {/each}
     <form onsubmit={save}>
       <div class="row">
         <label>Name <input bind:value={name} required /></label>
@@ -171,11 +186,11 @@
         <label>Passages, at most <input type="number" min="1" max="50" bind:value={maxPassages} required /></label>
         <label>
           Characters, at most
-          <input type="number" min="1500" max="40000" step="500" bind:value={maxCharacters} required />
+          <input type="number" min="1500" max="40000" step="1" bind:value={maxCharacters} required />
         </label>
         <label>
           Answer, at most (tokens)
-          <input type="number" min="256" max="64000" step="256" bind:value={maxAnswerTokens} required />
+          <input type="number" min="256" max="64000" step="1" bind:value={maxAnswerTokens} required />
         </label>
       </div>
 
@@ -194,7 +209,7 @@
           </label>
           <label>
             Findings of a dependency, at most (characters)
-            <input type="number" min="0" max="20000" step="100" bind:value={role.dependencyFindings} required />
+            <input type="number" min="0" max="20000" step="1" bind:value={role.dependencyFindings} required />
           </label>
         </div>
       {:else if role !== null && role.kind === "planner"}
@@ -204,12 +219,100 @@
         <label>Task of the dependencies <textarea rows="5" bind:value={role.dependenciesTask}></textarea></label>
         <label>
           Line about another work unit, at most (characters)
-          <input type="number" min="1" max="2000" step="50" bind:value={role.summaryCharacters} required />
+          <input type="number" min="1" max="2000" step="1" bind:value={role.summaryCharacters} required />
         </label>
       {:else if role !== null}
         <h3>The role: chat</h3>
         <p class="note">It talks with you; it has no task of its own.</p>
       {/if}
+
+      <details>
+        <summary>Advanced: the templates of the question</summary>
+        <p class="note">
+          Each placeholder in braces is replaced by its part of the question; one the program does not know stays as
+          written. The form of the answer, {"{form}"}, is the program's.
+        </p>
+        <label>
+          The message to the model <span class="note">{"{instructions}"}, {"{knowledge}"}, {"{task}"}; an empty part
+            takes no room.</span>
+          <textarea class="mono" rows="5" bind:value={systemTemplate}></textarea>
+        </label>
+        <label>
+          The knowledge, when there is any <span class="note">{"{passages}"}</span>
+          <textarea class="mono" rows="3" bind:value={knowledgeTemplate}></textarea>
+        </label>
+        <label>
+          Each passage of the knowledge <span class="note">{"{source}"}, {"{text}"}</span>
+          <textarea class="mono" rows="2" bind:value={passageTemplate}></textarea>
+        </label>
+        {#if role !== null && role.kind === "evaluator"}
+          <label>
+            The task <span class="note">{"{task}"}, {"{judgement}"}, {"{form}"}</span>
+            <textarea class="mono" rows="5" bind:value={role.taskTemplate}></textarea>
+          </label>
+          <label>
+            The question of the documentation <span class="note">{"{work_unit}"}, {"{label}"}, {"{standard}"},
+              {"{requirement}"}, {"{guidance}"}, {"{dependencies}"}, {"{documents}"}</span>
+            <textarea class="mono" rows="8" bind:value={role.documentationQuestion}></textarea>
+          </label>
+          <label>
+            The question of a functional test <span class="note">as above, and {"{proofs}"}</span>
+            <textarea class="mono" rows="11" bind:value={role.functionalQuestion}></textarea>
+          </label>
+          <label>
+            Each dependency <span class="note">{"{label}"}, {"{verdict}"}, {"{findings}"}</span>
+            <textarea class="mono" rows="2" bind:value={role.dependencyTemplate}></textarea>
+          </label>
+          <label>
+            Each document given whole <span class="note">{"{name}"}, {"{version}"}, {"{text}"}</span>
+            <textarea class="mono" rows="3" bind:value={role.documentTemplate}></textarea>
+          </label>
+          <label>
+            Each passage of the documents <span class="note">{"{name}"}, {"{text}"}</span>
+            <textarea class="mono" rows="2" bind:value={role.documentPassageTemplate}></textarea>
+          </label>
+          <label>
+            Each proof of the laboratory <span class="note">{"{name}"}, {"{date}"}, {"{tester}"}, {"{equipment}"},
+              {"{text}"}</span>
+            <textarea class="mono" rows="2" bind:value={role.proofTemplate}></textarea>
+          </label>
+          <div class="row">
+            <label>
+              Search of the knowledge <span class="note">{"{label}"}, {"{requirement}"}, {"{guidance}"}</span>
+              <input class="mono" bind:value={role.knowledgeSearch} required />
+            </label>
+            <label>
+              Search of the documents <span class="note">{"{label}"}, {"{requirement}"}, {"{guidance}"}</span>
+              <input class="mono" bind:value={role.documentSearch} required />
+            </label>
+          </div>
+        {:else if role !== null && role.kind === "planner"}
+          <label>
+            The question of the parameters <span class="note">{"{label}"}, {"{standard}"}, {"{requirement}"},
+              {"{parameters}"}, {"{documents}"}, {"{agents}"}</span>
+            <textarea class="mono" rows="10" bind:value={role.parametersQuestion}></textarea>
+          </label>
+          <label>
+            The question of the dependencies <span class="note">{"{label}"}, {"{requirement}"}, {"{dependencies}"},
+              {"{others}"}</span>
+            <textarea class="mono" rows="8" bind:value={role.dependenciesQuestion}></textarea>
+          </label>
+          <label>
+            The line about another work unit <span class="note">{"{label}"}, {"{kind}"}, {"{sentence}"}</span>
+            <input class="mono" bind:value={role.summaryTemplate} required />
+          </label>
+          <div class="row">
+            <label>
+              Search of the knowledge <span class="note">{"{label}"}, {"{requirement}"}</span>
+              <input class="mono" bind:value={role.knowledgeSearch} required />
+            </label>
+            <label>
+              The proof of a functional test the answer names none for
+              <input bind:value={role.defaultProofName} required />
+            </label>
+          </div>
+        {/if}
+      </details>
 
       <div class="buttons"><button type="submit" disabled={busy}>Save</button></div>
     </form>
@@ -247,6 +350,10 @@
 
 <style>
   h3 {
+    margin-top: 1.25rem;
+  }
+
+  details {
     margin-top: 1.25rem;
   }
 

@@ -31,6 +31,22 @@ export interface RoleView {
   parametersTask: string;
   dependenciesTask: string;
   summaryCharacters: number;
+  /** The templates of an evaluator (agent_roles_model.rs, EvaluatorRole). */
+  taskTemplate: string;
+  documentationQuestion: string;
+  functionalQuestion: string;
+  dependencyTemplate: string;
+  documentTemplate: string;
+  documentPassageTemplate: string;
+  proofTemplate: string;
+  documentSearch: string;
+  /** The templates of a planner (agent_roles_model.rs, PlannerRole). */
+  parametersQuestion: string;
+  dependenciesQuestion: string;
+  summaryTemplate: string;
+  defaultProofName: string;
+  /** What the knowledge is searched with, of either role. */
+  knowledgeSearch: string;
 }
 
 /** An integration or a knowledge base to choose (agent.rs, ChoiceView). */
@@ -56,7 +72,12 @@ export interface AgentView {
   maxPassages: number;
   maxCharacters: number;
   maxAnswerTokens: number;
+  systemTemplate: string;
+  knowledgeTemplate: string;
+  passageTemplate: string;
   role: RoleView;
+  /** Each placeholder a template needs and does not hold; saved all the same. */
+  warnings: string[];
   integrations: ChoiceView[];
   bases: ChoiceView[];
 }
@@ -72,6 +93,9 @@ export interface AgentFields {
   maxPassages: number;
   maxCharacters: number;
   maxAnswerTokens: number;
+  systemTemplate: string;
+  knowledgeTemplate: string;
+  passageTemplate: string;
   role: RoleView;
 }
 

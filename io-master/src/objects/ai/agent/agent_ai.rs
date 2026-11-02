@@ -8,7 +8,9 @@
 //!            ──► read_passages in the bases of the agent, at most max_passages
 //!            ──► the best first, as many as fit in max_characters (a passage never shortened)
 //!
-//! agent_question ──► the instructions of the agent + the task + the knowledge + the messages ──► Question
+//! agent_question ──► system_template of the agent: {instructions}, {knowledge}, {task} + the messages ──► Question
+//!
+//! filled(template, values) ──► each {placeholder} of the template replaced by its value, in one pass
 //! ```
 
 use crate::infrastructure::storage::user_database::UserDatabase;
@@ -18,6 +20,95 @@ use crate::objects::ai::chat::chat_model::Message;
 use crate::objects::ai::integration::integration_ai::question::Question;
 use crate::objects::ai::rag::rag_store::{MAX_FOUND, read_passages};
 use crate::objects::ai_error::AiError;
+
+/// The value of the placeholder that `text` starts with, just after its `{`
+/// (`"documents} ..."`), and the text after the placeholder.
+///
+/// Input: `text`, the rest of a template after a `{`; `values`, the
+/// placeholders without braces with their values.
+/// Output: the value and the rest (`Some(("ST ...", " ..."))`); `None` when
+/// no placeholder of `values` starts there.
+///
+/// Called by: [`filled`].
+fn placeholder_at<'a, 'b, V: AsRef<str>>(text: &'b str, values: &'a [(&str, V)]) -> Option<(&'a str, &'b str)> {
+    for (name, value) in values {
+        if let Some(rest) = text.strip_prefix(*name)
+            && let Some(rest) = rest.strip_prefix('}')
+        {
+            return Some((value.as_ref(), rest));
+        }
+    }
+
+    None
+}
+
+/// The template `template` of an agent or of its role with each placeholder
+/// of `values` (`{documents}`) replaced by its value, in one pass: a
+/// placeholder that comes inside a value (a document that writes
+/// "{documents}") is never replaced again, and a placeholder the program
+/// does not know stays as it is written.
+///
+/// Input: `template`, a template, bounded when it was written
+/// (`agent_store.rs`, `agent_roles_store.rs`); `values`, the placeholders
+/// without braces with their values (`[("label", "ADV_ARC.1-1")]`).
+/// Output: the text ("Work unit: ADV_ARC.1-1").
+///
+/// Called by: [`agent_knowledge`], [`agent_question`];
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `dependencies_text`, `documents_text`,
+/// `proofs_text`, `task_of`, `question_of`; `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `question_of`,
+/// `parameters_question`, `summary`, `dependencies_question`.
+/// Calls: [`placeholder_at`].
+pub fn filled<V: AsRef<str>>(template: &str, values: &[(&str, V)]) -> String {
+    let mut text = String::with_capacity(template.len());
+    let mut rest = template;
+
+    // Each pass takes at least one byte of the template, so it ends within
+    // the length of the template.
+    for _ in 0..=template.len() {
+        let Some((before, after)) = rest.split_once('{') else {
+            break;
+        };
+
+        text.push_str(before);
+
+        if let Some((value, after_placeholder)) = placeholder_at(after, values) {
+            text.push_str(value);
+            rest = after_placeholder;
+        } else {
+            text.push('{');
+            rest = after;
+        }
+    }
+
+    text.push_str(rest);
+    text
+}
+
+/// The message of an agent with the room of its empty parts taken out: no
+/// more than one empty line in a row, none at its ends (an agent without
+/// knowledge leaves `{knowledge}` empty).
+///
+/// Input: `text`, the system template of an agent filled.
+/// Output: the text ("You assess ...\n\nAnswer in JSON.").
+///
+/// Called by: [`agent_question`].
+fn tidied(text: &str) -> String {
+    let mut tidied = String::with_capacity(text.len());
+    let mut empty_before = true;
+
+    for line in text.trim().lines() {
+        let empty = line.trim().is_empty();
+
+        if !(empty && empty_before) {
+            tidied.push_str(line);
+            tidied.push('\n');
+        }
+
+        empty_before = empty;
+    }
+
+    tidied.trim_end().to_owned()
+}
 
 /// The words of `text` in lower case: what lies between the signs that are
 /// no letter or digit.
@@ -100,14 +191,15 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 ///
 /// Input: `agent`, the id of a stored agent; `question`, what the knowledge
 /// is looked for with ("ADV_ARC.1-1 The developer shall ...").
-/// Output: the passages given, the best first, each under the name of its
-/// source (`["=== CC interpretation 12.pdf ===\nThe TSF shall ..."]`);
-/// an error when the agent is missing or damaged or the database fails.
+/// Output: the passages given, the best first, each written by the
+/// `passage_template` of the agent (`["=== CC interpretation 12.pdf ===\nThe
+/// TSF shall ..."]`); an error when the agent is missing or damaged or the
+/// database fails.
 ///
 /// Called by: [`agent_question`]; `panels/views/agents/agent.rs`:
 /// `agent_knowledge_test`.
 /// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`widened`]; `objects/ai/rag/rag_store.rs`:
-/// `read_passages`.
+/// `read_passages`; [`filled`].
 pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<Vec<String>, AiError> {
     let agent = read_agent(db, agent)?;
     // The limits were checked when the agent was written
@@ -122,24 +214,24 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
     let mut given = Vec::with_capacity(found.len());
     let mut characters = 0;
 
-    // The limit counts the text of the passages; each is given under the
-    // name of its source, so that the model can say what it relied on.
+    // The limit counts the text of the passages, not their templates.
     for (source, passage) in found {
         let length = passage.chars().count();
 
         if characters + length <= limit {
             characters += length;
-            given.push(format!("=== {source} ===\n{passage}"));
+            given.push(filled(&agent.passage_template, &[("source", source.as_str()), ("text", passage.as_str())]));
         }
     }
 
     Ok(given)
 }
 
-/// The question the agent `agent` asks of its integration: its
-/// instructions, then the task `task` (none when empty), then its knowledge
-/// that fits `search`, then the messages `messages`, the last of them the
-/// question of the user.
+/// The question the agent `agent` asks of its integration: its message laid
+/// out by its `system_template` from its instructions, its knowledge that
+/// fits `search` (introduced by its `knowledge_template`, none when nothing
+/// is found) and the task `task` (none when empty), then the messages
+/// `messages`, the last of them the question of the user.
 ///
 /// Input:
 /// - `agent`: the id of a stored agent.
@@ -158,7 +250,7 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `question_of`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`;
 /// `objects/ai/chat/chat_ai.rs`: `chat_question`.
-/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`agent_knowledge`].
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`agent_knowledge`], [`filled`], [`tidied`].
 pub fn agent_question(
     db: &UserDatabase,
     agent: i64,
@@ -170,24 +262,14 @@ pub fn agent_question(
     ensure!(!messages.is_empty(), AiError::NoQuestion);
 
     let stored = read_agent(db, agent)?;
-    let knowledge = agent_knowledge(db, agent, search)?;
-    let mut system = stored.instructions;
-
-    // The knowledge is named for what it was found for, so that the model
-    // knows what it is about.
-    if !knowledge.is_empty() {
-        let found_for = if work_unit.is_some() { "this work unit" } else { "this question" };
-
-        system.push_str(&format!("\n\nYour knowledge for {found_for}:\n\n"));
-        system.push_str(&knowledge.join("\n\n"));
-    }
-
-    // The task comes last, so that the form of the answer is the last thing
-    // the model reads before the question.
-    if !task.is_empty() {
-        system.push_str("\n\n");
-        system.push_str(task);
-    }
+    let passages = agent_knowledge(db, agent, search)?;
+    let knowledge = if passages.is_empty() {
+        String::new()
+    } else {
+        filled(&stored.knowledge_template, &[("passages", passages.join("\n\n"))])
+    };
+    let values = [("instructions", stored.instructions.as_str()), ("knowledge", knowledge.as_str()), ("task", task)];
+    let system = tidied(&filled(&stored.system_template, &values));
 
     Ok(Question {
         integration: stored.integration,
@@ -275,7 +357,7 @@ mod tests {
         let question =
             agent_question(&db, id, "Answer in JSON.", "security architecture", Some(3), vec![message]).unwrap();
 
-        assert!(question.system.starts_with("You assess work units of the CEM.\n\nYour knowledge for this work unit:"));
+        assert!(question.system.starts_with("You assess work units of the CEM.\n\nYour knowledge for this question:"));
         assert!(question.system.contains("=== notes ===\nThe developer shall"));
         assert!(question.system.ends_with("\n\nAnswer in JSON."));
         assert_eq!((question.integration, question.agent, question.work_unit), (local, Some(id), Some(3)));
@@ -284,5 +366,15 @@ mod tests {
 
         assert_eq!(chat.system, "You assess work units of the CEM.");
         assert!(matches!(agent_question(&db, id, "", "", None, Vec::new()), Err(AiError::NoQuestion)));
+    }
+
+    #[test]
+    fn a_template_is_filled_in_one_pass() {
+        let values = [("name", "ST {text}"), ("text", "The TSF.")];
+
+        assert_eq!(filled("=== {name} ===\n{text}", &values), "=== ST {text} ===\nThe TSF.");
+        assert_eq!(filled("{unknown} {name", &values), "{unknown} {name");
+        assert_eq!(filled("{{text}}", &values), "{The TSF.}");
+        assert_eq!(tidied("\nA\n\n\n\nB\n\n"), "A\n\nB");
     }
 }

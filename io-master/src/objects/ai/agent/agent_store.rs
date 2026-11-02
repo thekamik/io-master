@@ -4,7 +4,8 @@
 //!
 //! ```text
 //! ai_agents                 id, name (unique), integration, instructions, max_passages, max_characters,
-//!                           max_answer_tokens, role (its parameters: objects/ai/agent_roles/agent_roles_store.rs)
+//!                           max_answer_tokens, system_template, knowledge_template, passage_template,
+//!                           role (its parameters: objects/ai/agent_roles/agent_roles_store.rs)
 //! ai_agent_knowledge_bases  (agent, position, knowledge_base)   knowledge_bases
 //! ai_agent_glossary         (agent, position, term, meaning)    glossary
 //! ```
@@ -34,6 +35,9 @@ pub const MAX_CHARACTERS: u32 = 40_000;
 /// The longest answer an agent may ask for, in tokens.
 pub const MAX_ANSWER_TOKENS: u32 = 64_000;
 
+/// The longest template of an agent, in characters.
+pub const MAX_TEMPLATE: usize = 20_000;
+
 /// The tables, made when they are missing (`objects/schema.rs`, `USER_TABLES`).
 pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS ai_agents (
@@ -44,6 +48,9 @@ pub const SCHEMA: &str = "
         max_passages      INTEGER NOT NULL,
         max_characters    INTEGER NOT NULL,
         max_answer_tokens INTEGER NOT NULL,
+        system_template    TEXT NOT NULL,
+        knowledge_template TEXT NOT NULL,
+        passage_template   TEXT NOT NULL,
         role              TEXT NOT NULL CHECK (role IN ('evaluator', 'planner', 'chat'))
     );
 
@@ -65,11 +72,12 @@ pub const SCHEMA: &str = "
 ";
 
 /// The columns every read of an agent selects.
-const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_characters, max_answer_tokens, role";
+const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_characters, max_answer_tokens, \
+                       system_template, knowledge_template, passage_template, role";
 
 /// Refuses an agent that does not hold together: lists over their limits, no
-/// name, limits of its knowledge over the program's, or a term of its
-/// glossary without its meaning.
+/// name, limits of its knowledge over the program's, a template over
+/// [`MAX_TEMPLATE`], or a term of its glossary without its meaning.
 ///
 /// Input: `agent`, the agent to be stored.
 ///
@@ -97,6 +105,13 @@ fn check_agent(agent: &Agent) -> Result<(), DbError> {
         DbError::Inconsistent(format!("an answer of an agent over {MAX_ANSWER_TOKENS} tokens, or of none"))
     );
     check_agent_role(&agent.role)?;
+
+    for template in [&agent.system_template, &agent.knowledge_template, &agent.passage_template] {
+        ensure!(
+            template.chars().count() <= MAX_TEMPLATE,
+            DbError::Inconsistent(format!("a template of an agent over {MAX_TEMPLATE} characters"))
+        );
+    }
 
     for entry in &agent.glossary {
         ensure!(
@@ -170,8 +185,10 @@ pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
     );
 
     transaction.execute(
-        "INSERT INTO ai_agents (name, integration, instructions, max_passages, max_characters, max_answer_tokens, role)
-         VALUES (:name, :integration, :instructions, :max_passages, :max_characters, :max_answer_tokens, :role)",
+        "INSERT INTO ai_agents (name, integration, instructions, max_passages, max_characters, max_answer_tokens,
+                                system_template, knowledge_template, passage_template, role)
+         VALUES (:name, :integration, :instructions, :max_passages, :max_characters, :max_answer_tokens,
+                 :system_template, :knowledge_template, :passage_template, :role)",
         named_params! {
             ":name": agent.name,
             ":integration": agent.integration,
@@ -179,6 +196,9 @@ pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
             ":max_passages": agent.max_passages,
             ":max_characters": agent.max_characters,
             ":max_answer_tokens": agent.max_answer_tokens,
+            ":system_template": agent.system_template,
+            ":knowledge_template": agent.knowledge_template,
+            ":passage_template": agent.passage_template,
             ":role": role_name(&agent.role),
         },
     )?;
@@ -207,6 +227,9 @@ fn agent_of(row: &Row<'_>, role: AgentRole) -> Result<Agent, DbError> {
         max_passages: row.get("max_passages")?,
         max_characters: row.get("max_characters")?,
         max_answer_tokens: row.get("max_answer_tokens")?,
+        system_template: row.get("system_template")?,
+        knowledge_template: row.get("knowledge_template")?,
+        passage_template: row.get("passage_template")?,
         role,
     })
 }
@@ -327,7 +350,8 @@ pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
     let changed = transaction.execute(
         "UPDATE ai_agents SET name = :name, integration = :integration, instructions = :instructions,
                 max_passages = :max_passages, max_characters = :max_characters,
-                max_answer_tokens = :max_answer_tokens
+                max_answer_tokens = :max_answer_tokens, system_template = :system_template,
+                knowledge_template = :knowledge_template, passage_template = :passage_template
          WHERE id = :id AND role = :role",
         named_params! {
             ":id": agent.id,
@@ -337,6 +361,9 @@ pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
             ":max_passages": agent.max_passages,
             ":max_characters": agent.max_characters,
             ":max_answer_tokens": agent.max_answer_tokens,
+            ":system_template": agent.system_template,
+            ":knowledge_template": agent.knowledge_template,
+            ":passage_template": agent.passage_template,
             ":role": role_name(&agent.role),
         },
     )?;

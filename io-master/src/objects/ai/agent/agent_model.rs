@@ -36,6 +36,16 @@ pub struct Agent {
     /// context of its integration (user, 2026-11-02).
     pub max_answer_tokens: u32,
 
+    /// How its message to the model is laid out (the system prompt):
+    /// `{instructions}`, `{knowledge}`, `{task}` (user, 2026-11-02).
+    pub system_template: String,
+
+    /// How its knowledge is introduced, when it gives any: `{passages}`.
+    pub knowledge_template: String,
+
+    /// Each passage of its knowledge: `{source}`, `{text}`.
+    pub passage_template: String,
+
     /// What it is made for, with the parameters of that work (user,
     /// 2026-11-02); given when it is made, never changed.
     pub role: AgentRole,

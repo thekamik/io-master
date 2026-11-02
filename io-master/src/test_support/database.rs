@@ -6,6 +6,7 @@ use crate::infrastructure::security::random::fill_random;
 use crate::infrastructure::storage::encryption::database_key::DatabaseKey;
 use crate::infrastructure::storage::user_database::{self, UserDatabase};
 use crate::objects::ai::agent::agent_model::Agent;
+use crate::objects::ai::agent::agent_rules::{NEW_KNOWLEDGE_TEMPLATE, NEW_PASSAGE_TEMPLATE, NEW_SYSTEM_TEMPLATE};
 use crate::objects::ai::agent_roles::agent_roles_rules::new_role;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::{EvaluationPlan, PlanState};
@@ -86,6 +87,7 @@ pub fn integration() -> Integration {
         protocol: Protocol::OpenAiChat,
         ca_certificate: None,
         context_size: 32_768,
+        characters_per_token: 3,
     }
 }
 
@@ -102,6 +104,9 @@ pub fn agent(integration: i64) -> Agent {
         max_passages: 8,
         max_characters: 12_000,
         max_answer_tokens: 16_000,
+        system_template: NEW_SYSTEM_TEMPLATE.to_owned(),
+        knowledge_template: NEW_KNOWLEDGE_TEMPLATE.to_owned(),
+        passage_template: NEW_PASSAGE_TEMPLATE.to_owned(),
         role: new_role("evaluator").unwrap(),
     }
 }
