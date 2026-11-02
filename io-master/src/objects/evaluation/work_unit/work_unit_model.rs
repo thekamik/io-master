@@ -91,14 +91,16 @@ pub struct WorkUnit {
 }
 
 /// The verdict of the assessment of a work unit, from the worst to the
-/// best: `Fail`, `Inconclusive`, `Pass` (user, 2026-10-28). Common
-/// Criteria knows only `Pass` and `Fail`; ETSI EN 303 645 also
+/// best: `Fail`, `Inconclusive`, `Pass` (user, 2026-10-28); `NotApplicable`
+/// for a work unit that does not apply to the product (user, 2026-11-02).
+/// Common Criteria knows `Pass` and `Fail`; ETSI EN 303 645 also
 /// `Inconclusive`. A plan names those it uses (`possible_verdicts`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Verdict {
     Pass,
     Fail,
     Inconclusive,
+    NotApplicable,
 }
 
 /// Who gave the results and the verdict of a work unit (user,

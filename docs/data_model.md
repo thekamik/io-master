@@ -111,7 +111,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 ### 3.2 The verdict (user, 2026-10-28, as Common Criteria asks)
 
-- **The verdicts of a plan.** Common Criteria knows only `Pass` and `Fail`; ETSI EN 303 645 also `Inconclusive`. A plan names those its standards know (`possible_verdicts`): `Pass` and `Fail` when it is made; the planner may add `Inconclusive`. From the worst to the best: `Fail`, `Inconclusive`, `Pass`.
+- **The verdicts of a plan.** Common Criteria knows `Pass` and `Fail`; ETSI EN 303 645 also `Inconclusive`; `NotApplicable` is for a work unit that does not apply to the product (user, 2026-11-02). A plan names those it uses (`possible_verdicts`): `Pass` and `Fail` when it is made; the planner may add `Inconclusive` and `NotApplicable`. From the worst to the best: `Fail`, `Inconclusive`, `Pass`; a dependency that does not apply holds nothing back.
 - A work unit is assessed by the AI even when a dependency did not pass, so that all its faults are found for the Observation Report.
 - Its verdict is the model's (or the evaluator's): the results of its dependencies are given to the model to weigh, and a dependency that did not pass is warned of in its notes.
 - `findings` holds every fault: those the AI found, and each dependency that did not pass, written by the program ("fail: its dependency ADV_ARC.1-1 failed").

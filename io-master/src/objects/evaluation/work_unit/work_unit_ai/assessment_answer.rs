@@ -112,7 +112,9 @@ pub fn read_assessment(answer: &str) -> Result<Assessment, AiError> {
     }
 
     Ok(Assessment {
-        verdict: text_of(&value, "verdict")?.to_lowercase(),
+        // "Not applicable" and "not-applicable" are the verdict the plan
+        // names "not_applicable".
+        verdict: text_of(&value, "verdict")?.to_lowercase().replace([' ', '-'], "_"),
         findings: text_of(&value, "findings")?,
         analysis: text_of(&value, "analysis")?,
         vulnerability_notes: text_of(&value, "vulnerability_notes")?,
@@ -158,7 +160,9 @@ fn dependency_warnings(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>
         let dependency = read_work_unit(db, *id)?;
 
         match dependency.verdict {
-            Some(Verdict::Pass) => {}
+            // A dependency that does not apply to the product holds nothing
+            // back, as one that passed.
+            Some(Verdict::Pass | Verdict::NotApplicable) => {}
             Some(Verdict::Fail) => warnings.push(format!("Its dependency {} failed", dependency.label)),
             Some(Verdict::Inconclusive) => {
                 warnings.push(format!("Its dependency {} is inconclusive", dependency.label));
@@ -323,6 +327,7 @@ mod tests {
         let (id, first, _) = evaluation(&db);
 
         assert!(matches!(read_assessment("It passes."), Err(AiError::Refused(_))));
+        assert_eq!(read_assessment(&answer("Not applicable", "")).unwrap().verdict, "not_applicable");
         assert!(matches!(
             apply_assessment(&db, id, first, &read_assessment(&answer("inconclusive", "")).unwrap(), &[]),
             Err(AiError::Refused(_))

@@ -80,7 +80,7 @@ pub const SCHEMA: &str = "
     CREATE TABLE IF NOT EXISTS evaluation_plan_verdicts (
         evaluation_plan INTEGER NOT NULL REFERENCES evaluation_plans(id),
         position        INTEGER NOT NULL,
-        verdict         TEXT NOT NULL CHECK (verdict IN ('pass', 'fail', 'inconclusive')),
+        verdict         TEXT NOT NULL CHECK (verdict IN ('pass', 'fail', 'inconclusive', 'not_applicable')),
         PRIMARY KEY (evaluation_plan, position),
         UNIQUE (evaluation_plan, verdict)
     );

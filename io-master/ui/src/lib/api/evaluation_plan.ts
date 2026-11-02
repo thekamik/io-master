@@ -36,7 +36,7 @@ export interface DocumentView {
 }
 
 /** A verdict as the program names it. */
-export type VerdictName = "pass" | "fail" | "inconclusive";
+export type VerdictName = "pass" | "fail" | "inconclusive" | "not_applicable";
 
 /** The data of a plan (plans.rs, PlanView). */
 export interface PlanView {

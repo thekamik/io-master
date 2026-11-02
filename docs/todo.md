@@ -16,6 +16,8 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 ## Reminders
 
+- **The documents kept by the service between the questions** (2026-11-02): every question of an assessment sends the whole ST again (about 55 000 tokens; 30 work units are 1.6 million tokens, a whole CEM many times more). The messages of Anthropic can keep a fixed beginning of the question in their cache (prompt caching, `cache_control`), paid in part: the documents of a work unit put first and marked, the work unit after them. To measure the cost first.
+
 - **The content fitted to a model of a small context** (user, 2026-11-02): a model whose context holds less than an ST of 100 pages (`objects/ai/integration/integration_ai/question.rs`: `NEEDED_CONTEXT`, 120 000 tokens) gets the documents of a work unit only as the 20 passages that fit it best, and the AI settings warn of it. To make a way of fitting the content to such a model: the documents parted by their sections (the section a work unit asks about given whole), a summary of the rest, or the assessment of a work unit in several questions.
 
 - **Repeated reading of the documents for the quotes** (found 2026-11-02): `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes` reads and spaces every document of the work unit once for each quote (`check_quote` calls `quotes_found` with one quote); `assessment_question.rs`: `unit_json` reads a document once for each quote. To measure with a real evaluation; then read each document once.

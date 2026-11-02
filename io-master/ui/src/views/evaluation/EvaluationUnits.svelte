@@ -83,7 +83,7 @@
   <h2>Work units</h2>
   <p>
     {assessed} of {rows.length} assessed · Pass {counted("pass")} · Fail {counted("fail")} · Inconclusive
-    {counted("inconclusive")}
+    {counted("inconclusive")} · Not applicable {counted("not_applicable")}
   </p>
 
   <div class="filters">
@@ -94,6 +94,7 @@
       <option value="pass">Pass</option>
       <option value="fail">Fail</option>
       <option value="inconclusive">Inconclusive</option>
+      <option value="not_applicable">Not applicable</option>
       <option value="user">Written by the evaluator</option>
     </select>
   </div>

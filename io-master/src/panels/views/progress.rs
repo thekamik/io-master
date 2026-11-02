@@ -35,7 +35,7 @@ pub struct ProgressView {
     failed: usize,
     /// The last work unit gone through; empty before the first.
     label: String,
-    /// "pass", "fail", "inconclusive"; `None` without a verdict.
+    /// `"pass"`, `"fail"`, `"inconclusive"`, `"not_applicable"`; `None` without a verdict.
     last_verdict: Option<&'static str>,
     problems: Vec<ProblemView>,
 }

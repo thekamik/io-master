@@ -69,7 +69,7 @@ pub struct PlanView {
     description: String,
     standards: Vec<StandardChoiceView>,
     documents: Vec<DocumentView>,
-    /// "pass", "fail", "inconclusive".
+    /// `"pass"`, `"fail"`, `"inconclusive"`, `"not_applicable"`.
     verdicts: Vec<String>,
     blocked: bool,
     /// The agent of the planner, which fills the work units ("Fill with AI").
@@ -89,6 +89,7 @@ fn verdict_name(verdict: Verdict) -> &'static str {
         Verdict::Pass => "pass",
         Verdict::Fail => "fail",
         Verdict::Inconclusive => "inconclusive",
+        Verdict::NotApplicable => "not_applicable",
     }
 }
 
@@ -105,6 +106,7 @@ fn verdict_of(name: &str) -> Result<Verdict, ViewError> {
         "pass" => Ok(Verdict::Pass),
         "fail" => Ok(Verdict::Fail),
         "inconclusive" => Ok(Verdict::Inconclusive),
+        "not_applicable" => Ok(Verdict::NotApplicable),
         _ => Err(ViewError::Invalid(format!("no verdict \"{name}\""))),
     }
 }

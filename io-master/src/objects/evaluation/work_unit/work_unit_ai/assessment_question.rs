@@ -44,16 +44,24 @@ const DOCUMENT_PASSAGES: usize = 20;
 /// characters.
 const MAX_DEPENDENCY_FINDINGS: usize = 1000;
 
-/// What the two tasks of the assessment share: the form of the answer and
-/// how it is written (user, 2026-11-02). `{verdicts}` is replaced by the
-/// verdicts of the plan.
-const ANSWER_FORM: &str = "Answer with one JSON object and nothing else:\n\
-{\"verdict\": one of {verdicts},\n \
-\"findings\": each thing the requirement asks for and the evidence does not give, one per line; empty when none,\n \
+/// What the two tasks of the assessment share (user, 2026-11-02): the care
+/// asked for, what the extracted text and the recorded version are, and the
+/// form of the answer, its verdict last so that it follows from the analysis.
+/// `{verdicts}` is replaced by the verdicts of the plan.
+const ANSWER_FORM: &str = "Be careful: pass a work unit only when the evidence shows that its requirement is met; \
+when it does not, fail it. A false fail is corrected by the evaluator, a false pass may never be found (user, \
+2026-11-02).\n\
+The text of a document was extracted from its file: its tables may be broken and its formatting (italic, bold, \
+underline) is lost. That is no fault of the document; what cannot be decided because of it is told in the notes, \
+for the evaluator to check in the original. The version of a document written under its name was recorded by the \
+evaluator: it is no part of the document and never a reason for a verdict.\n\n\
+Answer with one JSON object and nothing else, its fields in this order:\n\
+{\"findings\": each thing the requirement asks for and the evidence does not give, one per line; empty when none,\n \
 \"analysis\": how the evidence meets or fails the requirement, briefly,\n \
 \"vulnerability_notes\": what an attacker could use, or an empty text,\n \
 \"notes\": anything else the evaluator should know, or an empty text,\n \
-\"quotes\": [{\"document\": the name of a document given, \"text\": a fragment of it, word for word}]}\n\
+\"quotes\": [{\"document\": the name of a document given, \"text\": a fragment of it, word for word}],\n \
+\"verdict\": one of {verdicts}, decided last, from your findings and analysis}\n\
 Point with quotes to the places your verdict rests on; a quote is help for the evaluator, not a condition of the \
 verdict. Write briefly and to the point: no repetition of the requirement, no general remarks.";
 
@@ -94,6 +102,7 @@ pub fn verdict_name(verdict: Verdict) -> &'static str {
         Verdict::Pass => "pass",
         Verdict::Fail => "fail",
         Verdict::Inconclusive => "inconclusive",
+        Verdict::NotApplicable => "not_applicable",
     }
 }
 
@@ -216,8 +225,8 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit]) -> String {
 ///
 /// Input: `unit`, the work unit assessed; `whole`, whether the documents go
 /// whole.
-/// Output: the text ("=== ST (version 1.2) ===\n..."); an error of the
-/// database.
+/// Output: the text ("=== ST ===\n(the version recorded by the evaluator:
+/// 1.2)\n..."); an error of the database.
 ///
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
@@ -230,8 +239,10 @@ fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<Str
             let document = read_product_document(db, *id)?;
             let version = document.version.unwrap_or_default();
 
+            // The version is the evaluator's record, apart from the name the
+            // quotes give and apart from the text of the document.
             text.push_str(&format!(
-                "=== {} (version {version}) ===\n{}\n",
+                "=== {} ===\n(the version recorded by the evaluator: {version})\n{}\n",
                 document.name,
                 read_document_text(db, *id)?
             ));
@@ -426,7 +437,9 @@ mod tests {
         assert!(text.contains("\"input_product_documents\":[\"ST\"]") && text.contains("\"standard\":\"CEM\""));
         assert!(!text.contains("\"id\"") && !text.contains("\"author\"") && !text.contains("cross_reference"));
         assert!(text.contains("ASE_INT.1-1: fail\nThe ST names no TOE."));
-        assert!(text.contains("=== ST (version 1.0) ===") && text.contains("Its TSF filters packets."));
+        assert!(text.contains("=== ST ===\n(the version recorded by the evaluator: 1.0)"));
+        assert!(text.contains("Its TSF filters packets."));
+        assert!(question.system.contains("\"verdict\": one of \"pass\", \"fail\", decided last"));
         assert!(!text.contains("An earlier analysis.") && !text.contains("\"verdict\""));
         assert!(question.system.contains("as its documents describe it") && !text.contains("proofs of the laboratory"));
 

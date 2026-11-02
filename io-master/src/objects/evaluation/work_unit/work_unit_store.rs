@@ -58,7 +58,7 @@ pub const SCHEMA: &str = "
         analysis            TEXT NOT NULL,
         vulnerability_notes TEXT NOT NULL,
         notes               TEXT NOT NULL,
-        verdict             TEXT CHECK (verdict IN ('pass', 'fail', 'inconclusive')),
+        verdict             TEXT CHECK (verdict IN ('pass', 'fail', 'inconclusive', 'not_applicable')),
         author              TEXT CHECK (author IN ('ai', 'user')),
         UNIQUE (evaluation_plan, reference, oscal_key)
     );
@@ -118,6 +118,7 @@ pub(in crate::objects::evaluation) fn verdict_name(verdict: Verdict) -> &'static
         Verdict::Pass => "pass",
         Verdict::Fail => "fail",
         Verdict::Inconclusive => "inconclusive",
+        Verdict::NotApplicable => "not_applicable",
     }
 }
 
@@ -135,6 +136,7 @@ pub(in crate::objects::evaluation) fn verdict_of(
         "pass" => Ok(Verdict::Pass),
         "fail" => Ok(Verdict::Fail),
         "inconclusive" => Ok(Verdict::Inconclusive),
+        "not_applicable" => Ok(Verdict::NotApplicable),
         _ => Err(DbError::Corrupt { table, column, value: name.to_owned() }),
     }
 }

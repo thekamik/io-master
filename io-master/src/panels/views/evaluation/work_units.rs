@@ -347,6 +347,7 @@ fn verdict_of(name: &str) -> Result<Option<Verdict>, ViewError> {
         "pass" => Ok(Some(Verdict::Pass)),
         "fail" => Ok(Some(Verdict::Fail)),
         "inconclusive" => Ok(Some(Verdict::Inconclusive)),
+        "not_applicable" => Ok(Some(Verdict::NotApplicable)),
         _ => Err(ViewError::Invalid(format!("no verdict \"{name}\""))),
     }
 }
@@ -361,7 +362,7 @@ pub struct ResultsFields {
     notes: String,
     quotes: Vec<QuoteView>,
     proof_quotes: Vec<ProofQuoteView>,
-    /// "pass", "fail", "inconclusive", or empty for none.
+    /// `"pass"`, `"fail"`, `"inconclusive"`, `"not_applicable"`, or empty for none.
     verdict: String,
 }
 

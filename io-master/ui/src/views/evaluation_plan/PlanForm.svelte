@@ -19,6 +19,7 @@
   let description = $state("");
   let standards: number[] = $state([]);
   let inconclusive = $state(false);
+  let notApplicable = $state(false);
   let aiAgent: number | null = $state(null);
   let documentName = $state("");
   let problem = $state("");
@@ -34,6 +35,7 @@
       description = view.description;
       standards = view.standards.filter((standard) => standard.chosen).map((standard) => standard.id);
       inconclusive = view.verdicts.includes("inconclusive");
+      notApplicable = view.verdicts.includes("not_applicable");
       aiAgent = view.aiAgent;
     } catch (error) {
       problem = sentence(error);
@@ -69,7 +71,17 @@
   function save(event: SubmitEvent) {
     event.preventDefault();
 
-    const verdicts: VerdictName[] = inconclusive ? ["pass", "fail", "inconclusive"] : ["pass", "fail"];
+    // Pass and Fail always; the others as the planner chose them.
+    const verdicts: VerdictName[] = ["pass", "fail"];
+
+    if (inconclusive) {
+      verdicts.push("inconclusive");
+    }
+
+    if (notApplicable) {
+      verdicts.push("not_applicable");
+    }
+
     const documents = view?.documents.map((document) => document.id) ?? [];
 
     void write(() => planSave({ id: plan, name, description, standards, documents, verdicts, aiAgent }));
@@ -114,6 +126,11 @@
       <label class="check">
         <input type="checkbox" bind:checked={inconclusive} />
         The verdict Inconclusive too (ETSI EN 303 645); Pass and Fail always
+      </label>
+
+      <label class="check">
+        <input type="checkbox" bind:checked={notApplicable} />
+        The verdict Not applicable too, for a work unit that does not apply to the product
       </label>
 
       <label>

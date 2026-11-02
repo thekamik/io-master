@@ -102,7 +102,7 @@ export function evaluationProofGive(
 }
 
 /** A verdict as the program names it. */
-export type VerdictName = "pass" | "fail" | "inconclusive";
+export type VerdictName = "pass" | "fail" | "inconclusive" | "not_applicable";
 
 /** A name and how many it counts (run.rs, CountView). */
 export interface CountView {

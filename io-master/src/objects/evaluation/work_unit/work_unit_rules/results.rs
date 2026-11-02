@@ -80,8 +80,9 @@ fn quote_sources(db: &UserDatabase, unit: &WorkUnit) -> Result<(Vec<QuoteSource>
     Ok((documents, texts))
 }
 
-/// The source among `sources` named `name` (without regard to case) whose
-/// text holds `wanted`.
+/// The source among `sources` named `name` (without regard to case, and
+/// without a version the model may add in parentheses: "ST (version 1.0)" is
+/// "ST") whose text holds `wanted`.
 ///
 /// Input: `sources`, from [`quote_sources`]; `name`, the name the quote gives;
 /// `wanted`, the quote, the spaces made one.
@@ -89,8 +90,15 @@ fn quote_sources(db: &UserDatabase, unit: &WorkUnit) -> Result<(Vec<QuoteSource>
 ///
 /// Called by: [`quotes_found`].
 fn place_of(sources: &[QuoteSource], name: &str, wanted: &str) -> Option<i64> {
+    let bare = match name.split_once(" (") {
+        Some((head, _)) => head.trim(),
+        None => name.trim(),
+    };
+
     for (id, source, text) in sources {
-        if source.trim().eq_ignore_ascii_case(name) && text.contains(wanted) {
+        let source = source.trim();
+
+        if (source.eq_ignore_ascii_case(name.trim()) || source.eq_ignore_ascii_case(bare)) && text.contains(wanted) {
             return Some(*id);
         }
     }
@@ -332,10 +340,11 @@ mod tests {
         let proposed = [
             ("st".to_owned(), "Its TSF filters\npackets.".to_owned()),
             ("IXIT".to_owned(), "Its TSF filters packets.".to_owned()),
+            ("ST (version 1.0)".to_owned(), "Its TSF filters packets.".to_owned()),
         ];
         let quotes = quotes_found(&db, &unit, &proposed).unwrap();
 
-        assert_eq!(quotes.found.len(), 1);
+        assert_eq!(quotes.found.len(), 2);
         assert_eq!(quotes.missing, [proposed[1].clone()]);
     }
 
