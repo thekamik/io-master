@@ -116,7 +116,7 @@ fn unit_at<'a>(units: &'a [WorkUnit], positions: &[usize], index: usize) -> Resu
 /// The error of a position outside the work units of the plan, which the
 /// order of the work never gives.
 ///
-/// Called by: [`taken_in_order`], [`unit_at`].
+/// Called by: [`taken_in_order`], [`unit_at`], [`work_order`].
 fn outside(position: usize) -> DomainError {
     DomainError::Refused(format!("the order of the work: the position {position} is outside the plan"))
 }

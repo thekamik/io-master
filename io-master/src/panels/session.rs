@@ -219,10 +219,9 @@ impl Session {
 
     /// Whether the user asked the long work to stop.
     ///
-    /// Called by: `panels/views/chat/chats.rs`: `forwarded` (while an answer
-    /// streams); a filling and an assessment read the same field before each
-    /// step (`objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `assess_evaluation`,
-    /// `fill_plan`).
+    /// Called by: `panels/views/chat/chats.rs`: `forwarded`, while an answer
+    /// streams. A filling and an assessment read the same field themselves,
+    /// before each step, through the lock of the progress.
     /// Calls: [`Session::progress`].
     pub fn stop_requested(&self) -> Result<bool, SessionBroken> {
         Ok(self.progress()?.stop)

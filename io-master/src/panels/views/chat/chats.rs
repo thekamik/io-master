@@ -104,7 +104,7 @@ pub struct ChatAnswerView {
 /// Output: its view (`MessageView { speaker: "user", text: "...", time:
 /// 1793577600 }`).
 ///
-/// Called by: [`chat_view`], [`chat_ask`].
+/// Called by: [`chat_view`], [`written`].
 fn message_view(message: Message) -> MessageView {
     let speaker = match message.speaker {
         Speaker::User => "user",

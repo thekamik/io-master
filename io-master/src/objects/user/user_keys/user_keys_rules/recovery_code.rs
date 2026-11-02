@@ -81,14 +81,15 @@ impl fmt::Debug for RecoveryCode {
 impl RecoveryCode {
     /// The code of these random bytes.
     ///
-    /// Called by: `recovery.rs` (`new_code`), and the tests.
+    /// Called by: [`RecoveryCode::parse`]; `objects/user/user_keys/user_keys_rules/recovery.rs`:
+    /// `new_code`; the tests.
     pub fn from_bytes(bytes: [u8; CODE_BYTES]) -> RecoveryCode {
         RecoveryCode { bytes: Zeroizing::new(bytes) }
     }
 
     /// The bytes of the code, for the derivation of its key.
     ///
-    /// Called by: `recovery.rs`.
+    /// Called by: `objects/user/user_keys/user_keys_rules/recovery.rs`.
     pub fn expose(&self) -> &[u8; CODE_BYTES] {
         &self.bytes
     }

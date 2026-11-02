@@ -126,7 +126,7 @@ pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillP
 ///
 /// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillProgress`, from
 /// `ui/src/views/evaluation_plan/PlanFill.svelte`, while a filling runs and when it is shown.
-/// Calls: `progress.rs`: `progress_of`.
+/// Calls: `panels/views/progress.rs`: `progress_of`.
 #[tauri::command]
 pub fn plan_fill_progress(session: State<'_, Session>, plan: i64) -> Result<Option<ProgressView>, ViewError> {
     progress_of(&session, plan)

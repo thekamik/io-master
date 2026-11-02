@@ -139,7 +139,7 @@ pub async fn evaluation_assess(session: State<'_, Session>, id: i64, again: bool
 ///
 /// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationAssessProgress`, from
 /// `ui/src/views/evaluation/EvaluationRun.svelte`, while an assessment runs and when it is shown.
-/// Calls: `progress.rs`: `progress_of`.
+/// Calls: `panels/views/progress.rs`: `progress_of`.
 #[tauri::command]
 pub fn evaluation_assess_progress(session: State<'_, Session>, id: i64) -> Result<Option<ProgressView>, ViewError> {
     progress_of(&session, id)

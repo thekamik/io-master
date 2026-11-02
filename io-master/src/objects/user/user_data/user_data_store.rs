@@ -104,7 +104,7 @@ fn user_of(row: &Row<'_>) -> Result<User, DbError> {
 /// program did not write).
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `installed_user`,
-/// `log_in`.
+/// `find_user`.
 /// Calls: [`user_of`].
 pub fn read_users(system: &SystemDatabase) -> Result<Vec<User>, DbError> {
     let mut statement = system.connection().prepare("SELECT id, name, created FROM users ORDER BY id")?;

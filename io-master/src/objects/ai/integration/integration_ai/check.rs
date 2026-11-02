@@ -18,7 +18,7 @@ const CHECK_QUESTION: &str = "Reply with the word OK.";
 /// integration missing, its address refused, no key where its protocol needs
 /// one).
 ///
-/// Called by: `panels/views/settings/integrations.rs` (the check).
+/// Called by: `panels/views/settings/integrations.rs`: `integration_check`.
 /// Calls: `objects/ai/integration/integration_ai/question.rs`: `prepare`.
 pub fn check_question(db: &UserDatabase, id: i64) -> Result<Prepared, AiError> {
     let question = Question {

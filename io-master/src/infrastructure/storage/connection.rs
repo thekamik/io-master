@@ -33,8 +33,8 @@ const BUSY_TIMEOUT: Duration = Duration::from_secs(5);
 /// Output: nothing; the database holds every table of `tables`. An error of
 /// SQLite when a statement fails.
 ///
-/// Called by: `user_database.rs`: `UserDatabase::from`;
-/// `system_database.rs`: `SystemDatabase::from`.
+/// Called by: `infrastructure/storage/user_database.rs`: `UserDatabase::from`;
+/// `infrastructure/storage/system_database.rs`: `SystemDatabase::from`.
 pub(in crate::infrastructure::storage) fn prepare(connection: &Connection, tables: &[&str]) -> Result<(), DbError> {
     ensure!(!tables.is_empty(), DbError::Inconsistent("a database prepared without its tables".to_owned()));
 

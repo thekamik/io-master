@@ -38,9 +38,9 @@ const MAX_CALLS: usize = 64;
 /// Linux system does not happen).
 ///
 /// Called by: `infrastructure/storage/encryption/generate_key.rs`:
-/// `generate_database_key`; `objects/user/user_keys/user_keys_rules/password.rs`:
-/// `wrap`; `objects/user/user_keys/user_keys_rules/recovery.rs`: `new_code`,
-/// `wrap`; the tests.
+/// `generate_database_key`; `objects/user/user_data/user_data_rules.rs`: `install`;
+/// `objects/user/user_keys/user_keys_rules/password.rs`: `wrap`;
+/// `objects/user/user_keys/user_keys_rules/recovery.rs`: `new_code`, `wrap`; the tests.
 pub fn fill_random(buffer: &mut [u8]) -> io::Result<()> {
     ensure!(buffer.len() <= MAX_BYTES, io::Error::other(format!("more than {MAX_BYTES} random bytes asked for")));
 

@@ -26,11 +26,14 @@ pub const MAX_NAME: usize = 200;
 /// Output: the text trimmed ("Router R7"); `DomainError::Refused` ("the
 /// product is missing", "the product over 200 characters").
 ///
-/// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`,
-/// `add_document_place`; `evaluation_plan_rules/evaluation.rs`:
-/// `new_evaluation`; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
-/// `add_proof_place`; `objects/evaluation/product_document/product_document_store.rs`:
-/// `give_document`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `give_proof`.
+/// Called by: `objects/ai/agent/agent_rules.rs`: `checked`; `objects/ai/chat/chat_rules.rs`:
+/// `new_chat`, `rename_chat`, `checked_question`; `objects/ai/rag/rag_rules.rs`: `add_base`,
+/// `change_base`, `add_source`, `rename_source`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `new_evaluation`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`,
+/// `add_document_place`; `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`;
+/// `objects/evaluation/product_document/product_document_rules.rs`: `give_document`;
+/// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`.
 pub fn checked_text(text: &str, what: &str, limit: usize) -> Result<String, DomainError> {
     let text = text.trim();
 
