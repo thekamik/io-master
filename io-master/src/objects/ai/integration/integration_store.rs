@@ -85,7 +85,7 @@ fn check_integration(integration: &Integration) -> Result<(), DbError> {
 /// ([`check_integration`]), when the user has [`MAX_INTEGRATIONS`] already,
 /// or when its name is taken (`UNIQUE`).
 ///
-/// Called by: `integration_rules/settings.rs`: `add_integration`.
+/// Called by: `objects/ai/integration/integration_rules/settings.rs`: `add_integration`.
 /// Calls: [`check_integration`], [`protocol_name`].
 pub fn create_integration(db: &UserDatabase, integration: &Integration) -> Result<i64, DbError> {
     ensure!(integration.id == 0, DbError::Inconsistent("a new integration has an id already".to_owned()));
@@ -144,7 +144,7 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
 /// `objects/ai/api_key/api_key_store.rs`: `origin_of`;
 /// `objects/ai/agent/agent_rules.rs`: `checked`, `new_agent`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`;
-/// `integration_rules/settings.rs`: `activate_integration`,
+/// `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`,
 /// `change_integration`, `set_key`; `panels/views/agents/agent.rs`:
 /// `agent_list`.
 /// Calls: [`integration_of`].
@@ -199,7 +199,7 @@ pub fn read_integrations(db: &UserDatabase) -> Result<Vec<Integration>, DbError>
 /// its name is taken, or `DbError::NoRow` when there is no integration
 /// `integration.id`.
 ///
-/// Called by: `integration_rules/settings.rs`: `change_integration`.
+/// Called by: `objects/ai/integration/integration_rules/settings.rs`: `change_integration`.
 /// Calls: [`check_integration`], [`protocol_name`].
 pub fn update_integration(db: &UserDatabase, integration: &Integration) -> Result<(), DbError> {
     check_integration(integration)?;

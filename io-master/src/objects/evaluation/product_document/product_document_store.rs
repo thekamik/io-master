@@ -70,7 +70,7 @@ pub fn create_product_document(db: &UserDatabase, document: &ProductDocument) ->
 ///
 /// Output: the id of the document; an error when it has an id or no name.
 ///
-/// Called by: [`create_product_document`]; `evaluation_plan_store.rs`:
+/// Called by: [`create_product_document`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
 /// `copied_places`.
 pub(in crate::objects::evaluation) fn insert_product_document(
     connection: &Connection,
@@ -95,7 +95,7 @@ pub(in crate::objects::evaluation) fn insert_product_document(
 /// Output: the document (its file `None` while the place is only reserved);
 /// `DbError::NoRow` when there is none.
 ///
-/// Called by: [`update_product_document`]; `evaluation_plan_store.rs`:
+/// Called by: [`update_product_document`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
 /// `copied_places`; `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`;
 /// `objects/evaluation/product_document/product_document_rules.rs`: `give_document`;
 /// `panels/logic/evaluation/inputs.rs`: `inputs`;

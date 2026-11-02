@@ -154,8 +154,8 @@ fn check_plan(plan: &EvaluationPlan) -> Result<(), DbError> {
 /// stored (foreign key) or comes twice (`UNIQUE`).
 ///
 /// Called by: [`insert_plan`], [`update_evaluation_plan`].
-/// Calls: `infrastructure/storage/lists.rs`: `write_id_list`, `position`; `work_unit_store.rs`:
-/// `verdict_name`.
+/// Calls: `infrastructure/storage/lists.rs`: `write_id_list`, `position`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `verdict_name`.
 fn write_lists(connection: &Connection, id: i64, plan: &EvaluationPlan) -> Result<(), DbError> {
     write_id_list(
         connection,
@@ -294,7 +294,7 @@ fn plan_of(row: &Row<'_>) -> Result<EvaluationPlan, DbError> {
 /// `MAX_VERDICTS` (a database the program did not write).
 ///
 /// Called by: [`read_lists`].
-/// Calls: `work_unit_store.rs`: `verdict_of`.
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `verdict_of`.
 fn read_verdicts(connection: &Connection, id: i64) -> Result<Vec<Verdict>, DbError> {
     let mut statement = connection
         .prepare("SELECT verdict FROM evaluation_plan_verdicts WHERE evaluation_plan = :id ORDER BY position")?;
@@ -596,8 +596,8 @@ fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
 /// units still empty. An error when a document or a proof is not stored.
 ///
 /// Called by: [`create_evaluation`].
-/// Calls: `product_document_store.rs`: `read_product_document`,
-/// `insert_product_document`; `lab_proof_store.rs`: `read_lab_proof`,
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
+/// `insert_product_document`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`,
 /// `insert_lab_proof`; [`mapped`].
 fn copied_places(
     db: &UserDatabase,
@@ -658,9 +658,9 @@ fn copied_places(
 /// ```
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `new_evaluation`.
-/// Calls: [`read_evaluation_plan`], `work_unit_store.rs`: `read_work_units`;
+/// Calls: [`read_evaluation_plan`], `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
 /// [`copied_places`], [`all_mapped`], [`insert_plan`], [`copied_unit`],
-/// `work_unit_store.rs`: `insert_work_unit`, `write_dependencies`; [`mapped`].
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `insert_work_unit`, `write_dependencies`; [`mapped`].
 pub fn create_evaluation(
     db: &UserDatabase,
     source: i64,

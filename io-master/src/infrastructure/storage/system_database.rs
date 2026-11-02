@@ -46,7 +46,7 @@ impl SystemDatabase {
     /// SQLite when a table cannot be made.
     ///
     /// Called by: [`create`], [`open`].
-    /// Calls: `connection.rs`: `prepare`.
+    /// Calls: `infrastructure/storage/connection.rs`: `prepare`.
     fn from(connection: Connection, tables: &[&str]) -> Result<SystemDatabase, DbError> {
         prepare(&connection, tables)?;
 

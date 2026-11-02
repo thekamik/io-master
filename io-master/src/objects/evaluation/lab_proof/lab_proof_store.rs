@@ -51,7 +51,7 @@ pub fn create_lab_proof(db: &UserDatabase, proof: &LabProof) -> Result<i64, DbEr
 ///
 /// Output: the id of the proof; an error when it has an id or no name.
 ///
-/// Called by: [`create_lab_proof`]; `evaluation_plan_store.rs`: `copied_places`.
+/// Called by: [`create_lab_proof`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `copied_places`.
 pub(in crate::objects::evaluation) fn insert_lab_proof(
     connection: &Connection,
     proof: &LabProof,
@@ -82,7 +82,7 @@ pub(in crate::objects::evaluation) fn insert_lab_proof(
 /// Output: the proof (its text `None` while the place is only reserved);
 /// `DbError::NoRow` when there is none.
 ///
-/// Called by: [`update_lab_proof`]; `evaluation_plan_store.rs`: `copied_places`;
+/// Called by: [`update_lab_proof`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `copied_places`;
 /// `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`;
 /// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `proofs_text`, `unit_json`;

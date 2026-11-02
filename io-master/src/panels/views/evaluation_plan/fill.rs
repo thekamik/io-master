@@ -74,8 +74,8 @@ async fn fill(session: &Session, task: FillTask, plan: i64) -> Result<(), ViewEr
 /// [`fill`].
 /// Output: as [`fill`].
 ///
-/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFill`, from `ui/src/views/evaluation_plan/PlanFill.svelte`,
-/// "Fill parameters".
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillParameters`, from
+/// `ui/src/views/evaluation_plan/PlanFill.svelte`, "Fill parameters".
 /// Calls: [`fill`].
 #[tauri::command]
 pub async fn plan_fill_parameters(session: State<'_, Session>, plan: i64) -> Result<(), ViewError> {
@@ -90,8 +90,8 @@ pub async fn plan_fill_parameters(session: State<'_, Session>, plan: i64) -> Res
 /// [`fill`].
 /// Output: as [`fill`].
 ///
-/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFill`, from `ui/src/views/evaluation_plan/PlanFill.svelte`,
-/// "Fill dependencies".
+/// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillDependencies`, from
+/// `ui/src/views/evaluation_plan/PlanFill.svelte`, "Fill dependencies".
 /// Calls: [`fill`].
 #[tauri::command]
 pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> Result<(), ViewError> {

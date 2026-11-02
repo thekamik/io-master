@@ -204,11 +204,18 @@ export function planFillPreview(plan: number): Promise<FillPreviewView> {
 /** The two tasks of "Fill with AI", each its own command. */
 export type FillTask = "parameters" | "dependencies";
 
-/** Fills every work unit of a plan with the agent of its planner: every
- * parameter but the dependencies, or the dependencies only; ends when the
- * filling ends. Its steps are read with planFillProgress. Called by PlanFill.svelte. */
-export function planFill(task: FillTask, plan: number): Promise<void> {
-  return invoke(task === "parameters" ? "plan_fill_parameters" : "plan_fill_dependencies", { plan });
+/** Fills every parameter but the dependencies of every work unit of a plan
+ * with the agent of its planner; ends when the filling ends. Its steps are
+ * read with planFillProgress. Called by PlanFill.svelte. */
+export function planFillParameters(plan: number): Promise<void> {
+  return invoke("plan_fill_parameters", { plan });
+}
+
+/** Fills the dependencies of every work unit of a plan with the agent of its
+ * planner; ends when the filling ends. Its steps are read with
+ * planFillProgress. Called by PlanFill.svelte. */
+export function planFillDependencies(plan: number): Promise<void> {
+  return invoke("plan_fill_dependencies", { plan });
 }
 
 /** The progress of the last filling of a plan; null when there was none

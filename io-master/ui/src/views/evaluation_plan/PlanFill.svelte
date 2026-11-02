@@ -18,7 +18,8 @@
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";
   import {
-    planFill,
+    planFillDependencies,
+    planFillParameters,
     planFillPreview,
     planFillProgress,
     planFillStop,
@@ -93,7 +94,12 @@
     started = task;
 
     try {
-      await planFill(task, plan);
+      // Each task is its own command.
+      if (task === "parameters") {
+        await planFillParameters(plan);
+      } else {
+        await planFillDependencies(plan);
+      }
     } catch (error) {
       problem = sentence(error);
     } finally {

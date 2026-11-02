@@ -103,7 +103,7 @@ const COLUMNS: &str = "id, reference, label, oscal_key, requirement, guidance, c
 /// The name of a verdict in the database (`Verdict::Fail` → "fail").
 ///
 /// Called by: [`check_links`], [`insert_work_unit`], [`update_work_unit`];
-/// `evaluation_plan_store.rs`: `write_lists` (the verdicts of a plan).
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `write_lists` (the verdicts of a plan).
 pub(in crate::objects::evaluation) fn verdict_name(verdict: Verdict) -> &'static str {
     match verdict {
         Verdict::Pass => "pass",
@@ -116,7 +116,7 @@ pub(in crate::objects::evaluation) fn verdict_name(verdict: Verdict) -> &'static
 /// never writes is `DbError::Corrupt`, naming the table and the column it
 /// was read from.
 ///
-/// Called by: [`unit_of`]; `evaluation_plan_store.rs`: `read_verdicts`.
+/// Called by: [`unit_of`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_verdicts`.
 pub(in crate::objects::evaluation) fn verdict_of(
     table: &'static str,
     column: &'static str,
@@ -309,7 +309,7 @@ fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), 
 /// Output: nothing; an error when there are more than [`MAX_DEPENDENCIES`],
 /// when it depends on itself, or when a dependency is not stored.
 ///
-/// Called by: `evaluation_plan_store.rs`: `create_evaluation`.
+/// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `create_evaluation`.
 /// Calls: `infrastructure/storage/lists.rs`: `check_length`, `write_id_list`.
 pub(in crate::objects::evaluation) fn write_dependencies(
     connection: &Connection,
@@ -361,7 +361,7 @@ pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result
 /// [`MAX_WORK_UNITS`] already, or when its control is in the plan already
 /// (`UNIQUE`).
 ///
-/// Called by: [`create_work_unit`]; `evaluation_plan_store.rs`: `create_evaluation`.
+/// Called by: [`create_work_unit`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `create_evaluation`.
 /// Calls: [`check_lists`], [`check_links`], [`verdict_name`], [`author_name`],
 /// [`write_lists`].
 pub(in crate::objects::evaluation) fn insert_work_unit(
@@ -566,7 +566,7 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
 /// Output: the work units; an error when the plan has more than
 /// [`MAX_WORK_UNITS`] (a database the program did not write).
 ///
-/// Called by: `evaluation_plan_store.rs`: `create_evaluation`;
+/// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `create_evaluation`;
 /// `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`;
 /// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `question_of`;

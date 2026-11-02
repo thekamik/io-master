@@ -16,7 +16,6 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 ## Reminders
 
-- **One function of the page per command** (found 2026-11-02): `ui/src/lib/api/evaluation_plan.ts`: `planFill` calls two commands, `plan_fill_parameters` and `plan_fill_dependencies`, by its argument; `CLAUDE.md` asks for one function per command, named as the command. To part it in two (`planFillParameters`, `planFillDependencies`) with the user.
 - **Repeated reading of the documents for the quotes** (found 2026-11-02): `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes` reads and spaces every document of the work unit once for each quote (`check_quote` calls `quotes_found` with one quote); `assessment_question.rs`: `unit_json` reads a document once for each quote. To measure with a real evaluation; then read each document once.
 
 - **The parts of a control beyond its statement and guidance** (2026-11-01): the catalog of ETSI TS 103 701 (`testing_documents/`) has no part `guidance`; its parts `test-units`, `assessment-method` and `assignment-of-verdict` are kept in the stored catalog but reach no work unit (`objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `control_of` takes only `statement` and `guidance`). To decide whether and how a work unit shows them.
