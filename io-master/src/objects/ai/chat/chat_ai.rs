@@ -210,6 +210,7 @@ mod tests {
 
     use super::*;
 
+    use crate::objects::ai::agent::agent_model::Agent;
     use crate::objects::ai::agent::agent_store::create_agent;
     use crate::objects::ai::chat::chat_model::Chat;
     use crate::objects::ai::chat::chat_rules::{add_question, new_chat};
@@ -248,7 +249,7 @@ mod tests {
             work_unit: None,
             system: String::new(),
             messages,
-            max_answer_tokens: 16_000,
+            max_answer_tokens: 100,
         };
         // 300 tokens for the question, about 900 characters: the last
         // question fits, the first question and its answer with it do not.
@@ -301,7 +302,8 @@ mod tests {
         // 400 tokens: 100 for the answer, 300 for the question (900
         // characters at most, the instructions of the agent among them).
         let small = create_integration(&db, &Integration { context_size: 400, ..integration() }).unwrap();
-        let chat = new_chat(&db, "x", create_agent(&db, &agent(small)).unwrap()).unwrap();
+        let brief = Agent { max_answer_tokens: 100, ..agent(small) };
+        let chat = new_chat(&db, "x", create_agent(&db, &brief).unwrap()).unwrap();
 
         for _ in 0..3 {
             add_question(&db, chat, &"q".repeat(200)).unwrap();

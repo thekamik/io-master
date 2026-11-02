@@ -32,8 +32,9 @@ pub struct Agent {
     /// The most characters of its knowledge given with one question.
     pub max_characters: u32,
 
-    /// The longest answer it asks for, in tokens; at most a fourth of the
-    /// context of its integration (user, 2026-11-02).
+    /// The longest answer it asks for, in tokens, asked whole: a question
+    /// that does not fit beside it into the context of its integration is
+    /// refused (user, 2026-11-02).
     pub max_answer_tokens: u32,
 
     /// How its message to the model is laid out (the system prompt):

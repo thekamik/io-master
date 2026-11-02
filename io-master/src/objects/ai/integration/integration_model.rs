@@ -31,8 +31,12 @@ pub struct Integration {
     pub context_size: u32,
 
     /// How many characters of a text the model reads as one token, on
-    /// average: the estimate by which a question is measured against the
-    /// context (user, 2026-11-02).
+    /// average (user, 2026-11-02). The tokens are counted by the service, each
+    /// model by its own tokenizer; this is only the estimate by which the
+    /// program measures a question against `context_size` before it is sent,
+    /// a guard against a local server that shortens a question over its
+    /// context in silence. Fewer characters than the model uses err on the
+    /// safe side: a question is refused rather than cut.
     pub characters_per_token: u32,
 }
 

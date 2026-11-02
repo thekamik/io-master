@@ -4,11 +4,14 @@
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::chat::chat_model::{Message, Speaker};
-use crate::objects::ai::integration::integration_ai::question::{MAX_ANSWER_TOKENS, Prepared, Question, prepare};
+use crate::objects::ai::integration::integration_ai::question::{Prepared, Question, prepare};
 use crate::objects::ai_error::AiError;
 
-/// The question that checks an integration.
+/// The question that checks an integration, and the longest answer it asks
+/// for: a word, with room for a model that thinks before it answers, small
+/// enough for the smallest context.
 const CHECK_QUESTION: &str = "Reply with the word OK.";
+const CHECK_ANSWER_TOKENS: u32 = 256;
 
 /// The question that checks the integration `id`, prepared.
 ///
@@ -27,7 +30,7 @@ pub fn check_question(db: &UserDatabase, id: i64) -> Result<Prepared, AiError> {
         work_unit: None,
         system: String::new(),
         messages: vec![Message { speaker: Speaker::User, text: CHECK_QUESTION.to_owned(), time: 0 }],
-        max_answer_tokens: MAX_ANSWER_TOKENS,
+        max_answer_tokens: CHECK_ANSWER_TOKENS,
     };
 
     prepare(db, &question)

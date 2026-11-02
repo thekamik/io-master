@@ -29,10 +29,10 @@ use crate::objects::ai::integration::integration_rules::address::check_address;
 use crate::objects::ai::integration::integration_store::read_integration;
 use crate::objects::ai_error::AiError;
 
-/// The longest answer of a question without an agent (the check of an
-/// integration), and the one [`needed_context`] counts, in tokens; a question
-/// of an agent asks for the longest answer of its agent
-/// (`Agent::max_answer_tokens`).
+/// The answer [`needed_context`] counts beside an ST of 100 pages, in tokens:
+/// the longest answer of a new agent (`objects/ai/agent/agent_rules.rs`:
+/// `NEW_ANSWER_TOKENS`). A question asks for the longest answer of its agent
+/// (`Agent::max_answer_tokens`), never less.
 pub const MAX_ANSWER_TOKENS: u32 = 16_000;
 
 /// The most messages of one question.
@@ -85,8 +85,8 @@ pub struct Question {
     pub system: String,
     /// The conversation; its last message is the user's.
     pub messages: Vec<Message>,
-    /// The longest answer asked for, in tokens: that of the agent, or
-    /// [`MAX_ANSWER_TOKENS`] without one; at most a fourth of the context.
+    /// The longest answer asked for, in tokens: that of the agent, or that
+    /// of the check of an integration; asked whole, never lowered.
     pub max_answer_tokens: u32,
 }
 
@@ -102,18 +102,17 @@ pub struct Prepared {
     pub(in crate::objects::ai) time: i64,
 }
 
-/// The longest answer asked of the integration: a fourth of its context, at
-/// most `limit` (the agent's), at least one token.
-///
-/// Called by: [`check_size`], [`prepare`], [`context_warning`].
-fn answer_tokens(integration: &Integration, limit: u32) -> u32 {
-    (integration.context_size / 4).min(limit).max(1)
-}
-
 /// Refuses a question that does not fit into the context of the model
-/// beside its answer, estimated by `Integration::characters_per_token`: a
-/// question that does not fit is refused rather than shortened by the
-/// service in silence.
+/// beside its whole answer (`limit`, the agent's, never lowered in silence).
+///
+/// The tokens are counted by the service, each model by its own tokenizer;
+/// the program only estimates them, by `Integration::characters_per_token`,
+/// as a guard before the question is sent (user, 2026-11-02): a local
+/// server (Ollama, llama.cpp) shortens a question over its context in
+/// silence, and the model would judge a document it did not read whole. A
+/// question that does not fit is refused here instead, and the caller gives
+/// the documents as their passages or leaves the oldest messages of a chat
+/// out.
 ///
 /// Input: `integration`, the integration asked; `system`, the instructions;
 /// `turns`, the conversation; `limit`, the longest answer asked for.
@@ -121,7 +120,6 @@ fn answer_tokens(integration: &Integration, limit: u32) -> u32 {
 /// room (`{ estimated: 9000, room: 6000 }`) when it does not.
 ///
 /// Called by: [`prepare`].
-/// Calls: [`answer_tokens`].
 fn check_size(integration: &Integration, system: &str, turns: &[Turn], limit: u32) -> Result<(), AiError> {
     let mut characters = system.chars().count();
 
@@ -137,7 +135,7 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn], limit: u3
     );
 
     let estimated = u64::try_from(characters).unwrap_or(u64::MAX).div_ceil(u64::from(integration.characters_per_token));
-    let room = u64::from(integration.context_size.saturating_sub(answer_tokens(integration, limit)));
+    let room = u64::from(integration.context_size.saturating_sub(limit));
 
     ensure!(estimated <= room, AiError::TooLong { estimated, room });
 
@@ -161,7 +159,7 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn], limit: u3
 /// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
 /// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`; `objects/ai/api_key/api_key_store.rs`:
 /// `read_api_key`; `objects/ai/integration/integration_rules/address.rs`: `check_address`;
-/// `objects/ai/integration/integration_ai/turns.rs`: `turns`; [`check_size`], [`answer_tokens`];
+/// `objects/ai/integration/integration_ai/turns.rs`: `turns`; [`check_size`];
 /// `objects/ai/integration/integration_ai/protocol.rs`: `needs_key`, `body`; `infrastructure/clock.rs`: `now`.
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
     ensure!(
@@ -184,13 +182,7 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
     check_size(&integration, &question.system, &turns, question.max_answer_tokens)?;
 
     let time = now().map_err(|error| AiError::Refused(error.to_string()))?;
-    let body = body(
-        integration.protocol,
-        &integration.model,
-        &question.system,
-        &turns,
-        answer_tokens(&integration, question.max_answer_tokens),
-    );
+    let body = body(integration.protocol, &integration.model, &question.system, &turns, question.max_answer_tokens);
     let request = Request {
         url: integration.url,
         ca_certificate: integration.ca_certificate,
@@ -219,7 +211,7 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_list`,
 /// `integration_check`.
-/// Calls: [`needed_context`], [`answer_tokens`].
+/// Calls: [`needed_context`].
 pub fn context_warning(integration: &Integration) -> Option<String> {
     let context = u64::from(integration.context_size);
     let Some(needed) = needed_context(integration) else {
@@ -232,7 +224,7 @@ pub fn context_warning(integration: &Integration) -> Option<String> {
 
     // The pages left after the answer, the task, the requirement and the
     // knowledge: the pages of the documents the model can read whole.
-    let room = context.saturating_sub(u64::from(answer_tokens(integration, MAX_ANSWER_TOKENS)) + TASK_TOKENS);
+    let room = context.saturating_sub(u64::from(MAX_ANSWER_TOKENS) + TASK_TOKENS);
     let pages = (room * u64::from(integration.characters_per_token) / PAGE_CHARACTERS).saturating_sub(OTHER_PAGES);
 
     Some(format!(
@@ -257,7 +249,7 @@ mod tests {
         let small = Integration { context_size: 32_768, ..integration() };
         let warning = context_warning(&small).unwrap();
 
-        assert!(warning.contains("(32768 tokens) holds about 20 pages") && warning.contains("needs 120000"));
+        assert!(warning.contains("(32768 tokens) holds about 12 pages") && warning.contains("needs 120000"));
         assert!(context_warning(&Integration { context_size: 128_000, ..integration() }).is_none());
         assert_eq!(needed_context(&integration()), Some(120_000));
         assert_eq!(needed_context(&Integration { characters_per_token: 4, ..integration() }), Some(94_500));
@@ -271,7 +263,7 @@ mod tests {
             work_unit: Some(7),
             system: "Be brief.".to_owned(),
             messages: vec![Message { speaker: Speaker::User, text: text.to_owned(), time: 0 }],
-            max_answer_tokens: 16_000,
+            max_answer_tokens: 100,
         }
     }
 
