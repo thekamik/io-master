@@ -34,7 +34,7 @@ const MAX_TERM: usize = 500;
 
 /// The fewest characters of knowledge an agent gives: less than one
 /// passage would give nothing whole.
-const MIN_CHARACTERS: u32 = 1500;
+pub const MIN_CHARACTERS: u32 = 1500;
 
 /// The limits of a new agent: a few passages, a few pages of text.
 const NEW_PASSAGES: u32 = 8;
@@ -43,7 +43,7 @@ const NEW_CHARACTERS: u32 = 12_000;
 /// The longest answer a new agent asks for, in tokens, and the shortest one
 /// an agent may ask for: less leaves no room for an assessment.
 const NEW_ANSWER_TOKENS: u32 = 16_000;
-const MIN_ANSWER_TOKENS: u32 = 256;
+pub const MIN_ANSWER_TOKENS: u32 = 256;
 
 /// The instructions of a new agent, to be made its own by the user.
 const NEW_INSTRUCTIONS: &str = "You are an experienced evaluator of the security of products. Use the knowledge \

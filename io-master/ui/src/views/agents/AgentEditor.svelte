@@ -32,9 +32,10 @@
   let instructions = $state("");
   let bases: number[] = $state([]);
   let glossary: TermView[] = $state([]);
-  let maxPassages = $state(8);
-  let maxCharacters = $state(12000);
-  let maxAnswerTokens = $state(16000);
+  // The numbers come from the agent read; the page holds none of its own.
+  let maxPassages: number | null = $state(null);
+  let maxCharacters: number | null = $state(null);
+  let maxAnswerTokens: number | null = $state(null);
   let systemTemplate = $state("");
   let knowledgeTemplate = $state("");
   let passageTemplate = $state("");
@@ -80,7 +81,8 @@
     problem = "";
     busy = true;
 
-    if (role === null) {
+    // Nothing is sent until the agent is read and every number given.
+    if (role === null || maxPassages === null || maxCharacters === null || maxAnswerTokens === null) {
       busy = false;
       return;
     }
@@ -183,14 +185,31 @@
 
       <h3>Limits of one question</h3>
       <div class="row">
-        <label>Passages, at most <input type="number" min="1" max="50" bind:value={maxPassages} required /></label>
+        <label>
+          Passages, at most
+          <input type="number" min="1" max={view.limits.maxPassages} step="1" bind:value={maxPassages} required />
+        </label>
         <label>
           Characters, at most
-          <input type="number" min="1500" max="40000" step="1" bind:value={maxCharacters} required />
+          <input
+            type="number"
+            min={view.limits.minCharacters}
+            max={view.limits.maxCharacters}
+            step="1"
+            bind:value={maxCharacters}
+            required
+          />
         </label>
         <label>
           Answer, at most (tokens)
-          <input type="number" min="256" max="64000" step="1" bind:value={maxAnswerTokens} required />
+          <input
+            type="number"
+            min={view.limits.minAnswerTokens}
+            max={view.limits.maxAnswerTokens}
+            step="1"
+            bind:value={maxAnswerTokens}
+            required
+          />
         </label>
       </div>
 
@@ -205,11 +224,25 @@
         <div class="row">
           <label>
             Passages of the documents, at most (when they do not fit whole)
-            <input type="number" min="1" max="50" bind:value={role.documentPassages} required />
+            <input
+              type="number"
+              min="1"
+              max={view.limits.maxDocumentPassages}
+              step="1"
+              bind:value={role.documentPassages}
+              required
+            />
           </label>
           <label>
             Findings of a dependency, at most (characters)
-            <input type="number" min="0" max="20000" step="1" bind:value={role.dependencyFindings} required />
+            <input
+              type="number"
+              min="0"
+              max={view.limits.maxDependencyFindings}
+              step="1"
+              bind:value={role.dependencyFindings}
+              required
+            />
           </label>
         </div>
       {:else if role !== null && role.kind === "planner"}
@@ -219,7 +252,14 @@
         <label>Task of the dependencies <textarea rows="5" bind:value={role.dependenciesTask}></textarea></label>
         <label>
           Line about another work unit, at most (characters)
-          <input type="number" min="1" max="2000" step="1" bind:value={role.summaryCharacters} required />
+          <input
+            type="number"
+            min="1"
+            max={view.limits.maxSummaryCharacters}
+            step="1"
+            bind:value={role.summaryCharacters}
+            required
+          />
         </label>
       {:else if role !== null}
         <h3>The role: chat</h3>

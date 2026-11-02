@@ -55,6 +55,19 @@ export interface RoleView {
   functionalKind: string;
 }
 
+/** The limits of the numbers of an agent and its role, as the program
+ * checks them (agent.rs, AgentLimitsView). */
+export interface AgentLimitsView {
+  maxPassages: number;
+  minCharacters: number;
+  maxCharacters: number;
+  minAnswerTokens: number;
+  maxAnswerTokens: number;
+  maxDocumentPassages: number;
+  maxDependencyFindings: number;
+  maxSummaryCharacters: number;
+}
+
 /** An integration or a knowledge base to choose (agent.rs, ChoiceView). */
 export interface ChoiceView {
   id: number;
@@ -84,6 +97,7 @@ export interface AgentView {
   role: RoleView;
   /** Each placeholder a template needs and does not hold; saved all the same. */
   warnings: string[];
+  limits: AgentLimitsView;
   integrations: ChoiceView[];
   bases: ChoiceView[];
 }

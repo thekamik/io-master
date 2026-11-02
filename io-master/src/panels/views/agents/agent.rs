@@ -14,12 +14,18 @@ use tauri::State;
 
 use crate::objects::ai::agent::agent_ai::agent_knowledge;
 use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
-use crate::objects::ai::agent::agent_rules::{MAX_INSTRUCTIONS, agent_warnings, change_agent, new_agent};
-use crate::objects::ai::agent::agent_store::{MAX_TEMPLATE, read_agent, read_agents};
+use crate::objects::ai::agent::agent_rules::{
+    MAX_INSTRUCTIONS, MIN_ANSWER_TOKENS, MIN_CHARACTERS, agent_warnings, change_agent, new_agent,
+};
+use crate::objects::ai::agent::agent_store::{
+    MAX_ANSWER_TOKENS, MAX_CHARACTERS, MAX_TEMPLATE, read_agent, read_agents,
+};
 use crate::objects::ai::agent_roles::agent_roles_model::{AgentRole, EvaluatorRole, PlannerRole};
-use crate::objects::ai::agent_roles::agent_roles_store::{MAX_TASK, role_name};
+use crate::objects::ai::agent_roles::agent_roles_store::{
+    MAX_DEPENDENCY_FINDINGS, MAX_DOCUMENT_PASSAGES, MAX_SUMMARY_CHARACTERS, MAX_TASK, role_name,
+};
 use crate::objects::ai::integration::integration_store::{read_integration, read_integrations};
-use crate::objects::ai::rag::rag_store::read_knowledge_bases;
+use crate::objects::ai::rag::rag_store::{MAX_FOUND, read_knowledge_bases};
 use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
@@ -85,6 +91,21 @@ pub struct RoleView {
     functional_kind: String,
 }
 
+/// The limits of the numbers of an agent and of its role, as the program
+/// checks them (user, 2026-11-02: the page holds no number of its own).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AgentLimitsView {
+    max_passages: usize,
+    min_characters: u32,
+    max_characters: u32,
+    min_answer_tokens: u32,
+    max_answer_tokens: u32,
+    max_document_passages: u32,
+    max_dependency_findings: u32,
+    max_summary_characters: u32,
+}
+
 /// A choice of the editor: an integration or a knowledge base.
 #[derive(Serialize)]
 pub struct ChoiceView {
@@ -119,6 +140,7 @@ pub struct AgentView {
     /// Each placeholder a template needs and does not hold ("the template of
     /// the message has no {task}"): saved all the same (user, 2026-11-02).
     warnings: Vec<String>,
+    limits: AgentLimitsView,
     /// Every integration of the user ("name · model").
     integrations: Vec<ChoiceView>,
     /// Every knowledge base of the user.
@@ -360,9 +382,10 @@ pub fn agent_create(
 ///
 /// Input: `session`, the session of the window, someone logged in; `id`, the id
 /// of an agent.
-/// Output: the agent with what its editor offers and the warnings of its
-/// templates (`{"id": 3, "name": ..., "role": {"kind": "evaluator", ...},
-/// "warnings": [], "integrations": [...], "bases": [...]}`);
+/// Output: the agent with what its editor offers, the warnings of its
+/// templates and the limits of its numbers (`{"id": 3, "name": ..., "role":
+/// {"kind": "evaluator", ...}, "warnings": [], "limits": {...},
+/// "integrations": [...], "bases": [...]}`);
 /// `ViewError::NotLoggedIn` when nobody is logged in, an error of the
 /// database.
 ///
@@ -411,6 +434,16 @@ pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, View
         passage_template: agent.passage_template,
         role: role_view(agent.role),
         warnings,
+        limits: AgentLimitsView {
+            max_passages: MAX_FOUND,
+            min_characters: MIN_CHARACTERS,
+            max_characters: MAX_CHARACTERS,
+            min_answer_tokens: MIN_ANSWER_TOKENS,
+            max_answer_tokens: MAX_ANSWER_TOKENS,
+            max_document_passages: MAX_DOCUMENT_PASSAGES,
+            max_dependency_findings: MAX_DEPENDENCY_FINDINGS,
+            max_summary_characters: MAX_SUMMARY_CHARACTERS,
+        },
         integrations,
         bases,
     })
