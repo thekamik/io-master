@@ -96,7 +96,7 @@ pub(in crate::objects::evaluation) fn insert_product_document(
 /// `DbError::NoRow` when there is none.
 ///
 /// Called by: [`update_product_document`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
-/// `copied_places`; `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`;
+/// `copied_places`; `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`;
 /// `objects/evaluation/product_document/product_document_rules.rs`: `give_document`;
 /// `panels/logic/evaluation/inputs.rs`: `inputs`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`, `unit_json`;
@@ -260,7 +260,7 @@ fn check_indexed(connection: &Connection, id: i64) -> Result<(), DbError> {
 /// Output: the text; empty while the file is not given; the errors of
 /// [`check_indexed`] for a document missing or a file without passages.
 ///
-/// Called by: `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`;
+/// Called by: `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`.
 /// Calls: [`check_indexed`].
 pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError> {

@@ -143,6 +143,12 @@ export interface QuoteView {
   text: string;
 }
 
+/** A quote of a proof of the laboratory (work_units.rs, ProofQuoteView). */
+export interface ProofQuoteView {
+  proof: number;
+  text: string;
+}
+
 /** The last question of the AI about a work unit (work_units.rs, JournalView). */
 export interface JournalView {
   time: number;
@@ -161,13 +167,14 @@ export interface UnitView {
   guidance: string;
   dependencies: NamedView[];
   documents: NamedView[];
-  proofs: string[] | null;
+  proofs: NamedView[] | null;
   agent: string;
   findings: string;
   analysis: string;
   vulnerabilityNotes: string;
   notes: string;
   quotes: QuoteView[];
+  proofQuotes: ProofQuoteView[];
   verdict: VerdictName | null;
   author: "ai" | "user" | null;
   verdicts: VerdictName[];
@@ -181,6 +188,7 @@ export interface ResultsFields {
   vulnerabilityNotes: string;
   notes: string;
   quotes: QuoteView[];
+  proofQuotes: ProofQuoteView[];
   /** Empty for none. */
   verdict: VerdictName | "";
 }

@@ -245,6 +245,7 @@ pub fn apply_assessment(
         vulnerability_notes: assessment.vulnerability_notes.clone(),
         notes: joined(&assessment.notes, &added),
         quotes: quotes.found,
+        proof_quotes: quotes.proofs_found,
         verdict: Some(verdict),
         author: Some(Author::Ai),
         ..this

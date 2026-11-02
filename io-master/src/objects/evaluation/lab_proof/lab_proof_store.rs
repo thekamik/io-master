@@ -89,7 +89,8 @@ pub(in crate::objects::evaluation) fn insert_lab_proof(
 /// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`;
 /// `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `current_parameters`,
 /// `proof_named`; `panels/views/evaluation/work_units.rs`: `needs_of`;
-/// `panels/views/evaluation_plan/work_units.rs`: `work_unit_get`.
+/// `panels/views/evaluation_plan/work_units.rs`: `work_unit_get`;
+/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`, `check_proof_quotes`.
 pub fn read_lab_proof(db: &UserDatabase, id: i64) -> Result<LabProof, DbError> {
     let connection = db.connection();
     let mut statement =

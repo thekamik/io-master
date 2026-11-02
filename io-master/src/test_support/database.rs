@@ -69,6 +69,7 @@ pub fn unit(plan: &EvaluationPlan, label: &str) -> WorkUnit {
         vulnerability_notes: String::new(),
         notes: String::new(),
         quotes: Vec::new(),
+        proof_quotes: Vec::new(),
         verdict: None,
         author: None,
     }
@@ -122,6 +123,7 @@ pub fn node(id: i64, dependencies: &[i64]) -> WorkUnit {
         vulnerability_notes: String::new(),
         notes: String::new(),
         quotes: Vec::new(),
+        proof_quotes: Vec::new(),
         verdict: None,
         author: None,
     }

@@ -195,6 +195,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the rules of the data**:
   - `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`
+  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_proof_quotes`, `quote_sources`
 - **Processed, the AI**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `proofs_text`, `unit_json`
@@ -242,7 +243,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the rules of the data**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`
   - `objects/evaluation/product_document/product_document_rules.rs`: `give_document`
-  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes`, `quotes_found`
+  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes`, `quote_sources`
 - **Processed, the AI**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`, `unit_json`
@@ -265,7 +266,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlanWorkUnits.svelte` ← `plan_get`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`
 
-### `objects/evaluation/work_unit/work_unit_model.rs`: `WorkUnit`, `Verdict`, `Author`, `Quote`
+### `objects/evaluation/work_unit/work_unit_model.rs`: `WorkUnit`, `Verdict`, `Author`, `Quote`, `ProofQuote`
 
 - **Stored** (`objects/evaluation/work_unit/work_unit_store.rs`): `create_work_unit`, `read_work_unit`, `read_work_units`, `update_work_unit`, `delete_work_unit`
 - **Processed, the rules of the data**:
@@ -275,7 +276,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_all_work_units`, `add_work_unit`, `available_controls`, `holds`, `remove_work_unit`, `unit_of`
   - `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`, `update_work_unit_parameters`
-  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quote`, `check_quotes`, `quotes_found`, `save_results`
+  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_proof_quotes`, `check_quote`, `check_quotes`, `place_of`, `quote_sources`, `quotes_found`, `save_results`
 - **Processed, the AI**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`, `units_in_order`, `units_to_assess`
   - `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assess_work_unit`, `prepared_question`, `written`

@@ -76,7 +76,8 @@ and a requirement met in other words or in another place is met.\n\n\
 The documents of the product and the proofs of the laboratory (the record of each test: who performed it, when and \
 with what) given in the question are the evidence. The knowledge given above, if any, is help in reading the \
 requirement: interpretations of the standard come first, then examples of earlier evaluations and the guidance of \
-the laboratory; it is never evidence about this product.\n\n";
+the laboratory; it is never evidence about this product. In the quotes, \"document\" may also be the name of a proof \
+given.\n\n";
 
 /// The name of a verdict, as the question and the answer write it:
 /// `Verdict::Pass` is "pass".

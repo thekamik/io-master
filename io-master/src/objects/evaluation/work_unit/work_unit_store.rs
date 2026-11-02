@@ -12,14 +12,15 @@
 //! work_unit_dependencies   (work_unit, position, depends_on)       the dependencies
 //! work_unit_documents      (work_unit, position, product_document) input_product_documents
 //! work_unit_proofs         (work_unit, position, lab_proof)        input_functional
-//! work_unit_quotes         (work_unit, position, product_document, text)  the quotes
+//! work_unit_quotes         (work_unit, position, product_document, text)  the quotes of its documents
+//! work_unit_proof_quotes   (work_unit, position, lab_proof, text)         the quotes of its proofs
 //! ```
 //!
 //! What a work unit names must hold together with its plan (checked at
 //! every write, [`check_links`]): its standard is one of the standards of
 //! the plan, its documents are documents of the plan, its dependencies
 //! are work units of the plan, its verdict is one the plan knows, and
-//! each quote is taken from one of its documents. **The planning of a work
+//! each quote is taken from one of its documents or of its proofs. **The planning of a work
 //! unit of an evaluation is never changed** (user, 2026-10-30): once its plan
 //! is no more in planning, only its results are written ([`check_frozen`]).
 
@@ -28,7 +29,7 @@ use rusqlite::{Connection, Row, named_params};
 use crate::infrastructure::storage::error::DbError;
 use crate::infrastructure::storage::lists::{check_length, position, read_id_list, write_id_list};
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::evaluation::work_unit::work_unit_model::{Author, Quote, Verdict, WorkUnit};
+use crate::objects::evaluation::work_unit::work_unit_model::{Author, ProofQuote, Quote, Verdict, WorkUnit};
 
 /// The most work units of one plan (the CEM has 813).
 pub const MAX_WORK_UNITS: usize = 5000;
@@ -94,6 +95,14 @@ pub const SCHEMA: &str = "
         text             TEXT NOT NULL,
         PRIMARY KEY (work_unit, position)
     );
+
+    CREATE TABLE IF NOT EXISTS work_unit_proof_quotes (
+        work_unit INTEGER NOT NULL REFERENCES work_units(id) ON DELETE CASCADE,
+        position  INTEGER NOT NULL,
+        lab_proof INTEGER NOT NULL REFERENCES lab_proofs(id),
+        text      TEXT NOT NULL,
+        PRIMARY KEY (work_unit, position)
+    );
 ";
 
 /// The columns every read of a work unit selects.
@@ -153,8 +162,8 @@ fn author_of(name: &str) -> Result<Author, DbError> {
 }
 
 /// Refuses a work unit whose lists do not hold together: longer than their
-/// limits, a dependency on itself, or a quote of a document it does not
-/// use.
+/// limits, a dependency on itself, or a quote of a document or a proof it
+/// does not use.
 ///
 /// Input: `unit`, the work unit to be stored.
 ///
@@ -168,6 +177,7 @@ fn check_lists(unit: &WorkUnit) -> Result<(), DbError> {
     check_length(unit.input_product_documents.len(), MAX_DOCUMENTS, "documents of a work unit")?;
     check_length(unit.input_functional.as_ref().map_or(0, Vec::len), MAX_PROOFS, "proofs of a work unit")?;
     check_length(unit.quotes.len(), MAX_QUOTES, "quotes of a work unit")?;
+    check_length(unit.proof_quotes.len(), MAX_QUOTES, "quotes of the proofs of a work unit")?;
 
     ensure!(
         !unit.dependencies.contains(&unit.id),
@@ -178,6 +188,13 @@ fn check_lists(unit: &WorkUnit) -> Result<(), DbError> {
         ensure!(
             unit.input_product_documents.contains(&quote.product_document),
             DbError::Inconsistent(format!("a quote of {} from a document it does not use", unit.label))
+        );
+    }
+
+    for quote in &unit.proof_quotes {
+        ensure!(
+            unit.input_functional.as_deref().unwrap_or_default().contains(&quote.lab_proof),
+            DbError::Inconsistent(format!("a quote of {} from a proof it does not use", unit.label))
         );
     }
 
@@ -246,8 +263,8 @@ fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<()
 }
 
 /// Writes the lists of the work unit `id` anew: its dependencies, its
-/// documents and its proofs (lists of ids) and its quotes (a list of
-/// values). Run inside the transaction of its caller.
+/// documents and its proofs (lists of ids) and its quotes. Run inside the
+/// transaction of its caller.
 ///
 /// Input: `connection`, the open database inside a transaction; `id`, the id
 /// of the work unit; `unit`, its lists, checked by [`check_lists`] and
@@ -257,7 +274,7 @@ fn check_links(connection: &Connection, plan: i64, unit: &WorkUnit) -> Result<()
 /// (foreign key) or comes twice (`UNIQUE`).
 ///
 /// Called by: [`insert_work_unit`], [`update_work_unit`].
-/// Calls: `infrastructure/storage/lists.rs`: `write_id_list`, `position`.
+/// Calls: `infrastructure/storage/lists.rs`: `write_id_list`; [`write_quotes`].
 fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), DbError> {
     write_id_list(
         connection,
@@ -281,7 +298,23 @@ fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), 
         unit.input_functional.as_deref().unwrap_or_default(),
     )?;
 
+    write_quotes(connection, id, unit)
+}
+
+/// Writes the quotes of the work unit `id` anew: those of its documents and
+/// those of its proofs, each list in its order. Run inside the transaction
+/// of its caller.
+///
+/// Input: `connection`, the open database inside a transaction; `id`, the id
+/// of the work unit; `unit`, its quotes, checked by [`check_lists`].
+/// Output: nothing; an error of SQLite when a document or a proof is not
+/// stored (foreign key).
+///
+/// Called by: [`write_lists`].
+/// Calls: `infrastructure/storage/lists.rs`: `position`.
+fn write_quotes(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), DbError> {
     connection.execute("DELETE FROM work_unit_quotes WHERE work_unit = :id", named_params! { ":id": id })?;
+    connection.execute("DELETE FROM work_unit_proof_quotes WHERE work_unit = :id", named_params! { ":id": id })?;
 
     for (index, quote) in unit.quotes.iter().enumerate() {
         connection.execute(
@@ -293,6 +326,14 @@ fn write_lists(connection: &Connection, id: i64, unit: &WorkUnit) -> Result<(), 
                 ":document": quote.product_document,
                 ":text": quote.text,
             },
+        )?;
+    }
+
+    for (index, quote) in unit.proof_quotes.iter().enumerate() {
+        connection.execute(
+            "INSERT INTO work_unit_proof_quotes (work_unit, position, lab_proof, text)
+             VALUES (:id, :position, :proof, :text)",
+            named_params! { ":id": id, ":position": position(index)?, ":proof": quote.lab_proof, ":text": quote.text },
         )?;
     }
 
@@ -447,6 +488,7 @@ fn unit_of(row: &Row<'_>) -> Result<WorkUnit, DbError> {
         vulnerability_notes: row.get("vulnerability_notes")?,
         notes: row.get("notes")?,
         quotes: Vec::new(),
+        proof_quotes: Vec::new(),
         verdict: match verdict {
             Some(name) => Some(verdict_of("work_units", "verdict", &name)?),
             None => None,
@@ -484,6 +526,31 @@ fn read_quotes(connection: &Connection, id: i64) -> Result<Vec<Quote>, DbError> 
     Err(DbError::Inconsistent(format!("more than {MAX_QUOTES} quotes of a work unit in the database")))
 }
 
+/// Reads the quotes of the proofs of the work unit `id`, in their order.
+///
+/// Input: `connection`, the open database; `id`, the id of a work unit.
+/// Output: the quotes, each with its proof (`[ProofQuote { lab_proof: 6,
+/// text: "port 22 closed" }]`); `DbError::Inconsistent` for more than
+/// [`MAX_QUOTES`] in the database.
+///
+/// Called by: [`read_lists`].
+fn read_proof_quotes(connection: &Connection, id: i64) -> Result<Vec<ProofQuote>, DbError> {
+    let mut statement = connection
+        .prepare("SELECT lab_proof, text FROM work_unit_proof_quotes WHERE work_unit = :id ORDER BY position")?;
+    let mut rows = statement.query(named_params! { ":id": id })?;
+    let mut quotes = Vec::new();
+
+    for _ in 0..=MAX_QUOTES {
+        let Some(row) = rows.next()? else {
+            return Ok(quotes);
+        };
+
+        quotes.push(ProofQuote { lab_proof: row.get("lab_proof")?, text: row.get("text")? });
+    }
+
+    Err(DbError::Inconsistent(format!("more than {MAX_QUOTES} quotes of the proofs of a work unit in the database")))
+}
+
 /// Fills the lists of a work unit from their tables: its dependencies, its
 /// documents, its proofs (only for a functional test) and its quotes.
 ///
@@ -494,7 +561,7 @@ fn read_quotes(connection: &Connection, id: i64) -> Result<Vec<Quote>, DbError> 
 /// longer than its limit (a database the program did not write).
 ///
 /// Called by: [`read_work_unit`].
-/// Calls: `infrastructure/storage/lists.rs`: `read_id_list`; [`read_quotes`].
+/// Calls: `infrastructure/storage/lists.rs`: `read_id_list`; [`read_quotes`], [`read_proof_quotes`].
 fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbError> {
     unit.dependencies = read_id_list(
         connection,
@@ -519,6 +586,7 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
     }
 
     unit.quotes = read_quotes(connection, unit.id)?;
+    unit.proof_quotes = read_proof_quotes(connection, unit.id)?;
 
     Ok(())
 }

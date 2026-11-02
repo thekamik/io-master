@@ -30,7 +30,7 @@ use crate::objects::evaluation::product_document::product_document_model::Produc
 use crate::objects::evaluation::product_document::product_document_store::{
     insert_product_document, read_product_document,
 };
-use crate::objects::evaluation::work_unit::work_unit_model::{Quote, Verdict, WorkUnit};
+use crate::objects::evaluation::work_unit::work_unit_model::{ProofQuote, Quote, Verdict, WorkUnit};
 use crate::objects::evaluation::work_unit::work_unit_store::{
     MAX_WORK_UNITS, insert_work_unit, read_work_units, verdict_name, verdict_of, write_dependencies,
 };
@@ -568,6 +568,12 @@ fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
         });
     }
 
+    let mut proof_quotes = Vec::with_capacity(unit.proof_quotes.len());
+
+    for quote in &unit.proof_quotes {
+        proof_quotes.push(ProofQuote { lab_proof: mapped(&copies.proofs, quote.lab_proof)?, text: quote.text.clone() });
+    }
+
     Ok(WorkUnit {
         id: 0,
         input_product_documents: all_mapped(&copies.documents, &unit.input_product_documents)?,
@@ -576,6 +582,7 @@ fn copied_unit(unit: &WorkUnit, copies: &Copies) -> Result<WorkUnit, DbError> {
             None => None,
         },
         quotes,
+        proof_quotes,
         ..unit.clone()
     })
 }

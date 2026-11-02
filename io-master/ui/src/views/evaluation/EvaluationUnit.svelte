@@ -15,6 +15,7 @@
   import {
     evaluationUnitGet,
     evaluationUnitSave,
+    type ProofQuoteView,
     type QuoteView,
     type UnitView,
     type VerdictName,
@@ -35,6 +36,7 @@
   let vulnerabilityNotes = $state("");
   let notes = $state("");
   let quotes: QuoteView[] = $state([]);
+  let proofQuotes: ProofQuoteView[] = $state([]);
   let verdict: VerdictName | "" = $state("");
   let problem = $state("");
   let saved = $state("");
@@ -49,6 +51,7 @@
       vulnerabilityNotes = view.vulnerabilityNotes;
       notes = view.notes;
       quotes = view.quotes.map((quote) => ({ ...quote }));
+      proofQuotes = view.proofQuotes.map((quote) => ({ ...quote }));
       verdict = view.verdict ?? "";
     } catch (error) {
       problem = sentence(error);
@@ -61,7 +64,15 @@
     saved = "";
 
     try {
-      await evaluationUnitSave(evaluation, unit, { findings, analysis, vulnerabilityNotes, notes, quotes, verdict });
+      await evaluationUnitSave(evaluation, unit, {
+        findings,
+        analysis,
+        vulnerabilityNotes,
+        notes,
+        quotes,
+        proofQuotes,
+        verdict,
+      });
       saved = `Saved at ${new Date().toLocaleTimeString()}`;
       await reload();
     } catch (error) {
@@ -74,6 +85,14 @@
 
     if (first !== undefined) {
       quotes = [...quotes, { document: first.id, text: "" }];
+    }
+  }
+
+  function addProofQuote() {
+    const first = view?.proofs?.[0];
+
+    if (first !== undefined) {
+      proofQuotes = [...proofQuotes, { proof: first.id, text: "" }];
     }
   }
 
@@ -120,7 +139,11 @@
         {#each view.documents as one, index (one.id)}{index > 0 ? ", " : ""}{one.name} {one.detail ?? "(not given)"}{:else}none{/each}
       </dd>
       <dt>Proofs</dt>
-      <dd>{view.proofs === null ? "none: a work unit of the documentation" : view.proofs.join(", ")}</dd>
+      <dd>
+        {view.proofs === null
+          ? "none: a work unit of the documentation"
+          : view.proofs.map((proof) => proof.name).join(", ")}
+      </dd>
     </dl>
   </section>
 
@@ -163,6 +186,29 @@
       {/each}
       {#if view.documents.length > 0}
         <p><button type="button" class="ghost" onclick={addQuote}>+ A quote</button></p>
+      {/if}
+
+      {#if view.proofs !== null && view.proofs.length > 0}
+        <h3>Quotes of the proofs</h3>
+        <p class="note">Each word for word from its proof; one that is not found there is refused.</p>
+        {#each proofQuotes as quote, index (index)}
+          <div class="quote">
+            <select bind:value={quote.proof}>
+              {#each view.proofs as one (one.id)}
+                <option value={one.id}>{one.name}</option>
+              {/each}
+            </select>
+            <textarea bind:value={quote.text} rows="2"></textarea>
+            <button
+              type="button"
+              class="ghost"
+              onclick={() => (proofQuotes = proofQuotes.filter((_, at) => at !== index))}>Remove</button
+            >
+          </div>
+        {:else}
+          <p class="note">No quote of a proof.</p>
+        {/each}
+        <p><button type="button" class="ghost" onclick={addProofQuote}>+ A quote of a proof</button></p>
       {/if}
 
       <div class="buttons">

@@ -74,6 +74,7 @@ fn unit_of(standard: i64, control: &CatalogControl) -> WorkUnit {
         vulnerability_notes: String::new(),
         notes: String::new(),
         quotes: Vec::new(),
+        proof_quotes: Vec::new(),
         verdict: None,
         author: None,
     }

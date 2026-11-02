@@ -57,9 +57,9 @@ pub struct WorkUnit {
     pub ai_agent: Option<i64>,
 
     /// The results of the assessment of the work unit. `findings` holds
-    /// every fault, for the Observation Report: those the AI found in
-    /// the evidence, and each dependency that did not pass, written by
-    /// the program ("fail: its dependency ADV_ARC.1-1 failed").
+    /// every fault the assessment found in the evidence, for the
+    /// Observation Report; a dependency that did not pass is warned of in
+    /// `notes` ("Its dependency ADV_ARC.1-1 failed").
     pub findings: String,
     pub analysis: String,
     pub vulnerability_notes: String,
@@ -70,6 +70,11 @@ pub struct WorkUnit {
     /// checked by the program, never taken from the AI, so that a fault
     /// of the document is told from an invention of the model.
     pub quotes: Vec<Quote>,
+
+    /// The quotes of the proofs of the laboratory the assessment of a
+    /// functional test rests on (user, 2026-11-02), checked by the program
+    /// in the text of their proofs as the quotes of the documents are.
+    pub proof_quotes: Vec<ProofQuote>,
 
     /// The verdict of the assessment, one of the `possible_verdicts` of
     /// the plan; `None` while the work unit is not assessed. A work unit
@@ -112,6 +117,17 @@ pub struct Quote {
     /// The document it is taken from (`ProductDocument`), one of the
     /// `input_product_documents` of the work unit.
     pub product_document: i64,
+
+    /// The quote, word for word.
+    pub text: String,
+}
+
+/// A quote of a proof of the laboratory (user, 2026-11-02).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProofQuote {
+    /// The proof it is taken from (`LabProof`), one of the
+    /// `input_functional` of the work unit.
+    pub lab_proof: i64,
 
     /// The quote, word for word.
     pub text: String,

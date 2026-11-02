@@ -122,16 +122,16 @@ objects/evaluation/
                  evaluation_plan_ai.rs: the work units to assess (units_ready, the preview) and to fill
                  (fill_units, fill_preview); the loops assess_evaluation and fill_plan, a step per work unit, each
                  written into the progress, "Stop" read before each
-  work_unit/     work_unit_model.rs (WorkUnit, Quote, Verdict, Author), work_unit_store.rs,
+  work_unit/     work_unit_model.rs (WorkUnit, Quote, ProofQuote, Verdict, Author), work_unit_store.rs,
                  work_unit_rules/
                    parameters.rs: WorkUnitParameters, update_work_unit_parameters (then check_order);
                    add_proof_place
                    results.rs: Results, save_results (the results of the evaluator, of author User); quotes_found
-                   (a quote word for word in its document, for the evaluator and the AI alike)
+                   (a quote word for word in its document or proof, for the evaluator and the AI alike)
                  work_unit_ai/
                    assessment.rs (assess_work_unit: the question prepared, sent, the answer written),
                    assessment_question.rs, assessment_answer.rs (the answer read, the quotes checked, the verdict
-                   with the dependencies); filling.rs (fill_work_unit, FillTask), proposal.rs (the questions of the
+                   of the model kept, the dependencies warned of); filling.rs (fill_work_unit, FillTask), proposal.rs (the questions of the
                    parameters and of the dependencies, their answers read and written)
   product_document/  product_document_model.rs, product_document_store.rs,
                  product_document_rules.rs (document_file: .pdf, .txt, .md within its limit; document_text,

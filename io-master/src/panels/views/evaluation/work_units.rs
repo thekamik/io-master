@@ -23,7 +23,7 @@ use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::read_oscal_standard_document;
 use crate::objects::evaluation::product_document::product_document_store::read_product_document;
 use crate::objects::evaluation::work_unit::work_unit_ai::assessment_question::{assessing_agent, verdict_name};
-use crate::objects::evaluation::work_unit::work_unit_model::{Author, Quote, Verdict, WorkUnit};
+use crate::objects::evaluation::work_unit::work_unit_model::{Author, ProofQuote, Quote, Verdict, WorkUnit};
 use crate::objects::evaluation::work_unit::work_unit_rules::results::{Results, save_results};
 use crate::objects::evaluation::work_unit::work_unit_store::read_work_unit;
 use crate::panels::session::Session;
@@ -64,6 +64,13 @@ pub struct QuoteView {
     text: String,
 }
 
+/// A quote of a proof of the laboratory, as the page shows and sends it.
+#[derive(Serialize, Deserialize)]
+pub struct ProofQuoteView {
+    proof: i64,
+    text: String,
+}
+
 /// What a work unit needs, by names.
 struct Needs {
     /// Its dependencies with their verdicts.
@@ -71,7 +78,7 @@ struct Needs {
     /// Its documents with their versions.
     documents: Vec<NamedView>,
     /// Its proofs; `None` for a work unit of the documentation.
-    proofs: Option<Vec<String>>,
+    proofs: Option<Vec<NamedView>>,
 }
 
 /// The last question of the AI about a work unit and its answer.
@@ -98,13 +105,14 @@ pub struct UnitView {
     dependencies: Vec<NamedView>,
     documents: Vec<NamedView>,
     /// `None` for a work unit of the documentation.
-    proofs: Option<Vec<String>>,
+    proofs: Option<Vec<NamedView>>,
     agent: String,
     findings: String,
     analysis: String,
     vulnerability_notes: String,
     notes: String,
     quotes: Vec<QuoteView>,
+    proof_quotes: Vec<ProofQuoteView>,
     verdict: Option<&'static str>,
     author: Option<&'static str>,
     /// The verdicts the plan knows.
@@ -226,7 +234,7 @@ fn needs_of(db: &UserDatabase, unit: &WorkUnit) -> Result<Needs, ViewError> {
             let mut names = Vec::with_capacity(ids.len());
 
             for id in ids {
-                names.push(read_lab_proof(db, *id)?.name);
+                names.push(NamedView { id: *id, name: read_lab_proof(db, *id)?.name, detail: None });
             }
 
             Some(names)
@@ -260,10 +268,15 @@ fn unit_view(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> 
         ending: ending_name(entry.ending),
     });
     let mut quotes = Vec::with_capacity(unit.quotes.len());
+    let mut proof_quotes = Vec::with_capacity(unit.proof_quotes.len());
     let mut verdicts = Vec::with_capacity(evaluation.possible_verdicts.len());
 
     for quote in unit.quotes {
         quotes.push(QuoteView { document: quote.product_document, text: quote.text });
+    }
+
+    for quote in unit.proof_quotes {
+        proof_quotes.push(ProofQuoteView { proof: quote.lab_proof, text: quote.text });
     }
 
     for verdict in &evaluation.possible_verdicts {
@@ -285,6 +298,7 @@ fn unit_view(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> 
         vulnerability_notes: unit.vulnerability_notes,
         notes: unit.notes,
         quotes,
+        proof_quotes,
         verdict: unit.verdict.map(verdict_name),
         author: unit.author.map(author_name),
         verdicts,
@@ -346,6 +360,7 @@ pub struct ResultsFields {
     vulnerability_notes: String,
     notes: String,
     quotes: Vec<QuoteView>,
+    proof_quotes: Vec<ProofQuoteView>,
     /// "pass", "fail", "inconclusive", or empty for none.
     verdict: String,
 }
@@ -380,6 +395,10 @@ pub fn evaluation_unit_save(
         size += quote.text.len();
     }
 
+    for quote in &fields.proof_quotes {
+        size += quote.text.len();
+    }
+
     ensure!(size <= MAX_RESULTS_BYTES, ViewError::Invalid("the results are too long".to_owned()));
 
     ensure!(!session.is_working()?, ViewError::Invalid("the AI is working: save when it has ended".to_owned()));
@@ -390,12 +409,19 @@ pub fn evaluation_unit_save(
         quotes.push(Quote { product_document: quote.document, text: quote.text });
     }
 
+    let mut proof_quotes = Vec::with_capacity(fields.proof_quotes.len());
+
+    for quote in fields.proof_quotes {
+        proof_quotes.push(ProofQuote { lab_proof: quote.proof, text: quote.text });
+    }
+
     let results = Results {
         findings: fields.findings,
         analysis: fields.analysis,
         vulnerability_notes: fields.vulnerability_notes,
         notes: fields.notes,
         quotes,
+        proof_quotes,
         verdict: verdict_of(&fields.verdict)?,
     };
     let opened = session.lock()?;
