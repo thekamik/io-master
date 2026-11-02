@@ -213,17 +213,59 @@ pub fn update_product_document(
     Ok(())
 }
 
+/// Refuses a document whose file is given but whose text has no passages:
+/// the program writes the file and its passages in one transaction, so such
+/// a document comes from a database the program did not write (an earlier
+/// layout of the tables, a file changed outside the program). Without this
+/// check its text would read as empty, and the AI would assess an empty
+/// document.
+///
+/// Input: `connection`, the open database; `id`, the id of a document.
+/// Output: nothing for a place not given yet or a document with passages;
+/// `DbError::NoRow` for a document missing, `DbError::Corrupt` for a file
+/// without passages.
+///
+/// Called by: [`read_document_text`], [`read_document_passages`].
+fn check_indexed(connection: &Connection, id: i64) -> Result<(), DbError> {
+    let mut statement = connection.prepare(
+        "SELECT content IS NOT NULL AS given,
+                (SELECT count(*) FROM product_document_passages WHERE document = :id) AS passages
+         FROM product_documents WHERE id = :id",
+    )?;
+    let mut rows = statement.query(named_params! { ":id": id })?;
+    let Some(row) = rows.next()? else {
+        return Err(DbError::NoRow { table: "product_documents", id });
+    };
+    let given: bool = row.get("given")?;
+    let passages: i64 = row.get("passages")?;
+
+    ensure!(
+        !given || passages > 0,
+        DbError::Corrupt {
+            table: "product_document_passages",
+            column: "text",
+            value: format!("none for the given document {id}"),
+        }
+    );
+
+    Ok(())
+}
+
 /// Reads the text of a document as its index keeps it: its passages in
 /// their order, each on its own line (the spaces between the words of a
 /// passage are one), without reading the file again.
 ///
 /// Input: `db`, the open database of the user; `id`, the id of the document.
 ///
-/// Output: the text; empty while the file is not given.
+/// Output: the text; empty while the file is not given; the errors of
+/// [`check_indexed`] for a document missing or a file without passages.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`.
+/// Calls: [`check_indexed`].
 pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError> {
+    check_indexed(db.connection(), id)?;
+
     let mut statement = db.connection().prepare(
         "SELECT text FROM product_document_passages WHERE document = :id ORDER BY CAST(position AS INTEGER)",
     )?;
@@ -253,16 +295,23 @@ pub fn read_document_text(db: &UserDatabase, id: i64) -> Result<String, DbError>
 ///
 /// Output: at most `count` and at most `MAX_FOUND` passages, each with its
 /// document (`[(3, "The TOE protects ...")]`); none when the question has no
-/// word to look for.
+/// word to look for; the errors of [`check_indexed`] for a document missing
+/// or a file without passages.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`.
-/// Calls: `objects/ai/rag/rag_store.rs`: `query_of`.
+/// Calls: [`check_indexed`]; `objects/ai/rag/rag_store.rs`: `query_of`.
 pub fn read_document_passages(
     db: &UserDatabase,
     documents: &[i64],
     question: &str,
     count: usize,
 ) -> Result<Vec<(i64, String)>, DbError> {
+    // Every document is checked first, so that a file without passages is
+    // an error, never a search that finds nothing in it.
+    for document in documents {
+        check_indexed(db.connection(), *document)?;
+    }
+
     let Some(query) = query_of(question) else {
         return Ok(Vec::new());
     };
@@ -337,7 +386,29 @@ mod tests {
         assert_eq!(read_product_document(&db, id).unwrap(), given);
         assert_eq!(read_document_text(&db, id).unwrap(), "The TOE is a router.\nIts TSF filters packets.\n");
         assert_eq!(read_document_passages(&db, &[id], "packet filter", 5).unwrap().len(), 1);
-        assert!(read_document_passages(&db, &[id + 1], "packet", 5).unwrap().is_empty());
+        assert!(matches!(read_document_passages(&db, &[id + 1], "packet", 5), Err(DbError::NoRow { .. })));
+    }
+
+    #[test]
+    fn a_given_file_without_passages_is_refused_never_read_as_empty() {
+        let (_directory, db) = database();
+        let id = create_product_document(&db, &place()).unwrap();
+
+        // A place not given yet has no text, and that is no error.
+        assert_eq!(read_document_text(&db, id).unwrap(), "");
+
+        // A file written without its passages, as an earlier layout of the
+        // tables left it: the program itself never writes this.
+        db.connection()
+            .execute(
+                "UPDATE product_documents SET content = :content WHERE id = :id",
+                named_params! { ":content": vec![0x25_u8, 0x50, 0x44, 0x46], ":id": id },
+            )
+            .unwrap();
+
+        assert!(matches!(read_document_text(&db, id), Err(DbError::Corrupt { .. })));
+        assert!(matches!(read_document_passages(&db, &[id], "router", 5), Err(DbError::Corrupt { .. })));
+        assert!(matches!(read_document_text(&db, id + 1), Err(DbError::NoRow { .. })));
     }
 
     #[test]
