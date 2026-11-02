@@ -43,10 +43,16 @@ pub struct SseDecoder {
 }
 
 impl SseDecoder {
-    /// Reads the next piece of the stream; gives the events it completed,
-    /// in order. A line longer than [`MAX_LINE`] is an error.
+    /// Reads the next piece of the stream and gives the events it completed,
+    /// in order.
     ///
-    /// Called by: `connection.rs` (every piece of a streamed answer).
+    /// Input: `bytes`, the next piece as it came; the whole stream is bounded by
+    /// `MAX_STREAM` (`connection.rs`).
+    /// Output: the events completed (`[SseEvent { name: "message_stop", data:
+    /// "{...}" }]`), none while a line is incomplete; `AiError::UnexpectedAnswer`
+    /// for a line longer than [`MAX_LINE`].
+    ///
+    /// Called by: `objects/ai/integration/integration_ai/connection.rs`: `read_stream`.
     /// Calls: [`SseDecoder::line`].
     pub fn push(&mut self, bytes: &[u8]) -> Result<Vec<SseEvent>, AiError> {
         self.pending.extend_from_slice(bytes);
@@ -84,7 +90,11 @@ impl SseDecoder {
         Ok(events)
     }
 
-    /// Reads one line; gives the event an empty line ends.
+    /// Reads one line into the event being read.
+    ///
+    /// Input: `line`, one line of the stream without its line break.
+    /// Output: the event an empty line ends (`Some(SseEvent { .. })`); `None`
+    /// for a field, a comment, or an empty line with no fields before it.
     ///
     /// Called by: [`SseDecoder::push`].
     fn line(&mut self, line: &str) -> Option<SseEvent> {

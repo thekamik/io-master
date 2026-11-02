@@ -29,15 +29,23 @@ pub struct Sent(pub(in crate::objects::ai) Received);
 /// while it is written; stops when the receiver of `pieces` is dropped.
 /// Uses no database.
 ///
+/// Input: `prepared`, the question prepared; `pieces`, where each piece goes.
+/// Output: the answer as it came, readable only through
+/// `objects/ai/journal/journal_ai.rs`: `record`.
+///
 /// Called by: [`send_whole`]; `panels/views/chat/chats.rs`: `forwarded`, the
 /// lock of the session released.
-/// Calls: `connection.rs`: `send`.
+/// Calls: `objects/ai/integration/integration_ai/connection.rs`: `send`.
 pub async fn send(prepared: &Prepared, pieces: &mpsc::Sender<String>) -> Sent {
     Sent(connection::send(&prepared.request, pieces).await)
 }
 
 /// Sends the prepared question and drains the pieces of its answer: for a
 /// caller that wants the whole answer at once. Uses no database.
+///
+/// Input: `prepared`, the question prepared.
+/// Output: the answer as it came, readable only through
+/// `objects/ai/journal/journal_ai.rs`: `record`.
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_check`;
 /// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `fill_work_unit`;

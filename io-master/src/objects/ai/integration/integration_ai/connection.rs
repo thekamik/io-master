@@ -99,12 +99,16 @@ enum StreamEnd {
 }
 
 /// Sends the request and reads the answer, passing every piece of its text
-/// into `pieces`; stops when the receiver of `pieces` is dropped. Never
-/// fails as a whole: how it ended is in [`Received`], next to what was
-/// written until then.
+/// into `pieces`; stops when the receiver of `pieces` is dropped.
 ///
-/// Called by: `sending.rs`: `send`.
-/// Calls: [`exchange`], `objects/ai/api_key/api_key_ai.rs`: `masked`.
+/// Input: `request`, the request prepared (`question.rs`: `prepare`), its
+/// address checked again here; `pieces`, where each piece of text goes.
+/// Output: never fails as a whole: how it ended is in [`Received`], next to
+/// what was written until then (`Received { reading, stopped: false, error:
+/// None }`), its error with the key masked.
+///
+/// Called by: `objects/ai/integration/integration_ai/sending.rs`: `send`.
+/// Calls: [`exchange`]; `objects/ai/api_key/api_key_ai.rs`: `masked`.
 pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received {
     let mut reading = Reading::default();
 
@@ -116,11 +120,17 @@ pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received 
     }
 }
 
-/// The work of [`send`]; gives whether the caller stopped the answer.
+/// The work of [`send`]: the address checked, the request posted, the
+/// answer read as a stream.
+///
+/// Input: as [`send`]; `reading`, what was read of the answer so far.
+/// Output: whether the caller stopped the answer (`false`); an error for an
+/// address refused, a connection failed, a status that is no success, a
+/// broken or unreadable stream.
 ///
 /// Called by: [`send`].
-/// Calls: `integration_rules/address.rs`: `check_address`; [`http_client`], [`post`],
-/// [`read_error`], [`read_stream`].
+/// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`; [`http_client`],
+/// [`post`], [`read_error`], [`read_stream`]; `objects/ai_error.rs`: `from_status`.
 async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mut Reading) -> Result<bool, AiError> {
     check_address(&request.url)?;
 
@@ -152,8 +162,12 @@ async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mu
 /// Made for every request: an integration may have a CA certificate of its
 /// own, and the program asks few questions.
 ///
+/// Input: `request`, the request; its address and CA certificate are used.
+/// Output: the client; an error for a certificate refused, or when the
+/// library cannot make it.
+///
 /// Called by: [`exchange`].
-/// Calls: `integration_rules/address.rs`: `certificates`.
+/// Calls: `objects/ai/integration/integration_rules/address.rs`: `certificates`; [`explain`].
 fn http_client(request: &Request) -> Result<Client, AiError> {
     let mut builder = Client::builder()
         .https_only(request.url.starts_with("https://"))
@@ -176,8 +190,12 @@ fn http_client(request: &Request) -> Result<Client, AiError> {
 /// Sends the request: its headers (the key marked sensitive, so that it
 /// stays out of any debug output of the library) and its body.
 ///
+/// Input: `client`, made by [`http_client`]; `request`, the request.
+/// Output: the response, its body not read yet; `AiError::Address` for a key
+/// a header cannot carry, `AiError::NoConnection` when sending fails.
+///
 /// Called by: [`exchange`].
-/// Calls: `protocol.rs`: `key_headers`.
+/// Calls: `objects/ai/integration/integration_ai/protocol.rs`: `key_headers`; [`explain`].
 async fn post(client: &Client, request: &Request) -> Result<Response, AiError> {
     let headers = key_headers(request.protocol, request.key.as_deref().map(String::as_str))?;
     let mut builder = client.post(&request.url).header("content-type", "application/json");
@@ -195,8 +213,16 @@ async fn post(client: &Client, request: &Request) -> Result<Response, AiError> {
 
 /// Reads a streamed answer up to its end, passing each piece of text on.
 ///
+/// Input: `response`, a response with a success status; `protocol`, the
+/// protocol of the integration; `pieces`, where each piece goes; `reading`,
+/// what was read so far.
+/// Output: how the stream ended (`StreamEnd::Done`); an error for a broken
+/// connection, an answer over [`MAX_STREAM`] or in more than [`MAX_CHUNKS`]
+/// pieces, an event that cannot be read, an error the service reports.
+///
 /// Called by: [`exchange`].
-/// Calls: `SseDecoder::push`; `protocol.rs`: `read_event`.
+/// Calls: `objects/ai/integration/integration_ai/sse.rs`: `SseDecoder::push`;
+/// `objects/ai/integration/integration_ai/protocol.rs`: `read_event`; [`explain`].
 async fn read_stream(
     response: &mut Response,
     protocol: Protocol,
@@ -235,8 +261,11 @@ async fn read_stream(
 }
 
 /// Reads the body of an answer that is no success, at most [`MAX_ERROR`]
-/// bytes; what cannot be read is left out (the status still tells the
-/// kind).
+/// bytes.
+///
+/// Input: `response`, a response whose status is no success.
+/// Output: the bytes read (`b"{\"error\": ...}"`); what cannot be read is
+/// left out, as the status still tells the kind.
 ///
 /// Called by: [`exchange`].
 async fn read_error(response: &mut Response) -> Vec<u8> {
@@ -254,6 +283,10 @@ async fn read_error(response: &mut Response) -> Vec<u8> {
 
 /// The explanation of a failed connection: the error and its causes ("error
 /// sending request" alone says little).
+///
+/// Input: `error`, the error of the library.
+/// Output: the text ("error sending request: connection refused"); "no
+/// answer in time" for a timeout.
 ///
 /// Called by: [`http_client`], [`post`], [`read_stream`].
 fn explain(error: &reqwest::Error) -> String {

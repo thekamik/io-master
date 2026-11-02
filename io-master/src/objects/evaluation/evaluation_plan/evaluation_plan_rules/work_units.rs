@@ -25,8 +25,15 @@ use crate::objects::evaluation::work_unit::work_unit_store::{create_work_unit, d
 
 /// The controls of the standard `standard`, one of the standards of `plan`.
 ///
-/// Called by: [`add_work_unit`], [`add_all_work_units`].
-/// Calls: `read_oscal_standard_document`; `oscal_standard_document_rules.rs`:
+/// Input: `plan`, a stored plan; `standard`, the id of a stored standard.
+/// Output: its controls in the order of the standard (`[CatalogControl {
+/// label: "ADV_ARC.1-1", .. }, ...]`); `DomainError::Refused` for a standard
+/// not of the plan or not JSON, `DomainError::Oscal` for one that is no
+/// catalog.
+///
+/// Called by: [`available_controls`], [`add_work_unit`], [`add_all_work_units`].
+/// Calls: `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
+/// `read_oscal_standard_document`; `objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`:
 /// `catalog_controls`.
 fn controls_of(db: &UserDatabase, plan: &EvaluationPlan, standard: i64) -> Result<Vec<CatalogControl>, DomainError> {
     ensure!(
@@ -43,6 +50,10 @@ fn controls_of(db: &UserDatabase, plan: &EvaluationPlan, standard: i64) -> Resul
 
 /// A new work unit of the standard `standard` made from its control
 /// `control`: no dependencies, documents, proofs or agent yet.
+///
+/// Input: `standard`, the id of a standard of the plan; `control`, one of
+/// its controls.
+/// Output: the work unit, its id 0, to be created.
 ///
 /// Called by: [`add_work_unit`], [`add_all_work_units`].
 fn unit_of(standard: i64, control: &CatalogControl) -> WorkUnit {
@@ -71,7 +82,11 @@ fn unit_of(standard: i64, control: &CatalogControl) -> WorkUnit {
 /// Whether the plan holds the work unit of the control `oscal_key` of the
 /// standard `standard` already.
 ///
-/// Called by: [`add_work_unit`], [`add_all_work_units`].
+/// Input: `units`, the work units of the plan; `standard`, the id of a
+/// standard; `oscal_key`, the key of a control ("adv_arc.1-1").
+/// Output: `true` when one of `units` is that control.
+///
+/// Called by: [`available_controls`], [`add_work_unit`], [`add_all_work_units`].
 fn holds(units: &[WorkUnit], standard: i64, oscal_key: &str) -> bool {
     for unit in units {
         if unit.reference == standard && unit.oscal_key == oscal_key {
@@ -86,8 +101,14 @@ fn holds(units: &[WorkUnit], standard: i64, oscal_key: &str) -> bool {
 /// does not hold yet, in the order of the standard: what the planner may
 /// add.
 ///
+/// Input: `plan`, the id of a stored plan; `standard`, the id of one of its
+/// standards.
+/// Output: the controls (`[CatalogControl { label: "ADV_ARC.1-2", .. }]`);
+/// the errors of [`controls_of`], an error of the database.
+///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_controls`.
-/// Calls: `read_evaluation_plan`, [`controls_of`], `read_work_units`, [`holds`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// [`controls_of`]; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`holds`].
 pub fn available_controls(db: &UserDatabase, plan: i64, standard: i64) -> Result<Vec<CatalogControl>, DomainError> {
     let stored = read_evaluation_plan(db, plan)?;
     let units = read_work_units(db, plan)?;
@@ -103,12 +124,17 @@ pub fn available_controls(db: &UserDatabase, plan: i64, standard: i64) -> Result
 }
 
 /// Adds to the plan `plan` the work unit of the control `oscal_key` of its
-/// standard `standard`, as its last. Refused when the plan holds it already.
-/// Gives its id.
+/// standard `standard`, as its last.
+///
+/// Input: `plan`, the id of a plan in planning; `standard`, the id of one of
+/// its standards; `oscal_key`, the key of a control of it.
+/// Output: the id of the new work unit (`14`); `DomainError::Refused` when
+/// the plan holds it already, the standard has no such control, or the plan
+/// is not in planning; the errors of [`controls_of`].
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_add`.
-/// Calls: `planning.rs`: `plan_in_planning`, [`controls_of`], [`holds`], [`unit_of`],
-/// `create_work_unit`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`; [`controls_of`], [`holds`], [`unit_of`];
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `create_work_unit`.
 pub fn add_work_unit(db: &UserDatabase, plan: i64, standard: i64, oscal_key: &str) -> Result<i64, DomainError> {
     let stored = plan_in_planning(db, plan)?;
     let controls = controls_of(db, &stored, standard)?;
@@ -128,12 +154,16 @@ pub fn add_work_unit(db: &UserDatabase, plan: i64, standard: i64, oscal_key: &st
 }
 
 /// Adds to the plan `plan` every control of its standard `standard` it does
-/// not hold yet, in the order of the standard ("add all"). Gives how many
-/// were added.
+/// not hold yet, in the order of the standard ("add all").
+///
+/// Input: `plan`, the id of a plan in planning; `standard`, the id of one of
+/// its standards.
+/// Output: how many were added (`37`); the refusals of a plan not in
+/// planning, the errors of [`controls_of`].
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_add_all`.
-/// Calls: `planning.rs`: `plan_in_planning`, [`controls_of`], [`holds`], [`unit_of`],
-/// `create_work_unit`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`; [`controls_of`], [`holds`], [`unit_of`];
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `create_work_unit`.
 pub fn add_all_work_units(db: &UserDatabase, plan: i64, standard: i64) -> Result<usize, DomainError> {
     let stored = plan_in_planning(db, plan)?;
     let controls = controls_of(db, &stored, standard)?;
@@ -153,8 +183,14 @@ pub fn add_all_work_units(db: &UserDatabase, plan: i64, standard: i64) -> Result
 /// Removes the work unit `unit` from the plan `plan` in planning, with the
 /// dependencies of the others on it, and marks the cross references again.
 ///
+/// Input: `plan`, the id of a plan in planning; `unit`, the id of one of its
+/// work units.
+/// Output: nothing; `DomainError::Refused` for a work unit not of the plan
+/// or a plan not in planning, an error of the database.
+///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_remove`.
-/// Calls: `planning.rs`: `plan_in_planning`, `delete_work_unit`, `order.rs`: `check_order`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`; `objects/evaluation/work_unit/work_unit_store.rs`: `delete_work_unit`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`.
 pub fn remove_work_unit(db: &UserDatabase, plan: i64, unit: i64) -> Result<(), DomainError> {
     let stored = plan_in_planning(db, plan)?;
 

@@ -37,14 +37,20 @@ pub struct WorkUnitParameters {
 
 /// Gives the work unit `unit` of the plan `plan` in planning the
 /// `parameters` of the planner, and marks the cross references again. An
-/// empty list of proofs makes it a test of the documentation (`None`); the
-/// agent named must exist (`ai_agent`, the agent that will work on it).
+/// empty list of proofs makes it a test of the documentation (`None`).
+///
+/// Input: `plan`, the id of a plan in planning; `unit`, the id of one of its
+/// work units; `parameters`, as the planner or the AI gives them, the agent
+/// named a stored one.
+/// Output: nothing; `DomainError::Refused` for a plan not in planning or a
+/// work unit not of it, an error of the database for an agent missing or
+/// for links its store refuses.
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_save`
 /// (the form of a work unit); `objects/evaluation/work_unit/work_unit_ai/proposal.rs`:
 /// `apply_parameters`, `apply_dependencies` (proposed by the AI).
-/// Calls: `../evaluation_plan_rules/planning.rs`: `plan_in_planning`;
-/// `../evaluation_plan_rules/order.rs`: `check_order`;
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`;
 /// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/evaluation/work_unit/work_unit_store.rs`:
 /// `read_work_unit`, `update_work_unit`.
 pub fn update_work_unit_parameters(
@@ -80,12 +86,17 @@ pub fn update_work_unit_parameters(
     Ok(())
 }
 
-/// Reserves a new place of a proof of the laboratory (`name`: "results of
-/// the scan of the ports") for the work unit `unit` of the plan `plan`,
-/// which becomes a functional test. Gives the id of the place.
+/// Reserves a new place of a proof of the laboratory for the work unit
+/// `unit` of the plan `plan`, which becomes a functional test.
+///
+/// Input: `plan`, the id of a plan in planning; `unit`, the id of one of its
+/// work units; `name`, the name of the proof ("results of the scan of the
+/// ports").
+/// Output: the id of the place (`15`); `DomainError::Refused` for a plan not
+/// in planning, a work unit not of it or a name refused.
 ///
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_add_proof`.
-/// Calls: `../evaluation_plan_rules/planning.rs`: `plan_in_planning`;
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`;
 /// `objects/text.rs`: `checked_text`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `create_lab_proof`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`.
 pub fn add_proof_place(db: &UserDatabase, plan: i64, unit: i64, name: &str) -> Result<i64, DomainError> {

@@ -153,9 +153,12 @@ pub fn info(pdf: &[u8]) -> Result<PdfInfo, PdfError> {
     Ok(PdfInfo { pages, title: field(&text, "Title:") })
 }
 
-/// The value of the field `name` in what `pdfinfo` wrote: `field(text,
-/// "Pages:")` of a line "Pages:   471" is `Some("471")`; `None` when no line
-/// has the field or its value is empty.
+/// The value of the field `name` in what `pdfinfo` wrote.
+///
+/// Input: `text`, what `pdfinfo` wrote, a field a line; `name`, the field
+/// with its colon (`"Pages:"`).
+/// Output: its value without spaces around (`Some("471")` of a line
+/// "Pages:   471"); `None` when no line has the field or its value is empty.
 ///
 /// Called by: [`info`].
 fn field(text: &str, name: &str) -> Option<String> {
@@ -210,6 +213,11 @@ pub fn text_of_pages(pdf: &[u8], first: u32, last: u32) -> Result<Vec<String>, P
 
 /// The whole text of the PDF `pdf`, read by parts of [`PART`] pages, the
 /// pages parted by an empty line.
+///
+/// Input: `pdf`, the bytes of the PDF, within [`MAX_FILE`].
+/// Output: its text ("Page one...\n\nPage two..."); the errors of [`info`]
+/// and [`text_of_pages`], and `PdfError::Unreadable` when not every page
+/// was read.
 ///
 /// Called by: `objects/ai/rag/rag_rules.rs`: `source_text` (a source);
 /// `objects/evaluation/product_document/product_document_rules.rs`: `document_text` (a

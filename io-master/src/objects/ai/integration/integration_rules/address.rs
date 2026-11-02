@@ -30,9 +30,9 @@ const REFUSED: &str = "the address of the integration";
 /// with the reason otherwise ("the address of the integration: a password
 /// in the address").
 ///
-/// Called by: `settings.rs`: `checked` (an integration saved);
-/// `integration_ai/question.rs`: `prepare`; `integration_ai/connection.rs`:
-/// `exchange`.
+/// Called by: `objects/ai/integration/integration_rules/settings.rs`: `checked` (an
+/// integration saved); `objects/ai/integration/integration_ai/question.rs`: `prepare`;
+/// `objects/ai/integration/integration_ai/connection.rs`: `exchange`.
 pub fn check_address(url: &str) -> Result<(), DomainError> {
     let parsed = Url::parse(url).map_err(|error| DomainError::Refused(format!("{REFUSED}: {url}: {error}")))?;
     let local = matches!(parsed.host_str(), Some("127.0.0.1" | "[::1]" | "localhost"));
@@ -49,10 +49,14 @@ pub fn check_address(url: &str) -> Result<(), DomainError> {
     Ok(())
 }
 
-/// The certificates of a CA certificate in PEM; refused when it holds none
-/// or is no PEM.
+/// The certificates of a CA certificate in PEM.
 ///
-/// Called by: `integration_ai/connection.rs` (`http_client`); [`check_certificate`].
+/// Input: `pem`, the CA certificate as given, one or more PEM blocks.
+/// Output: its certificates; `DomainError::Refused` when it holds none or is
+/// no PEM.
+///
+/// Called by: `objects/ai/integration/integration_ai/connection.rs`: `http_client`;
+/// [`check_certificate`].
 pub(in crate::objects::ai::integration) fn certificates(pem: &str) -> Result<Vec<Certificate>, DomainError> {
     let certificates = Certificate::from_pem_bundle(pem.as_bytes())
         .map_err(|error| DomainError::Refused(format!("{REFUSED}: the CA certificate: {error}")))?;
@@ -67,7 +71,8 @@ pub(in crate::objects::ai::integration) fn certificates(pem: &str) -> Result<Vec
 
 /// Refuses a CA certificate the connection could not use.
 ///
-/// Called by: `settings.rs`: `checked` (an integration saved).
+/// Called by: `objects/ai/integration/integration_rules/settings.rs`: `checked` (an
+/// integration saved).
 /// Calls: [`certificates`].
 pub fn check_certificate(pem: &str) -> Result<(), DomainError> {
     certificates(pem)?;

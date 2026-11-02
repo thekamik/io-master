@@ -103,9 +103,15 @@ impl RecoveryCode {
 
     /// Reads a typed code: the letter case, spaces and dashes aside.
     ///
+    /// Input: `typed`, the code as typed ("abcde-fghjk-..."), at most
+    /// [`TYPED_MAX`] bytes.
+    /// Output: the code; `RecoveryCodeError::Length` for other than 35
+    /// characters, `RecoveryCodeError::Character` for a character no code has,
+    /// `RecoveryCodeError::Check` for a mistyped code.
+    ///
     /// Called by: `objects/user/user_data/user_data_rules.rs`: `recover`, when
     /// the code comes from the page.
-    /// Calls: [`value_of`], [`symbols`].
+    /// Calls: [`value_of`], [`bytes_of`], [`symbols`].
     pub fn parse(typed: &str) -> Result<RecoveryCode, RecoveryCodeError> {
         ensure!(typed.len() <= TYPED_MAX, RecoveryCodeError::Length);
 
@@ -135,6 +141,9 @@ impl RecoveryCode {
 /// The 35 values (0 to 31) of a code: its 160 bits five by five, then 15
 /// bits of SHA-256 of the bytes.
 ///
+/// Input: `bytes`, the 20 bytes of a code.
+/// Output: the values, wiped when dropped (`[3, 17, 30, ...]`).
+///
 /// Called by: [`RecoveryCode::to_text`], [`RecoveryCode::parse`].
 /// Calls: [`bits`].
 fn symbols(bytes: &[u8; CODE_BYTES]) -> Zeroizing<Vec<u8>> {
@@ -157,6 +166,9 @@ fn symbols(bytes: &[u8; CODE_BYTES]) -> Zeroizing<Vec<u8>> {
 /// The five bits of `bytes` that start at bit `offset` (the highest bit of
 /// the first byte is bit 0); bits past the end are zero.
 ///
+/// Input: `bytes`, the bytes of a code or of its check; `offset`, a bit.
+/// Output: the value, 0 to 31 (`bits(&[0b1010_1000], 0)` is 21).
+///
 /// Called by: [`symbols`].
 fn bits(bytes: &[u8], offset: usize) -> u8 {
     let mut value = 0u8;
@@ -172,6 +184,9 @@ fn bits(bytes: &[u8], offset: usize) -> u8 {
 }
 
 /// The 20 bytes written by the first 32 values of a code.
+///
+/// Input: `values`, the values typed, at least `DATA_CHARS`, each 0 to 31.
+/// Output: the bytes; `RecoveryCodeError::Length` for fewer values.
 ///
 /// Called by: [`RecoveryCode::parse`].
 fn bytes_of(values: &[u8]) -> Result<[u8; CODE_BYTES], RecoveryCodeError> {
@@ -190,17 +205,27 @@ fn bytes_of(values: &[u8]) -> Result<[u8; CODE_BYTES], RecoveryCodeError> {
     Ok(bytes)
 }
 
-/// The value of a typed character, or `None` when no code has it.
+/// The value of a typed character: `value_of('a')` is 8.
 ///
 /// Called by: [`RecoveryCode::parse`].
 fn value_of(character: char) -> Option<u8> {
     let upper = character.to_ascii_uppercase();
-    let position = ALPHABET.iter().position(|&letter| char::from(letter) == upper)?;
 
-    u8::try_from(position).ok()
+    // The values are counted as `u8` beside the 32 letters, so no
+    // conversion of a position can fail and be dropped.
+    for (value, letter) in (0u8..).zip(ALPHABET.iter()) {
+        if char::from(*letter) == upper {
+            return Some(value);
+        }
+    }
+
+    None
 }
 
 /// The values as characters, in groups of five joined by dashes.
+///
+/// Input: `values`, the 35 values of a code.
+/// Output: the text, wiped when dropped ("ABCDE-FGHJK-...").
 ///
 /// Called by: [`RecoveryCode::to_text`].
 fn group(values: &[u8]) -> Zeroizing<String> {

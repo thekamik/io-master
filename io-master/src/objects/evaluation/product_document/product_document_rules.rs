@@ -34,13 +34,13 @@ const MAX_VERSION: usize = 500;
 const PDF_SIGNATURE: &[u8] = b"%PDF-";
 
 /// The file `path` of a document of the product, as it is kept: a `.pdf`,
-/// `.txt` or `.md` file within its limit; refused for another kind.
+/// `.txt` or `.md` file within its limit.
 ///
+/// Input: `path`, a file chosen in the dialog of the page.
 /// Output: the bytes of the file; `DomainError::Refused` for another kind, a
 /// file over its limit, or one that cannot be read.
 ///
-/// Called by: `panels/views/evaluation/inputs.rs`: `evaluation_document_give`
-/// (a file chosen in the dialog).
+/// Called by: `panels/views/evaluation/inputs.rs`: `evaluation_document_give`.
 pub fn document_file(path: &Path) -> Result<Vec<u8>, DomainError> {
     let read = |error: std::io::Error| DomainError::Refused(format!("{}: {error}", path.display()));
     let extension = path.extension().and_then(|extension| extension.to_str()).unwrap_or_default().to_lowercase();
@@ -57,7 +57,12 @@ pub fn document_file(path: &Path) -> Result<Vec<u8>, DomainError> {
 }
 
 /// The text of the file `content` of a document: a PDF through Poppler,
-/// anything else as UTF-8; refused when it holds no text.
+/// anything else as UTF-8.
+///
+/// Input: `content`, the bytes of the file from [`document_file`].
+/// Output: its text ("1 Introduction ..."); `DomainError::Refused` for a
+/// file that is neither a PDF nor UTF-8 or holds no text,
+/// `DomainError::Pdf` for a PDF that cannot be read.
 ///
 /// Called by: [`give_document`].
 /// Calls: `infrastructure/pdf/poppler.rs`: `text`.
@@ -75,7 +80,12 @@ pub fn document_text(content: &[u8]) -> Result<String, DomainError> {
 }
 
 /// Gives the document `document` of the evaluation `evaluation` its file
-/// `content` and its version `version`. Refused unless the evaluation is in
+/// `content` and its version `version`.
+///
+/// Input: `evaluation`, the id of an evaluation in progress; `document`, the
+/// id of one of its places of documents; `content`, the file from
+/// [`document_file`]; `version`, the version typed ("1.2").
+/// Output: nothing; `DomainError::Refused` unless the evaluation is in
 /// progress, the place is one of its documents and the file holds a text;
 /// its store refuses a document given already.
 ///

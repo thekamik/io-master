@@ -31,7 +31,13 @@ const VERSION: &str = "2026-10-21";
 /// The body of a question: the instructions in the field `system`, the
 /// turns in `messages`, the answer at most `answer_tokens` long.
 ///
-/// Called by: `protocol.rs`: `body`.
+/// Input: `model`, the model of the integration ("claude-opus-5-5");
+/// `system`, the instructions, empty for none; `turns`, the conversation,
+/// the question last; `answer_tokens`, the longest answer.
+/// Output: the JSON of the body (`{"model": ..., "max_tokens": 4096,
+/// "stream": true, "messages": [...]}`).
+///
+/// Called by: `objects/ai/integration/integration_ai/protocol.rs`: `body`.
 pub fn body(model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Value {
     let mut messages = Vec::with_capacity(turns.len());
 
@@ -53,13 +59,16 @@ pub fn body(model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Va
 
 /// The headers of the key and of the version of the API.
 ///
-/// Called by: `protocol.rs`: `key_headers`.
+/// Called by: `objects/ai/integration/integration_ai/protocol.rs`: `key_headers`.
 pub fn key_headers(key: &str) -> [(&'static str, Zeroizing<String>); 2] {
     [("x-api-key", Zeroizing::new(key.to_owned())), ("anthropic-version", Zeroizing::new(VERSION.to_owned()))]
 }
 
-/// How the model ended, from `stop_reason`. A reason the program does not
-/// know (or `max_tokens`) is taken as cut: the answer may be incomplete.
+/// How the model ended, from its reason. A reason the program does not
+/// know is taken as cut: the answer may be incomplete.
+///
+/// Input: `reason`, the reason the service gave (`"end_turn"`, `"stop"`).
+/// Output: the ending (`Ending::Complete`).
 ///
 /// Called by: [`read_event`].
 fn ending_of(reason: &str) -> Ending {
@@ -80,11 +89,16 @@ fn tokens(value: Option<&Value>) -> Option<u32> {
     Some(u32::try_from(count).unwrap_or(u32::MAX))
 }
 
-/// Reads one event of the answer into `reading`; gives the piece of text it
-/// carried, if any. An error the service reports is an error.
+/// Reads one event of the answer of Anthropic into `reading`.
 ///
-/// Called by: `protocol.rs`: `read_event` (every event of the stream).
-/// Calls: [`ending_of`], [`tokens`].
+/// Input: `event`, one event of the stream, its data within the limit of a
+/// line (`sse.rs`); `reading`, what was read of the answer so far.
+/// Output: the piece of text the event carried (`Some("Hel")`), `None` for
+/// an event without text; `AiError::UnexpectedAnswer` for data that is no
+/// JSON, `AiError::Reported` for an error the service reports.
+///
+/// Called by: `objects/ai/integration/integration_ai/protocol.rs`: `read_event` (every event of the stream).
+/// Calls: [`ending_of`], [`tokens`]; `objects/ai_error.rs`: `shorten`.
 pub fn read_event(event: &SseEvent, reading: &mut Reading) -> Result<Option<String>, AiError> {
     let value: Value = serde_json::from_str(&event.data)
         .map_err(|error| AiError::UnexpectedAnswer(format!("an event that is no JSON: {error}")))?;

@@ -168,15 +168,18 @@ fn binding(user: i64) -> Vec<u8> {
 }
 
 /// Writes the installation, the user and the two copies of the key into
-/// the new system database, and makes the database of the user. Gives the
-/// id of the user (also when it fails after the user was written, so that
-/// its database file can be removed), and the result.
+/// the new system database, and makes the database of the user.
+///
+/// Input: `system`, the new system database; `data_dir`, the data folder;
+/// `name`, the name of the user; `password`, the password, checked.
+/// Output: the id of the user (also when it fails after the user was
+/// written, so that its database file can be removed) and the result: the
+/// account opened, or the error (`(Some(1), Ok(opened))`).
 ///
 /// Called by: [`create_account`].
 /// Calls: `infrastructure/security/random.rs`: `fill_random`; `infrastructure/clock.rs`: `now`;
-/// `create_installation`, `create_user`, `generate_database_key`,
-/// `password::wrap`, `recovery::new_code`, `recovery::wrap`, `create_user_keys`,
-/// `user_database::create`, `create_settings`.
+/// `objects/user/program_data/program_data_store.rs`: `create_installation`;
+/// `objects/user/user_data/user_data_store.rs`: `create_user`; [`keys_and_database`].
 fn install(
     system: &SystemDatabase,
     data_dir: &Path,
@@ -210,7 +213,17 @@ fn install(
 /// The second half of [`install`]: the key of the database, its two copies,
 /// the database of the user with its settings.
 ///
+/// Input: `system`, the new system database; `data_dir`, the data folder;
+/// `user`, the user written; `password`, the password, checked.
+/// Output: the account opened, with the recovery code to show once; an error
+/// of the key, the copies or the databases.
+///
 /// Called by: [`install`].
+/// Calls: `infrastructure/storage/encryption/generate_key.rs`: `generate_database_key`;
+/// `objects/user/user_keys/user_keys_rules/recovery.rs`: `new_code`, `wrap`; `objects/user/user_keys/user_keys_rules/password.rs`: `wrap`; [`binding`];
+/// `objects/user/user_keys/user_keys_store.rs`: `create_user_keys`;
+/// `infrastructure/storage/user_database.rs`: `create`;
+/// `objects/user/program_data/program_data_store.rs`: `create_settings`.
 fn keys_and_database(
     system: &SystemDatabase,
     data_dir: &Path,
@@ -237,8 +250,11 @@ fn keys_and_database(
 }
 
 /// Removes a file of a first start that failed, so that the first start can
-/// be tried again; a missing file is no error. A file that cannot be removed
-/// is told with the failure.
+/// be tried again.
+///
+/// Input: `path`, a file the first start made; `failure`, why it failed.
+/// Output: the failure; with what went wrong added when the file cannot be
+/// removed. A missing file is no error.
 ///
 /// Called by: [`create_account`].
 fn removed(path: &Path, failure: AccountError) -> AccountError {
@@ -253,13 +269,19 @@ fn removed(path: &Path, failure: AccountError) -> AccountError {
 
 /// The first start: makes the data folder (private to the user of the
 /// computer), the installation, its one user `name` with the password
-/// `password` (given twice), and the database of the user. Gives the user,
-/// the open database and the recovery code, which the window shows once.
-/// When it fails half way, the files it made are removed.
+/// `password` (given twice), and the database of the user. When it fails
+/// half way, the files it made are removed.
+///
+/// Input: `data_dir`, the data folder of the program; `name`, the name typed
+/// ("Kamil"); `password`, `repeated`, the password given twice.
+/// Output: the user, the open database and the recovery code, which the
+/// window shows once; `AccountError::PasswordsDiffer`, a password refused,
+/// `AccountError::AlreadyInstalled`, or an error of the folder, the key or
+/// the databases.
 ///
 /// Called by: `panels/views/program_start/installation.rs`: `installation_create`.
-/// Calls: `password::check_password`, `system_database::create`, [`install`],
-/// [`removed`].
+/// Calls: `objects/user/user_keys/user_keys_rules/password.rs`: `check_password`; `infrastructure/storage/system_database.rs`:
+/// `create`, `path`; `infrastructure/storage/user_database.rs`: `path`; [`install`], [`removed`].
 pub fn create_account(
     data_dir: &Path,
     name: &str,
@@ -298,12 +320,16 @@ pub fn create_account(
     }
 }
 
-/// The user of the installation in the data folder `data_dir`; `None` when
-/// the program is not installed yet, so that the window shows the first
-/// start.
+/// The user of the installation in the data folder `data_dir`.
+///
+/// Input: `data_dir`, the data folder of the program.
+/// Output: the user (`Some(User { name: "Kamil", .. })`); `None` when the
+/// program is not installed yet, so that the window shows the first start;
+/// an error of the database.
 ///
 /// Called by: `panels/views/program_start/login.rs`: `login_get`.
-/// Calls: `system_database::open`, `read_users`.
+/// Calls: `infrastructure/storage/system_database.rs`: `open`;
+/// `objects/user/user_data/user_data_store.rs`: `read_users`.
 pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
     let system = match system_database::open(data_dir, &SYSTEM_TABLES) {
         Ok(system) => system,
@@ -355,13 +381,18 @@ fn find_user(system: &SystemDatabase, name: &str) -> Result<Option<User>, Accoun
 }
 
 /// The login: the user `name` (whatever its letter case) with its
-/// password. Gives the user and its database, opened; the key is wiped
-/// when this function ends. A wrong password and an unknown name fail the
-/// same way.
+/// password. The key is wiped when this function ends.
+///
+/// Input: `data_dir`, the data folder of the program; `name`, the name typed;
+/// `password`, the password typed.
+/// Output: the user and its database, opened; `AccountError::WrongCredentials`
+/// for a wrong password and an unknown name alike, an error of the
+/// databases.
 ///
 /// Called by: `panels/views/program_start/login.rs`: `login_log_in`.
-/// Calls: [`open_installed`], [`find_user`], `read_user_keys`,
-/// `password::unwrap`, `user_database::open`.
+/// Calls: [`open_installed`], [`find_user`]; `objects/user/user_keys/user_keys_store.rs`:
+/// `read_user_keys`; `objects/user/user_keys/user_keys_rules/password.rs`: `unwrap`; [`binding`];
+/// `infrastructure/storage/user_database.rs`: `open`.
 pub fn log_in(data_dir: &Path, name: &str, password: &str) -> Result<(User, UserDatabase), AccountError> {
     let system = open_installed(data_dir)?;
     let Some(user) = find_user(&system, name)? else {

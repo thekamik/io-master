@@ -87,6 +87,10 @@ pub fn prepare_shortened(db: &UserDatabase, mut question: Question) -> Result<(P
 /// What the knowledge of the agent is looked for with: the question and
 /// the last question of the user before it.
 ///
+/// Input: `messages`, the messages of the chat before the question;
+/// `question`, the question, checked.
+/// Output: the text to look for ("What is the TSF? and in the ST?").
+///
 /// Called by: [`chat_question`].
 fn search_text(messages: &[Message], question: &str) -> String {
     for message in messages.iter().rev() {
@@ -100,8 +104,13 @@ fn search_text(messages: &[Message], question: &str) -> String {
 
 /// The question `text` in the chat `chat`, as the integration of its agent
 /// gets it: the instructions and the knowledge of the agent, the messages
-/// of the chat and the question. Nothing is written; refused when the chat
-/// has no agent or no room for the question and its answer.
+/// of the chat and the question. Nothing is written.
+///
+/// Input: `chat`, the id of a stored chat; `text`, the question as typed.
+/// Output: the question for the integration, its last message `text`;
+/// `AiError::Refused` when the chat has no agent or no room for the
+/// question and its answer, the errors of the question checked and of the
+/// database.
 ///
 /// Called by: [`prepared`].
 /// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`; `objects/ai/chat/chat_rules.rs`:
@@ -128,18 +137,25 @@ fn chat_question(db: &UserDatabase, chat: i64, text: &str) -> Result<Question, A
 
 /// The question `text` in the chat `chat`, prepared for the integration of
 /// its agent, with as many of the latest messages of the chat as fit into
-/// the context of the model; gives also how many messages were left out.
-/// Refused when the question does not fit even alone.
+/// the context of the model.
 ///
-/// Called by: `panels/views/chat/chats.rs`: `chat_ask`.
+/// Input: `chat`, the id of a stored chat; `text`, the question as typed.
+/// Output: the question prepared and how many messages were left out of it
+/// (`(prepared, 4)`); an error when the question does not fit even alone,
+/// or [`chat_question`] refuses it.
+///
+/// Called by: `panels/views/chat/chats.rs`: `prepared_question`.
 /// Calls: [`chat_question`], [`prepare_shortened`].
 pub fn prepared(db: &UserDatabase, chat: i64, text: &str) -> Result<(Prepared, usize), AiError> {
     prepare_shortened(db, chat_question(db, chat, text)?)
 }
 
 /// The text of the answer `answer` as the chat keeps it: an answer that did
-/// not end by itself gets its mark; a failed one, or one without text that
-/// ended by itself, is not kept.
+/// not end by itself gets its mark.
+///
+/// Input: `answer`, the answer as `objects/ai/journal/journal_ai.rs`: `record` read it.
+/// Output: the text to keep ("The TSF ...\n\n[stopped]"); `None` for a
+/// failed answer, or one without text that ended by itself.
 ///
 /// Called by: [`add_answer`].
 fn kept_text(answer: &Answer) -> Option<String> {
@@ -161,9 +177,14 @@ fn kept_text(answer: &Answer) -> Option<String> {
 }
 
 /// Writes the answer `answer` as the last message of the chat `chat`, as
-/// [`kept_text`] keeps it; gives the message written, `None` when none was.
+/// [`kept_text`] keeps it.
 ///
-/// Called by: `panels/views/chat/chats.rs`: `chat_ask` (after `objects/ai/journal/journal_ai.rs`:
+/// Input: `chat`, the id of a stored chat; `answer`, the answer recorded in
+/// the journal.
+/// Output: the message written; `None` when none was; an error of the clock
+/// or the database.
+///
+/// Called by: `panels/views/chat/chats.rs`: `written` (after `objects/ai/journal/journal_ai.rs`:
 /// `record`).
 /// Calls: [`kept_text`]; `infrastructure/clock.rs`: `now`; `objects/ai/chat/chat_store.rs`:
 /// `create_message`.

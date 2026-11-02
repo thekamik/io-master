@@ -98,7 +98,7 @@ struct Names {
     agents: HashMap<i64, String>,
 }
 
-/// The label of each work unit of `units`, by its id.
+/// The label of each work unit of `units`, by its id: `{7: "ADV_ARC.1-1"}`.
 ///
 /// Called by: [`dependencies_question`], [`apply_dependencies`].
 fn labels(units: &[WorkUnit]) -> HashMap<i64, String> {
@@ -113,6 +113,10 @@ fn labels(units: &[WorkUnit]) -> HashMap<i64, String> {
 
 /// The names of the things `ids` name, by `names`; an id without a name
 /// is left out.
+///
+/// Input: `ids`, the ids of documents, agents or work units; `names`, their
+/// names by id.
+/// Output: the names, in the order of `ids` (`["ST", "IXIT"]`).
 ///
 /// Called by: [`current_parameters`], [`parameters_question`],
 /// [`dependencies_question`].
@@ -131,8 +135,13 @@ fn named(ids: &[i64], names: &HashMap<i64, String>) -> Vec<String> {
 /// The names of the documents of the plan and of every agent, by their
 /// ids.
 ///
+/// Input: `plan`, a plan in planning.
+/// Output: the names (`Names { documents: {9: "ST"}, agents: {2: "Planner"} }`);
+/// an error of the database.
+///
 /// Called by: [`parameters_question`], [`apply_parameters`].
-/// Calls: `read_product_document`, `read_agents`.
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// `objects/ai/agent/agent_store.rs`: `read_agents`.
 fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, AiError> {
     let mut documents = HashMap::with_capacity(plan.product_documents.len());
     let mut agents = HashMap::new();
@@ -152,8 +161,14 @@ fn names_of(db: &UserDatabase, plan: &EvaluationPlan) -> Result<Names, AiError> 
 /// work unit `unit`: its instructions and the task `task`, with its
 /// knowledge that fits the work unit, and the text `text` of the question.
 ///
+/// Input: `plan`, the id of a plan to fill; `unit`, one of its work units;
+/// `task`, [`PARAMETERS_TASK`] or [`DEPENDENCIES_TASK`]; `text`, the question.
+/// Output: the question; the refusals of `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`,
+/// `AiError::Refused` for a work unit not of the plan, the errors of the
+/// agent.
+///
 /// Called by: [`parameters_question`], [`dependencies_question`].
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`,
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`;
 /// `objects/ai/agent/agent_ai.rs`: `agent_question`.
 fn question_of(db: &UserDatabase, plan: i64, unit: &WorkUnit, task: &str, text: String) -> Result<Question, AiError> {
     let (stored, agent_id) = plan_to_fill(db, plan)?;
@@ -169,8 +184,12 @@ fn question_of(db: &UserDatabase, plan: i64, unit: &WorkUnit, task: &str, text: 
 /// The parameters but the dependencies of the work unit `unit` now, as the
 /// question shows them (names, not ids).
 ///
+/// Input: `unit`, a work unit of the plan; `names`, from [`names_of`].
+/// Output: the JSON (`{"documents": ["ST"], "functional": false, ...}`); an
+/// error of the database for a proof missing.
+///
 /// Called by: [`parameters_question`].
-/// Calls: [`named`], `read_lab_proof`.
+/// Calls: [`named`]; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn current_parameters(db: &UserDatabase, unit: &WorkUnit, names: &Names) -> Result<Value, AiError> {
     let mut proofs = Vec::new();
 
@@ -196,9 +215,15 @@ fn current_parameters(db: &UserDatabase, unit: &WorkUnit, names: &Names) -> Resu
 /// `plan`: its requirement, its parameters now, the documents of the plan
 /// and the agents.
 ///
-/// Called by: `filling.rs`: `prepared_question`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`, [`names_of`],
-/// [`current_parameters`],
+/// Input: `plan`, the id of a plan to fill; `unit`, the id of one of its work
+/// units.
+/// Output: the question; the refusals of [`question_of`], an error of the
+/// database.
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
+/// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
+/// `read_oscal_standard_document`; [`names_of`], [`current_parameters`], [`named`],
 /// [`question_of`].
 pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let (stored, _) = plan_to_fill(db, plan)?;
@@ -226,6 +251,9 @@ pub fn parameters_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Qu
 /// label, the first sentence of its requirement (at most [`MAX_SUMMARY`]
 /// characters) and its kind of test.
 ///
+/// Input: `unit`, a work unit of the plan.
+/// Output: the line ("ADV_ARC.1-1 (documentation): The developer shall ...").
+///
 /// Called by: [`dependencies_question`].
 fn summary(unit: &WorkUnit) -> String {
     let requirement = unit.requirement.trim();
@@ -243,8 +271,14 @@ fn summary(unit: &WorkUnit) -> String {
 /// `plan`: its requirement, its dependencies now, and every other work unit
 /// of the plan in one line.
 ///
-/// Called by: `filling.rs`: `prepared_question`.
-/// Calls: [`labels`], [`named`], [`summary`], [`question_of`].
+/// Input: `plan`, the id of a plan to fill; `unit`, the id of one of its work
+/// units.
+/// Output: the question; the refusals of [`question_of`], an error of the
+/// database.
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`; [`labels`], [`named`],
+/// [`summary`], [`question_of`].
 pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<Question, AiError> {
     let units = read_work_units(db, plan)?;
     let this = read_work_unit(db, unit)?;
@@ -267,8 +301,13 @@ pub fn dependencies_question(db: &UserDatabase, plan: i64, unit: i64) -> Result<
     question_of(db, plan, &this, DEPENDENCIES_TASK, text)
 }
 
-/// The JSON object of an answer (a fence of Markdown or words around it
-/// are passed over); refused when the answer holds none.
+/// The JSON object of an answer: a fence of Markdown or words around it are
+/// passed over.
+///
+/// Input: `answer`, the text of the answer of the AI, bounded by
+/// `MAX_STREAM` (`connection.rs`).
+/// Output: the object (`{"documents": [...], ...}`); `AiError::Refused`
+/// when the answer holds none.
 ///
 /// Called by: [`read_parameters`], [`read_dependencies`].
 fn answer_object(answer: &str) -> Result<Value, AiError> {
@@ -276,12 +315,21 @@ fn answer_object(answer: &str) -> Result<Value, AiError> {
         return Err(AiError::Refused("the answer holds no JSON object".to_owned()));
     };
 
-    serde_json::from_str(answer.get(start..=end).unwrap_or_default())
-        .map_err(|error| AiError::Refused(format!("the answer is no JSON object: {error}")))
+    // A "}" before the first "{" leaves no object between them.
+    ensure!(start < end, AiError::Refused("the answer holds no JSON object".to_owned()));
+
+    let object =
+        answer.get(start..=end).ok_or_else(|| AiError::Refused("the answer holds no JSON object".to_owned()))?;
+
+    serde_json::from_str(object).map_err(|error| AiError::Refused(format!("the answer is no JSON object: {error}")))
 }
 
 /// The strings of the list `field` of the answer, at most `max`; what is no
 /// string is left out.
+///
+/// Input: `answer`, the object of the answer; `field`, a list of it
+/// ("documents"); `max`, the most kept.
+/// Output: the strings trimmed (`["ST", "IXIT"]`); empty without the list.
 ///
 /// Called by: [`read_parameters`], [`read_dependencies`].
 fn strings(answer: &Value, field: &str, max: usize) -> Vec<String> {
@@ -298,9 +346,16 @@ fn strings(answer: &Value, field: &str, max: usize) -> Vec<String> {
     found
 }
 
-/// The proposal of the parameters in an answer.
+/// The proposal of the parameters in an answer, before it is checked
+/// against the plan.
 ///
-/// Called by: `filling.rs`: `applied`.
+/// Input: `answer`, the text of the answer of the AI.
+/// Output: the proposal, its lists cut to their limits
+/// (`ParametersProposal { documents: ["ST"], functional: true, .. }`); the
+/// refusals of [`answer_object`], `AiError::Refused` for a guidance over
+/// [`MAX_GUIDANCE`].
+///
+/// Called by: {FI}: `applied`.
 /// Calls: [`answer_object`], [`strings`].
 pub fn read_parameters(answer: &str) -> Result<ParametersProposal, AiError> {
     let value = answer_object(answer)?;
@@ -320,9 +375,10 @@ pub fn read_parameters(answer: &str) -> Result<ParametersProposal, AiError> {
     })
 }
 
-/// The labels of the dependencies an answer proposes.
+/// The labels of the dependencies an answer proposes, at most
+/// `MAX_DEPENDENCIES`: `["ADV_ARC.1-1"]`.
 ///
-/// Called by: `filling.rs`: `applied`.
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `applied`.
 /// Calls: [`answer_object`], [`strings`].
 pub fn read_dependencies(answer: &str) -> Result<Vec<String>, AiError> {
     Ok(strings(&answer_object(answer)?, "dependencies", MAX_DEPENDENCIES))
@@ -331,7 +387,10 @@ pub fn read_dependencies(answer: &str) -> Result<Vec<String>, AiError> {
 /// The id of the name `name` among `names`, its case and the spaces around
 /// it passed over.
 ///
-/// Called by: [`apply_parameters`], [`apply_dependencies`].
+/// Input: `names`, names by id; `name`, a name the answer gives (" st ").
+/// Output: its id (`Some(9)`); `None` when no name matches.
+///
+/// Called by: [`chosen_agent`], [`apply_parameters`], [`apply_dependencies`].
 fn id_of(names: &HashMap<i64, String>, name: &str) -> Option<i64> {
     let wanted = name.trim().to_lowercase();
 
@@ -347,8 +406,12 @@ fn id_of(names: &HashMap<i64, String>, name: &str) -> Option<i64> {
 /// The proof of the work unit `unit` named `name` (its case passed over),
 /// if it has one.
 ///
+/// Input: `unit`, a work unit of the plan; `name`, a name the answer gives.
+/// Output: its id (`Some(6)`), `None` when the work unit has no such proof;
+/// an error of the database.
+///
 /// Called by: [`chosen_proofs`].
-/// Calls: `read_lab_proof`.
+/// Calls: `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn proof_named(db: &UserDatabase, unit: &WorkUnit, name: &str) -> Result<Option<i64>, AiError> {
     for id in unit.input_functional.as_deref().unwrap_or_default() {
         if read_lab_proof(db, *id)?.name.eq_ignore_ascii_case(name) {
@@ -362,8 +425,13 @@ fn proof_named(db: &UserDatabase, unit: &WorkUnit, name: &str) -> Result<Option<
 /// The proofs of a functional test: a proof of the work unit `unit` with
 /// the same name is kept, a new name gets a new place.
 ///
+/// Input: `unit`, a work unit of the plan; `proposed`, the names of proofs
+/// the answer gives.
+/// Output: the ids of the proofs (`[6, 15]`), [`DEFAULT_PROOF`] when no name
+/// is usable; an error of the database.
+///
 /// Called by: [`apply_parameters`].
-/// Calls: [`proof_named`], `create_lab_proof`.
+/// Calls: [`proof_named`]; `objects/evaluation/lab_proof/lab_proof_store.rs`: `create_lab_proof`.
 fn chosen_proofs(db: &UserDatabase, unit: &WorkUnit, proposed: &[String]) -> Result<Vec<i64>, AiError> {
     let mut names = Vec::with_capacity(proposed.len());
 
@@ -394,8 +462,12 @@ fn chosen_proofs(db: &UserDatabase, unit: &WorkUnit, proposed: &[String]) -> Res
     Ok(proofs)
 }
 
-/// The agent the proposal names, among `agents`; `None` for none, with a
-/// note for a name that is no agent.
+/// The agent the proposal names, among `agents`.
+///
+/// Input: `agents`, every agent by id; `proposed`, the name the answer
+/// gives; `notes`, where a note for a name that is no agent goes.
+/// Output: the id of the agent (`Some(3)`); `None` for none or a name that is
+/// no agent.
 ///
 /// Called by: [`apply_parameters`].
 /// Calls: [`id_of`].
@@ -417,12 +489,15 @@ fn chosen_agent(agents: &HashMap<i64, String>, proposed: Option<&String>, notes:
 
 /// Writes the proposed parameters of the work unit `unit` of the plan
 /// `plan`, its dependencies kept: only the documents and agents there are.
-/// Gives a note for every name left out.
 ///
-/// Called by: `filling.rs`: `applied`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`, [`names_of`],
-/// [`id_of`], [`chosen_agent`],
-/// [`chosen_proofs`], `update_work_unit_parameters`.
+/// Input: `plan`, the id of a plan to fill; `unit`, the id of one of its work
+/// units; `proposal`, from [`read_parameters`].
+/// Output: a note for every name left out (`["no document SRS in the plan"]`);
+/// the refusals of the plan and of `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `applied`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`names_of`],
+/// [`id_of`], [`chosen_agent`], [`chosen_proofs`]; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
 pub fn apply_parameters(
     db: &UserDatabase,
     plan: i64,
@@ -459,13 +534,16 @@ pub fn apply_parameters(
 /// Writes the proposed dependencies of the work unit `unit` of the plan
 /// `plan`, its other parameters kept: only the work units of the plan. A
 /// dependency that closes a cycle is written; the planner decides, and a
-/// note says that the work unit is now a cross reference. Gives a note for
-/// every label left out.
+/// note says that the work unit is now a cross reference.
 ///
-/// Called by: `filling.rs`: `applied`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`, [`labels`],
-/// [`id_of`],
-/// `update_work_unit_parameters`.
+/// Input: `plan`, the id of a plan to fill; `unit`, the id of one of its work
+/// units; `proposed`, the labels from [`read_dependencies`].
+/// Output: a note for every label left out (`["no work unit X in the plan"]`);
+/// the refusals of the plan and of `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `applied`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_to_fill`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `read_work_unit`;
+/// [`labels`], [`id_of`]; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
 pub fn apply_dependencies(
     db: &UserDatabase,
     plan: i64,

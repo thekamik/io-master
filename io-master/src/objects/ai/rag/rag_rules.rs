@@ -32,10 +32,17 @@ const MAX_DESCRIPTION: usize = 2000;
 /// character of the longest text of a source.
 const MAX_TEXT_FILE: u64 = 64 * 1024 * 1024;
 
-/// Makes a new knowledge base; gives its id.
+/// Makes a new knowledge base.
+///
+/// Input: `name`, the name typed ("Common Criteria"); `description`, what it
+/// holds, may be empty.
+/// Output: the id of the new base (`4`); `DomainError::Refused` for a name
+/// refused, a description over [`MAX_DESCRIPTION`] or `MAX_BASES` bases
+/// already, an error of the database.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_base_create`.
-/// Calls: `objects/text.rs`: `checked_text`, `read_knowledge_bases`, `create_knowledge_base`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_knowledge_bases`,
+/// `create_knowledge_base`.
 pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64, DomainError> {
     let name = checked_text(name, "the name of the base", MAX_NAME)?;
 
@@ -50,8 +57,13 @@ pub fn add_base(db: &UserDatabase, name: &str, description: &str) -> Result<i64,
 
 /// Writes the name and the description of the base `base.id` anew.
 ///
+/// Input: `base`, the base as changed, its id that of a stored base.
+/// Output: nothing; `DomainError::Refused` for a name or a description
+/// refused, an error of the database for a base missing.
+///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_base_save`.
-/// Calls: `objects/text.rs`: `checked_text`, `read_knowledge_base`, `update_knowledge_base`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`,
+/// `update_knowledge_base`.
 pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), DomainError> {
     let name = checked_text(&base.name, "the name of the base", MAX_NAME)?;
 
@@ -68,11 +80,15 @@ pub fn change_base(db: &UserDatabase, base: &KnowledgeBase) -> Result<(), Domain
 }
 
 /// The text of the file `path` for a source: a `.txt` or `.md` file as
-/// UTF-8, a `.pdf` through Poppler; refused for another kind, a file over
-/// its limit, a text that is no UTF-8 or that holds nothing.
+/// UTF-8, a `.pdf` through Poppler.
 ///
-/// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_add`,
-/// `knowledge_source_replace` (a file chosen in the dialog).
+/// Input: `path`, a file chosen in the dialog of the page.
+/// Output: its text ("The TOE shall ..."); `DomainError::Refused` for
+/// another kind of file, a file over its limit, a text that is no UTF-8,
+/// holds nothing or is over `MAX_SOURCE_CHARS`; `DomainError::Pdf` for a PDF
+/// that cannot be read.
+///
+/// Called by: `panels/views/agents/knowledge.rs`: `chosen_text`.
 /// Calls: `infrastructure/pdf/poppler.rs`: `text`.
 pub fn source_text(path: &Path) -> Result<String, DomainError> {
     let read = |error: std::io::Error| DomainError::Refused(format!("{}: {error}", path.display()));
@@ -100,11 +116,18 @@ pub fn source_text(path: &Path) -> Result<String, DomainError> {
     Ok(text)
 }
 
-/// Adds the text `text` to the base `base` as a new source named `name`;
-/// gives its id. The database indexes its passages.
+/// Adds the text `text` to the base `base` as a new source named `name`.
+/// The database indexes its passages.
+///
+/// Input: `base`, the id of a stored base; `name`, the name of the source
+/// ("CEM 3.1 R5.pdf"); `text`, its text from [`source_text`].
+/// Output: the id of the new source (`12`); `DomainError::Refused` for a name
+/// refused or `MAX_SOURCES` sources in the base already, an error of the
+/// database.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_add`.
-/// Calls: `objects/text.rs`: `checked_text`, `read_sources`, `create_source`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`,
+/// `read_sources`, `create_source`.
 pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Result<i64, DomainError> {
     let name = checked_text(name, "the name of the source", MAX_NAME)?;
 
@@ -121,7 +144,7 @@ pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Res
 /// database indexes it anew.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_replace`.
-/// Calls: `read_source`, `update_source`.
+/// Calls: `objects/ai/rag/rag_store.rs`: `read_source`, `update_source`.
 pub fn replace_source_text(db: &UserDatabase, id: i64, text: String) -> Result<(), DomainError> {
     let source = read_source(db, id)?;
 
@@ -130,8 +153,12 @@ pub fn replace_source_text(db: &UserDatabase, id: i64, text: String) -> Result<(
 
 /// Changes the name of the source `id`.
 ///
+/// Input: `id`, the id of a stored source; `name`, the new name typed.
+/// Output: nothing; `DomainError::Refused` for a name refused, an error of
+/// the database for a source missing.
+///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_rename`.
-/// Calls: `objects/text.rs`: `checked_text`, `read_source`, `update_source`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_source`, `update_source`.
 pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), DomainError> {
     let name = checked_text(name, "the name of the source", MAX_NAME)?;
     let source = read_source(db, id)?;
@@ -143,7 +170,7 @@ pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), Domai
 /// base, at most [`MAX_FOUND`].
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_search`.
-/// Calls: `read_knowledge_base`, `read_passages`.
+/// Calls: `objects/ai/rag/rag_store.rs`: `read_knowledge_base`, `read_passages`.
 pub fn search_base(db: &UserDatabase, base: i64, question: &str) -> Result<Vec<String>, DomainError> {
     read_knowledge_base(db, base)?;
 

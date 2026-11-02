@@ -30,9 +30,15 @@ use crate::objects::session::progress::progress_ai::lock::{lock_database, open_d
 /// The question of the work unit `unit`, prepared: with its documents whole,
 /// or with their passages when they do not fit into the context of the model.
 ///
+/// Input: `evaluation`, the id of an evaluation in progress; `unit`, the id
+/// of one of its work units.
+/// Output: the question prepared; the refusals of
+/// `objects/ai/integration/integration_ai/question.rs`: `prepare` (no key, no room even
+/// with the passages) and of the question made.
+///
 /// Called by: [`prepared_question`].
-/// Calls: `assessment_question.rs`: `assessment_question`; `objects/ai/integration/integration_ai/question.rs`:
-/// `prepare`.
+/// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessment_question`;
+/// `objects/ai/integration/integration_ai/question.rs`: `prepare`.
 pub(in crate::objects::evaluation) fn prepared_assessment(
     db: &UserDatabase,
     evaluation: i64,
@@ -45,11 +51,17 @@ pub(in crate::objects::evaluation) fn prepared_assessment(
     }
 }
 
-/// Reads the answer `answer` and writes it into the work unit `unit`; gives
-/// the notes of what was not taken.
+/// Reads the answer `answer` and writes it into the work unit `unit`.
+///
+/// Input: `evaluation`, the id of an evaluation in progress; `unit`, the id
+/// of one of its work units; `answer`, the text of the answer of the AI.
+/// Output: the notes of what was not taken (`["a quote not found in the ST"]`);
+/// `AiError::Refused` for an answer that cannot be read, an error of the
+/// database.
 ///
 /// Called by: [`written`].
-/// Calls: `assessment_answer.rs`: `read_assessment`, `apply_assessment`.
+/// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `read_assessment`,
+/// `apply_assessment`.
 pub(in crate::objects::evaluation) fn assessed(
     db: &UserDatabase,
     evaluation: i64,
@@ -59,9 +71,14 @@ pub(in crate::objects::evaluation) fn assessed(
     apply_assessment(db, evaluation, unit, &read_assessment(answer)?)
 }
 
-/// The label of the work unit `unit` and its question, prepared; the reason
-/// instead of the question when it is refused (no room in the context, no
-/// key).
+/// The label of the work unit `unit` and its question, prepared, under the
+/// lock of the database.
+///
+/// Input: `database`, the lock of the open database of the session;
+/// `evaluation`, `unit`, as [`prepared_assessment`].
+/// Output: the label and the question (`("ADV_ARC.1-1", Ok(prepared))`), or
+/// the reason instead of the question when it is refused (no room in the
+/// context, no key); an error when the session or the database fails.
 ///
 /// Called by: [`assess_work_unit`].
 /// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_database`, `open_database`;
@@ -78,12 +95,20 @@ fn prepared_question(
     Ok((label, prepared_assessment(db, evaluation, unit).map_err(|error| error.to_string())))
 }
 
-/// Writes the answer into the journal of the agent, then into the work unit
-/// `unit`; gives its verdict and the notes, or no verdict and why.
+/// Writes the answer into the journal of the agent, then into the work unit,
+/// under the lock of the database.
+///
+/// Input: `database`, the lock of the open database of the session; `step`,
+/// the ids of the evaluation and of the work unit; `prepared`, the question
+/// as it was sent; `sent`, its answer.
+/// Output: the verdict and the notes (`(Some(Pass), [])`), or no verdict and
+/// why (`(None, ["no connection"])`); an error when the session or the
+/// database fails.
 ///
 /// Called by: [`assess_work_unit`].
 /// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_database`, `open_database`;
-/// `objects/ai/journal/journal_ai.rs`: `record`; [`assessed`]; `read_work_unit`.
+/// `objects/ai/journal/journal_ai.rs`: `record`; [`assessed`];
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`.
 fn written(
     database: &Mutex<Option<UserDatabase>>,
     step: (i64, i64),
@@ -118,7 +143,7 @@ fn written(
 /// not assessed (`("ADV_ARC.1-1", Some(Pass), [])`). An error when the
 /// session or the database fails.
 ///
-/// Called by: `evaluation_plan_ai.rs`: `assess_evaluation`.
+/// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `assess_evaluation`.
 /// Calls: [`prepared_question`], `objects/ai/integration/integration_ai/sending.rs`:
 /// `send_whole`, [`written`].
 pub async fn assess_work_unit(

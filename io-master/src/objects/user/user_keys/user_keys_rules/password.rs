@@ -93,6 +93,9 @@ impl std::error::Error for KeyError {}
 /// else is demanded, as NIST recommends: length protects better
 /// than forced special characters.
 ///
+/// Input: `password`, the password as typed.
+/// Output: nothing; `KeyError::WeakPassword` with the rule it breaks.
+///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `create_account`, `recover`,
 /// `change_password`; [`wrap`].
 pub fn check_password(password: &str) -> Result<(), KeyError> {
@@ -111,6 +114,12 @@ pub fn check_password(password: &str) -> Result<(), KeyError> {
 
 /// Derives the unlocking key from a password: Argon2id of the password
 /// with `salt`, `memory_kib` and `iterations`, then HKDF.
+///
+/// Input: `password`, the password; `salt`, [`SALT_LENGTH`] random bytes;
+/// `memory_kib`, `iterations`, the parameters of Argon2id, as written with
+/// the copy of the key.
+/// Output: the 32 bytes of the unlocking key, wiped when dropped;
+/// `KeyError::Failed` for parameters Argon2 refuses.
 ///
 /// Called by: [`wrap`], [`unwrap`].
 fn unlocking_key(
@@ -139,14 +148,17 @@ fn unlocking_key(
     Ok(key)
 }
 
-/// Encrypts the key of a database with a password.
+/// Encrypts the key of a database with a password. `binding` ties the
+/// result to one account (its id): an encrypted key copied to another
+/// account does not open there.
 ///
-/// `binding` ties the result to one account (for example its
-/// name): an encrypted key copied to another account does not open
-/// there.
+/// Input: `key`, the key of the database; `password`, the password given;
+/// `binding`, the binding of the account.
+/// Output: the copy of the key with its salt, parameters, nonce and tag;
+/// `KeyError::WeakPassword` for a password refused, `KeyError::Failed` when
+/// no random bytes or no key could be made.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`;
-/// `renewal.rs`: `renew_keys`.
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`; `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`.
 /// Calls: [`check_password`], `infrastructure/security/random.rs`: `fill_random`, [`unlocking_key`].
 pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<WrappedKey, KeyError> {
     check_password(password)?;
@@ -177,9 +189,13 @@ pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<Wrapped
     })
 }
 
-/// Opens the key of a database with the password. Fails with
-/// [`KeyError::WrongPassword`] when it does not fit, or when `binding`
-/// is not the one used by [`wrap`].
+/// Opens the key of a database with the password.
+///
+/// Input: `wrapped`, the copy written by [`wrap`]; `password`, the password
+/// typed; `binding`, the binding of the account.
+/// Output: the key of the database; [`KeyError::WrongPassword`] when the
+/// password or `binding` does not fit, `KeyError::Damaged` for a copy of
+/// another form.
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`, `open_with_password`.
 /// Calls: [`unlocking_key`], `infrastructure/storage/encryption/database_key.rs`: `DatabaseKey::fill_with`.

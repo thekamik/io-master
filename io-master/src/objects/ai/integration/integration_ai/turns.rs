@@ -18,7 +18,12 @@ pub struct Turn {
 
 /// The turns of the messages `messages`, as described at the top.
 ///
-/// Called by: `question.rs`: `prepare`.
+/// Input: `messages`, the messages of a question, at most `MAX_MESSAGES`
+/// (`question.rs`).
+/// Output: the turns, the empty messages left out, two of one speaker in a
+/// row joined, an answer first left out (`[Turn { speaker: User, .. }]`).
+///
+/// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`.
 pub fn turns(messages: &[Message]) -> Vec<Turn> {
     let mut turns: Vec<Turn> = Vec::with_capacity(messages.len());
 

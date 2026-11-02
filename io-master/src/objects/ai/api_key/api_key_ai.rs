@@ -20,7 +20,12 @@ fn mask(text: String, key: Option<&str>) -> String {
 
 /// The error with the key masked in its explanation.
 ///
-/// Called by: `objects/ai/integration/integration_ai/connection.rs` (`send`).
+/// Input: `error`, an error of a question sent; `key`, the API key sent with
+/// it, `None` when none was.
+/// Output: the same error, its text with [`MASK`] for the key ("401: key
+/// ••••••••  rejected").
+///
+/// Called by: `objects/ai/integration/integration_ai/connection.rs`: `send`.
 /// Calls: [`mask`].
 pub(in crate::objects::ai) fn masked(error: AiError, key: Option<&str>) -> AiError {
     match error {

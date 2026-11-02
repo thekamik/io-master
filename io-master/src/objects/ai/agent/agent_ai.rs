@@ -22,6 +22,9 @@ use crate::objects::ai_error::AiError;
 /// The words of `text` in lower case: what lies between the signs that are
 /// no letter or digit.
 ///
+/// Input: `text`, a question or a term of a glossary, bounded by its caller.
+/// Output: its words (`["the", "tsf", "protects"]` of "The TSF protects.").
+///
 /// Called by: [`names_term`], [`widened`].
 fn words(text: &str) -> Vec<String> {
     let mut found = Vec::new();
@@ -39,6 +42,10 @@ fn words(text: &str) -> Vec<String> {
 /// Whether the question names the term: the words of the term follow one
 /// another among the words of the question, whole (user, 2026-10-29: "ST"
 /// is not named by "test").
+///
+/// Input: `question`, the words of the question ([`words`]); `term`, a term
+/// of the glossary ("ST").
+/// Output: `true` when the question names it; `false` for an empty term.
 ///
 /// Called by: [`widened`].
 /// Calls: [`words`].
@@ -62,6 +69,11 @@ fn names_term(question: &[String], term: &str) -> bool {
 /// term the question names is added, so that the search finds a text that
 /// writes the term out ("TSF" also finds "TOE Security Functionality").
 ///
+/// Input: `question`, the question as asked; `glossary`, the glossary of the
+/// agent, checked when the agent was written (`agent_rules.rs`).
+/// Output: the question with the meanings after it ("What is the TSF? TOE
+/// Security Functionality").
+///
 /// Called by: [`agent_knowledge`].
 /// Calls: [`words`], [`names_term`].
 fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
@@ -82,6 +94,11 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 /// passages of its bases that fit it best, at most its `max_passages`, as
 /// many of them, the best first, as fit in its `max_characters`. A passage
 /// is never shortened: one that does not fit is left out.
+///
+/// Input: `agent`, the id of a stored agent; `question`, what the knowledge
+/// is looked for with ("ADV_ARC.1-1 The developer shall ...").
+/// Output: the passages given, the best first (`["The TSF shall ...", ...]`);
+/// an error when the agent is missing or damaged or the database fails.
 ///
 /// Called by: [`agent_question`]; `panels/views/agents/agent.rs`:
 /// `agent_knowledge_test`.

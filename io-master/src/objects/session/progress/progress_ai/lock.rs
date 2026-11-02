@@ -26,16 +26,22 @@ use crate::objects::session::progress::progress_model::Progress;
 /// [`open_database`]). An error when a command failed while it held the
 /// lock: the session is broken.
 ///
-/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`,
-/// `work_unit_ai/filling.rs`: their steps under the lock.
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_question`,
+/// `written`; `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`,
+/// `written`.
 pub fn lock_database(database: &Mutex<Option<UserDatabase>>) -> Result<MutexGuard<'_, Option<UserDatabase>>, AiError> {
     database.lock().map_err(|_| AiError::Refused("the session is broken: start the program again".to_owned()))
 }
 
-/// The open database in the guard `opened`; refused when the user logged
-/// out while the work ran.
+/// The open database in the guard `opened`.
 ///
-/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`, `filling.rs`.
+/// Input: `opened`, what the guard of [`lock_database`] holds.
+/// Output: the database; `AiError::Refused` when the user logged out while
+/// the work ran.
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_question`,
+/// `written`; `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`,
+/// `written`.
 pub fn open_database(opened: Option<&UserDatabase>) -> Result<&UserDatabase, AiError> {
     match opened {
         Some(database) => Ok(database),
@@ -45,6 +51,7 @@ pub fn open_database(opened: Option<&UserDatabase>) -> Result<&UserDatabase, AiE
 
 /// The progress of the long work, locked for a moment.
 ///
+/// Input: `progress`, the lock of the progress of the session.
 /// Output: the guard. An error when the session is broken.
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `assess_evaluation`,

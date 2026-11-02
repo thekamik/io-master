@@ -27,7 +27,7 @@ const MAX_KEY_HEADERS: usize = 2;
 /// Whether the service of `protocol` always needs an API key: a local
 /// server of the chat completions of `OpenAI` needs none.
 ///
-/// Called by: `question.rs`: `prepare`.
+/// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`; [`key_headers`].
 pub fn needs_key(protocol: Protocol) -> bool {
     match protocol {
         Protocol::OpenAiChat => false,
@@ -47,8 +47,9 @@ pub fn needs_key(protocol: Protocol) -> bool {
 ///
 /// Output: the body as JSON (`{"model": "llama3.1", "stream": true, ...}`).
 ///
-/// Called by: `question.rs`: `prepare`.
-/// Calls: `openai.rs`: `body`; `anthropic.rs`: `body`.
+/// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`.
+/// Calls: `objects/ai/integration/integration_ai/openai.rs`: `body`;
+/// `objects/ai/integration/integration_ai/anthropic.rs`: `body`.
 pub fn body(protocol: Protocol, model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Value {
     match protocol {
         Protocol::OpenAiChat => openai::body(model, system, turns),
@@ -56,12 +57,17 @@ pub fn body(protocol: Protocol, model: &str, system: &str, turns: &[Turn], answe
     }
 }
 
-/// The headers that carry the key `key` in `protocol`: none for a service
-/// without a key; an error when the protocol needs a key and there is none.
+/// The headers that carry the key `key` in `protocol`.
 ///
-/// Called by: `connection.rs`: `post`.
-/// Calls: [`needs_key`]; `openai.rs`: `key_header`; `anthropic.rs`:
-/// `key_headers`.
+/// Input: `protocol`, the protocol of the integration; `key`, the API key,
+/// `None` when the integration has none.
+/// Output: the headers (`[("authorization", "Bearer ...")]`), none for a
+/// service without a key; `AiError::NoKey` when the protocol needs a key and
+/// there is none.
+///
+/// Called by: `objects/ai/integration/integration_ai/connection.rs`: `post`.
+/// Calls: [`needs_key`]; `objects/ai/integration/integration_ai/openai.rs`: `key_header`;
+/// `objects/ai/integration/integration_ai/anthropic.rs`: `key_headers`.
 pub fn key_headers(protocol: Protocol, key: Option<&str>) -> Result<Vec<(&'static str, Zeroizing<String>)>, AiError> {
     let mut headers = Vec::with_capacity(MAX_KEY_HEADERS);
     let Some(key) = key else {
@@ -77,12 +83,16 @@ pub fn key_headers(protocol: Protocol, key: Option<&str>) -> Result<Vec<(&'stati
     Ok(headers)
 }
 
-/// Reads one event of an answer in `protocol` into `reading`; gives the
-/// piece of text it carried, if any. An error the service reports is an
-/// error.
+/// Reads one event of an answer in `protocol` into `reading`.
 ///
-/// Called by: `connection.rs`: `read_stream`.
-/// Calls: `openai.rs`: `read_event`; `anthropic.rs`: `read_event`.
+/// Input: `protocol`, the protocol of the integration; `event`, one event of
+/// the stream; `reading`, what was read of the answer so far.
+/// Output: the piece of text the event carried (`Some("Hel")`), if any; an
+/// error for an event that cannot be read or an error the service reports.
+///
+/// Called by: `objects/ai/integration/integration_ai/connection.rs`: `read_stream`.
+/// Calls: `objects/ai/integration/integration_ai/openai.rs`: `read_event`;
+/// `objects/ai/integration/integration_ai/anthropic.rs`: `read_event`.
 pub fn read_event(protocol: Protocol, event: &SseEvent, reading: &mut Reading) -> Result<Option<String>, AiError> {
     match protocol {
         Protocol::OpenAiChat => openai::read_event(event, reading),

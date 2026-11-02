@@ -54,8 +54,12 @@ pub fn new_evaluation(db: &UserDatabase, plan: i64, identification: [&str; 3], a
     Ok(create_evaluation(db, plan, &product, &client, &evaluator, started, Some(agent))?)
 }
 
-/// The evaluation `id`; refused unless it is being carried out (state
+/// The evaluation `id`, refused unless it is being carried out (state
 /// `Evaluation`).
+///
+/// Input: `id`, the id of a stored plan or evaluation.
+/// Output: the evaluation; `DomainError::Refused` for a plan or an evaluation
+/// not in progress, an error of the database for one missing.
 ///
 /// Called by: [`change_agent`]; `objects/evaluation/product_document/product_document_rules.rs`: `give_document`;
 /// `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`;
@@ -77,6 +81,11 @@ pub fn evaluation_in_progress(db: &UserDatabase, id: i64) -> Result<EvaluationPl
 /// Gives the evaluation `evaluation` the agent `agent` for its work units
 /// without an agent of their own.
 ///
+/// Input: `evaluation`, the id of an evaluation in progress; `agent`, the id
+/// of a stored agent.
+/// Output: nothing; the errors of [`evaluation_in_progress`], an error of
+/// the database for an agent missing.
+///
 /// Called by: `panels/views/evaluation/evaluations.rs`: `evaluation_set_agent`.
 /// Calls: [`evaluation_in_progress`]; `objects/ai/agent/agent_store.rs`: `read_agent`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `update_evaluation_plan`.
@@ -89,10 +98,13 @@ pub fn change_agent(db: &UserDatabase, evaluation: i64, agent: i64) -> Result<()
 }
 
 /// The proofs of the laboratory the work units `units` need, each once, in
-/// the order of the work units (`[6, 9]`).
+/// the order of the work units.
 ///
-/// Called by: `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`; `panels/logic/evaluation/inputs.rs`:
-/// `inputs`.
+/// Input: `units`, the work units of an evaluation.
+/// Output: the ids of the proofs (`[6, 9]`).
+///
+/// Called by: `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`;
+/// `panels/logic/evaluation/inputs.rs`: `inputs`.
 pub fn needed_proofs(units: &[WorkUnit]) -> Vec<i64> {
     let mut proofs = Vec::new();
 

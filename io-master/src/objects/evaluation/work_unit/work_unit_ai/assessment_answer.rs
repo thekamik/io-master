@@ -45,8 +45,13 @@ pub struct Assessment {
     pub quotes: Vec<(String, String)>,
 }
 
-/// The JSON object of an answer (a fence of Markdown or words around it are
-/// passed over); refused when the answer holds none.
+/// The JSON object of an answer: a fence of Markdown or words around it are
+/// passed over.
+///
+/// Input: `answer`, the text of the answer of the AI, bounded by
+/// `MAX_STREAM` (`connection.rs`).
+/// Output: the object (`{"verdict": "Pass", ...}`); `AiError::Refused` when
+/// the answer holds none.
 ///
 /// Called by: [`read_assessment`].
 fn answer_object(answer: &str) -> Result<Value, AiError> {
@@ -54,11 +59,19 @@ fn answer_object(answer: &str) -> Result<Value, AiError> {
         return Err(AiError::Refused("the answer holds no JSON object".to_owned()));
     };
 
-    serde_json::from_str(answer.get(start..=end).unwrap_or_default())
-        .map_err(|error| AiError::Refused(format!("the answer is no JSON object: {error}")))
+    // A "}" before the first "{" leaves no object between them.
+    ensure!(start < end, AiError::Refused("the answer holds no JSON object".to_owned()));
+
+    let object =
+        answer.get(start..=end).ok_or_else(|| AiError::Refused("the answer holds no JSON object".to_owned()))?;
+
+    serde_json::from_str(object).map_err(|error| AiError::Refused(format!("the answer is no JSON object: {error}")))
 }
 
-/// The text of the field `field` of the answer, trimmed; refused over
+/// The text of the field `field` of the answer, trimmed.
+///
+/// Input: `value`, the object of the answer; `field`, a field ("findings").
+/// Output: its text, empty when it has none; `AiError::Refused` over
 /// [`MAX_RESULT`] characters.
 ///
 /// Called by: [`read_assessment`].
@@ -73,9 +86,15 @@ fn text_of(value: &Value, field: &str) -> Result<String, AiError> {
     Ok(text.to_owned())
 }
 
-/// The assessment an answer proposes; refused when it holds no JSON object.
+/// The assessment an answer proposes, before it is checked against the work
+/// unit.
 ///
-/// Called by: `assessment.rs`: `assessed`.
+/// Input: `answer`, the text of the answer of the AI.
+/// Output: the assessment, at most `MAX_QUOTES` quotes, each cut to
+/// [`MAX_QUOTE`] characters (`Assessment { verdict: "Pass", .. }`); the
+/// refusals of [`answer_object`] and [`text_of`].
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assessed`.
 /// Calls: [`answer_object`], [`text_of`].
 pub fn read_assessment(answer: &str) -> Result<Assessment, AiError> {
     let value = answer_object(answer)?;
@@ -104,8 +123,13 @@ pub fn read_assessment(answer: &str) -> Result<Assessment, AiError> {
 
 /// The verdict of its name, if the plan knows it.
 ///
+/// Input: `name`, the verdict the answer gives ("Pass"); `possible`, the
+/// verdicts of the plan.
+/// Output: the verdict (`Some(Verdict::Pass)`); `None` when the plan does not
+/// know it.
+///
 /// Called by: [`apply_assessment`].
-/// Calls: [`verdict_name`].
+/// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `verdict_name`.
 fn verdict_of(name: &str, possible: &[Verdict]) -> Option<Verdict> {
     for verdict in possible {
         if verdict_name(*verdict) == name {
@@ -116,7 +140,7 @@ fn verdict_of(name: &str, possible: &[Verdict]) -> Option<Verdict> {
     None
 }
 
-/// How bad a verdict is: `Fail` the worst, `Pass` the best.
+/// How bad a verdict is: `Fail` the worst (2), `Pass` the best (0).
 ///
 /// Called by: [`with_dependencies`].
 fn badness(verdict: Verdict) -> u8 {
@@ -128,12 +152,17 @@ fn badness(verdict: Verdict) -> u8 {
 }
 
 /// The verdict `own` of the work unit `unit` made the worst of its own and
-/// those of its dependencies (user, 2026-10-28, as Common Criteria asks), and
-/// the lines of the findings for each dependency that did not pass or is not
-/// assessed.
+/// those of its dependencies (user, 2026-10-28, as Common Criteria asks).
+///
+/// Input: `unit`, the work unit assessed; `own`, the verdict the answer
+/// gives.
+/// Output: the verdict and the lines of the findings for each dependency
+/// that did not pass or is not assessed (`(Fail, ["Fail: its dependency
+/// ADV_ARC.1-1 failed"])`); an error of the database.
 ///
 /// Called by: [`apply_assessment`].
-/// Calls: `read_work_unit`, [`badness`].
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`badness`];
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `verdict_name`.
 fn with_dependencies(db: &UserDatabase, unit: &WorkUnit, own: Verdict) -> Result<(Verdict, Vec<String>), AiError> {
     let mut verdict = own;
     let mut lines = Vec::new();
@@ -165,7 +194,8 @@ fn with_dependencies(db: &UserDatabase, unit: &WorkUnit, own: Verdict) -> Result
     Ok((verdict, lines))
 }
 
-/// `first` and the lines `more`, parted by a line end when both hold text.
+/// `first` and the lines `more`, parted by a line end when both hold text:
+/// `joined("A", ["B"])` is "A\nB".
 ///
 /// Called by: [`apply_assessment`].
 fn joined(first: &str, more: &[String]) -> String {
@@ -183,14 +213,19 @@ fn joined(first: &str, more: &[String]) -> String {
 }
 
 /// Writes the assessment `assessment` into the work unit `unit` of the
-/// evaluation `evaluation`, as the results of the AI; gives the notes of
-/// what was not taken (a quote not found). Refused when the verdict is none
-/// of the plan.
+/// evaluation `evaluation`, as the results of the AI.
 ///
-/// Called by: `assessment.rs`: `assessed`.
-/// Calls: `read_evaluation_plan`, `read_work_unit`, [`verdict_of`],
+/// Input: `evaluation`, the id of an evaluation in progress; `unit`, the id
+/// of one of its work units; `assessment`, from [`read_assessment`].
+/// Output: the notes of what was not taken (`["The AI quoted a text not found
+/// in ST: ..."]`); `AiError::Refused` for a work unit not of the evaluation
+/// or a verdict none of the plan, an error of the database.
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assessed`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; [`verdict_of`];
 /// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`;
-/// [`with_dependencies`], [`joined`], `update_work_unit`.
+/// [`with_dependencies`], [`joined`].
 pub fn apply_assessment(
     db: &UserDatabase,
     evaluation: i64,

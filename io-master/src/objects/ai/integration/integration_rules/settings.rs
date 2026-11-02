@@ -27,8 +27,14 @@ const MIN_CONTEXT: u32 = 512;
 /// program sends to, a model, a context, a CA certificate the connection can
 /// use (an empty one is none).
 ///
+/// Input: `integration`, the integration as given by the page.
+/// Output: the integration to write; `DomainError::Refused` for an empty or
+/// too long name, no model, a context under [`MIN_CONTEXT`], an address or a
+/// certificate refused.
+///
 /// Called by: [`add_integration`], [`change_integration`].
-/// Calls: `address.rs`: `check_address`, `check_certificate`.
+/// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`,
+/// `check_certificate`.
 fn checked(integration: &Integration) -> Result<Integration, DomainError> {
     let name = integration.name.trim();
     let certificate = integration.ca_certificate.as_deref().unwrap_or_default().trim();
@@ -57,12 +63,15 @@ fn checked(integration: &Integration) -> Result<Integration, DomainError> {
     })
 }
 
-/// Stores a new integration and gives its id; the first one becomes the
-/// active one.
+/// Stores a new integration; the first one becomes the active one.
 ///
-/// Called by: `panels/views/settings/integrations.rs` (a new integration).
-/// Calls: [`checked`], `create_integration`, `read_settings`,
-/// `update_settings`.
+/// Input: `integration`, the new integration, its id 0.
+/// Output: its id (`2`); `DomainError::Refused` for an id given or what
+/// [`checked`] refuses, an error of the database.
+///
+/// Called by: `panels/views/settings/integrations.rs`: `integration_create`.
+/// Calls: [`checked`]; `objects/ai/integration/integration_store.rs`: `create_integration`;
+/// `objects/user/program_data/program_data_store.rs`: `read_settings`, `update_settings`.
 pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i64, DomainError> {
     ensure!(integration.id == 0, DomainError::Refused("a new integration has an id already".to_owned()));
 
@@ -78,9 +87,14 @@ pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i
 /// Writes the data of the integration `integration.id` anew. Its key stays
 /// bound to the old address: a new address needs the key given anew.
 ///
-/// Called by: `panels/views/settings/integrations.rs` (an integration
-/// saved).
-/// Calls: `read_integration`, [`checked`], `update_integration`.
+/// Input: `integration`, the integration as changed, its id that of a stored
+/// one.
+/// Output: nothing; `DomainError::Refused` for what [`checked`] refuses, an
+/// error of the database for an integration missing.
+///
+/// Called by: `panels/views/settings/integrations.rs`: `integration_save`.
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`,
+/// `update_integration`; [`checked`].
 pub fn change_integration(db: &UserDatabase, integration: &Integration) -> Result<(), DomainError> {
     read_integration(db, integration.id)?;
 
@@ -90,8 +104,9 @@ pub fn change_integration(db: &UserDatabase, integration: &Integration) -> Resul
 /// Makes the integration `id` the active one: the one asked where no agent
 /// names another.
 ///
-/// Called by: `panels/views/settings/integrations.rs`.
-/// Calls: `read_integration`, `update_settings`.
+/// Called by: `panels/views/settings/integrations.rs`: `integration_activate`.
+/// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
+/// `objects/user/program_data/program_data_store.rs`: `update_settings`.
 pub fn activate_integration(db: &UserDatabase, id: i64) -> Result<(), DomainError> {
     read_integration(db, id)?;
 

@@ -27,7 +27,13 @@ use crate::objects::ai_error::{AiError, shorten};
 /// The body of a question: the instructions as the first message of the
 /// role `system`, then the turns.
 ///
-/// Called by: `protocol.rs`: `body`.
+/// Input: `model`, the model of the integration ("llama3.1"); `system`, the
+/// instructions, empty for none; `turns`, the conversation, the question
+/// last.
+/// Output: the JSON of the body (`{"model": ..., "stream": true,
+/// "messages": [...]}`).
+///
+/// Called by: `objects/ai/integration/integration_ai/protocol.rs`: `body`.
 pub fn body(model: &str, system: &str, turns: &[Turn]) -> Value {
     let mut messages = Vec::with_capacity(turns.len() + 1);
 
@@ -47,16 +53,18 @@ pub fn body(model: &str, system: &str, turns: &[Turn]) -> Value {
     json!({"model": model, "stream": true, "stream_options": {"include_usage": true}, "messages": messages})
 }
 
-/// The header of the key, when there is one: `authorization`, the value
-/// `Bearer <key>`.
+/// The header of the key: `authorization`, the value `Bearer <key>`.
 ///
-/// Called by: `protocol.rs`: `key_headers`.
+/// Called by: `objects/ai/integration/integration_ai/protocol.rs`: `key_headers`.
 pub fn key_header(key: &str) -> (&'static str, Zeroizing<String>) {
     ("authorization", Zeroizing::new(format!("Bearer {key}")))
 }
 
-/// How the model ended, from `finish_reason`. A reason the program does not
+/// How the model ended, from its reason. A reason the program does not
 /// know is taken as cut: the answer may be incomplete.
+///
+/// Input: `reason`, the reason the service gave (`"end_turn"`, `"stop"`).
+/// Output: the ending (`Ending::Complete`).
 ///
 /// Called by: [`read_event`].
 fn ending_of(reason: &str) -> Ending {
@@ -77,11 +85,16 @@ fn tokens(value: Option<&Value>) -> Option<u32> {
     Some(u32::try_from(count).unwrap_or(u32::MAX))
 }
 
-/// Reads one event of the answer into `reading`; gives the piece of text it
-/// carried, if any. An error the service reports is an error.
+/// Reads one event of the answer of `OpenAI` into `reading`.
 ///
-/// Called by: `protocol.rs`: `read_event` (every event of the stream).
-/// Calls: [`ending_of`], [`tokens`].
+/// Input: `event`, one event of the stream, its data within the limit of a
+/// line (`sse.rs`); `reading`, what was read of the answer so far.
+/// Output: the piece of text the event carried (`Some("Hel")`), `None` for
+/// an event without text; `AiError::UnexpectedAnswer` for data that is no
+/// JSON, `AiError::Reported` for an error the service reports.
+///
+/// Called by: `objects/ai/integration/integration_ai/protocol.rs`: `read_event` (every event of the stream).
+/// Calls: [`ending_of`], [`tokens`]; `objects/ai_error.rs`: `shorten`.
 pub fn read_event(event: &SseEvent, reading: &mut Reading) -> Result<Option<String>, AiError> {
     if event.data == "[DONE]" {
         reading.done = true;

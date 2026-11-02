@@ -15,9 +15,14 @@ use crate::objects::error::DomainError;
 /// address; a key it had is replaced. The key is trimmed: a key pasted with
 /// a line break is the same key.
 ///
-/// Called by: `panels/views/settings/integrations.rs` (a key entered).
+/// Input: `id`, the id of a stored integration; `key`, the key as typed.
+/// Output: nothing; `DomainError::Refused` for an empty key, one over
+/// `MAX_KEY` or with a character a header cannot carry; an error of the
+/// database for an integration missing.
+///
+/// Called by: `panels/views/settings/integrations.rs`: `integration_set_key`.
 /// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
-/// `api_key_store.rs`: `update_api_key`.
+/// `objects/ai/api_key/api_key_store.rs`: `update_api_key`.
 pub fn set_key(db: &UserDatabase, id: i64, key: &str) -> Result<(), DomainError> {
     let key = key.trim();
 
@@ -39,8 +44,8 @@ pub fn set_key(db: &UserDatabase, id: i64, key: &str) -> Result<(), DomainError>
 /// Whether the integration `id` has a key for its present address. The key
 /// itself never leaves the store and the AI of the integration.
 ///
-/// Called by: `panels/views/settings/integrations.rs` (the list).
-/// Calls: `api_key_store.rs`: `read_api_key`.
+/// Called by: `panels/views/settings/integrations.rs`: `integration_list`.
+/// Calls: `objects/ai/api_key/api_key_store.rs`: `read_api_key`.
 pub fn has_key(db: &UserDatabase, id: i64) -> Result<bool, DomainError> {
     Ok(read_api_key(db, id)?.is_some())
 }

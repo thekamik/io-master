@@ -24,7 +24,13 @@ const MAX_TITLE: usize = 200;
 /// The longest question of the user, in characters.
 pub const MAX_QUESTION: usize = 20_000;
 
-/// Makes a new chat with the agent `agent`, without messages; gives its id.
+/// Makes a new chat with the agent `agent`, without messages.
+///
+/// Input: `title`, the title typed ("The ST of the router"); `agent`, the id of
+/// a stored agent.
+/// Output: the id of the new chat (`5`); `DomainError::Refused` for an empty
+/// title or one over [`MAX_TITLE`], an error of the database for an agent
+/// missing.
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_create`.
 /// Calls: `objects/text.rs`: `checked_text`; `objects/ai/agent/agent_store.rs`: `read_agent`;
@@ -39,6 +45,10 @@ pub fn new_chat(db: &UserDatabase, title: &str, agent: i64) -> Result<i64, Domai
 
 /// Writes the title `title` of the chat `chat`; its agent and its messages
 /// stay as they were.
+///
+/// Input: `chat`, the id of a stored chat; `title`, the new title typed.
+/// Output: nothing; `DomainError::Refused` for a title refused, an error of
+/// the database for a chat missing.
 ///
 /// Called by: `panels/views/chat/chats.rs`: `chat_rename`.
 /// Calls: `objects/ai/chat/chat_store.rs`: `read_chat`, `update_chat`; `objects/text.rs`:
@@ -63,8 +73,12 @@ pub fn checked_question(text: &str) -> Result<String, DomainError> {
 /// Writes the question `text` of the user as the last message of the chat
 /// `chat`.
 ///
-/// Called by: `panels/views/chat/chats.rs` (`chat_ask`, once the question is
-/// prepared).
+/// Input: `chat`, the id of a stored chat; `text`, the question as typed.
+/// Output: nothing; `DomainError::Refused` for a question refused or a clock
+/// before 1970, an error of the database.
+///
+/// Called by: `panels/views/chat/chats.rs`: `prepared_question`, once the
+/// question is prepared.
 /// Calls: [`checked_question`]; `infrastructure/clock.rs`: `now`; `objects/ai/chat/chat_store.rs`:
 /// `create_message`.
 pub fn add_question(db: &UserDatabase, chat: i64, text: &str) -> Result<(), DomainError> {

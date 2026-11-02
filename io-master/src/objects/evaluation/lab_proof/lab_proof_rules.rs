@@ -24,9 +24,14 @@ const MAX_FIELD: usize = 500;
 const MAX_PROOF: usize = 1_000_000;
 
 /// Gives the proof `proof.id` of the evaluation `evaluation` its text and
-/// the record of its test; its name stays as it was reserved. Refused unless
-/// the evaluation is in progress and a work unit of it needs the proof, or a
-/// part of the record is missing; its store refuses a proof given already.
+/// the record of its test; its name stays as it was reserved.
+///
+/// Input: `evaluation`, the id of an evaluation in progress; `proof`, the
+/// proof as typed: its id that of a place a work unit needs, its text,
+/// date, tester and equipment.
+/// Output: nothing; `DomainError::Refused` unless the evaluation is in
+/// progress and a work unit of it needs the proof, or for a part of the
+/// record missing or too long; its store refuses a proof given already.
 ///
 /// Called by: `panels/views/evaluation/inputs.rs`: `evaluation_proof_give`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`,

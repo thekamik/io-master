@@ -88,6 +88,9 @@ pub struct CatalogControl {
 /// The validator of the schema of NIST, compiled from the text built into
 /// the program.
 ///
+/// Output: the validator; `OscalError::NotCatalog` when the schema built in
+/// cannot be read, which a build of the program never gives.
+///
 /// Called by: [`check_catalog`].
 fn validator() -> Result<Validator, OscalError> {
     let schema: Value = serde_json::from_str(CATALOG_SCHEMA)
@@ -99,14 +102,23 @@ fn validator() -> Result<Validator, OscalError> {
 
 /// The text of a field of the metadata of a catalog.
 ///
+/// Input: `document`, a catalog; `field`, a field of its metadata ("title").
+/// Output: its text ("Common Methodology for Information Technology Security
+/// Evaluation"); empty when the catalog has no such field.
+///
 /// Called by: [`check_catalog`].
 fn metadata_text(document: &Value, field: &str) -> String {
     document.pointer(&format!("/catalog/metadata/{field}")).and_then(Value::as_str).unwrap_or_default().to_owned()
 }
 
 /// Checks that `text` is an OSCAL catalog: JSON within its limit, valid
-/// against the schema of NIST. Gives the document read and its title and
-/// version.
+/// against the schema of NIST.
+///
+/// Input: `text`, the document as imported.
+/// Output: the document read and its title and version (`(document,
+/// CheckedCatalog { title: "CEM", version: "3.1 R5" })`); `OscalError::TooLarge`
+/// over [`MAX_DOCUMENT`], `OscalError::NotJson`, `OscalError::NotCatalog`
+/// with at most [`MAX_MESSAGES`] messages of the check.
 ///
 /// Called by: [`import_standard`].
 /// Calls: [`validator`], [`metadata_text`].
@@ -147,6 +159,10 @@ enum Kind {
 /// the last first, so that the stack gives them in the order of the
 /// document.
 ///
+/// Input: `stack`, the objects still to walk; `object`, a group or a control;
+/// `key`, `"groups"` or `"controls"`; `kind`, what the objects of that array
+/// are.
+///
 /// Called by: [`catalog_controls`].
 fn push_items<'a>(stack: &mut Vec<(Kind, &'a Value)>, object: &'a Value, key: &str, kind: Kind) {
     if let Some(items) = object.get(key).and_then(Value::as_array) {
@@ -158,6 +174,10 @@ fn push_items<'a>(stack: &mut Vec<(Kind, &'a Value)>, object: &'a Value, key: &s
 
 /// The text of a part and of the parts inside it, each on a line of its
 /// own, a part with a label ("a.") led by it.
+///
+/// Input: `part`, a part of a control.
+/// Output: its text ("The developer shall ...\na. describe ..."); an
+/// `OscalError::TooMany` for more than [`MAX_OBJECTS`] parts.
 ///
 /// Called by: [`parts_named`].
 /// Calls: [`label_of`].
@@ -187,7 +207,8 @@ fn part_text(part: &Value) -> Result<String, OscalError> {
     Err(OscalError::TooMany)
 }
 
-/// The label of an object of OSCAL (its prop `label`), if it has one.
+/// The label of an object of OSCAL (its prop `label`), if it has one:
+/// `Some("ADV_ARC.1-1")`.
 ///
 /// Called by: [`part_text`], [`control_of`].
 fn label_of(object: &Value) -> Option<&str> {
@@ -201,6 +222,10 @@ fn label_of(object: &Value) -> Option<&str> {
 }
 
 /// The text of the parts named `name` of a control, joined.
+///
+/// Input: `control`, a control; `name`, `"statement"` or `"guidance"`.
+/// Output: their text, the parts parted by a line break; empty when it has
+/// none; the errors of [`part_text`].
 ///
 /// Called by: [`control_of`].
 /// Calls: [`part_text`].
@@ -217,6 +242,11 @@ fn parts_named(control: &Value, name: &str) -> Result<String, OscalError> {
 }
 
 /// The control of the catalog as a work unit is made from it.
+///
+/// Input: `control`, a control of the catalog.
+/// Output: the control (`CatalogControl { oscal_key: "adv_arc.1-1", label:
+/// "ADV_ARC.1-1", .. }`); `OscalError::NotCatalog` for a control without
+/// its id, the errors of [`parts_named`].
 ///
 /// Called by: [`catalog_controls`].
 /// Calls: [`label_of`], [`parts_named`].
@@ -238,6 +268,11 @@ fn control_of(control: &Value) -> Result<CatalogControl, OscalError> {
 /// Every control of the catalog `document`, in the order of the document:
 /// those of its groups (and of the groups inside them) and the controls
 /// inside controls (the enhancements of NIST).
+///
+/// Input: `document`, a catalog that passed [`check_catalog`].
+/// Output: its controls (`[CatalogControl { .. }, ...]`);
+/// `OscalError::NotCatalog` without a catalog, `OscalError::TooMany` for
+/// more than [`MAX_OBJECTS`] objects.
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `controls_of`.
 /// Calls: [`push_items`], [`control_of`].
@@ -269,7 +304,11 @@ pub fn catalog_controls(document: &Value) -> Result<Vec<CatalogControl>, OscalEr
 
 /// Imports the OSCAL catalog `text`: checked against the schema of NIST,
 /// stored as it was given, with the title and the version of its metadata.
-/// Gives its id.
+///
+/// Input: `text`, the document read from the file chosen.
+/// Output: the id of the standard (`2`); the errors of [`check_catalog`],
+/// `DomainError::Refused` for a catalog without a title, an error of the
+/// database.
 ///
 /// Called by: `panels/views/evaluation_plan/standards.rs`: `standard_import`.
 /// Calls: [`check_catalog`]; `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:

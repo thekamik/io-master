@@ -71,7 +71,7 @@ pub struct Prepared {
 /// The longest answer asked of the integration: a fourth of its context,
 /// at most [`MAX_ANSWER_TOKENS`], at least one token.
 ///
-/// Called by: [`prepare`].
+/// Called by: [`check_size`], [`prepare`].
 fn answer_tokens(integration: &Integration) -> u32 {
     (integration.context_size / 4).clamp(1, MAX_ANSWER_TOKENS)
 }
@@ -79,7 +79,13 @@ fn answer_tokens(integration: &Integration) -> u32 {
 /// Refuses a question that does not fit into the context of the model
 /// beside its answer (the estimate of [`CHARACTERS_PER_TOKEN`]).
 ///
+/// Input: `integration`, the integration asked; `system`, the instructions;
+/// `turns`, the conversation.
+/// Output: nothing when it fits; `AiError::TooLong` with the estimate and the
+/// room (`{ estimated: 9000, room: 6000 }`) when it does not.
+///
 /// Called by: [`prepare`].
+/// Calls: [`answer_tokens`].
 fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result<(), AiError> {
     let mut characters = system.chars().count();
 
@@ -97,18 +103,25 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn]) -> Result
 
 /// Prepares the question `question`: reads its integration and its key,
 /// makes the body in the protocol of the integration and checks that it
-/// fits. Refused when there is nothing to ask, the address is not one the
-/// program sends to, or the protocol needs a key the integration has not.
+/// fits. Runs under the lock of the session.
+///
+/// Input: `question`, the question, its last message the user's.
+/// Output: the question ready to be sent, with what its entry of the journal
+/// needs; `AiError::TooManyMessages` over [`MAX_MESSAGES`],
+/// `AiError::NoQuestion` with nothing to ask, `AiError::NoKey` when the
+/// protocol needs a key the integration has not, `AiError::TooLong` when it
+/// does not fit, an error for an address refused or a database failed.
 ///
 /// Called by: `objects/ai/chat/chat_ai.rs`: `prepare_shortened`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_assessment`;
-/// `check.rs`: `check_question`;
-/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`; under the
-/// lock of the session.
+/// `objects/ai/integration/integration_ai/check.rs`: `check_question`;
+/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`.
 /// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`;
-/// `objects/ai/api_key/api_key_store.rs`: `read_api_key`; `integration_rules/address.rs`:
-/// `check_address`; `turns.rs`: `turns`; [`check_size`];
-/// `protocol.rs`: `needs_key`, `body`; `infrastructure/clock.rs`: `now`.
+/// `objects/ai/api_key/api_key_store.rs`: `read_api_key`;
+/// `objects/ai/integration/integration_rules/address.rs`: `check_address`;
+/// `objects/ai/integration/integration_ai/turns.rs`: `turns`; [`check_size`], [`answer_tokens`];
+/// `objects/ai/integration/integration_ai/protocol.rs`: `needs_key`, `body`;
+/// `infrastructure/clock.rs`: `now`.
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
     ensure!(
         question.messages.len() <= MAX_MESSAGES,

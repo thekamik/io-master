@@ -94,6 +94,10 @@ pub fn quotes_found(
 /// Whether the quote `text` of the document `document` stands word for word
 /// in it, for the work unit `unit`.
 ///
+/// Input: `unit`, a work unit; `document`, the name of one of its documents;
+/// `text`, the text quoted.
+/// Output: `true` when it is found; an error of the database.
+///
 /// Called by: [`check_quotes`].
 /// Calls: [`quotes_found`].
 fn check_quote(db: &UserDatabase, unit: &WorkUnit, document: &str, text: &str) -> Result<bool, DomainError> {
@@ -116,9 +120,13 @@ pub struct Results {
 /// Refuses a quote of the work unit `unit` that is not of one of its
 /// documents, or that is not found in it word for word.
 ///
+/// Input: `unit`, the work unit as stored; `quotes`, the quotes the
+/// evaluator gives.
+/// Output: nothing; `DomainError::Refused` for more than `MAX_QUOTES`, a
+/// quote of another document or one not found, an error of the database.
+///
 /// Called by: [`save_results`].
-/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
-/// [`check_quote`].
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`; [`check_quote`].
 fn check_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[Quote]) -> Result<(), DomainError> {
     ensure!(quotes.len() <= MAX_QUOTES, DomainError::Refused(format!("more than {MAX_QUOTES} quotes")));
 
@@ -140,14 +148,18 @@ fn check_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[Quote]) -> Result<
 }
 
 /// Writes the results `results` of the work unit `unit` of the evaluation
-/// `evaluation`, as the evaluator gives them: of author User. Refused unless
-/// the evaluation is in progress, the verdict is one of the plan and each
-/// quote stands in its document.
+/// `evaluation`, as the evaluator gives them: of author User.
+///
+/// Input: `evaluation`, the id of an evaluation in progress; `unit`, the id
+/// of one of its work units; `results`, as the evaluator gives them.
+/// Output: nothing; `DomainError::Refused` unless the evaluation is in
+/// progress, the work unit is one of it, the verdict is one of the plan,
+/// every text is within [`MAX_RESULT`] and each quote stands in its document.
 ///
 /// Called by: `panels/views/evaluation/work_units.rs`: `evaluation_unit_save`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
-/// `read_work_unit`, `objects/text.rs`: `check_length`;
-/// [`check_quotes`], `update_work_unit`.
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; `objects/text.rs`: `check_length`;
+/// [`check_quotes`].
 pub fn save_results(db: &UserDatabase, evaluation: i64, unit: i64, results: &Results) -> Result<(), DomainError> {
     let stored = evaluation_in_progress(db, evaluation)?;
     let this = read_work_unit(db, unit)?;

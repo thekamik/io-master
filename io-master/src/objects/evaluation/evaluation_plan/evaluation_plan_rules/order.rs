@@ -174,12 +174,18 @@ pub fn work_order(units: &[WorkUnit]) -> Result<Order, DomainError> {
 
 /// Marks the cross references of the plan `plan`: `cross_reference` of every
 /// work unit, and `blocked` of the plan when there is one; writes only what
-/// changed. Gives whether the plan is blocked.
+/// changed.
 ///
-/// Called by: `work_units.rs`: `remove_work_unit`; `../work_unit_rules/parameters.rs`:
+/// Input: `plan`, the id of a stored plan.
+/// Output: whether the plan is blocked (`true`); an error of the database,
+/// or of [`work_order`].
+///
+/// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`:
+/// `remove_work_unit`; `objects/evaluation/work_unit/work_unit_rules/parameters.rs`:
 /// `update_work_unit_parameters`.
-/// Calls: `read_work_units`, [`work_order`], `update_work_unit`,
-/// `read_evaluation_plan`, `update_evaluation_plan`.
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`, `update_work_unit`; [`work_order`];
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`,
+/// `update_evaluation_plan`.
 pub fn check_order(db: &UserDatabase, plan: i64) -> Result<bool, DomainError> {
     let units = read_work_units(db, plan)?;
     let crossed = work_order(&units)?.crossed;

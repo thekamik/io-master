@@ -117,7 +117,11 @@ impl From<DomainError> for AiError {
 /// The error of an answer that is no success: its HTTP status decides the
 /// kind, its body gives the explanation.
 ///
-/// Called by: `objects/ai/integration/integration_ai/connection.rs` (an answer that is no success).
+/// Input: `status`, the HTTP status (`401`); `body`, the body read, at most
+/// `MAX_ERROR` bytes (`connection.rs`).
+/// Output: the error (`AiError::KeyRejected("invalid x-api-key")`).
+///
+/// Called by: `objects/ai/integration/integration_ai/connection.rs`: `exchange`.
 /// Calls: [`explanation`].
 pub(in crate::objects) fn from_status(status: u16, body: &[u8]) -> AiError {
     let message = explanation(body);
@@ -136,6 +140,11 @@ pub(in crate::objects) fn from_status(status: u16, body: &[u8]) -> AiError {
 /// What the service said: `error.message` of a JSON body (both protocols
 /// put it there), else the beginning of the body on one line.
 ///
+/// Input: `body`, the body of an answer that is no success, bounded by its
+/// caller.
+/// Output: the explanation, at most [`EXPLANATION_LENGTH`] characters
+/// ("invalid x-api-key"); "no explanation was given" for an empty body.
+///
 /// Called by: [`from_status`].
 /// Calls: [`shorten`].
 fn explanation(body: &[u8]) -> String {
@@ -153,8 +162,11 @@ fn explanation(body: &[u8]) -> String {
 
 /// The text cut to [`EXPLANATION_LENGTH`] characters.
 ///
-/// Called by: [`explanation`]; `objects/ai/integration/integration_ai/openai.rs`,
-/// `objects/ai/integration/integration_ai/anthropic.rs` (an error in the
+/// Input: `text`, an explanation of a service.
+/// Output: the text, or its beginning ended by "…" when it is longer.
+///
+/// Called by: [`explanation`]; `objects/ai/integration/integration_ai/openai.rs`: `read_event`;
+/// `objects/ai/integration/integration_ai/anthropic.rs`: `read_event` (an error in the
 /// middle of an answer).
 pub(in crate::objects) fn shorten(text: &str) -> String {
     if text.chars().count() <= EXPLANATION_LENGTH {

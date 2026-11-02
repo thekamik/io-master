@@ -55,9 +55,15 @@ pub struct Preview {
 
 /// The work units of the evaluation `evaluation` in the order of the work.
 ///
-/// Called by: [`units_to_assess`]; `panels/views/evaluation/work_units.rs`
-/// (the list of the work units).
-/// Calls: `read_work_units`, `work_order`.
+/// Input: `evaluation`, the id of a stored evaluation (a plan).
+/// Output: its work units, each after its dependencies (`[ASE_INT.1-1,
+/// ASE_INT.1-2, ...]`); `AiError::Refused` when it has a cross reference,
+/// an error of the database.
+///
+/// Called by: [`units_to_assess`]; `panels/views/evaluation/work_units.rs`:
+/// `evaluation_unit_list`.
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `work_order`.
 pub fn units_in_order(db: &UserDatabase, evaluation: i64) -> Result<Vec<WorkUnit>, AiError> {
     let units = read_work_units(db, evaluation)?;
     let order = work_order(&units)?;
@@ -81,9 +87,13 @@ pub fn units_in_order(db: &UserDatabase, evaluation: i64) -> Result<Vec<WorkUnit
 /// the work: never one of author User (the evaluator decides, P1); one with
 /// a verdict only with `again`.
 ///
+/// Input: `evaluation`, the id of an evaluation in progress; `again`, whether
+/// the work units with a verdict are assessed again.
+/// Output: the work units chosen; `AiError::Refused` for an evaluation not in
+/// progress or with a cross reference, an error of the database.
+///
 /// Called by: [`preview`].
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
-/// [`units_in_order`].
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`; [`units_in_order`].
 fn units_to_assess(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Vec<WorkUnit>, AiError> {
     evaluation_in_progress(db, evaluation)?;
 
@@ -98,7 +108,11 @@ fn units_to_assess(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Ve
     Ok(chosen)
 }
 
-/// Counts `name` once more in `counted`.
+/// Counts `name` once more in `counted`: `[("Evaluator", 2)]` becomes
+/// `[("Evaluator", 3)]`, a new name is added with 1.
+///
+/// Input: `counted`, the names counted so far, at most one for each work
+/// unit of an evaluation; `name`, the name to count.
 ///
 /// Called by: [`preview`].
 fn count(counted: &mut Vec<(String, usize)>, name: String) {
@@ -115,8 +129,13 @@ fn count(counted: &mut Vec<(String, usize)>, name: String) {
 /// The inputs the work unit `unit` needs and that are not given, by their
 /// names.
 ///
+/// Input: `unit`, a work unit of an evaluation.
+/// Output: the names (`["the document ST v1.2", "the proof Test 3"]`); an
+/// error of the database for a document or a proof missing.
+///
 /// Called by: [`preview`].
-/// Calls: `read_product_document`, `read_lab_proof`.
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, AiError> {
     let mut missing = Vec::new();
 
@@ -142,11 +161,16 @@ fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, AiE
 /// What the assessment of the evaluation `evaluation` would ask, counted
 /// now: its work units, the agents asked, the inputs missing.
 ///
+/// Input: as [`units_to_assess`].
+/// Output: the preview (`Preview { units: [7, 8], agents: [("Evaluator", 2)],
+/// missing: [] }`); the errors of [`units_to_assess`], an error of the
+/// database for an agent missing.
+///
 /// Called by: [`units_ready`]; `panels/views/evaluation/run.rs`:
 /// `evaluation_assess_preview`.
-/// Calls: [`units_to_assess`], `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`:
-/// `evaluation_in_progress`; `assessing_agent`,
-/// `read_agent`, [`missing_inputs`], [`count`].
+/// Calls: [`units_to_assess`], `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`;
+/// `objects/ai/agent/agent_store.rs`: `read_agent`; [`missing_inputs`], [`count`].
 pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Preview, AiError> {
     let units = units_to_assess(db, evaluation, again)?;
     let stored = evaluation_in_progress(db, evaluation)?;
@@ -164,9 +188,12 @@ pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Previe
     Ok(found)
 }
 
-/// The work units of the plan `plan` to fill, in its order; refused unless
-/// the plan is in planning, names an agent of the planner and has work
-/// units.
+/// The work units of the plan `plan` to fill, in its order.
+///
+/// Input: `plan`, the id of a stored plan.
+/// Output: the ids of its work units (`[3, 4, 5]`); `AiError::Refused`
+/// unless the plan is in planning, names an agent of the planner and has
+/// work units.
 ///
 /// Called by: [`fill_preview`]; `panels/views/evaluation_plan/fill.rs`:
 /// `fill` (the start of a filling).
@@ -191,11 +218,16 @@ pub struct FillPreview {
 }
 
 /// What a filling of the plan `plan` would ask, counted now, before the
-/// planner starts it; refused as [`fill_units`] refuses.
+/// planner starts it.
+///
+/// Input: `plan`, the id of a stored plan.
+/// Output: the preview (`FillPreview { questions: 12, agent: "Planner",
+/// integration: "Ollama · llama3.1" }`); refused as [`fill_units`] refuses.
 ///
 /// Called by: `panels/views/evaluation_plan/fill.rs`: `plan_fill_preview`.
 /// Calls: [`fill_units`], `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`:
-/// `plan_to_fill`; `read_agent`, `read_integration`.
+/// `plan_to_fill`; `objects/ai/agent/agent_store.rs`: `read_agent`;
+/// `objects/ai/integration/integration_store.rs`: `read_integration`.
 pub fn fill_preview(db: &UserDatabase, plan: i64) -> Result<FillPreview, AiError> {
     let questions = fill_units(db, plan)?.len();
     let (_, agent_id) = plan_to_fill(db, plan)?;
@@ -211,6 +243,10 @@ pub fn fill_preview(db: &UserDatabase, plan: i64) -> Result<FillPreview, AiError
 
 /// The work units of the evaluation `evaluation` to assess, refused while a
 /// document or a proof they need is not given.
+///
+/// Input: as [`units_to_assess`].
+/// Output: their ids in the order of the work (`[7, 8]`); `AiError::Refused`
+/// naming each input missing, the errors of [`preview`].
 ///
 /// Called by: `panels/views/evaluation/run.rs`: `evaluation_assess` (the
 /// start of an assessment).

@@ -37,13 +37,20 @@ pub enum FillTask {
     Dependencies,
 }
 
-/// The label of the work unit `unit` and the question of the task, prepared;
-/// the reason instead of the question when it is refused (no room in the
-/// context, no key).
+/// The label of the work unit `unit` and the question of the task, prepared,
+/// under the lock of the database.
+///
+/// Input: `database`, the lock of the open database of the session; `task`,
+/// the task of the filling; `plan`, a plan in planning with an agent of the
+/// planner; `unit`, one of its work units.
+/// Output: the label and the question (`("1.1.1", Ok(prepared))`), or the
+/// reason instead of the question when it is refused (no room in the
+/// context, no key); an error when the session or the database fails.
 ///
 /// Called by: [`fill_work_unit`].
-/// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_database`, `open_database`; `read_work_unit`;
-/// `proposal.rs`: `parameters_question`, `dependencies_question`;
+/// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_database`, `open_database`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
+/// `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `parameters_question`, `dependencies_question`;
 /// `objects/ai/integration/integration_ai/question.rs`: `prepare`.
 fn prepared_question(
     database: &Mutex<Option<UserDatabase>>,
@@ -67,10 +74,16 @@ fn prepared_question(
 }
 
 /// Reads the answer `answer` as the task asks and writes it into the work
-/// unit `unit`; gives the notes of what was left out.
+/// unit `unit`.
+///
+/// Input: `task`, the task of the filling; `plan`, `unit`, as
+/// [`prepared_question`]; `answer`, the text of the answer of the AI.
+/// Output: the notes of what was left out (`["the proof X is unknown"]`);
+/// `AiError::Refused` for an answer that cannot be read, an error of the
+/// database.
 ///
 /// Called by: [`written`].
-/// Calls: `proposal.rs`: `read_parameters`, `apply_parameters`,
+/// Calls: `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `read_parameters`, `apply_parameters`,
 /// `read_dependencies`, `apply_dependencies`.
 fn applied(db: &UserDatabase, task: FillTask, plan: i64, unit: i64, answer: &str) -> Result<Vec<String>, AiError> {
     match task {
@@ -80,7 +93,13 @@ fn applied(db: &UserDatabase, task: FillTask, plan: i64, unit: i64, answer: &str
 }
 
 /// Writes the answer into the journal of the agent of the planner, then
-/// into the work unit `unit`; gives whether it was filled and the notes.
+/// into the work unit, under the lock of the database.
+///
+/// Input: `database`, the lock of the open database of the session; `step`,
+/// the task and the ids of the plan and of the work unit; `prepared`, the
+/// question as it was sent; `sent`, its answer.
+/// Output: whether it was filled and the notes (`(true, [])`); an error when
+/// the session or the database fails.
 ///
 /// Called by: [`fill_work_unit`].
 /// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_database`, `open_database`;
@@ -120,7 +139,7 @@ fn written(
 /// notes: what was left out of the answer, or why it was not filled
 /// (`("1.1.1", true, [])`). An error when the session or the database fails.
 ///
-/// Called by: `evaluation_plan_ai.rs`: `fill_plan`.
+/// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_plan`.
 /// Calls: [`prepared_question`], `objects/ai/integration/integration_ai/sending.rs`:
 /// `send_whole`, [`written`].
 pub async fn fill_work_unit(

@@ -7,10 +7,12 @@ use std::path::PathBuf;
 /// The name of the folder of the program in the data folder of the user.
 const FOLDER: &str = "io-master";
 
-/// The data folder of the program; `None` when neither `XDG_DATA_HOME` nor
-/// `HOME` is set, so that the program cannot know where its data is.
+/// The data folder of the program: `~/.local/share/io-master`.
 ///
-/// Called by: `main.rs`
+/// Output: the folder, from `XDG_DATA_HOME` or else from `HOME`; `None` when
+/// neither is set, so that the program cannot know where its data is.
+///
+/// Called by: `main.rs`: `tauri_startup`.
 pub fn default_data_folder() -> Option<PathBuf> {
     if let Some(base) = std::env::var_os("XDG_DATA_HOME")
         && !base.is_empty()

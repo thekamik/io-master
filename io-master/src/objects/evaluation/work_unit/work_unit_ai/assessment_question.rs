@@ -56,10 +56,13 @@ else:\n\
 Rest every statement on a quote. Quote only the documents given, word for word: a quote that is not found in its \
 document is not taken.";
 
-/// The name of a verdict, as the question and the answer write it.
+/// The name of a verdict, as the question and the answer write it:
+/// `Verdict::Pass` is "pass".
 ///
 /// Called by: [`unit_json`], [`dependencies_text`], [`question_of`];
-/// `assessment_answer.rs`.
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `verdict_of`,
+/// `with_dependencies`; `panels/views/evaluation/work_units.rs`: `row_of`, `needs_of`,
+/// `unit_view`; `panels/views/progress.rs`: `progress_view`.
 pub fn verdict_name(verdict: Verdict) -> &'static str {
     match verdict {
         Verdict::Pass => "pass",
@@ -69,10 +72,15 @@ pub fn verdict_name(verdict: Verdict) -> &'static str {
 }
 
 /// The agent that assesses the work unit `unit`: its own, or the agent of
-/// the evaluation; refused when there is neither.
+/// the evaluation.
+///
+/// Input: `evaluation`, the evaluation of the work unit; `unit`, one of its
+/// work units.
+/// Output: the id of the agent (`3`); `AiError::Refused` when there is
+/// neither.
 ///
 /// Called by: [`assessment_question`]; `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`:
-/// `preview`; `panels/views/evaluation/work_units.rs` (the list).
+/// `preview`; `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`.
 pub fn assessing_agent(evaluation: &EvaluationPlan, unit: &WorkUnit) -> Result<i64, AiError> {
     match unit.ai_agent.or(evaluation.ai_agent) {
         Some(agent) => Ok(agent),
@@ -81,6 +89,11 @@ pub fn assessing_agent(evaluation: &EvaluationPlan, unit: &WorkUnit) -> Result<i
 }
 
 /// The label of the work unit `id` among `units`.
+///
+/// Input: `units`, the work units of the evaluation; `id`, the id of one of
+/// them.
+/// Output: its label ("ADV_ARC.1-1"); "work unit 12" when none of `units`
+/// has the id.
 ///
 /// Called by: [`unit_json`], [`dependencies_text`].
 fn label_of(units: &[WorkUnit], id: i64) -> String {
@@ -96,9 +109,16 @@ fn label_of(units: &[WorkUnit], id: i64) -> String {
 /// The work unit `unit` as JSON, but its id, author, agent and cross
 /// reference, every id written as a name (user, 2026-10-30).
 ///
+/// Input: `unit`, the work unit assessed; `units`, the work units of its
+/// evaluation.
+/// Output: the JSON (`{"label": "ADV_ARC.1-1", "standard": "CEM",
+/// "dependencies": [...], ...}`); an error of the database for a standard, a
+/// document or a proof missing.
+///
 /// Called by: [`question_of`].
-/// Calls: `read_oscal_standard_document`, [`label_of`],
-/// `read_product_document`, `read_lab_proof`, [`verdict_name`].
+/// Calls: `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
+/// `read_oscal_standard_document`; [`label_of`]; `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`verdict_name`].
 fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<Value, AiError> {
     let mut dependencies = Vec::with_capacity(unit.dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
@@ -151,6 +171,11 @@ fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<V
 /// its verdict and its findings (at most [`MAX_DEPENDENCY_FINDINGS`]
 /// characters).
 ///
+/// Input: `unit`, the work unit assessed; `units`, the work units of its
+/// evaluation.
+/// Output: the text ("ADV_ARC.1-1: pass\n...\n\n"); empty without
+/// dependencies.
+///
 /// Called by: [`question_of`].
 /// Calls: [`label_of`], [`verdict_name`].
 fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit]) -> String {
@@ -174,8 +199,13 @@ fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit]) -> String {
 /// the passages of them all that fit the work unit best, each under the name
 /// and the version of its document.
 ///
+/// Input: `unit`, the work unit assessed; `whole`, whether the documents go
+/// whole.
+/// Output: the text ("=== ST (version 1.2) ===\n..."); an error of the
+/// database.
+///
 /// Called by: [`question_of`].
-/// Calls: `read_product_document`, `read_document_text`,
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`, `read_document_text`,
 /// `read_document_passages`.
 fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<String, AiError> {
     let mut text = String::new();
@@ -203,7 +233,7 @@ fn documents_text(db: &UserDatabase, unit: &WorkUnit, whole: bool) -> Result<Str
 }
 
 /// The day of `seconds` since 1970 (UTC), as YYYY-MM-DD (the civil calendar
-/// of the days since 1970, H. Hinnant).
+/// of the days since 1970, H. Hinnant): `day_of(1793577600)` is "2026-11-02".
 ///
 /// Called by: [`proofs_text`].
 fn day_of(seconds: i64) -> String {
@@ -222,8 +252,12 @@ fn day_of(seconds: i64) -> String {
 
 /// The proofs of the work unit `unit`, each with the record of its test.
 ///
+/// Input: `unit`, the work unit assessed.
+/// Output: the text ("=== Test 3 (performed 2026-10-30 by K. K. with ...)
+/// ===\n..."); an error of the database for a proof missing.
+///
 /// Called by: [`question_of`].
-/// Calls: `read_lab_proof`, [`day_of`].
+/// Calls: `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`day_of`].
 fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
     let mut text = String::new();
 
@@ -244,11 +278,18 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit) -> Result<String, AiError> {
 }
 
 /// The question about the work unit `unit` of the evaluation `evaluation`,
-/// asked of the agent `agent`; its documents whole with `whole`.
+/// asked of the agent `agent`.
+///
+/// Input: `evaluation`, an evaluation in progress; `unit`, one of its work
+/// units; `agent`, the agent that assesses it; `whole`, whether its documents
+/// go whole.
+/// Output: the question, its task and the work unit with its documents and
+/// proofs; an error of the database or of the agent.
 ///
 /// Called by: [`assessment_question`].
-/// Calls: [`unit_json`], [`dependencies_text`], [`documents_text`],
-/// [`proofs_text`], `objects/ai/agent/agent_ai.rs`: `agent_question`.
+/// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`unit_json`],
+/// [`dependencies_text`], [`documents_text`], [`proofs_text`], [`verdict_name`];
+/// `objects/ai/agent/agent_ai.rs`: `agent_question`.
 fn question_of(
     db: &UserDatabase,
     evaluation: &EvaluationPlan,
@@ -281,11 +322,16 @@ fn question_of(
 
 /// The question of the assessment of the work unit `unit` of the evaluation
 /// `evaluation`, its documents whole with `whole`, otherwise their passages
-/// that fit it best. Refused when the work unit is not one of the
-/// evaluation or has no agent.
+/// that fit it best.
 ///
-/// Called by: `assessment.rs`: `prepared_assessment`.
-/// Calls: `read_evaluation_plan`, `read_work_unit`, [`assessing_agent`],
+/// Input: `evaluation`, the id of an evaluation; `unit`, the id of one of its
+/// work units; `whole`, whether the documents go whole.
+/// Output: the question; `AiError::Refused` when the work unit is not one of
+/// the evaluation or has no agent, the errors of [`question_of`].
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `prepared_assessment`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`assessing_agent`],
 /// [`question_of`].
 pub fn assessment_question(db: &UserDatabase, evaluation: i64, unit: i64, whole: bool) -> Result<Question, AiError> {
     let stored = read_evaluation_plan(db, evaluation)?;

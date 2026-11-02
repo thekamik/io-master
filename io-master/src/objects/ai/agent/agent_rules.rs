@@ -39,7 +39,12 @@ knowledge given with the question; quote the text you rely on word for word and 
 knowledge is not enough, say what is missing.";
 
 /// Makes a new agent of the integration `integration`, with the default
-/// instructions and limits and no knowledge yet; gives its id.
+/// instructions and limits and no knowledge yet.
+///
+/// Input: `name`, the name typed ("Evaluator ADV"), checked here;
+/// `integration`, the id of a stored integration.
+/// Output: the id of the new agent (`3`); `DomainError::Refused` for a name
+/// refused or taken, an error of the database for an integration missing.
 ///
 /// Called by: `panels/views/agents/agent.rs`: `agent_create`.
 /// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`; [`checked`];
@@ -64,6 +69,10 @@ pub fn new_agent(db: &UserDatabase, name: &str, integration: i64) -> Result<i64,
 /// Writes the agent `agent.id` anew: its name, integration, instructions,
 /// knowledge bases, glossary and limits.
 ///
+/// Input: `agent`, the agent as changed, its id that of a stored agent.
+/// Output: nothing; `DomainError::Refused` for what [`checked`] refuses, an
+/// error of the database for an agent missing.
+///
 /// Called by: `panels/views/agents/agent.rs`: `agent_save`.
 /// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`, `update_agent`; [`checked`].
 pub fn change_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DomainError> {
@@ -72,9 +81,13 @@ pub fn change_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DomainError>
     Ok(update_agent(db, &checked(db, agent)?)?)
 }
 
-/// The glossary with its text trimmed, the rows left empty taken out;
-/// refused when a term has no meaning or a meaning no term, or a text is
-/// over its limit.
+/// The glossary with its text trimmed, the rows left empty taken out.
+///
+/// Input: `glossary`, the glossary as typed.
+/// Output: the rows kept (`[GlossaryEntry { term: "TSF", meaning: "TOE
+/// Security Functionality" }]`); `DomainError::Refused` when there are more
+/// than `MAX_TERMS`, a term has no meaning or a meaning no term, or a text is
+/// over [`MAX_TERM`].
 ///
 /// Called by: [`checked`].
 fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, DomainError> {
@@ -106,13 +119,19 @@ fn checked_glossary(glossary: &[GlossaryEntry]) -> Result<Vec<GlossaryEntry>, Do
 /// The agent with its text trimmed, checked: a name, an integration and
 /// knowledge bases that exist, each base once, limits in their ranges.
 ///
+/// Input: `agent`, the agent as given by the page or made by [`new_agent`].
+/// Output: the agent to write, its bases each once; `DomainError::Refused`
+/// for a limit out of its range or text over its limit, an error of the
+/// database for an integration or a base missing.
+///
 /// Called by: [`new_agent`], [`change_agent`].
 /// Calls: `objects/text.rs`: `checked_text`; `objects/ai/integration/integration_store.rs`:
 /// `read_integration`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`;
 /// [`checked_glossary`].
 fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
     let name = checked_text(&agent.name, "the name of the agent", MAX_NAME)?;
-    let passages = usize::try_from(agent.max_passages).unwrap_or(usize::MAX);
+    let passages = usize::try_from(agent.max_passages)
+        .map_err(|_| DomainError::Refused(format!("the passages of a question: from 1 to {MAX_FOUND}")))?;
 
     ensure!(
         agent.instructions.chars().count() <= MAX_INSTRUCTIONS,

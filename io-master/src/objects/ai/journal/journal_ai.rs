@@ -38,9 +38,12 @@ pub struct Answer {
 }
 
 /// Writes the question of the agent `agent` and its answer into the
-/// journal of the agent; gives the id of the entry. On a failure the
-/// explanation is written after the text of the answer, so that the journal
-/// tells why it failed.
+/// journal of the agent. On a failure the explanation is written after the
+/// text of the answer, so that the journal tells why it failed.
+///
+/// Input: `prepared`, the question as it was sent; `agent`, the id of the
+/// agent that asked; `answer`, the answer as [`record`] read it.
+/// Output: the id of the entry (`41`); an error of the database.
 ///
 /// Called by: [`record`].
 /// Calls: `objects/ai/journal/journal_store.rs`: `create_journal_entry`.
@@ -71,12 +74,19 @@ fn write_entry(db: &UserDatabase, prepared: Prepared, agent: i64, answer: &Answe
 }
 
 /// Gives the answer out, written first into the journal of its agent; the
-/// answer to a question without an agent is not kept.
+/// answer to a question without an agent is not kept. Runs under the lock
+/// of the session.
+///
+/// Input: `prepared`, the question as it was sent; `sent`, its answer as it
+/// came.
+/// Output: the answer with how it ended and the id of its entry
+/// (`Answer { journal: Some(41), ending: Complete, .. }`); an error of the
+/// database when the entry cannot be written.
 ///
 /// Called by: `panels/views/settings/integrations.rs`: `integration_check`;
 /// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `written`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `written`;
-/// `panels/views/chat/chats.rs`: `written`; under the lock of the session.
+/// `panels/views/chat/chats.rs`: `written`.
 /// Calls: [`write_entry`].
 pub fn record(db: &UserDatabase, prepared: Prepared, sent: Sent) -> Result<Answer, AiError> {
     let Sent(received) = sent;

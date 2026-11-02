@@ -26,6 +26,9 @@ use crate::objects::text::{MAX_NAME, checked_text};
 
 /// Refuses a plan that is no more in planning, and one without a name.
 ///
+/// Input: `plan`, a plan as stored or as changed.
+/// Output: nothing; `DomainError::Refused` with the reason.
+///
 /// Called by: [`plan_in_planning`], [`update_plan`], [`add_document_place`].
 pub fn check_planning(plan: &EvaluationPlan) -> Result<(), DomainError> {
     ensure!(
@@ -39,11 +42,15 @@ pub fn check_planning(plan: &EvaluationPlan) -> Result<(), DomainError> {
 
 /// The plan `plan`, refused unless it is in planning.
 ///
-/// Called by: [`plan_to_fill`]; `work_units.rs`: `add_work_unit`,
-/// `add_all_work_units`, `remove_work_unit`; `../work_unit_rules/parameters.rs`:
-/// `update_work_unit_parameters`, `add_proof_place`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
-/// [`check_planning`].
+/// Input: `plan`, the id of a stored plan.
+/// Output: the plan; the refusals of [`check_planning`], an error of the
+/// database for a plan missing.
+///
+/// Called by: [`plan_to_fill`]; `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`:
+/// `add_work_unit`, `add_all_work_units`, `remove_work_unit`;
+/// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`,
+/// `add_proof_place`.
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`; [`check_planning`].
 pub fn plan_in_planning(db: &UserDatabase, plan: i64) -> Result<EvaluationPlan, DomainError> {
     let stored = read_evaluation_plan(db, plan)?;
 
@@ -52,13 +59,15 @@ pub fn plan_in_planning(db: &UserDatabase, plan: i64) -> Result<EvaluationPlan, 
     Ok(stored)
 }
 
-/// The plan `plan` to fill with the AI ("Fill with AI"), refused unless it
-/// is in planning and names an agent of the planner; gives the plan and its
-/// agent.
+/// The plan `plan` to fill with the AI ("Fill with AI").
+///
+/// Input: `plan`, the id of a stored plan.
+/// Output: the plan and the id of its agent of the planner (`(plan, 2)`);
+/// refused unless it is in planning and names an agent of the planner.
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_units`,
 /// `fill_preview`; `objects/evaluation/work_unit/work_unit_ai/proposal.rs`:
-/// `question_of`, `apply_parameters`, `apply_dependencies`.
+/// `question_of`, `parameters_question`, `apply_parameters`, `apply_dependencies`.
 /// Calls: [`plan_in_planning`].
 pub fn plan_to_fill(db: &UserDatabase, plan: i64) -> Result<(EvaluationPlan, i64), DomainError> {
     let stored = plan_in_planning(db, plan)?;
@@ -71,11 +80,15 @@ pub fn plan_to_fill(db: &UserDatabase, plan: i64) -> Result<(EvaluationPlan, i64
 }
 
 /// Makes a new plan in planning, without standards or work units yet, with
-/// the verdicts of Common Criteria (`Pass`, `Fail`). Gives its id.
+/// the verdicts of Common Criteria (`Pass`, `Fail`).
+///
+/// Input: `name`, the name typed ("CC EAL4+ router"); `description`, may be
+/// empty.
+/// Output: the id of the new plan (`1`); `DomainError::Refused` for a name
+/// refused, an error of the database.
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_create`.
-/// Calls: `objects/text.rs`: `checked_text`; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
-/// `create_evaluation_plan`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `create_evaluation_plan`.
 pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i64, DomainError> {
     let name = checked_text(name, "the name of the plan", MAX_NAME)?;
 
@@ -103,9 +116,12 @@ pub fn create_plan(db: &UserDatabase, name: &str, description: &str) -> Result<i
 /// Writes the data of the plan `plan.id` the planner changed: its name,
 /// description, standards, places of documents, verdicts and the agent of
 /// the planner. Its state, its work units and `blocked` stay as stored.
-/// Refused when the plan is no more in planning, when a work unit of the
-/// plan still uses a standard or a document the plan would lose, or when
-/// the agent does not exist.
+///
+/// Input: `plan`, the plan as changed, its id that of a stored plan.
+/// Output: nothing; `DomainError::Refused` when the plan is no more in
+/// planning or has no name, or a work unit of the plan still uses a standard
+/// or a document the plan would lose; an error of the database for an agent
+/// missing.
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_save`.
 /// Calls: [`check_planning`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
@@ -149,8 +165,12 @@ pub fn update_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), Domai
     Ok(update_evaluation_plan(db, &changed)?)
 }
 
-/// Reserves a new place of a document of the product (`name`: "ST",
-/// "IXIT") in the plan `plan`. Gives the id of the place.
+/// Reserves a new place of a document of the product in the plan `plan`.
+///
+/// Input: `plan`, the id of a plan in planning; `name`, the name of the
+/// document ("ST", "IXIT").
+/// Output: the id of the place (`9`); the refusals of [`check_planning`] or
+/// for a name refused, an error of the database.
 ///
 /// Called by: `panels/views/evaluation_plan/plans.rs`: `plan_add_document`.
 /// Calls: [`check_planning`]; `objects/text.rs`: `checked_text`;
