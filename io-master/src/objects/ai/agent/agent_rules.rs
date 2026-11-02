@@ -34,9 +34,9 @@ const NEW_PASSAGES: u32 = 8;
 const NEW_CHARACTERS: u32 = 12_000;
 
 /// The instructions of a new agent, to be made its own by the user.
-const NEW_INSTRUCTIONS: &str = "You are an evaluator of the security of a product. Base every statement on the \
-knowledge given with the question; quote the text you rely on word for word and say where it comes from. When the \
-knowledge is not enough, say what is missing.";
+const NEW_INSTRUCTIONS: &str = "You are an experienced evaluator of the security of products. Use the knowledge \
+given with a question, when there is any, to read the requirement as the standard and the laboratory mean it; judge \
+the product only by its own documents and proofs. Be precise and brief.";
 
 /// Makes a new agent of the integration `integration`, with the default
 /// instructions and limits and no knowledge yet.

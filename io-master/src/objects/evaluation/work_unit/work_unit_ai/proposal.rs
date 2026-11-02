@@ -69,7 +69,9 @@ now and your knowledge, propose its parameters. Answer with one JSON object and 
 \"functional\": true when it needs a functional test of the laboratory, false for a test of the documentation,\n \
 \"proofs\": [the names of the proofs of the laboratory its functional test needs],\n \
 \"agent\": the name of the agent that should assess it, or null,\n \
-\"guidance\": the guidance for the evaluator, whole}\n\
+\"guidance\": the guidance for the evaluator on this work unit, as the methodology gives it, improved where your \
+knowledge helps; only the guidance itself, never remarks on this question, on what was given or on what is missing; \
+the guidance given unchanged when you have nothing to add}\n\
 Use only the documents and agents the question lists.";
 
 /// The task of the dependencies, given after the instructions of the agent.
