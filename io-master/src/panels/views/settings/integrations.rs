@@ -1,11 +1,12 @@
 //! The integrations of the settings of the AI, as the page calls them: the
-//! list, a new one, one saved, the active one, its API key, the check of the
-//! connection.
+//! list, where a new one starts and the limits of its fields, a new one, one
+//! saved, the active one, its API key, the check of the connection.
 //!
 //! ```text
 //! IntegrationList.svelte ──integration_list()──────► the integrations, the active one, has a key ──► [IntegrationView]
 //!                        ──integration_activate()──► activate_integration
-//! IntegrationForm.svelte ──integration_create(...)─► add_integration ──► id
+//! IntegrationForm.svelte ──integration_form()──────► the start of a new one, the limits ──► IntegrationFormView
+//!                        ──integration_create(...)─► add_integration ──► id
 //!                        ──integration_save(...)───► change_integration
 //!                        ──integration_set_key()───► set_key            (the key goes in, never out)
 //!                        ──integration_check(id)───► check_question ─► sending::send_whole ─► journal::record
@@ -22,9 +23,13 @@ use crate::objects::ai::integration::integration_ai::question::context_warning;
 use crate::objects::ai::integration::integration_ai::sending::send_whole;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 use crate::objects::ai::integration::integration_rules::settings::{
+    MIN_CONTEXT, NEW_CHARACTERS_PER_TOKEN, NEW_CONNECT_TIMEOUT_SECONDS, NEW_STREAM_SILENCE_SECONDS,
     activate_integration, add_integration, change_integration,
 };
-use crate::objects::ai::integration::integration_store::{read_integration, read_integrations};
+use crate::objects::ai::integration::integration_store::{
+    MAX_CHARACTERS_PER_TOKEN, MAX_CONNECT_TIMEOUT_SECONDS, MAX_STREAM_SILENCE_SECONDS, read_integration,
+    read_integrations,
+};
 use crate::objects::ai::journal::journal_ai::record;
 use crate::objects::ai::journal::journal_model::Ending;
 use crate::objects::user::program_data::program_data_store::read_settings;
@@ -55,11 +60,28 @@ pub struct IntegrationView {
     ca_certificate: String,
     context_size: u32,
     characters_per_token: u32,
+    connect_timeout_seconds: u32,
+    stream_silence_seconds: u32,
     /// Why the context is too small for an ST of 100 pages; `None` when it
     /// is not.
     context_warning: Option<String>,
     has_key: bool,
     active: bool,
+}
+
+/// Where a new integration starts and the limits of the fields of an
+/// integration, as the program gives them (user, 2026-11-02: the page holds
+/// no number of its own).
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IntegrationFormView {
+    characters_per_token: u32,
+    connect_timeout_seconds: u32,
+    stream_silence_seconds: u32,
+    min_context: u32,
+    max_characters_per_token: u32,
+    max_connect_timeout_seconds: u32,
+    max_stream_silence_seconds: u32,
 }
 
 /// What the check of an integration found.
@@ -151,6 +173,8 @@ fn integration_of(fields: IntegrationFields) -> Result<Integration, ViewError> {
         ca_certificate: Some(fields.ca_certificate),
         context_size: fields.context_size,
         characters_per_token: fields.characters_per_token,
+        connect_timeout_seconds: fields.connect_timeout_seconds,
+        stream_silence_seconds: fields.stream_silence_seconds,
     })
 }
 
@@ -167,6 +191,8 @@ pub struct IntegrationFields {
     ca_certificate: String,
     context_size: u32,
     characters_per_token: u32,
+    connect_timeout_seconds: u32,
+    stream_silence_seconds: u32,
 }
 
 /// Every integration of the user, the active one marked, whether each has a
@@ -204,10 +230,33 @@ pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationVi
             ca_certificate: integration.ca_certificate.unwrap_or_default(),
             context_size: integration.context_size,
             characters_per_token: integration.characters_per_token,
+            connect_timeout_seconds: integration.connect_timeout_seconds,
+            stream_silence_seconds: integration.stream_silence_seconds,
         });
     }
 
     Ok(integrations)
+}
+
+/// Where a new integration starts and the limits of the fields of an
+/// integration: the constants of the program, nothing read.
+///
+/// Output: the view (`{"charactersPerToken": 3, "connectTimeoutSeconds": 15,
+/// "streamSilenceSeconds": 300, "minContext": 512, ...}`).
+///
+/// Called by: `ui/src/lib/api/settings.ts`: `integrationForm`, from `ui/src/views/settings/IntegrationForm.svelte`,
+/// when the form opens.
+#[tauri::command]
+pub fn integration_form() -> IntegrationFormView {
+    IntegrationFormView {
+        characters_per_token: NEW_CHARACTERS_PER_TOKEN,
+        connect_timeout_seconds: NEW_CONNECT_TIMEOUT_SECONDS,
+        stream_silence_seconds: NEW_STREAM_SILENCE_SECONDS,
+        min_context: MIN_CONTEXT,
+        max_characters_per_token: MAX_CHARACTERS_PER_TOKEN,
+        max_connect_timeout_seconds: MAX_CONNECT_TIMEOUT_SECONDS,
+        max_stream_silence_seconds: MAX_STREAM_SILENCE_SECONDS,
+    }
 }
 
 /// Stores a new integration; gives its id.

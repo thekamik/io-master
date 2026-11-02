@@ -12,7 +12,8 @@ use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::integration::integration_model::Integration;
 use crate::objects::ai::integration::integration_rules::address::{check_address, check_certificate};
 use crate::objects::ai::integration::integration_store::{
-    MAX_CHARACTERS_PER_TOKEN, create_integration, read_integration, update_integration,
+    MAX_CHARACTERS_PER_TOKEN, MAX_CONNECT_TIMEOUT_SECONDS, MAX_STREAM_SILENCE_SECONDS, create_integration,
+    read_integration, update_integration,
 };
 use crate::objects::error::DomainError;
 use crate::objects::user::program_data::program_data_model::Settings;
@@ -23,7 +24,17 @@ const MAX_NAME: usize = 100;
 
 /// The smallest context of a model, in tokens: less leaves no room for a
 /// question.
-const MIN_CONTEXT: u32 = 512;
+pub const MIN_CONTEXT: u32 = 512;
+
+/// Where a new integration starts (user, 2026-11-02: the program gives them,
+/// the page none): three characters of a token, fewer than most models use
+/// (about four for English), so that the estimate errs on the side of a
+/// question refused; 15 seconds for a connection to open; 300 seconds of
+/// silence for a local model that thinks long. The context has no start: it
+/// is the model's, given by its service.
+pub const NEW_CHARACTERS_PER_TOKEN: u32 = 3;
+pub const NEW_CONNECT_TIMEOUT_SECONDS: u32 = 15;
+pub const NEW_STREAM_SILENCE_SECONDS: u32 = 300;
 
 /// The integration with its text trimmed, checked: a name, an address the
 /// program sends to, a model, a context, the characters of a token, a CA
@@ -32,8 +43,8 @@ const MIN_CONTEXT: u32 = 512;
 /// Input: `integration`, the integration as given by the page.
 /// Output: the integration to write; `DomainError::Refused` for an empty or
 /// too long name, no model, a context under [`MIN_CONTEXT`], characters of a
-/// token out of 1 to `MAX_CHARACTERS_PER_TOKEN`, an address or a certificate
-/// refused.
+/// token out of 1 to `MAX_CHARACTERS_PER_TOKEN`, a wait out of its range, an
+/// address or a certificate refused.
 ///
 /// Called by: [`add_integration`], [`change_integration`].
 /// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`, `check_certificate`.
@@ -52,6 +63,14 @@ fn checked(integration: &Integration) -> Result<Integration, DomainError> {
         (1..=MAX_CHARACTERS_PER_TOKEN).contains(&integration.characters_per_token),
         DomainError::Refused(format!("the characters of a token: from 1 to {MAX_CHARACTERS_PER_TOKEN}"))
     );
+    ensure!(
+        (1..=MAX_CONNECT_TIMEOUT_SECONDS).contains(&integration.connect_timeout_seconds),
+        DomainError::Refused(format!("the wait for a connection: from 1 to {MAX_CONNECT_TIMEOUT_SECONDS} seconds"))
+    );
+    ensure!(
+        (1..=MAX_STREAM_SILENCE_SECONDS).contains(&integration.stream_silence_seconds),
+        DomainError::Refused(format!("the silence of a stream: from 1 to {MAX_STREAM_SILENCE_SECONDS} seconds"))
+    );
     check_address(integration.url.trim())?;
 
     if !certificate.is_empty() {
@@ -67,6 +86,8 @@ fn checked(integration: &Integration) -> Result<Integration, DomainError> {
         ca_certificate: if certificate.is_empty() { None } else { Some(certificate.to_owned()) },
         context_size: integration.context_size,
         characters_per_token: integration.characters_per_token,
+        connect_timeout_seconds: integration.connect_timeout_seconds,
+        stream_silence_seconds: integration.stream_silence_seconds,
     })
 }
 

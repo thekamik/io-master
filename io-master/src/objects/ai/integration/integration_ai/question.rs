@@ -15,6 +15,8 @@
 //! database) only for `prepare` and `record`, so that the other commands
 //! of the window are not held up by a long answer.
 
+use std::time::Duration;
+
 use zeroize::Zeroizing;
 
 use crate::infrastructure::clock::now;
@@ -189,6 +191,8 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
         protocol: integration.protocol,
         key: key.map(|key| Zeroizing::new(key.key.as_str().to_owned())),
         body: body.to_string(),
+        connect_timeout: Duration::from_secs(u64::from(integration.connect_timeout_seconds)),
+        stream_silence: Duration::from_secs(u64::from(integration.stream_silence_seconds)),
     };
 
     Ok(Prepared {

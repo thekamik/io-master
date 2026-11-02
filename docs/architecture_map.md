@@ -130,14 +130,14 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Commands** (`panels/views/`):
   - `agents/agent.rs`: `agent_list`, `agent_create`, `agent_get`, `agent_save`
   - `evaluation_plan/fill.rs`: `plan_fill_preview`
-  - `settings/integrations.rs`: `integration_list`, `integration_create`, `integration_save`, `integration_activate`, `integration_set_key`, `integration_check`
+  - `settings/integrations.rs`: `integration_list`, `integration_form`, `integration_create`, `integration_save`, `integration_activate`, `integration_set_key`, `integration_check`
 - **Shown** (`ui/src/`):
   - `views/agents/AgentEditor.svelte` ← `agent_get`, `agent_save`
   - `views/agents/AgentList.svelte` ← `integration_list`, `agent_list`, `agent_create`
   - `views/chat/ChatList.svelte` ← `agent_list`
   - `views/evaluation/Evaluations.svelte` ← `agent_list`
   - `views/evaluation_plan/PlanFill.svelte` ← `plan_fill_preview`
-  - `views/settings/IntegrationForm.svelte` ← `integration_create`, `integration_save`, `integration_set_key`, `integration_check`
+  - `views/settings/IntegrationForm.svelte` ← `integration_form`, `integration_create`, `integration_save`, `integration_set_key`, `integration_check`
   - `views/settings/IntegrationList.svelte` ← `integration_list`, `integration_activate`
 
 ### `objects/ai/journal/journal_model.rs`: `JournalEntry`, `Ending`

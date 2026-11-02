@@ -53,7 +53,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 
 | Model | File | Fields | Table |
 |---|---|---|---|
-| `Integration` | `objects/ai/integration/integration_model.rs` | id, name, url, model, protocol, ca_certificate, context_size, characters_per_token | `ai_integrations` |
+| `Integration` | `objects/ai/integration/integration_model.rs` | id, name, url, model, protocol, ca_certificate, context_size, characters_per_token, connect_timeout_seconds, stream_silence_seconds | `ai_integrations` |
 | `Protocol` | `objects/ai/integration/integration_model.rs` | OpenAiChat, AnthropicMessages | (a column) |
 | `ApiKey` | `objects/ai/api_key/api_key_model.rs` | integration, key | `ai_api_keys` (with the origin it is bound to) |
 | `Agent` | `objects/ai/agent/agent_model.rs` | id, name, integration, instructions, knowledge_bases, glossary, max_passages, max_characters, max_answer_tokens, system_template, knowledge_template, passage_template, role | `ai_agents` (lists: `ai_agent_knowledge_bases`, `ai_agent_glossary`) |

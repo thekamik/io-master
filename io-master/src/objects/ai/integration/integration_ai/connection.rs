@@ -40,14 +40,6 @@ use crate::objects::ai::integration::integration_model::Protocol;
 use crate::objects::ai::integration::integration_rules::address::{certificates, check_address};
 use crate::objects::ai_error::{AiError, from_status};
 
-/// How long a connection may take to open.
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
-
-/// How long a stream may stay silent. A local model on a slow computer may
-/// think long before its first piece, so this is generous; a longer silence
-/// means a broken connection.
-const STREAM_SILENCE: Duration = Duration::from_secs(300);
-
 /// The most bytes of a streamed answer: far more than any answer (its
 /// events carry a few bytes of text each); it stops a broken service from
 /// filling the memory.
@@ -76,6 +68,12 @@ pub struct Request {
     pub key: Option<Zeroizing<String>>,
     /// The body (JSON); the key is never in it.
     pub body: String,
+    /// How long the connection may take to open
+    /// (`Integration::connect_timeout_seconds`).
+    pub connect_timeout: Duration,
+    /// How long the stream may stay silent
+    /// (`Integration::stream_silence_seconds`).
+    pub stream_silence: Duration,
 }
 
 /// What came back: the answer read, complete or not.
@@ -158,11 +156,13 @@ async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mu
     }
 }
 
-/// The HTTP client of a request, with the rules at the top of this file.
+/// The HTTP client of a request, with the rules at the top of this file and
+/// the waits of its integration.
 /// Made for every request: an integration may have a CA certificate of its
 /// own, and the program asks few questions.
 ///
-/// Input: `request`, the request; its address and CA certificate are used.
+/// Input: `request`, the request; its address, CA certificate and waits are
+/// used.
 /// Output: the client; an error for a certificate refused, or when the
 /// library cannot make it.
 ///
@@ -174,8 +174,8 @@ fn http_client(request: &Request) -> Result<Client, AiError> {
         .tls_version_min(Version::TLS_1_3)
         .redirect(Policy::none())
         .no_proxy()
-        .connect_timeout(CONNECT_TIMEOUT)
-        .read_timeout(STREAM_SILENCE)
+        .connect_timeout(request.connect_timeout)
+        .read_timeout(request.stream_silence)
         .user_agent(concat!("io-master/", env!("CARGO_PKG_VERSION")));
 
     if let Some(pem) = &request.ca_certificate {
@@ -333,6 +333,8 @@ mod tests {
             protocol,
             key: Some(Zeroizing::new(KEY.to_owned())),
             body: json!({"model": "m", "messages": [{"role": "user", "content": "Hi"}]}).to_string(),
+            connect_timeout: Duration::from_secs(15),
+            stream_silence: Duration::from_secs(300),
         }
     }
 

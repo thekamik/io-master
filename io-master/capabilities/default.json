@@ -47,6 +47,7 @@
     "allow-evaluation-unit-get",
     "allow-evaluation-unit-save",
     "allow-integration-list",
+    "allow-integration-form",
     "allow-integration-create",
     "allow-integration-save",
     "allow-integration-activate",

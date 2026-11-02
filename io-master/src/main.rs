@@ -430,6 +430,7 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation::work_units::evaluation_unit_get,
             panels::views::evaluation::work_units::evaluation_unit_save,
             panels::views::settings::integrations::integration_list,
+            panels::views::settings::integrations::integration_form,
             panels::views::settings::integrations::integration_create,
             panels::views::settings::integrations::integration_save,
             panels::views::settings::integrations::integration_activate,

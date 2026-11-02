@@ -88,6 +88,8 @@ pub fn integration() -> Integration {
         ca_certificate: None,
         context_size: 32_768,
         characters_per_token: 3,
+        connect_timeout_seconds: 15,
+        stream_silence_seconds: 300,
     }
 }
 

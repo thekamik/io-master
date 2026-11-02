@@ -38,6 +38,14 @@ pub struct Integration {
     /// context in silence. Fewer characters than the model uses err on the
     /// safe side: a question is refused rather than cut.
     pub characters_per_token: u32,
+
+    /// How long, in seconds, a connection to the service may take to open.
+    pub connect_timeout_seconds: u32,
+
+    /// How long, in seconds, the stream of an answer may stay silent: a
+    /// local model on a slow computer may think long before its first piece;
+    /// a longer silence is taken for a broken connection.
+    pub stream_silence_seconds: u32,
 }
 
 /// The way the program speaks with an AI service.

@@ -52,6 +52,7 @@ fn main() {
         "evaluation_unit_get",
         "evaluation_unit_save",
         "integration_list",
+        "integration_form",
         "integration_create",
         "integration_save",
         "integration_activate",

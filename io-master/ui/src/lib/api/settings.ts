@@ -22,6 +22,8 @@ export interface IntegrationView {
   contextSize: number;
   /** The characters of a token, by which a question is measured. */
   charactersPerToken: number;
+  connectTimeoutSeconds: number;
+  streamSilenceSeconds: number;
   /** Why the context is too small for an ST of 100 pages; null when it is not. */
   contextWarning: string | null;
   hasKey: boolean;
@@ -39,6 +41,20 @@ export interface IntegrationFields {
   caCertificate: string;
   contextSize: number;
   charactersPerToken: number;
+  connectTimeoutSeconds: number;
+  streamSilenceSeconds: number;
+}
+
+/** Where a new integration starts and the limits of the fields, as the
+ * program gives them (integrations.rs, IntegrationFormView). */
+export interface IntegrationFormView {
+  charactersPerToken: number;
+  connectTimeoutSeconds: number;
+  streamSilenceSeconds: number;
+  minContext: number;
+  maxCharactersPerToken: number;
+  maxConnectTimeoutSeconds: number;
+  maxStreamSilenceSeconds: number;
 }
 
 /** What the check of an integration found (integrations.rs, CheckView). */
@@ -56,6 +72,11 @@ export interface CheckView {
 /** Every integration, the active one marked. */
 export function integrationList(): Promise<IntegrationView[]> {
   return invoke("integration_list");
+}
+
+/** Where a new integration starts and the limits of its fields. */
+export function integrationForm(): Promise<IntegrationFormView> {
+  return invoke("integration_form");
 }
 
 /** Stores a new integration; gives its id. */
