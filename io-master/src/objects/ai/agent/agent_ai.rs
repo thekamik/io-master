@@ -66,27 +66,30 @@ fn names_term(question: &[String], term: &str) -> bool {
 }
 
 /// The question widened by the glossary of the agent: the meaning of every
-/// term the question names is added, so that the search finds a text that
-/// writes the term out ("TSF" also finds "TOE Security Functionality").
+/// term the question names is put before it, so that the search finds a text
+/// that writes the term out ("TSF" also finds "TOE Security Functionality").
 ///
 /// Input: `question`, the question as asked; `glossary`, the glossary of the
 /// agent, checked when the agent was written (`agent_rules.rs`).
-/// Output: the question with the meanings after it ("What is the TSF? TOE
-/// Security Functionality").
+/// Output: the meanings, then the question ("TOE Security Functionality What
+/// is the TSF?").
 ///
 /// Called by: [`agent_knowledge`].
 /// Calls: [`words`], [`names_term`].
 fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
     let asked = words(question);
-    let mut widened = question.to_owned();
+    let mut widened = String::new();
 
+    // The meanings come first: the search reads a bounded number of words,
+    // and the terms of the glossary are what the agent was given them for.
     for entry in glossary {
         if names_term(&asked, &entry.term) {
-            widened.push(' ');
             widened.push_str(&entry.meaning);
+            widened.push(' ');
         }
     }
 
+    widened.push_str(question);
     widened
 }
 
@@ -97,7 +100,8 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 ///
 /// Input: `agent`, the id of a stored agent; `question`, what the knowledge
 /// is looked for with ("ADV_ARC.1-1 The developer shall ...").
-/// Output: the passages given, the best first (`["The TSF shall ...", ...]`);
+/// Output: the passages given, the best first, each under the name of its
+/// source (`["=== CC interpretation 12.pdf ===\nThe TSF shall ..."]`);
 /// an error when the agent is missing or damaged or the database fails.
 ///
 /// Called by: [`agent_question`]; `panels/views/agents/agent.rs`:
@@ -118,12 +122,14 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
     let mut given = Vec::with_capacity(found.len());
     let mut characters = 0;
 
-    for passage in found {
+    // The limit counts the text of the passages; each is given under the
+    // name of its source, so that the model can say what it relied on.
+    for (source, passage) in found {
         let length = passage.chars().count();
 
         if characters + length <= limit {
             characters += length;
-            given.push(passage);
+            given.push(format!("=== {source} ===\n{passage}"));
         }
     }
 
@@ -167,18 +173,20 @@ pub fn agent_question(
     let knowledge = agent_knowledge(db, agent, search)?;
     let mut system = stored.instructions;
 
-    if !task.is_empty() {
-        system.push_str("\n\n");
-        system.push_str(task);
-    }
-
     // The knowledge is named for what it was found for, so that the model
     // knows what it is about.
     if !knowledge.is_empty() {
         let found_for = if work_unit.is_some() { "this work unit" } else { "this question" };
 
         system.push_str(&format!("\n\nYour knowledge for {found_for}:\n\n"));
-        system.push_str(&knowledge.join("\n\n---\n\n"));
+        system.push_str(&knowledge.join("\n\n"));
+    }
+
+    // The task comes last, so that the form of the answer is the last thing
+    // the model reads before the question.
+    if !task.is_empty() {
+        system.push_str("\n\n");
+        system.push_str(task);
     }
 
     Ok(Question { integration: stored.integration, agent: Some(agent), work_unit, system, messages })
@@ -239,8 +247,8 @@ mod tests {
         ];
 
         assert_eq!(widened("the test of the TOE", &glossary), "the test of the TOE");
-        assert_eq!(widened("Read the ST.", &glossary), "Read the ST. Security Target");
-        assert_eq!(widened("the toe Scope", &glossary), "the toe Scope the boundary");
+        assert_eq!(widened("Read the ST.", &glossary), "Security Target Read the ST.");
+        assert_eq!(widened("the toe Scope", &glossary), "the boundary the toe Scope");
     }
 
     #[test]
@@ -260,8 +268,9 @@ mod tests {
         let question =
             agent_question(&db, id, "Answer in JSON.", "security architecture", Some(3), vec![message]).unwrap();
 
-        assert!(question.system.starts_with("You assess work units of the CEM.\n\nAnswer in JSON."));
-        assert!(question.system.contains("Your knowledge for this work unit:\n\nThe developer shall"));
+        assert!(question.system.starts_with("You assess work units of the CEM.\n\nYour knowledge for this work unit:"));
+        assert!(question.system.contains("=== notes ===\nThe developer shall"));
+        assert!(question.system.ends_with("\n\nAnswer in JSON."));
         assert_eq!((question.integration, question.agent, question.work_unit), (local, Some(id), Some(3)));
 
         let chat = agent_question(&db, id, "", "routers", None, question.messages.clone()).unwrap();

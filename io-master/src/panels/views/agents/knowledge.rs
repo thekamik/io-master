@@ -239,7 +239,8 @@ pub fn knowledge_source_rename(session: State<'_, Session>, id: i64, name: Strin
 ///
 /// Input: `session`, the session of the window, someone logged in; `base`, the
 /// id of a base; `question`, the question typed.
-/// Output: the passages found, the best first (`["..."]`);
+/// Output: the passages found, the best first, each under the name of its
+/// source as the model gets it (`["=== CEM.pdf ===\nThe evaluator shall ..."]`);
 /// `ViewError::NotLoggedIn` when nobody is logged in, an error of the database.
 ///
 /// Called by: `ui/src/lib/api/agents.ts`: `knowledgeSearch`, from `ui/src/views/agents/BaseEditor.svelte`,
@@ -251,6 +252,14 @@ pub fn knowledge_search(session: State<'_, Session>, base: i64, question: String
     ensure!(question.len() <= MAX_FIELD, ViewError::Invalid("the question is too long".to_owned()));
 
     let opened = session.lock()?;
+    let found = search_base(database(opened.as_ref())?, base, &question)?;
+    let mut views = Vec::with_capacity(found.len());
 
-    Ok(search_base(database(opened.as_ref())?, base, &question)?)
+    // Each passage as the model gets it from an agent
+    // (`objects/ai/agent/agent_ai.rs`: `agent_knowledge`).
+    for (source, passage) in found {
+        views.push(format!("=== {source} ===\n{passage}"));
+    }
+
+    Ok(views)
 }

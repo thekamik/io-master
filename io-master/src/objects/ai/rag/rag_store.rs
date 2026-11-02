@@ -30,10 +30,13 @@ pub const PASSAGE_CHARS: usize = 1500;
 /// is about 1.5 million).
 pub const MAX_SOURCE_CHARS: usize = 20_000_000;
 
-/// The most passages a search gives, and the most words of a question it
-/// looks for.
+/// The most passages a search gives.
 pub const MAX_FOUND: usize = 50;
-const MAX_WORDS: usize = 64;
+
+/// The most words of a question a search looks for: a bound of the memory
+/// (rule 3), far above the words of a requirement with its guidance and the
+/// terms of a glossary, so that no word that matters is cut off.
+const MAX_WORDS: usize = 4000;
 
 /// The words of English a search passes over (user, 2026-10-29): they are
 /// in almost every passage, so a question that names them ("What is the
@@ -468,7 +471,8 @@ pub(in crate::objects) fn query_of(question: &str) -> Option<String> {
 }
 
 /// Finds the passages of the knowledge bases of an agent that fit a
-/// question best (BM25 of FTS5), the best first.
+/// question best (BM25 of FTS5), the best first, each with the name of its
+/// source, so that the model and the user know where a passage comes from.
 ///
 /// Input:
 /// - `db`: the open database of the user.
@@ -477,13 +481,20 @@ pub(in crate::objects) fn query_of(question: &str) -> Option<String> {
 /// - `question`: the text to look for.
 /// - `count`: the most passages wanted (the limit of the agent).
 ///
-/// Output: at most `count` and at most [`MAX_FOUND`] passages; none when the
-/// question has no word to look for. An error when there are too many bases.
+/// Output: at most `count` and at most [`MAX_FOUND`] passages with their
+/// sources (`[("CC interpretation 12.pdf", "The TSF shall ...")]`); none when
+/// the question has no word to look for. An error when there are too many
+/// bases.
 ///
 /// Called by: `objects/ai/agent/agent_ai.rs`: `agent_knowledge`;
 /// `objects/ai/rag/rag_rules.rs`: `search_base`.
 /// Calls: [`query_of`].
-pub fn read_passages(db: &UserDatabase, bases: &[i64], question: &str, count: usize) -> Result<Vec<String>, DbError> {
+pub fn read_passages(
+    db: &UserDatabase,
+    bases: &[i64],
+    question: &str,
+    count: usize,
+) -> Result<Vec<(String, String)>, DbError> {
     ensure!(bases.len() <= MAX_BASES, DbError::Inconsistent(format!("more than {MAX_BASES} knowledge bases")));
 
     let Some(query) = query_of(question) else {
@@ -502,10 +513,10 @@ pub fn read_passages(db: &UserDatabase, bases: &[i64], question: &str, count: us
     let bases = format!("[{}]", ids.join(","));
     let connection = db.connection();
     let mut statement = connection.prepare(
-        "SELECT knowledge_passages.text AS text FROM knowledge_passages
+        "SELECT knowledge_sources.name AS source, knowledge_passages.text AS text
+         FROM knowledge_passages JOIN knowledge_sources ON knowledge_sources.id = knowledge_passages.source
          WHERE knowledge_passages MATCH :query
-           AND source IN (SELECT id FROM knowledge_sources
-                          WHERE knowledge_base IN (SELECT value FROM json_each(:bases)))
+           AND knowledge_sources.knowledge_base IN (SELECT value FROM json_each(:bases))
          ORDER BY bm25(knowledge_passages) LIMIT :wanted",
     )?;
     let mut rows = statement.query(named_params! {
@@ -518,7 +529,7 @@ pub fn read_passages(db: &UserDatabase, bases: &[i64], question: &str, count: us
     for _ in 0..wanted {
         let Some(row) = rows.next()? else { break };
 
-        found.push(row.get("text")?);
+        found.push((row.get("source")?, row.get("text")?));
     }
 
     Ok(found)
@@ -556,7 +567,10 @@ mod tests {
 
         assert_eq!(read_sources(&db, id).unwrap(), vec![stored]);
         assert!(read_passages(&db, &[id], "keys", 8).unwrap().is_empty());
-        assert_eq!(read_passages(&db, &[id], "signed firmware", 8).unwrap(), vec!["The firmware is signed."]);
+        assert_eq!(
+            read_passages(&db, &[id], "signed firmware", 8).unwrap(),
+            vec![("Router X, 2025".to_owned(), "The firmware is signed.".to_owned())]
+        );
     }
 
     #[test]
@@ -583,7 +597,7 @@ mod tests {
         create_source(&db, &source(one, "Generated keys are stored encrypted.")).unwrap();
         create_source(&db, &source(two, "The key of the door.")).unwrap();
 
-        assert_eq!(read_passages(&db, &[one], "key", 8).unwrap(), vec!["Generated keys are stored encrypted."]);
+        assert_eq!(read_passages(&db, &[one], "key", 8).unwrap()[0].1, "Generated keys are stored encrypted.");
         assert_eq!(read_passages(&db, &[one, two], "key", 8).unwrap().len(), 2);
         assert!(read_passages(&db, &[one], "\"OR NOT(", 8).unwrap().is_empty());
         // "What is the" are passed over: only "key" is looked for.

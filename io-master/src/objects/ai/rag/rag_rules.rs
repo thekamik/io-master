@@ -166,12 +166,16 @@ pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), Domai
     Ok(update_source(db, &Source { name, ..source })?)
 }
 
-/// The passages of the base `base` that fit `question` best: the test of a
-/// base, at most [`MAX_FOUND`].
+/// The passages of the base `base` that fit `question` best, each with the
+/// name of its source: the test of a base, at most [`MAX_FOUND`].
+///
+/// Input: `base`, the id of a stored base; `question`, the question typed.
+/// Output: the passages with their sources (`[("CEM.pdf", "The evaluator
+/// shall ...")]`); an error of the database for a base missing.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_search`.
 /// Calls: `objects/ai/rag/rag_store.rs`: `read_knowledge_base`, `read_passages`.
-pub fn search_base(db: &UserDatabase, base: i64, question: &str) -> Result<Vec<String>, DomainError> {
+pub fn search_base(db: &UserDatabase, base: i64, question: &str) -> Result<Vec<(String, String)>, DomainError> {
     read_knowledge_base(db, base)?;
 
     Ok(read_passages(db, &[base], question, MAX_FOUND)?)
