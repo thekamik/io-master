@@ -89,8 +89,14 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 /// `objects/ai/rag/rag_store.rs`: `read_passages`.
 pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<Vec<String>, AiError> {
     let agent = read_agent(db, agent)?;
-    let count = usize::try_from(agent.max_passages).unwrap_or(MAX_FOUND);
-    let limit = usize::try_from(agent.max_characters).unwrap_or(0);
+    // The limits were checked when the agent was written
+    // (`agent_rules.rs`); a negative one is a damaged agent, never a default.
+    let count = usize::try_from(agent.max_passages)
+        .map_err(|_| AiError::Refused(format!("the agent has {} passages", agent.max_passages)))?;
+    let limit = usize::try_from(agent.max_characters)
+        .map_err(|_| AiError::Refused(format!("the agent has {} characters", agent.max_characters)))?;
+
+    ensure!(count <= MAX_FOUND, AiError::Refused(format!("the agent has {count} passages, over {MAX_FOUND}")));
     let found = read_passages(db, &agent.knowledge_bases, &widened(question, &agent.glossary), count)?;
     let mut given = Vec::with_capacity(found.len());
     let mut characters = 0;

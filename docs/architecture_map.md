@@ -270,7 +270,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Stored** (`objects/evaluation/work_unit/work_unit_store.rs`): `create_work_unit`, `read_work_unit`, `read_work_units`, `update_work_unit`, `delete_work_unit`
 - **Processed, the rules of the data**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `needed_proofs`
-  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`, `links`, `taken_in_order`, `unit_at`, `work_order`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`, `links`, `outside`, `taken_in_order`, `unit_at`, `work_order`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`, `update_plan`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_all_work_units`, `add_work_unit`, `available_controls`, `holds`, `remove_work_unit`, `unit_of`
   - `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`

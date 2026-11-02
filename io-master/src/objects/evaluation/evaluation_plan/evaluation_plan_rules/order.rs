@@ -37,20 +37,27 @@ pub struct Order {
 /// Kahn's algorithm over the work units at `positions`: takes, again and
 /// again, a work unit whose counted dependencies are all taken. With
 /// `backward`, a dependency is counted the other way: a work unit is taken
-/// when no work unit left depends on it. Gives the positions taken, in their
-/// order.
+/// when no work unit left depends on it.
+///
+/// Input: `units`, the work units of a plan; `positions`, positions in
+/// `units`, each at most once; `backward`, the direction of the counting.
+/// Output: the positions taken, in their order (`[1, 2, 0]`); an error when
+/// a position is outside `units`, which [`work_order`] never gives.
 ///
 /// Called by: [`work_order`].
-fn taken_in_order(units: &[WorkUnit], positions: &[usize], backward: bool) -> Vec<usize> {
+/// Calls: [`links`], [`unit_at`].
+fn taken_in_order(units: &[WorkUnit], positions: &[usize], backward: bool) -> Result<Vec<usize>, DomainError> {
+    ensure!(positions.len() <= units.len(), outside(positions.len()));
+
+    // How many of the work units at `positions` each one waits for.
     let mut waiting = Vec::with_capacity(positions.len());
 
-    for &position in positions {
+    for index in 0..positions.len() {
+        let unit = unit_at(units, positions, index)?;
         let mut count = 0;
 
-        for &other in positions {
-            if let (Some(unit), Some(other_unit)) = (units.get(position), units.get(other))
-                && links(unit, other_unit, backward)
-            {
+        for other in 0..positions.len() {
+            if links(unit, unit_at(units, positions, other)?, backward) {
                 count += 1;
             }
         }
@@ -66,14 +73,15 @@ fn taken_in_order(units: &[WorkUnit], positions: &[usize], backward: bool) -> Ve
         }
     }
 
+    // Each turn takes the next work unit of `taken` and frees those that
+    // waited for it; a work unit is pushed once, when its count reaches 0,
+    // so `taken` never outgrows `positions`.
     for next in 0..positions.len() {
         let Some(&index) = taken.get(next) else { break };
-        let Some(done) = unit_at(units, positions, index) else { break };
+        let done = unit_at(units, positions, index)?;
 
         for (other, count) in waiting.iter_mut().enumerate() {
-            let Some(other_unit) = unit_at(units, positions, other) else { continue };
-
-            if *count > 0 && links(other_unit, done, backward) {
+            if *count > 0 && links(unit_at(units, positions, other)?, done, backward) {
                 *count -= 1;
 
                 if *count == 0 {
@@ -86,19 +94,31 @@ fn taken_in_order(units: &[WorkUnit], positions: &[usize], backward: bool) -> Ve
     let mut result = Vec::with_capacity(taken.len());
 
     for index in taken {
-        if let Some(&position) = positions.get(index) {
-            result.push(position);
-        }
+        let position = positions.get(index).copied().ok_or_else(|| outside(index))?;
+
+        result.push(position);
     }
 
-    result
+    Ok(result)
 }
 
-/// The work unit at the `index`-th of `positions`.
+/// The work unit at the `index`-th of `positions`; an error when either is
+/// outside its list.
 ///
 /// Called by: [`taken_in_order`].
-fn unit_at<'a>(units: &'a [WorkUnit], positions: &[usize], index: usize) -> Option<&'a WorkUnit> {
-    units.get(*positions.get(index)?)
+/// Calls: [`outside`].
+fn unit_at<'a>(units: &'a [WorkUnit], positions: &[usize], index: usize) -> Result<&'a WorkUnit, DomainError> {
+    let position = positions.get(index).copied().ok_or_else(|| outside(index))?;
+
+    units.get(position).ok_or_else(|| outside(position))
+}
+
+/// The error of a position outside the work units of the plan, which the
+/// order of the work never gives.
+///
+/// Called by: [`taken_in_order`], [`unit_at`].
+fn outside(position: usize) -> DomainError {
+    DomainError::Refused(format!("the order of the work: the position {position} is outside the plan"))
 }
 
 /// Whether `unit` waits for `other`: forward, when `unit` depends on
@@ -114,17 +134,22 @@ fn links(unit: &WorkUnit, other: &WorkUnit, backward: bool) -> bool {
 /// backward on those left, the ones that only depend on a cycle are taken
 /// away, and the work units of the cycles themselves remain.
 ///
+/// Input: `units`, the work units of a plan, in the order of the plan.
+/// Output: the order and the cross references, as positions in `units`
+/// (`Order { order: [1, 2, 0], crossed: [] }`); an error only if
+/// [`taken_in_order`] finds a position outside `units`.
+///
 /// Called by: [`check_order`]; `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`:
 /// `units_in_order`.
 /// Calls: [`taken_in_order`].
-pub fn work_order(units: &[WorkUnit]) -> Order {
+pub fn work_order(units: &[WorkUnit]) -> Result<Order, DomainError> {
     let mut all = Vec::with_capacity(units.len());
 
     for position in 0..units.len() {
         all.push(position);
     }
 
-    let order = taken_in_order(units, &all, false);
+    let order = taken_in_order(units, &all, false)?;
     let mut left = Vec::with_capacity(units.len().saturating_sub(order.len()));
 
     for position in all {
@@ -133,7 +158,7 @@ pub fn work_order(units: &[WorkUnit]) -> Order {
         }
     }
 
-    let behind = taken_in_order(units, &left, true);
+    let behind = taken_in_order(units, &left, true)?;
     let mut crossed = Vec::with_capacity(left.len());
 
     for position in left {
@@ -142,7 +167,9 @@ pub fn work_order(units: &[WorkUnit]) -> Order {
         }
     }
 
-    Order { order, crossed }
+    ensure!(order.len() + crossed.len() <= units.len(), outside(units.len()));
+
+    Ok(Order { order, crossed })
 }
 
 /// Marks the cross references of the plan `plan`: `cross_reference` of every
@@ -155,7 +182,7 @@ pub fn work_order(units: &[WorkUnit]) -> Order {
 /// `read_evaluation_plan`, `update_evaluation_plan`.
 pub fn check_order(db: &UserDatabase, plan: i64) -> Result<bool, DomainError> {
     let units = read_work_units(db, plan)?;
-    let crossed = work_order(&units).crossed;
+    let crossed = work_order(&units)?.crossed;
 
     for (position, unit) in units.iter().enumerate() {
         let is_crossed = crossed.contains(&position);
@@ -189,7 +216,7 @@ mod tests {
     #[test]
     fn a_work_unit_comes_after_its_dependencies_otherwise_in_the_order_of_the_plan() {
         let units = [node(1, &[3]), node(2, &[]), node(3, &[])];
-        let order = work_order(&units);
+        let order = work_order(&units).unwrap();
 
         assert_eq!(order.order, vec![1, 2, 0]);
         assert!(order.crossed.is_empty());
@@ -199,7 +226,7 @@ mod tests {
     fn only_the_work_units_of_a_cycle_are_cross_references() {
         // 1 ⇄ 2 is a cycle; 3 depends on it; 4 is free.
         let units = [node(1, &[2]), node(2, &[1]), node(3, &[1]), node(4, &[])];
-        let order = work_order(&units);
+        let order = work_order(&units).unwrap();
 
         assert_eq!(order.order, vec![3]);
         assert_eq!(order.crossed, vec![0, 1]);

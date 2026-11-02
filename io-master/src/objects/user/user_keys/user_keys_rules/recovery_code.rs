@@ -211,7 +211,9 @@ fn group(values: &[u8]) -> Zeroizing<String> {
             text.push('-');
         }
 
-        let letter = ALPHABET.get(usize::from(*value)).copied().unwrap_or(b'?');
+        // A value is five bits (`bits`); the mask keeps it within the 32
+        // letters, so no letter is ever made up for a value outside them.
+        let letter = ALPHABET[usize::from(*value & 0b1_1111)];
         text.push(char::from(letter));
     }
 

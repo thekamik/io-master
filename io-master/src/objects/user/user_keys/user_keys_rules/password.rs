@@ -41,18 +41,13 @@ pub const PASSWORD_MIN: usize = 12;
 /// paste of a whole document out.
 pub const PASSWORD_MAX: usize = 1024;
 
-/// Memory of Argon2id in KiB: 64 MiB, as recommended by OWASP.
-/// The tests use little, to stay fast.
-#[cfg(not(test))]
+/// Memory of Argon2id in KiB: 64 MiB, as recommended by OWASP. The tests
+/// use the same (rule 8: no `#[cfg]` but `#[cfg(test)]`); `argon2` is built
+/// optimized also in the dev profile (`Cargo.toml`), so they stay fast.
 const ARGON2_MEMORY_KIB: u32 = 64 * 1024;
-#[cfg(test)]
-const ARGON2_MEMORY_KIB: u32 = 256;
 
 /// Passes of Argon2id over the memory.
-#[cfg(not(test))]
 const ARGON2_ITERATIONS: u32 = 3;
-#[cfg(test)]
-const ARGON2_ITERATIONS: u32 = 1;
 
 /// What the HKDF derivation is for. A different text gives an
 /// unrelated key, so a key made for one purpose never serves

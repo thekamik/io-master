@@ -60,16 +60,18 @@ pub struct Preview {
 /// Calls: `read_work_units`, `work_order`.
 pub fn units_in_order(db: &UserDatabase, evaluation: i64) -> Result<Vec<WorkUnit>, AiError> {
     let units = read_work_units(db, evaluation)?;
-    let order = work_order(&units);
+    let order = work_order(&units)?;
 
     ensure!(order.crossed.is_empty(), AiError::Refused("the evaluation has a cross reference".to_owned()));
 
     let mut ordered = Vec::with_capacity(units.len());
 
     for position in order.order {
-        if let Some(unit) = units.get(position) {
-            ordered.push(unit.clone());
-        }
+        let unit = units.get(position).ok_or_else(|| {
+            AiError::Refused(format!("the order of the work: the position {position} is outside the evaluation"))
+        })?;
+
+        ordered.push(unit.clone());
     }
 
     Ok(ordered)

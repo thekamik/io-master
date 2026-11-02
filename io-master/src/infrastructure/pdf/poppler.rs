@@ -29,6 +29,9 @@ pub const MAX_FILE: u64 = 256 * 1024 * 1024;
 /// The most pages a document may have.
 pub const MAX_PAGES: u32 = 10_000;
 
+/// The most parts of [`PART`] pages a PDF of [`MAX_PAGES`] is read in.
+const MAX_PARTS: u32 = MAX_PAGES.div_ceil(PART);
+
 /// What `pdfinfo` tells about a file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PdfInfo {
@@ -140,20 +143,31 @@ pub fn info(pdf: &[u8]) -> Result<PdfInfo, PdfError> {
     let output = run("pdfinfo", &["-enc", "UTF-8", "fd://0"], pdf)?;
     let text = String::from_utf8_lossy(&output.stdout);
 
-    let field = |name: &str| {
-        text.lines()
-            .find_map(|line| line.strip_prefix(name))
-            .map(|value| value.trim().to_owned())
-            .filter(|value| !value.is_empty())
-    };
-
-    let pages: u32 = field("Pages:")
-        .and_then(|value| value.parse().ok())
-        .ok_or_else(|| PdfError::Unreadable("pdfinfo names no number of pages".to_owned()))?;
+    let named =
+        field(&text, "Pages:").ok_or_else(|| PdfError::Unreadable("pdfinfo names no number of pages".to_owned()))?;
+    let pages: u32 =
+        named.parse().map_err(|error| PdfError::Unreadable(format!("pdfinfo names \"{named}\" pages: {error}")))?;
 
     ensure!(pages > 0 && pages <= MAX_PAGES, PdfError::Unreadable(format!("the file has {pages} pages")));
 
-    Ok(PdfInfo { pages, title: field("Title:") })
+    Ok(PdfInfo { pages, title: field(&text, "Title:") })
+}
+
+/// The value of the field `name` in what `pdfinfo` wrote: `field(text,
+/// "Pages:")` of a line "Pages:   471" is `Some("471")`; `None` when no line
+/// has the field or its value is empty.
+///
+/// Called by: [`info`].
+fn field(text: &str, name: &str) -> Option<String> {
+    for line in text.lines() {
+        if let Some(value) = line.strip_prefix(name) {
+            let value = value.trim();
+
+            return if value.is_empty() { None } else { Some(value.to_owned()) };
+        }
+    }
+
+    None
 }
 
 /// The text of the pages `first` to `last`: one text per page.
@@ -206,8 +220,9 @@ pub fn text(pdf: &[u8]) -> Result<String, PdfError> {
     let mut text = String::new();
     let mut first = 1;
 
-    // Each turn reads one part; MAX_PAGES / PART parts at most.
-    for _ in 0..=pages / PART {
+    // Each turn reads one part; `info` checked the pages against MAX_PAGES,
+    // so MAX_PARTS turns read them all.
+    for _ in 0..MAX_PARTS {
         if first > pages {
             break;
         }
@@ -221,6 +236,8 @@ pub fn text(pdf: &[u8]) -> Result<String, PdfError> {
 
         first = last + 1;
     }
+
+    ensure!(first > pages, PdfError::Unreadable(format!("only {} of {pages} pages read", first - 1)));
 
     Ok(text)
 }
