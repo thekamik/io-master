@@ -10,11 +10,14 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 
 - The review of the code by the user, file by file (`review.md`); the functional hardening: a limit of failed logins, a full disk, a damaged database, the limits of the inputs measured on real documents.
 - The restriction lints of clippy in `[lints]` of `Cargo.toml` for the rules of `CLAUDE.md` (`unwrap_used`, `panic`, `indexing_slicing` and the like; `pedantic` is on).
-- **The checks with recovery** (rule 5, 2026-11-01): 200 `ensure!` in 503 functions (0.40 on average, the rule asks two): added in the review file by file, for what the types do not guarantee (the limits of an input, the state a function expects).
+- **The checks with recovery** (rule 5): 212 `ensure!` in 517 functions (0.41 on average, the rule asks two), counted on 2026-11-02 after the silent defaults were replaced; added in the review file by file, only for what the types do not guarantee (the limits of an input, the state a function expects), never to fill the average.
 - `cargo-audit` and `cargo-deny`; the package for Debian 13.
 - Version 1: from then on the data is kept and every change of a table is a migration. The names of the database files keep their `.v2` until then (user, 2026-10-31: the databases of the tests are not broken for a name).
 
 ## Reminders
+
+- **One function of the page per command** (found 2026-11-02): `ui/src/lib/api/evaluation_plan.ts`: `planFill` calls two commands, `plan_fill_parameters` and `plan_fill_dependencies`, by its argument; `CLAUDE.md` asks for one function per command, named as the command. To part it in two (`planFillParameters`, `planFillDependencies`) with the user.
+- **Repeated reading of the documents for the quotes** (found 2026-11-02): `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes` reads and spaces every document of the work unit once for each quote (`check_quote` calls `quotes_found` with one quote); `assessment_question.rs`: `unit_json` reads a document once for each quote. To measure with a real evaluation; then read each document once.
 
 - **The parts of a control beyond its statement and guidance** (2026-11-01): the catalog of ETSI TS 103 701 (`testing_documents/`) has no part `guidance`; its parts `test-units`, `assessment-method` and `assignment-of-verdict` are kept in the stored catalog but reach no work unit (`objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `control_of` takes only `statement` and `guidance`). To decide whether and how a work unit shows them.
 

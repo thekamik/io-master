@@ -39,7 +39,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/work_units.rs`: `evaluation_unit_list`, `evaluation_unit_get`
   - `evaluation_plan/fill.rs`: `plan_fill_preview`
   - `evaluation_plan/plans.rs`: `plan_get`, `plan_save`
-  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_get`, `work_unit_save`
+  - `evaluation_plan/work_units.rs`: `work_unit_get`, `work_unit_save`
 - **Shown** (`ui/src/`):
   - `views/agents/AgentEditor.svelte` ← `agent_get`, `agent_save`, `agent_knowledge_test`
   - `views/agents/AgentList.svelte` ← `agent_list`, `agent_create`
@@ -175,7 +175,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/work_units.rs`: `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save`
   - `evaluation_plan/fill.rs`: `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`
   - `evaluation_plan/plans.rs`: `plan_list`, `plan_create`, `plan_get`, `plan_save`, `plan_add_document`
-  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_save`, `work_unit_add_proof`
+  - `evaluation_plan/work_units.rs`: `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_save`, `work_unit_add_proof`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
@@ -206,7 +206,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/inputs.rs`: `evaluation_proof_give`
   - `evaluation/run.rs`: `evaluation_assess_preview`, `evaluation_assess`
   - `evaluation/work_units.rs`: `evaluation_unit_get`
-  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_get`, `work_unit_add_proof`
+  - `evaluation_plan/work_units.rs`: `work_unit_get`, `work_unit_add_proof`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
@@ -227,7 +227,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/work_units.rs`: `evaluation_unit_get`
   - `evaluation_plan/plans.rs`: `plan_get`
   - `evaluation_plan/standards.rs`: `standard_list`, `standard_import`
-  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`
+  - `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationUnit.svelte` ← `evaluation_unit_get`
   - `views/evaluation_plan/PlanEditor.svelte` ← `plan_get`
@@ -293,7 +293,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/work_units.rs`: `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save`
   - `evaluation_plan/fill.rs`: `plan_fill_parameters`, `plan_fill_dependencies`
   - `evaluation_plan/plans.rs`: `plan_create`, `plan_get`, `plan_save`
-  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`
+  - `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
