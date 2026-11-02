@@ -44,13 +44,19 @@ const DOCUMENT_PASSAGES: usize = 20;
 /// characters.
 const MAX_DEPENDENCY_FINDINGS: usize = 1000;
 
-/// What the two tasks of the assessment share (user, 2026-11-02): the care
-/// asked for, what the extracted text and the recorded version are, and the
+/// What the two tasks of the assessment share (user, 2026-11-02): the scope of
+/// the work unit, substance before form, the care asked for about the
+/// substance, what the extracted text and the recorded version are, and the
 /// form of the answer, its verdict last so that it follows from the analysis.
 /// `{verdicts}` is replaced by the verdicts of the plan.
-const ANSWER_FORM: &str = "Be careful: pass a work unit only when the evidence shows that its requirement is met; \
-when it does not, fail it. A false fail is corrected by the evaluator, a false pass may never be found (user, \
-2026-11-02).\n\
+const ANSWER_FORM: &str = "Judge only what the requirement of this work unit asks. A fault that belongs to \
+another work unit, its dependencies among them, is judged there: tell it in the notes, never in the findings or the \
+verdict, unless this requirement itself rests on it.\n\
+Fail the work unit when the content its requirement asks for is missing, or is contradicted in a way that touches \
+the requirement. An editorial flaw (the format of a date, a broken cross-reference, numbering, layout) goes to the \
+notes and does not change the verdict.\n\
+Be careful about the substance: when the evidence does not show that the requirement is met, fail the work unit. \
+A false fail is corrected by the evaluator, a false pass may never be found (user, 2026-11-02).\n\
 The text of a document was extracted from its file: its tables may be broken and its formatting (italic, bold, \
 underline) is lost. That is no fault of the document; what cannot be decided because of it is told in the notes, \
 for the evaluator to check in the original. The version of a document written under its name was recorded by the \
@@ -340,8 +346,8 @@ fn question_of(
     let task = if functional { FUNCTIONAL_TASK } else { DOCUMENTATION_TASK };
     let task = format!("{task}{}", ANSWER_FORM.replace("{verdicts}", &verdicts.join(", ")));
     let mut text = format!(
-        "The work unit:\n{}\n\nIts dependencies (their results are given for context; weigh them \
-         yourself):\n{}\nIts documents of the product:\n{}",
+        "The work unit:\n{}\n\nIts dependencies (their results are given for context; a fault of a \
+         dependency is judged in its own work unit):\n{}\nIts documents of the product:\n{}",
         unit_json(db, unit, &units)?,
         dependencies_text(unit, &units),
         documents_text(db, unit, whole)?,
