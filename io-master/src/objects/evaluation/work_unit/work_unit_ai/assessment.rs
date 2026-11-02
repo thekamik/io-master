@@ -78,8 +78,7 @@ pub(in crate::objects::evaluation) fn prepared_assessment(
 /// of the database.
 ///
 /// Called by: [`written`].
-/// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `read_assessment`,
-/// `apply_assessment`.
+/// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `read_assessment`, `apply_assessment`.
 pub(in crate::objects::evaluation) fn assessed(
     db: &UserDatabase,
     evaluation: i64,
@@ -128,8 +127,8 @@ fn prepared_question(
 ///
 /// Called by: [`assess_work_unit`].
 /// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_database`, `open_database`;
-/// `objects/ai/journal/journal_ai.rs`: `record`; [`assessed`];
-/// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`.
+/// `objects/ai/journal/journal_ai.rs`: `record`; [`assessed`]; `objects/evaluation/work_unit/work_unit_store.rs`:
+/// `read_work_unit`.
 fn written(
     database: &Mutex<Option<UserDatabase>>,
     step: (i64, i64),

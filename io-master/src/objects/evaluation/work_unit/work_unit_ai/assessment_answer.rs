@@ -207,8 +207,7 @@ fn joined(first: &str, more: &[String]) -> String {
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assessed`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; [`verdict_of`];
-/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`;
-/// [`dependency_warnings`], [`joined`].
+/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`; [`dependency_warnings`], [`joined`].
 pub fn apply_assessment(
     db: &UserDatabase,
     evaluation: i64,

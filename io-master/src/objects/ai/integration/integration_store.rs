@@ -145,8 +145,9 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
 /// `objects/ai/agent/agent_rules.rs`: `checked`, `new_agent`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`;
 /// `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`,
-/// `change_integration`, `set_key`; `panels/views/agents/agent.rs`:
-/// `agent_list`.
+/// `change_integration`; `objects/ai/api_key/api_key_rules.rs`: `set_key`;
+/// `panels/views/agents/agent.rs`: `agent_list`; `panels/views/settings/integrations.rs`:
+/// `integration_check`.
 /// Calls: [`integration_of`].
 pub fn read_integration(db: &UserDatabase, id: i64) -> Result<Integration, DbError> {
     let connection = db.connection();

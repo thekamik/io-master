@@ -20,6 +20,8 @@ export interface IntegrationView {
   protocol: ProtocolName;
   caCertificate: string;
   contextSize: number;
+  /** Why the context is too small for an ST of 100 pages; null when it is not. */
+  contextWarning: string | null;
   hasKey: boolean;
   active: boolean;
 }
@@ -44,6 +46,8 @@ export interface CheckView {
   error: string | null;
   inputTokens: number;
   outputTokens: number;
+  /** Why the context of the integration is too small for an ST of 100 pages; null when it is not. */
+  contextWarning: string | null;
 }
 
 /** Every integration, the active one marked. */

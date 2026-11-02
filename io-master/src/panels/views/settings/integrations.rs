@@ -18,12 +18,13 @@ use tauri::State;
 
 use crate::objects::ai::api_key::api_key_rules::{has_key, set_key};
 use crate::objects::ai::integration::integration_ai::check::check_question;
+use crate::objects::ai::integration::integration_ai::question::context_warning;
 use crate::objects::ai::integration::integration_ai::sending::send_whole;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 use crate::objects::ai::integration::integration_rules::settings::{
     activate_integration, add_integration, change_integration,
 };
-use crate::objects::ai::integration::integration_store::read_integrations;
+use crate::objects::ai::integration::integration_store::{read_integration, read_integrations};
 use crate::objects::ai::journal::journal_ai::record;
 use crate::objects::ai::journal::journal_model::Ending;
 use crate::objects::user::program_data::program_data_store::read_settings;
@@ -53,6 +54,9 @@ pub struct IntegrationView {
     /// Empty: the trusted certificates of the system.
     ca_certificate: String,
     context_size: u32,
+    /// Why the context is too small for an ST of 100 pages; `None` when it
+    /// is not.
+    context_warning: Option<String>,
     has_key: bool,
     active: bool,
 }
@@ -69,6 +73,9 @@ pub struct CheckView {
     error: Option<String>,
     input_tokens: u32,
     output_tokens: u32,
+    /// Why the context of the integration is too small for an ST of 100
+    /// pages; `None` when it is not.
+    context_warning: Option<String>,
 }
 
 /// The name of a protocol on the page.
@@ -163,9 +170,10 @@ pub struct IntegrationFields {
 /// key.
 ///
 /// Input: `session`, the session of the window, someone logged in.
-/// Output: the integrations (`[{"id": 1, "name": "Ollama", "active": true,
-/// "hasKey": false, ...}]`); `ViewError::NotLoggedIn` when nobody is logged in,
-/// an error of the database.
+/// Output: the integrations, each with the warning about a context too small
+/// for an ST of 100 pages (`[{"id": 1, "name": "Ollama", "active": true,
+/// "hasKey": false, "contextWarning": null, ...}]`); `ViewError::NotLoggedIn`
+/// when nobody is logged in, an error of the database.
 ///
 /// Called by: `ui/src/lib/api/settings.ts`: `integrationList`, from `ui/src/views/settings/IntegrationList.svelte`,
 /// when the tab opens and after a change; `ui/src/views/agents/AgentList.svelte` (the integration of a new agent).
@@ -182,6 +190,7 @@ pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationVi
 
     for integration in read_integrations(db)? {
         integrations.push(IntegrationView {
+            context_warning: context_warning(&integration),
             has_key: has_key(db, integration.id)?,
             active: active == Some(integration.id),
             id: integration.id,
@@ -269,9 +278,11 @@ pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) ->
 ///
 /// Input: `session`, the session of the window, someone logged in; `id`, the id
 /// of an integration.
-/// Output: the answer to the question of the check (`{"text": "OK", "ending":
-/// "complete", "error": null}`); `ViewError::NotLoggedIn` when nobody is logged
-/// in, the refusals of the question, an error of the session or the database.
+/// Output: the answer to the question of the check, with the warning about a
+/// context too small for an ST of 100 pages (`{"text": "OK", "ending":
+/// "complete", "error": null, "contextWarning": "The context of ..."}`);
+/// `ViewError::NotLoggedIn` when nobody is logged in, the refusals of the
+/// question, an error of the session or the database.
 ///
 /// Called by: `ui/src/lib/api/settings.ts`: `integrationCheck`, from
 /// `ui/src/views/settings/IntegrationForm.svelte`, "Check the connection".
@@ -280,10 +291,11 @@ pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) ->
 /// `objects/ai/integration/integration_ai/sending.rs`: `send_whole`; `objects/ai/journal/journal_ai.rs`: `record`.
 #[tauri::command]
 pub async fn integration_check(session: State<'_, Session>, id: i64) -> Result<CheckView, ViewError> {
-    let prepared = {
+    let (prepared, warning) = {
         let opened = session.lock()?;
+        let db = database(opened.as_ref())?;
 
-        check_question(database(opened.as_ref())?, id)?
+        (check_question(db, id)?, context_warning(&read_integration(db, id)?))
     };
     let sent = send_whole(&prepared).await;
     let opened = session.lock()?;
@@ -296,5 +308,6 @@ pub async fn integration_check(session: State<'_, Session>, id: i64) -> Result<C
         error: answer.error.map(|error| error.to_string()),
         input_tokens: answer.input_tokens,
         output_tokens: answer.output_tokens,
+        context_warning: warning,
     })
 }

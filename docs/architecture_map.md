@@ -103,7 +103,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the AI**:
   - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`
   - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`
-  - `objects/ai/integration/integration_ai/question.rs`: `answer_tokens`, `check_size`, `prepare`
+  - `objects/ai/integration/integration_ai/question.rs`: `answer_tokens`, `check_size`, `context_warning`, `prepare`
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`
 - **Commands** (`panels/views/`):
   - `agents/agent.rs`: `agent_list`, `agent_create`, `agent_get`, `agent_save`

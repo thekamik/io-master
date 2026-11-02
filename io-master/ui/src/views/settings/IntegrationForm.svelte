@@ -43,7 +43,9 @@
   let protocol: ProtocolName = $state(start?.protocol ?? "openai_chat");
   let url = $state(start?.url ?? "");
   let model = $state(start?.model ?? "");
-  let contextSize = $state(start?.contextSize ?? 32768);
+  // 128 000 tokens hold an ST of 100 pages with its requirement, a page of
+  // knowledge and the answer (src/objects/ai/integration/integration_ai/question.rs, NEEDED_CONTEXT).
+  let contextSize = $state(start?.contextSize ?? 128000);
   let caCertificate = $state(start?.caCertificate ?? "");
   let key = $state("");
   let check: CheckView | null = $state(null);
@@ -185,6 +187,7 @@
         <dt>Answer</dt><dd>{check.text || "—"}</dd>
         <dt>Model</dt><dd class="mono">{check.model}</dd>
         <dt>Tokens</dt><dd>{check.inputTokens} in, {check.outputTokens} out</dd>
+        {#if check.contextWarning}<dt>Context</dt><dd class="note">{check.contextWarning}</dd>{/if}
       </dl>
     {/if}
   {/if}

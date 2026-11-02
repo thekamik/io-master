@@ -63,6 +63,7 @@
           <td class="wrap">
             {integration.name}
             {#if integration.active}<span class="badge success">active</span>{/if}
+            {#if integration.contextWarning}<p class="note">{integration.contextWarning}</p>{/if}
           </td>
           <td class="wrap mono">{integration.model}</td>
           <td>

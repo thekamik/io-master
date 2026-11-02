@@ -42,6 +42,30 @@ const CHARACTERS_PER_TOKEN: u64 = 3;
 /// The most messages of one question.
 pub const MAX_MESSAGES: usize = 1000;
 
+/// The characters of a page of a document, as the context a model needs is
+/// counted: generous, a page of an ST holds about 2200 (user, 2026-11-02).
+const PAGE_CHARACTERS: u64 = 3000;
+
+/// The pages of the documents one question of an assessment should hold
+/// whole: an ST of 100 pages (user, 2026-11-02).
+const DOCUMENT_PAGES: u64 = 100;
+
+/// The pages beside the documents: the requirement of the standard (at most
+/// one page) and the knowledge of the agent (about one page).
+const OTHER_PAGES: u64 = 2;
+
+/// The tokens of the instructions of an agent and of the task of an
+/// assessment, beside the pages.
+const TASK_TOKENS: u64 = 2000;
+
+/// The context a model needs for a question of [`DOCUMENT_PAGES`] and
+/// [`OTHER_PAGES`] pages and
+/// its longest answer, in tokens, counted as [`prepare`] counts: 120 000.
+/// The integrations are made with a context of 128 000 by default (the page:
+/// `ui/src/views/settings/IntegrationForm.svelte`).
+pub const NEEDED_CONTEXT: u64 =
+    (DOCUMENT_PAGES + OTHER_PAGES) * PAGE_CHARACTERS / CHARACTERS_PER_TOKEN + TASK_TOKENS + MAX_ANSWER_TOKENS as u64;
+
 /// A question to ask.
 pub struct Question {
     /// The integration asked.
@@ -159,6 +183,37 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
     })
 }
 
+/// The warning about a model whose context is too small for the documents
+/// of an evaluation: how many pages it holds, and what to do. The questions
+/// still go: their documents as the passages that fit each work unit.
+///
+/// Input: `integration`, an integration of the user.
+/// Output: the warning ("The context of Ollama (32768 tokens) holds about 15
+/// pages ..."); `None` when the context holds [`NEEDED_CONTEXT`].
+///
+/// Called by: `panels/views/settings/integrations.rs`: `integration_list`,
+/// `integration_check`.
+/// Calls: [`answer_tokens`].
+pub fn context_warning(integration: &Integration) -> Option<String> {
+    let context = u64::from(integration.context_size);
+
+    if context >= NEEDED_CONTEXT {
+        return None;
+    }
+
+    // The pages left after the answer, the task, the requirement and the
+    // knowledge: the pages of the documents the model can read whole.
+    let room = context.saturating_sub(u64::from(answer_tokens(integration)) + TASK_TOKENS);
+    let pages = (room * CHARACTERS_PER_TOKEN / PAGE_CHARACTERS).saturating_sub(OTHER_PAGES);
+
+    Some(format!(
+        "The context of {} ({context} tokens) holds about {pages} pages of documents; an ST of {DOCUMENT_PAGES} pages needs \
+         {NEEDED_CONTEXT}. Larger documents go to the model as their passages that fit each work unit, so it may miss \
+         what it needs: split the documents into smaller parts, or choose a model with a larger context.",
+        integration.name
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     //! Tests of the question prepared: its size and its last message.
@@ -167,6 +222,16 @@ mod tests {
 
     use crate::objects::ai::integration::integration_store::create_integration;
     use crate::test_support::database::{database, integration};
+
+    #[test]
+    fn a_context_too_small_for_an_st_of_100_pages_is_warned_of() {
+        let small = Integration { context_size: 32_768, ..integration() };
+        let warning = context_warning(&small).unwrap();
+
+        assert!(warning.contains("(32768 tokens) holds about 20 pages") && warning.contains("needs 120000"));
+        assert!(context_warning(&Integration { context_size: 128_000, ..integration() }).is_none());
+        assert_eq!(NEEDED_CONTEXT, 120_000);
+    }
 
     /// A question without an agent to the integration `integration`.
     fn question(integration: i64, text: &str) -> Question {
