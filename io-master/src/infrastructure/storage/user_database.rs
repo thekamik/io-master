@@ -93,7 +93,7 @@ pub fn path(data_dir: &Path, user_id: i64) -> PathBuf {
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `keys_and_database`;
 /// the tests: `test_support/database.rs`.
-/// Calls: [`path`], `sqlcipher::create`, [`UserDatabase::from`].
+/// Calls: [`path`]; `infrastructure/storage/encryption/sqlcipher.rs`: `create`; [`UserDatabase::from`].
 pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey, tables: &[&str]) -> Result<UserDatabase, DbError> {
     let directory = data_dir.join(DIRECTORY);
 
@@ -123,7 +123,7 @@ pub fn create(data_dir: &Path, user_id: i64, key: &DatabaseKey, tables: &[&str])
 /// (`DbError::WrongKey`).
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`.
-/// Calls: [`path`], `sqlcipher::open`, [`UserDatabase::from`].
+/// Calls: [`path`]; `infrastructure/storage/encryption/sqlcipher.rs`: `open`; [`UserDatabase::from`].
 pub fn open(data_dir: &Path, user_id: i64, key: &DatabaseKey, tables: &[&str]) -> Result<UserDatabase, DbError> {
     UserDatabase::from(sqlcipher::open(&path(data_dir, user_id), key)?, tables)
 }

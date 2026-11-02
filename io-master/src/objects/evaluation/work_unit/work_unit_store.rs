@@ -362,8 +362,7 @@ pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result
 /// (`UNIQUE`).
 ///
 /// Called by: [`create_work_unit`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `create_evaluation`.
-/// Calls: [`check_lists`], [`check_links`], [`verdict_name`], [`author_name`],
-/// [`write_lists`].
+/// Calls: [`check_lists`], [`check_links`], [`verdict_name`], [`author_name`], [`write_lists`].
 pub(in crate::objects::evaluation) fn insert_work_unit(
     connection: &Connection,
     plan: i64,
@@ -695,8 +694,8 @@ fn check_frozen(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<(), DbE
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`;
 /// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`,
 /// `update_work_unit_parameters`.
-/// Calls: [`check_lists`], [`plan_of`], [`check_frozen`], [`check_links`],
-/// [`verdict_name`], [`author_name`], [`write_lists`].
+/// Calls: [`check_lists`], [`plan_of`], [`check_frozen`], [`check_links`], [`verdict_name`], [`author_name`],
+/// [`write_lists`].
 pub fn update_work_unit(db: &UserDatabase, unit: &WorkUnit) -> Result<(), DbError> {
     check_lists(unit)?;
 

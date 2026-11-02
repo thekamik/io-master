@@ -228,7 +228,7 @@ fn read_glossary(connection: &Connection, id: i64) -> Result<Vec<GlossaryEntry>,
 /// `update_work_unit_parameters`; `panels/views/agents/agent.rs`: `agent_get`;
 /// `panels/views/chat/chats.rs`: `agent_name`;
 /// `panels/views/evaluation/work_units.rs`: `row_of`, `unit_view`.
-/// Calls: [`agent_of`], `infrastructure/storage/lists.rs`: `read_id_list`, [`read_glossary`].
+/// Calls: [`agent_of`]; `infrastructure/storage/lists.rs`: `read_id_list`; [`read_glossary`].
 pub fn read_agent(db: &UserDatabase, id: i64) -> Result<Agent, DbError> {
     let connection = db.connection();
     let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM ai_agents WHERE id = :id"))?;

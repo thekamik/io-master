@@ -465,8 +465,7 @@ fn order_work_units(connection: &Connection, id: i64, units: &[i64]) -> Result<(
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`,
 /// `update_plan`.
-/// Calls: [`check_plan`], [`state_name`], [`write_lists`],
-/// [`order_work_units`].
+/// Calls: [`check_plan`], [`state_name`], [`write_lists`], [`order_work_units`].
 pub fn update_evaluation_plan(db: &UserDatabase, plan: &EvaluationPlan) -> Result<(), DbError> {
     check_plan(plan)?;
 
@@ -658,8 +657,8 @@ fn copied_places(
 /// ```
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `new_evaluation`.
-/// Calls: [`read_evaluation_plan`], `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
-/// [`copied_places`], [`all_mapped`], [`insert_plan`], [`copied_unit`],
+/// Calls: [`read_evaluation_plan`]; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
+/// [`copied_places`], [`all_mapped`], [`insert_plan`], [`copied_unit`];
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `insert_work_unit`, `write_dependencies`; [`mapped`].
 pub fn create_evaluation(
     db: &UserDatabase,

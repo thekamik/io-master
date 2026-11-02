@@ -85,7 +85,7 @@ pub fn path(data_dir: &Path) -> PathBuf {
 /// installed) or cannot be made.
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `create_account`.
-/// Calls: [`path`], `sqlcipher::create_plain`, [`SystemDatabase::from`].
+/// Calls: [`path`]; `infrastructure/storage/encryption/sqlcipher.rs`: `create_plain`; [`SystemDatabase::from`].
 pub fn create(data_dir: &Path, tables: &[&str]) -> Result<SystemDatabase, DbError> {
     SystemDatabase::from(sqlcipher::create_plain(&path(data_dir))?, tables)
 }
@@ -103,7 +103,7 @@ pub fn create(data_dir: &Path, tables: &[&str]) -> Result<SystemDatabase, DbErro
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `installed_user`,
 /// `log_in`.
-/// Calls: [`path`], `sqlcipher::open_plain`, [`SystemDatabase::from`].
+/// Calls: [`path`]; `infrastructure/storage/encryption/sqlcipher.rs`: `open_plain`; [`SystemDatabase::from`].
 pub fn open(data_dir: &Path, tables: &[&str]) -> Result<SystemDatabase, DbError> {
     SystemDatabase::from(sqlcipher::open_plain(&path(data_dir))?, tables)
 }
