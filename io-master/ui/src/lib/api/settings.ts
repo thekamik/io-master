@@ -48,6 +48,11 @@ export interface IntegrationFields {
 /** Where a new integration starts and the limits of the fields, as the
  * program gives them (integrations.rs, IntegrationFormView). */
 export interface IntegrationFormView {
+  name: string;
+  protocol: ProtocolName;
+  url: string;
+  model: string;
+  contextSize: number;
   charactersPerToken: number;
   connectTimeoutSeconds: number;
   streamSilenceSeconds: number;
@@ -74,9 +79,10 @@ export function integrationList(): Promise<IntegrationView[]> {
   return invoke("integration_list");
 }
 
-/** Where a new integration starts and the limits of its fields. */
-export function integrationForm(): Promise<IntegrationFormView> {
-  return invoke("integration_form");
+/** Where a new integration of a protocol starts (of the program's first
+ * protocol, without one) and the limits of its fields. */
+export function integrationForm(protocol: ProtocolName | null): Promise<IntegrationFormView> {
+  return invoke("integration_form", { protocol });
 }
 
 /** Stores a new integration; gives its id. */

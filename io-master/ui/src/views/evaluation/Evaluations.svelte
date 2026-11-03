@@ -3,7 +3,8 @@
   plan_list and agent_list for the choices): every evaluation and report,
   and a new evaluation, begun on a copy of a plan in planning with the
   identification ISO/IEC 17025 asks for and the agent of the work units
-  without one of their own (user, 2026-10-30). An evaluation opened shows
+  without one of their own (user, 2026-10-30); the evaluator starts as the
+  user logged in (loginGet). An evaluation opened shows
   its editor (EvaluationEditor). Which screen is shown is presentation
   only: it stays in the page.
 -->
@@ -14,6 +15,7 @@
   import { sentence } from "../../lib/api/errors";
   import { evaluationCreate, evaluationList, type EvaluationSummaryView } from "../../lib/api/evaluation";
   import { planList, type PlanSummaryView } from "../../lib/api/evaluation_plan";
+  import { loginGet } from "../../lib/api/program_start";
   import EvaluationEditor from "./EvaluationEditor.svelte";
 
   let evaluations: EvaluationSummaryView[] = $state([]);
@@ -39,6 +41,8 @@
       agents = (await agentList()).filter((one) => one.role === "evaluator");
       plan = plan ?? ready[0]?.id ?? null;
       agent = agent ?? agents[0]?.id ?? null;
+      // The evaluator is most often the one who begins the evaluation.
+      evaluator ||= (await loginGet()).loggedIn ?? "";
     } catch (error) {
       problem = sentence(error);
     }

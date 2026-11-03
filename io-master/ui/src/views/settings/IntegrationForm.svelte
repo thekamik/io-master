@@ -7,8 +7,9 @@
   it back, the form shows only whether one is stored. A stored integration
   whose address changed needs its key given anew (the key is bound to its
   address). Where a new integration starts and the limits of the fields
-  come from the program (integration_form): the page holds no number of its
-  own; the context of the model has no start, it is given by its service.
+  come from the program (integration_form): the page holds no value of its
+  own. In a new integration a change of the protocol brings the start of the
+  new protocol into every field not changed by hand.
   Tells the tab after a write (onsaved, with the id).
 -->
 <script lang="ts">
@@ -34,24 +35,18 @@
     onclose,
   }: { integration: IntegrationView | null; onsaved: (id: number) => void; onclose: () => void } = $props();
 
-  /** What a new integration of each protocol is most often. */
-  const EXAMPLES: Record<ProtocolName, { url: string; model: string }> = {
-    openai_chat: { url: "http://127.0.0.1:11434/v1/chat/completions", model: "llama3.1" },
-    anthropic_messages: { url: "https://api.anthropic.com/v1/messages", model: "claude-opus-5-5" },
-  };
-
   // The form starts from the integration given; it is made anew for another
   // one (the {#key} of the tab), so the first value is enough (untrack: read
   // once, on purpose).
   const start = untrack(() => integration);
 
+  // Every field starts from the integration given, or from the program
+  // (loadForm) for a new one.
   let name = $state(start?.name ?? "");
-  let protocol: ProtocolName = $state(start?.protocol ?? "openai_chat");
+  let protocol: ProtocolName | null = $state(start?.protocol ?? null);
   let url = $state(start?.url ?? "");
   let model = $state(start?.model ?? "");
-  // The context is the model's, as its service gives it: no start.
   let contextSize: number | null = $state(start?.contextSize ?? null);
-  // The rest starts from the integration given, or from the program.
   let charactersPerToken: number | null = $state(start?.charactersPerToken ?? null);
   let connectTimeoutSeconds: number | null = $state(start?.connectTimeoutSeconds ?? null);
   let streamSilenceSeconds: number | null = $state(start?.streamSilenceSeconds ?? null);
@@ -64,20 +59,53 @@
   let checking = $state(false);
   let savedAt: Date | null = $state(null);
 
-  /** Reads where a new integration starts and the limits of the fields;
-   * a field the integration given has keeps its value. */
+  /** Reads the limits of the fields and, for a new integration, where it
+   * starts; a stored integration keeps its values. */
   async function loadForm() {
     try {
-      form = await integrationForm();
-      charactersPerToken ??= form.charactersPerToken;
-      connectTimeoutSeconds ??= form.connectTimeoutSeconds;
-      streamSilenceSeconds ??= form.streamSilenceSeconds;
+      form = await integrationForm(protocol);
+
+      if (start === null) {
+        name = form.name;
+        protocol = form.protocol;
+        url = form.url;
+        model = form.model;
+        contextSize = form.contextSize;
+        charactersPerToken = form.charactersPerToken;
+        connectTimeoutSeconds = form.connectTimeoutSeconds;
+        streamSilenceSeconds = form.streamSilenceSeconds;
+      }
     } catch (error) {
       problem = sentence(error);
     }
   }
 
   void loadForm();
+
+  /** A new integration whose protocol changed: every field still as the old
+   * protocol started it takes the start of the new one; a field changed by
+   * hand stays. */
+  async function changeProtocol() {
+    if (start !== null || form === null || protocol === null) {
+      return;
+    }
+
+    try {
+      const before = form;
+      const after = await integrationForm(protocol);
+
+      if (name === before.name) name = after.name;
+      if (url === before.url) url = after.url;
+      if (model === before.model) model = after.model;
+      if (contextSize === before.contextSize) contextSize = after.contextSize;
+      if (charactersPerToken === before.charactersPerToken) charactersPerToken = after.charactersPerToken;
+      if (connectTimeoutSeconds === before.connectTimeoutSeconds) connectTimeoutSeconds = after.connectTimeoutSeconds;
+      if (streamSilenceSeconds === before.streamSilenceSeconds) streamSilenceSeconds = after.streamSilenceSeconds;
+      form = after;
+    } catch (error) {
+      problem = sentence(error);
+    }
+  }
 
   /** Runs one write: the buttons locked while it runs, the time of the
    * write shown when it succeeded. */
@@ -101,6 +129,7 @@
 
     // The fields are required: the page sends nothing until each is given.
     if (
+      protocol === null ||
       contextSize === null ||
       charactersPerToken === null ||
       connectTimeoutSeconds === null ||
@@ -165,18 +194,18 @@
   {#if form}
     <form onsubmit={save}>
       <div class="row">
-        <label>Name <input bind:value={name} required placeholder="Ollama on this computer" /></label>
+        <label>Name <input bind:value={name} required /></label>
         <label>
           Protocol
-          <select bind:value={protocol}>
+          <select bind:value={protocol} onchange={changeProtocol}>
             <option value="openai_chat">OpenAI chat (Ollama, llama.cpp, vLLM)</option>
             <option value="anthropic_messages">Anthropic messages</option>
           </select>
         </label>
       </div>
-      <label>Address <input class="mono" bind:value={url} required placeholder={EXAMPLES[protocol].url} /></label>
+      <label>Address <input class="mono" bind:value={url} required /></label>
       <div class="row">
-        <label>Model <input class="mono" bind:value={model} required placeholder={EXAMPLES[protocol].model} /></label>
+        <label>Model <input class="mono" bind:value={model} required /></label>
         <label>
           Context, in tokens
           <span class="note">As the service of the model gives it.</span>

@@ -43,7 +43,8 @@
       agent = view.aiAgent;
 
       for (const proof of view.proofs) {
-        proofForms[proof.id] ??= { text: "", day: "", tester: view.summary.evaluator, equipment: "" };
+        // A proof is most often given on the day of its test, by the evaluator.
+        proofForms[proof.id] ??= { text: "", day: today(), tester: view.summary.evaluator, equipment: "" };
       }
     } catch (error) {
       problem = sentence(error);
@@ -102,6 +103,11 @@
     } finally {
       busy = false;
     }
+  }
+
+  /** The day of today (UTC), as the field of a date holds it: "2026-11-03". */
+  function today(): string {
+    return new Date().toISOString().slice(0, 10);
   }
 
   function date(seconds: number | null): string {

@@ -121,7 +121,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Processed, the rules of the data**:
   - `objects/ai/agent/agent_rules.rs`: `checked`, `new_agent`
   - `objects/ai/api_key/api_key_rules.rs`: `set_key`
-  - `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`, `add_integration`, `change_integration`, `checked`
+  - `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`, `add_integration`, `change_integration`, `checked`, `new_integration`
 - **Processed, the AI**:
   - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`
   - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`

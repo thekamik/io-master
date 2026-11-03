@@ -5,7 +5,8 @@
 //! ```text
 //! IntegrationList.svelte ──integration_list()──────► the integrations, the active one, has a key ──► [IntegrationView]
 //!                        ──integration_activate()──► activate_integration
-//! IntegrationForm.svelte ──integration_form()──────► the start of a new one, the limits ──► IntegrationFormView
+//! IntegrationForm.svelte ──integration_form(protocol)► new_integration: the start of a new one, the limits
+//!                                                      ──► IntegrationFormView
 //!                        ──integration_create(...)─► add_integration ──► id
 //!                        ──integration_save(...)───► change_integration
 //!                        ──integration_set_key()───► set_key            (the key goes in, never out)
@@ -23,8 +24,7 @@ use crate::objects::ai::integration::integration_ai::question::context_warning;
 use crate::objects::ai::integration::integration_ai::sending::send_whole;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 use crate::objects::ai::integration::integration_rules::settings::{
-    MIN_CONTEXT, NEW_CHARACTERS_PER_TOKEN, NEW_CONNECT_TIMEOUT_SECONDS, NEW_STREAM_SILENCE_SECONDS,
-    activate_integration, add_integration, change_integration,
+    MIN_CONTEXT, NEW_PROTOCOL, activate_integration, add_integration, change_integration, new_integration,
 };
 use crate::objects::ai::integration::integration_store::{
     MAX_CHARACTERS_PER_TOKEN, MAX_CONNECT_TIMEOUT_SECONDS, MAX_STREAM_SILENCE_SECONDS, read_integration,
@@ -71,10 +71,16 @@ pub struct IntegrationView {
 
 /// Where a new integration starts and the limits of the fields of an
 /// integration, as the program gives them (user, 2026-11-02: the page holds
-/// no number of its own).
+/// no value of its own).
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IntegrationFormView {
+    name: String,
+    /// `"openai_chat"`, `"anthropic_messages"`.
+    protocol: &'static str,
+    url: String,
+    model: String,
+    context_size: u32,
     characters_per_token: u32,
     connect_timeout_seconds: u32,
     stream_silence_seconds: u32,
@@ -106,7 +112,7 @@ pub struct CheckView {
 /// Input: `protocol`, a protocol.
 /// Output: its name on the page (`"openai"`).
 ///
-/// Called by: [`integration_list`].
+/// Called by: [`integration_list`], [`integration_form`].
 fn protocol_name(protocol: Protocol) -> &'static str {
     match protocol {
         Protocol::OpenAiChat => "openai_chat",
@@ -120,7 +126,7 @@ fn protocol_name(protocol: Protocol) -> &'static str {
 /// Input: `name`, the name of a protocol the page sends (`"anthropic"`).
 /// Output: the protocol; `ViewError::Invalid` for another name.
 ///
-/// Called by: [`integration_of`].
+/// Called by: [`integration_of`], [`integration_form`].
 fn protocol_of(name: &str) -> Result<Protocol, ViewError> {
     match name {
         "openai_chat" => Ok(Protocol::OpenAiChat),
@@ -238,25 +244,42 @@ pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationVi
     Ok(integrations)
 }
 
-/// Where a new integration starts and the limits of the fields of an
-/// integration: the constants of the program, nothing read.
+/// Where a new integration of the protocol `protocol` starts (of the
+/// protocol a new one starts with, without one) and the limits of the fields
+/// of an integration: nothing read.
 ///
-/// Output: the view (`{"charactersPerToken": 3, "connectTimeoutSeconds": 15,
-/// "streamSilenceSeconds": 300, "minContext": 512, ...}`).
+/// Input: `protocol`, the name of the protocol chosen (`"anthropic_messages"`),
+/// or `None` when the form opens.
+/// Output: the view (`{"name": "Anthropic", "protocol": "anthropic_messages",
+/// "model": "claude-haiku-5-5", "contextSize": 1000000, "minContext": 512,
+/// ...}`); `ViewError::Invalid` for a protocol the page never sends.
 ///
 /// Called by: `ui/src/lib/api/settings.ts`: `integrationForm`, from `ui/src/views/settings/IntegrationForm.svelte`,
-/// when the form opens.
+/// when the form opens and when the protocol of a new integration changes.
+/// Calls: [`protocol_of`]; `objects/ai/integration/integration_rules/settings.rs`: `new_integration`;
+/// [`protocol_name`].
 #[tauri::command]
-pub fn integration_form() -> IntegrationFormView {
-    IntegrationFormView {
-        characters_per_token: NEW_CHARACTERS_PER_TOKEN,
-        connect_timeout_seconds: NEW_CONNECT_TIMEOUT_SECONDS,
-        stream_silence_seconds: NEW_STREAM_SILENCE_SECONDS,
+pub fn integration_form(protocol: Option<String>) -> Result<IntegrationFormView, ViewError> {
+    let chosen = match protocol {
+        Some(name) => protocol_of(&name)?,
+        None => NEW_PROTOCOL,
+    };
+    let start = new_integration(chosen);
+
+    Ok(IntegrationFormView {
+        name: start.name,
+        protocol: protocol_name(start.protocol),
+        url: start.url,
+        model: start.model,
+        context_size: start.context_size,
+        characters_per_token: start.characters_per_token,
+        connect_timeout_seconds: start.connect_timeout_seconds,
+        stream_silence_seconds: start.stream_silence_seconds,
         min_context: MIN_CONTEXT,
         max_characters_per_token: MAX_CHARACTERS_PER_TOKEN,
         max_connect_timeout_seconds: MAX_CONNECT_TIMEOUT_SECONDS,
         max_stream_silence_seconds: MAX_STREAM_SILENCE_SECONDS,
-    }
+    })
 }
 
 /// Stores a new integration; gives its id.

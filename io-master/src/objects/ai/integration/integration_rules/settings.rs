@@ -9,7 +9,7 @@
 //! integration made becomes the active one.
 
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::ai::integration::integration_model::Integration;
+use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 use crate::objects::ai::integration::integration_rules::address::{check_address, check_certificate};
 use crate::objects::ai::integration::integration_store::{
     MAX_CHARACTERS_PER_TOKEN, MAX_CONNECT_TIMEOUT_SECONDS, MAX_STREAM_SILENCE_SECONDS, create_integration,
@@ -26,15 +26,65 @@ const MAX_NAME: usize = 100;
 /// question.
 pub const MIN_CONTEXT: u32 = 512;
 
-/// Where a new integration starts (user, 2026-11-02: the program gives them,
-/// the page none): three characters of a token, fewer than most models use
-/// (about four for English), so that the estimate errs on the side of a
-/// question refused; 15 seconds for a connection to open; 300 seconds of
-/// silence for a local model that thinks long. The context has no start: it
-/// is the model's, given by its service.
-pub const NEW_CHARACTERS_PER_TOKEN: u32 = 3;
-pub const NEW_CONNECT_TIMEOUT_SECONDS: u32 = 15;
-pub const NEW_STREAM_SILENCE_SECONDS: u32 = 300;
+/// Where a new integration starts, whatever its protocol (user, 2026-11-02:
+/// the program gives them, the page none): three characters of a token,
+/// fewer than most models use (about four for English), so that the estimate
+/// errs on the side of a question refused; 15 seconds for a connection to
+/// open; 300 seconds of silence for a local model that thinks long.
+const NEW_CHARACTERS_PER_TOKEN: u32 = 3;
+const NEW_CONNECT_TIMEOUT_SECONDS: u32 = 15;
+const NEW_STREAM_SILENCE_SECONDS: u32 = 300;
+
+/// The protocol a new integration starts with: a model on this computer.
+pub const NEW_PROTOCOL: Protocol = Protocol::OpenAiChat;
+
+/// Where a new integration of the chat completions starts: Ollama on this
+/// computer, a model of a context of 128 000 tokens (an ST of 100 pages
+/// whole: `objects/ai/integration/integration_ai/question.rs`:
+/// `needed_context`).
+const NEW_OPENAI_NAME: &str = "Ollama on this computer";
+const NEW_OPENAI_URL: &str = "http://127.0.0.1:11434/v1/chat/completions";
+const NEW_OPENAI_MODEL: &str = "llama3.1";
+const NEW_OPENAI_CONTEXT: u32 = 128_000;
+
+/// Where a new integration of the messages of Anthropic starts: the model
+/// the laboratory tests with (user, 2026-11-03), its context of 1 000 000
+/// tokens as Anthropic gives it.
+const NEW_ANTHROPIC_NAME: &str = "Anthropic";
+const NEW_ANTHROPIC_URL: &str = "https://api.anthropic.com/v1/messages";
+const NEW_ANTHROPIC_MODEL: &str = "claude-haiku-5-5";
+const NEW_ANTHROPIC_CONTEXT: u32 = 1_000_000;
+
+/// Where a new integration of the protocol `protocol` starts: the name,
+/// address, model and context its service most often has, and the estimate
+/// and the waits of every integration; the form shows them to be corrected.
+///
+/// Input: `protocol`, the protocol chosen.
+/// Output: the integration, not stored (`Integration { id: 0, name:
+/// "Anthropic", model: "claude-haiku-5-5", context_size: 1000000, .. }`).
+///
+/// Called by: `panels/views/settings/integrations.rs`: `integration_form`.
+pub fn new_integration(protocol: Protocol) -> Integration {
+    let (name, url, model, context_size) = match protocol {
+        Protocol::OpenAiChat => (NEW_OPENAI_NAME, NEW_OPENAI_URL, NEW_OPENAI_MODEL, NEW_OPENAI_CONTEXT),
+        Protocol::AnthropicMessages => {
+            (NEW_ANTHROPIC_NAME, NEW_ANTHROPIC_URL, NEW_ANTHROPIC_MODEL, NEW_ANTHROPIC_CONTEXT)
+        }
+    };
+
+    Integration {
+        id: 0,
+        name: name.to_owned(),
+        url: url.to_owned(),
+        model: model.to_owned(),
+        protocol,
+        ca_certificate: None,
+        context_size,
+        characters_per_token: NEW_CHARACTERS_PER_TOKEN,
+        connect_timeout_seconds: NEW_CONNECT_TIMEOUT_SECONDS,
+        stream_silence_seconds: NEW_STREAM_SILENCE_SECONDS,
+    }
+}
 
 /// The integration with its text trimmed, checked: a name, an address the
 /// program sends to, a model, a context, the characters of a token, a CA
@@ -146,7 +196,6 @@ mod tests {
 
     use super::*;
 
-    use crate::objects::ai::integration::integration_model::Protocol;
     use crate::objects::user::program_data::program_data_store::create_settings;
     use crate::test_support::TempDir;
     use crate::test_support::database::{database, integration};
@@ -197,5 +246,13 @@ mod tests {
             add_integration(&db, &Integration { characters_per_token: 0, ..integration() }),
             Err(DomainError::Refused(_))
         ));
+    }
+
+    #[test]
+    fn a_new_integration_starts_from_its_protocol_and_is_accepted() {
+        let anthropic = new_integration(Protocol::AnthropicMessages);
+
+        assert_eq!((anthropic.model.as_str(), anthropic.context_size), ("claude-haiku-5-5", 1_000_000));
+        assert!(checked(&anthropic).is_ok() && checked(&new_integration(NEW_PROTOCOL)).is_ok());
     }
 }
