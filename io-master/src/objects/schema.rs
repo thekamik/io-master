@@ -27,13 +27,14 @@ use crate::objects::evaluation::evaluation_plan::evaluation_plan_store;
 use crate::objects::evaluation::lab_proof::lab_proof_store;
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store;
 use crate::objects::evaluation::product_document::product_document_store;
+use crate::objects::evaluation::report_template::report_template_store;
 use crate::objects::evaluation::work_unit::work_unit_store;
 use crate::objects::user::program_data::program_data_store;
 use crate::objects::user::user_data::user_data_store;
 use crate::objects::user::user_keys::user_keys_store;
 
 /// The tables of the database of the user (`users/<id>.v2.db`, encrypted).
-pub const USER_TABLES: [&str; 13] = [
+pub const USER_TABLES: [&str; 14] = [
     // objects/ai/
     agent_store::SCHEMA,
     agent_roles_store::SCHEMA,
@@ -47,6 +48,7 @@ pub const USER_TABLES: [&str; 13] = [
     lab_proof_store::SCHEMA,
     oscal_standard_document_store::SCHEMA,
     product_document_store::SCHEMA,
+    report_template_store::SCHEMA,
     work_unit_store::SCHEMA,
     // objects/user/: the settings only (the installation is in the system database)
     program_data_store::SCHEMA,

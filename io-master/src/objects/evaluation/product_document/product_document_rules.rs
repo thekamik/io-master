@@ -6,6 +6,7 @@
 //! ```text
 //! a file ──► document_file: .pdf, .txt or .md, within its limit
 //!        ──► give_document: a place of the evaluation, the text readable (document_text) ──► update_product_document
+//! a document ──► product_document_fields ──► the values of its markers in a report
 //! ```
 //!
 //! Whether a file is a PDF is told by its first bytes (`%PDF-`), so that the
@@ -114,6 +115,22 @@ pub fn give_document(
     let given = ProductDocument { content: Some(content), version: Some(version), ..place };
 
     Ok(update_product_document(db, &given, Some(&text))?)
+}
+
+/// The fields of a document of the product a report writes
+/// (`{{product_document.name}}`), in the order of [`product_document_fields`]; its
+/// file is no text of a report.
+pub const PRODUCT_DOCUMENT_FIELDS: [&str; 3] = ["id", "name", "version"];
+
+/// The fields of the document `document` as a report writes them, in the
+/// order of [`PRODUCT_DOCUMENT_FIELDS`]; a version not given is empty.
+///
+/// Input: `document`, a document of an evaluation.
+/// Output: its fields (`["4", "ST", "1.0"]`).
+///
+/// Called by: `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`.
+pub fn product_document_fields(document: &ProductDocument) -> [String; 3] {
+    [document.id.to_string(), document.name.clone(), document.version.clone().unwrap_or_default()]
 }
 
 #[cfg(test)]

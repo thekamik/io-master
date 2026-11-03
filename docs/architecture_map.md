@@ -181,9 +181,11 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Stored** (`objects/evaluation/evaluation_plan/evaluation_plan_store.rs`): `create_evaluation_plan`, `read_evaluation_plan`, `read_evaluation_plans`, `update_evaluation_plan`, `create_evaluation`
 - **Processed, the rules of the data**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`, `evaluation_in_progress`, `new_evaluation`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_rules/fields.rs`: `evaluation_plan_fields`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`, `check_planning`, `create_plan`, `plan_in_planning`, `plan_to_fill`, `update_plan`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `available_controls`, `controls_of`
+  - `objects/evaluation/report_template/report_template_rules/filling.rs`: `filled_report`, `lists_of`
 - **Processed, the AI**:
   - `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`, `assessment_question`, `question_of`
@@ -198,6 +200,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation_plan/fill.rs`: `plan_fill_preview`, `plan_fill_parameters`, `plan_fill_dependencies`
   - `evaluation_plan/plans.rs`: `plan_list`, `plan_create`, `plan_get`, `plan_save`, `plan_add_document`
   - `evaluation_plan/work_units.rs`: `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_save`, `work_unit_add_proof`
+  - `reports/report.rs`: `report_list`, `report_preview`, `report_export`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
@@ -215,7 +218,9 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`objects/evaluation/lab_proof/lab_proof_store.rs`): `create_lab_proof`, `read_lab_proof`, `update_lab_proof`
 - **Processed, the rules of the data**:
-  - `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`
+  - `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`, `lab_proof_fields`
+  - `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`
+  - `objects/evaluation/work_unit/work_unit_rules/fields.rs`: `work_unit_fields`, `proof_name`
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`
   - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_proof_quotes`, `quote_sources`
 - **Processed, the AI**:
@@ -230,6 +235,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/run.rs`: `evaluation_assess_preview`, `evaluation_assess`
   - `evaluation/work_units.rs`: `evaluation_unit_get`
   - `evaluation_plan/work_units.rs`: `work_unit_get`, `work_unit_add_proof`
+  - `reports/report.rs`: `report_preview`, `report_export`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
@@ -242,7 +248,9 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Stored** (`objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`): `create_oscal_standard_document`, `read_oscal_standard_document`, `read_oscal_standard_documents`
 - **Processed, the rules of the data**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `controls_of`
-  - `objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `import_standard`
+  - `objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `import_standard`, `oscal_standard_document_fields`
+  - `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`
+  - `objects/evaluation/work_unit/work_unit_rules/fields.rs`: `work_unit_fields`, `standard_title`
 - **Processed, the AI**:
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `unit_json`
   - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `parameters_question`
@@ -251,6 +259,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation_plan/plans.rs`: `plan_get`
   - `evaluation_plan/standards.rs`: `standard_list`, `standard_import`
   - `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`
+  - `reports/report.rs`: `report_preview`, `report_export`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationUnit.svelte` ← `evaluation_unit_get`
   - `views/evaluation_plan/PlanEditor.svelte` ← `plan_get`
@@ -264,7 +273,9 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Stored** (`objects/evaluation/product_document/product_document_store.rs`): `create_product_document`, `read_product_document`, `update_product_document`, `read_document_text`, `read_document_passages`
 - **Processed, the rules of the data**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`
-  - `objects/evaluation/product_document/product_document_rules.rs`: `give_document`
+  - `objects/evaluation/product_document/product_document_rules.rs`: `give_document`, `product_document_fields`
+  - `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`
+  - `objects/evaluation/work_unit/work_unit_rules/fields.rs`: `work_unit_fields`, `document_name`
   - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes`, `quote_sources`
 - **Processed, the AI**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
@@ -278,6 +289,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation/run.rs`: `evaluation_assess_preview`, `evaluation_assess`
   - `evaluation/work_units.rs`: `evaluation_unit_get`, `evaluation_unit_save`
   - `evaluation_plan/plans.rs`: `plan_get`, `plan_add_document`
+  - `reports/report.rs`: `report_preview`, `report_export`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_document_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`
@@ -288,6 +300,17 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlanWorkUnits.svelte` ← `plan_get`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`
 
+### `objects/evaluation/report_template/report_template_model.rs`: `ReportTemplate`
+
+- **Stored** (`objects/evaluation/report_template/report_template_store.rs`): `create_report_template`, `read_report_template`, `read_report_templates`, `update_report_template`
+- **Processed, the rules of the data**:
+  - `objects/evaluation/report_template/report_template_rules/filling.rs`: `filled_report`, `write_report`
+  - `objects/evaluation/report_template/report_template_rules/markers.rs`: `segments`, `template_warnings` (the markers and blocks of its text)
+  - `objects/evaluation/report_template/report_template_rules/templates.rs`: `change_template`, `import_template`, `new_template`, `write_template`
+- **Commands** (`panels/views/`):
+  - `reports/report.rs`: `report_preview`, `report_export`
+  - `reports/templates.rs`: `report_template_list`, `report_template_create`, `report_template_get`, `report_template_save`, `report_template_import`, `report_template_export`, `report_markers`
+
 ### `objects/evaluation/work_unit/work_unit_model.rs`: `WorkUnit`, `Verdict`, `Author`, `Quote`, `ProofQuote`
 
 - **Stored** (`objects/evaluation/work_unit/work_unit_store.rs`): `create_work_unit`, `read_work_unit`, `read_work_units`, `update_work_unit`, `delete_work_unit`
@@ -297,6 +320,8 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`, `update_plan`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_all_work_units`, `add_work_unit`, `available_controls`, `holds`, `remove_work_unit`, `unit_of`
   - `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`
+  - `objects/evaluation/report_template/report_template_rules/filling.rs`: `filled_report`, `units_in_order`, `lists_of`
+  - `objects/evaluation/work_unit/work_unit_rules/fields.rs`: `work_unit_fields`, `label_of`, `verdict_text`
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`, `update_work_unit_parameters`
   - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_proof_quotes`, `check_quote`, `check_quotes`, `place_of`, `quote_sources`, `quotes_found`, `save_results`
 - **Processed, the AI**:
@@ -317,6 +342,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `evaluation_plan/fill.rs`: `plan_fill_parameters`, `plan_fill_dependencies`
   - `evaluation_plan/plans.rs`: `plan_create`, `plan_get`, `plan_save`
   - `evaluation_plan/work_units.rs`: `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`
+  - `reports/report.rs`: `report_preview`, `report_export`
 - **Shown** (`ui/src/`):
   - `views/evaluation/EvaluationInputs.svelte` ← `evaluation_get`, `evaluation_proof_give`
   - `views/evaluation/EvaluationRun.svelte` ← `evaluation_assess_preview`, `evaluation_assess`

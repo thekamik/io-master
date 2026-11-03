@@ -48,6 +48,7 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 | `OscalStandardDocument` | `oscal_standard_document/oscal_standard_document_model.rs` | id, title, doc, version | `oscal_standard_documents` |
 | `ProductDocument` | `product_document/product_document_model.rs` | id, name, content, version | `product_documents` |
 | `LabProof` | `lab_proof/lab_proof_model.rs` | id, name, proof, performed, tester, equipment | `lab_proofs` |
+| `ReportTemplate` | `report_template/report_template_model.rs` | id, name, extension, text | `report_templates` |
 
 ### 2.2 `objects/ai/`
 
@@ -140,3 +141,11 @@ User, Installation (system database, not encrypted)   Settings (active_integrati
 - A standard is an **OSCAL 1.2.3 catalog** (`OscalStandardDocument::doc`, its JSON), checked against the schema of NIST built into the program (`io-master/oscal/`) when it is imported; its title and version are read from its metadata.
 - A work unit is made from one control of a catalog of its plan: `oscal_key` is the `id` of the control, `label` its label in the standard (the `prop` `label`), `requirement` and `guidance` the text of its statement and guidance parts.
 - The plan and the evaluation are the program's own model, linked to the catalogs only by these ids: nothing of ours is written into an OSCAL document.
+
+## 7. The reports (user, 2026-11-03)
+
+- **A report is a template filled with an evaluation**, no model of its own. A template (`ReportTemplate`) is a text of any format the evaluator writes (Markdown, HTML, LaTeX, plain text), kept in the database, imported from a file and written into one; a new one starts from the default template of the program (`io-master/report_templates/default_report.md`).
+- **A marker is a field of a model** in double braces, named by the model and the field, the same in every format: `{{evaluation_plan.product}}`, `{{work_unit.findings}}`. Each model whose fields a report writes has its list of fields and the function that gives their values (`EVALUATION_PLAN_FIELDS` and `evaluation_plan_fields`, likewise for the work unit, the standard, the document of the product and the proof); the template replaces each marker by its value in one pass, a marker inside a value never replaced again. A field that names other objects by their ids writes their names (the labels of the dependencies, the title of the standard); a time writes its day ("2026-11-03"). The file of a document and the catalog of a standard are no fields of a report. Nothing is escaped for the format.
+- **A list of the evaluation is a block**, written once for each element: `{{#evaluation_plan.work_units}} ... {{/evaluation_plan.work_units}}` (in the order of the work), likewise `oscal_documents`, `product_documents` and `lab_proofs` (the proofs its work units need). Inside a block the markers of its elements and those of the evaluation are known. A block of work units takes a filter of the verdict: `{{#evaluation_plan.work_units verdict=fail}}` (`pass`, `fail`, `inconclusive`, `not_applicable`, `none`). Blocks are never nested (no recursion).
+- **A template is checked when it is saved**: a block not closed, nested, or of an unknown list or filter is refused; an unknown marker (a field misspelled, a field of a work unit outside its block) is kept with a warning and written as it stands.
+- A report is written of an evaluation in progress or finished, never of a plan in planning.

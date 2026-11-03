@@ -5,6 +5,7 @@
 //! ```text
 //! the page ──the text of a file──► import_standard ──► check_catalog ──► create_oscal_standard_document
 //! a standard of a plan ──► catalog_controls ──► evaluation_plan_rules/work_units.rs (the work units made)
+//! a standard ──► oscal_standard_document_fields ──► the values of its markers in a report
 //! ```
 //!
 //! The schema is the file of NIST in `oscal/schema/v1.2.3/`, built into
@@ -325,6 +326,21 @@ pub fn import_standard(db: &UserDatabase, text: &str) -> Result<i64, DomainError
         OscalStandardDocument { id: 0, title: checked.title, doc: text.to_owned(), version: checked.version };
 
     Ok(create_oscal_standard_document(db, &standard)?)
+}
+
+/// The fields of a standard a report writes (`{{oscal_standard_document.title}}`), in
+/// the order of [`oscal_standard_document_fields`]; its catalog is no text of a report.
+pub const OSCAL_STANDARD_DOCUMENT_FIELDS: [&str; 3] = ["id", "title", "version"];
+
+/// The fields of the standard `document` as a report writes them, in the
+/// order of [`OSCAL_STANDARD_DOCUMENT_FIELDS`].
+///
+/// Input: `document`, a standard of an evaluation.
+/// Output: its fields (`["2", "Common Evaluation Methodology", "3.1R5"]`).
+///
+/// Called by: `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`.
+pub fn oscal_standard_document_fields(document: &OscalStandardDocument) -> [String; 3] {
+    [document.id.to_string(), document.title.clone(), document.version.clone()]
 }
 
 #[cfg(test)]

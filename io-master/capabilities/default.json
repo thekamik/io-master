@@ -73,6 +73,16 @@
     "allow-chat-get",
     "allow-chat-rename",
     "allow-chat-ask",
-    "allow-chat-stop"
+    "allow-chat-stop",
+    "allow-report-list",
+    "allow-report-preview",
+    "allow-report-export",
+    "allow-report-template-list",
+    "allow-report-template-create",
+    "allow-report-template-get",
+    "allow-report-template-save",
+    "allow-report-template-import",
+    "allow-report-template-export",
+    "allow-report-markers"
   ]
 }

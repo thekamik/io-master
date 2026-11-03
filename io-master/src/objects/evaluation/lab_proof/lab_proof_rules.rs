@@ -5,8 +5,10 @@
 //!
 //! ```text
 //! a text ──► give_proof: a place a work unit of the evaluation needs, its record whole ──► update_lab_proof
+//! a proof ──► lab_proof_fields ──► the values of its markers in a report
 //! ```
 
+use crate::infrastructure::clock::date_of;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::error::DomainError;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::{
@@ -60,6 +62,29 @@ pub fn give_proof(db: &UserDatabase, evaluation: i64, proof: &LabProof) -> Resul
     };
 
     Ok(update_lab_proof(db, &given)?)
+}
+
+/// The fields of a proof of the laboratory a report writes
+/// (`{{lab_proof.tester}}`), in the order of [`lab_proof_fields`].
+pub const LAB_PROOF_FIELDS: [&str; 6] = ["id", "name", "proof", "performed", "tester", "equipment"];
+
+/// The fields of the proof `proof` as a report writes them, in the order of
+/// [`LAB_PROOF_FIELDS`]: the day of its test, a part not given empty.
+///
+/// Input: `proof`, a proof of an evaluation.
+/// Output: its fields (`["6", "Scan", "22/tcp open ssh", "2026-10-25", "K. K.", "nmap 7.95"]`).
+///
+/// Called by: `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`.
+/// Calls: `infrastructure/clock.rs`: `date_of`.
+pub fn lab_proof_fields(proof: &LabProof) -> [String; 6] {
+    [
+        proof.id.to_string(),
+        proof.name.clone(),
+        proof.proof.clone().unwrap_or_default(),
+        proof.performed.map(date_of).unwrap_or_default(),
+        proof.tester.clone().unwrap_or_default(),
+        proof.equipment.clone().unwrap_or_default(),
+    ]
 }
 
 #[cfg(test)]

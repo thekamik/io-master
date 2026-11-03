@@ -79,6 +79,16 @@ fn main() {
         "chat_rename",
         "chat_ask",
         "chat_stop",
+        "report_list",
+        "report_preview",
+        "report_export",
+        "report_template_list",
+        "report_template_create",
+        "report_template_get",
+        "report_template_save",
+        "report_template_import",
+        "report_template_export",
+        "report_markers",
     ]);
 
     tauri_build::try_build(tauri_build::Attributes::new().app_manifest(commands))

@@ -126,6 +126,7 @@ objects/evaluation/
                    (cross_reference and blocked written after every change of the work units of a plan)
                    work_units.rs: the work units as children of the plan: available_controls, add_work_unit,
                    add_all_work_units (from the controls of a standard of the plan), remove_work_unit
+                   fields.rs: EVALUATION_PLAN_FIELDS, evaluation_plan_fields (its fields as a report writes them)
                  evaluation_plan_ai.rs: the work units to assess (units_ready, the preview) and to fill
                  (fill_units, fill_preview); the loops assess_evaluation and fill_plan, a step per work unit, each
                  written into the progress, "Stop" read before each
@@ -135,6 +136,8 @@ objects/evaluation/
                    add_proof_place
                    results.rs: Results, save_results (the results of the evaluator, of author User); quotes_found
                    (a quote word for word in its document or proof, for the evaluator and the AI alike)
+                   fields.rs: WORK_UNIT_FIELDS, work_unit_fields (its fields as a report writes them, the names
+                   of what it names), verdict_text
                  work_unit_ai/
                    assessment.rs (assess_work_unit: the question prepared, sent, the answer written),
                    assessment_question.rs, assessment_answer.rs (the answer read, the quotes checked, the verdict
@@ -142,11 +145,22 @@ objects/evaluation/
                    parameters and of the dependencies, their answers read and written)
   product_document/  product_document_model.rs, product_document_store.rs,
                  product_document_rules.rs (document_file: .pdf, .txt, .md within its limit; document_text,
-                 give_document)
-  lab_proof/     lab_proof_model.rs, lab_proof_store.rs, lab_proof_rules.rs (give_proof: its whole record)
+                 give_document; product_document_fields)
+  lab_proof/     lab_proof_model.rs, lab_proof_store.rs, lab_proof_rules.rs (give_proof: its whole record;
+                 lab_proof_fields)
   oscal_standard_document/  oscal_standard_document_model.rs, oscal_standard_document_store.rs,
                  oscal_standard_document_rules.rs (import_standard; check_catalog: the JSON schema of NIST, built
-                 in; catalog_controls: the tree walked with a bounded stack; OscalError)
+                 in; catalog_controls: the tree walked with a bounded stack; OscalError;
+                 oscal_standard_document_fields)
+  report_template/  report_template_model.rs (ReportTemplate), report_template_store.rs,
+                 report_template_rules/
+                   markers.rs: marker (a field of a model ──► "{{work_unit.findings}}"), segments (the texts
+                   and the blocks of a template, never nested), replaced (the markers replaced in one pass),
+                   template_warnings (the unknown markers)
+                   filling.rs: filled_report (the fields of an evaluation and of each element of its lists
+                   ──► the template filled, at most MAX_REPORT), write_report
+                   templates.rs: new_template (io-master/report_templates/default_report.md), change_template,
+                   import_template, write_template
 objects/session/
   progress/      progress_model.rs (Progress, Problem: a helper model, never kept),
                  progress_ai/ step.rs (record_step: a step of a long work written into it),
@@ -183,6 +197,7 @@ Each panel has a folder in `views/`, and in `logic/` when it shows something the
 | `agents` | none: the agent and the knowledge are objects (`objects/ai/agent/`, `objects/ai/rag/`) | `agent_*`, `knowledge_*`, `agent_journal_list`, `agent_journal_get` |
 | `evaluation` | `inputs.rs` (every place of input with the work units that need it); the evaluation begun, its inputs given and the results of the evaluator are in `objects/evaluation/` | `evaluation_list`, `evaluation_create`, `evaluation_get`, `evaluation_set_agent`, `evaluation_document_give`, `evaluation_proof_give`, `evaluation_assess_preview`, `evaluation_assess`, `evaluation_assess_progress`, `evaluation_assess_stop`, `evaluation_unit_list`, `evaluation_unit_get`, `evaluation_unit_save` |
 | `chat` | none: the chat is an object (`objects/ai/chat/`) | `chat_list`, `chat_create`, `chat_get`, `chat_rename`, `chat_ask` (the answer streamed into the page), `chat_stop` |
+| `reports` | none: the template and the report filled from it are objects (`objects/evaluation/report_template/`) | `report_list`, `report_preview`, `report_export`, `report_template_*`, `report_markers` |
 | `settings` | none: the integration and its key are objects (`integration_rules/settings.rs`, `api_key_rules.rs`, `integration_ai/check.rs`) | `integration_*` |
 
 A command is listed in `tauri::generate_handler!` (`main.rs`), `build.rs` and `capabilities/default.json`; its function on the page is in `ui/src/lib/api/<panel>.ts`, named as the command.

@@ -171,6 +171,7 @@ mod objects {
             pub mod evaluation_plan_store;
             pub mod evaluation_plan_rules {
                 pub mod evaluation;
+                pub mod fields;
                 pub mod order;
                 pub mod planning;
                 pub mod work_units;
@@ -196,6 +197,17 @@ mod objects {
             pub mod product_document_rules;
             pub mod product_document_store;
         }
+        // A template of a report: its markers (a field of a model in double
+        // braces) and blocks, the report of an evaluation filled from it.
+        pub mod report_template {
+            pub mod report_template_model;
+            pub mod report_template_store;
+            pub mod report_template_rules {
+                pub mod filling;
+                pub mod markers;
+                pub mod templates;
+            }
+        }
         // A work unit: the parameters the planner gives it, the results of the
         // evaluator and the check of a quote; the work of the AI on it (its
         // assessment, its filling).
@@ -203,6 +215,7 @@ mod objects {
             pub mod work_unit_model;
             pub mod work_unit_store;
             pub mod work_unit_rules {
+                pub mod fields;
                 pub mod parameters;
                 pub mod results;
             }
@@ -320,6 +333,12 @@ mod panels {
             pub mod installation;
             pub mod login;
         }
+        // panels/views/reports/: the reports of the evaluations written by
+        // the templates, the templates and their editor.
+        pub mod reports {
+            pub mod report;
+            pub mod templates;
+        }
         // panels/views/settings/: the integrations, their keys and the check
         // of the connection.
         pub mod settings {
@@ -369,6 +388,7 @@ fn main() -> ExitCode {
 /// `capabilities/default.json`; the three lists name the same commands.
 ///
 /// Called by: [`main`].
+/// Calls: [`run_window`].
 fn tauri_startup() -> ExitCode {
     let Some(data_folder) = default_data_folder() else {
         eprintln!("Error: the data folder of IO Master cannot be found: neither XDG_DATA_HOME nor HOME is set.");
@@ -457,6 +477,16 @@ fn tauri_startup() -> ExitCode {
             panels::views::chat::chats::chat_rename,
             panels::views::chat::chats::chat_ask,
             panels::views::chat::chats::chat_stop,
+            panels::views::reports::report::report_list,
+            panels::views::reports::report::report_preview,
+            panels::views::reports::report::report_export,
+            panels::views::reports::templates::report_template_list,
+            panels::views::reports::templates::report_template_create,
+            panels::views::reports::templates::report_template_get,
+            panels::views::reports::templates::report_template_save,
+            panels::views::reports::templates::report_template_import,
+            panels::views::reports::templates::report_template_export,
+            panels::views::reports::templates::report_markers,
         ])
         .build(tauri::generate_context!());
 
@@ -468,6 +498,14 @@ fn tauri_startup() -> ExitCode {
         }
     };
 
+    run_window(app)
+}
+
+/// Runs the window `app` until it is closed and gives the exit code of the
+/// program.
+///
+/// Called by: [`tauri_startup`].
+fn run_window(app: tauri::App) -> ExitCode {
     // However the program ends (the cross of the window, the end of the
     // session of the desktop), the user is logged out: their database is
     // closed. The closure is the one Tauri requires for its events (a
