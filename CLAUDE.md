@@ -49,7 +49,21 @@ panels/ ──► objects/ ──► infrastructure/
 - **`infrastructure/`** holds what belongs to no object and no panel, and knows no object: `storage/` (the database files, their encryption, `DbError`; the list of the tables given as a parameter), `security/`, `pdf/`, `clock.rs`, `data_folder.rs`.
 - **`panels/`** knows the window: `session.rs` (the user logged in, the open database, the progress), `views/<panel>/` (only the commands the page calls), `logic/<panel>/` (only what a panel shows beyond the objects; it gets the open database as a parameter and never reaches the session).
 - **Every function belongs to an object**: it is placed with the model it works on, never as a universal tool shared for the sake of shorter code. Two models that read alike keep each its own function, unless an architectural reason joins them (then ask first).
-- The direction of the dependencies is checked by `src/architecture_tests.rs`; `main.rs` is the map of every module, in the order of the groups.
+- The direction of the dependencies is decided by the user (`docs/code_structure.md`, section 1) and read in the `use` lines of each file.
+
+### Modules (user, 2026-11-04)
+
+The modules of Rust 2018 and later, without `mod.rs`:
+
+1. A module without submodules is one file: `src/name.rs`.
+2. A module with submodules is a file `src/name.rs` and a folder `src/name/` beside it: the submodules lie in the folder, and `name.rs` declares them (`pub mod submodule;`), its head saying what the folder holds.
+3. Every `.rs` file (but `main.rs`) is declared by `mod name;` in its parent module: Rust scans no folders, and a file not declared is passed over in silence.
+4. The modules of the top (`checks`, `infrastructure`, `objects`, `panels`, `test_support`) are declared in `src/main.rs` by `mod name;`, without `pub`.
+5. Inside a module file `pub mod` for a submodule used outside its parent; the functions, structures and the like used by other modules are `pub` (or `pub(in ...)` where the folder is enough).
+6. Imports by absolute paths from the root: `use crate::module::submodule::Item;`.
+7. No submodules declared in blocks `mod x { ... }`; an inline block only for the tests (`#[cfg(test)] mod tests { ... }`).
+
+A new file: made in its folder; the file `<folder>.rs` beside the folder made when it is missing; `pub mod <name>;` added to the parent (or `mod <name>;` to `main.rs`); `cargo build` shows that the module is seen.
 
 ### Names, order, errors
 
@@ -71,7 +85,7 @@ A very short function (one or two lines) has only its first sentence and `Called
 ### Tests
 
 - Tests live in the file whose functions they test, as its last item: `#[cfg(test)] mod tests { use super::*; ... }`.
-- Help for the tests only in `src/test_support.rs` and `src/test_support/`; the test of the whole program in `src/architecture_tests.rs`.
+- Help for the tests only in `src/test_support.rs` and `src/test_support/`.
 - Small steps, each tested on its own; window tests only on a private Xvfb display (`docs/handover.md`), never on the user's screen.
 
 ### Dependencies
@@ -120,7 +134,7 @@ They bind **our code** (`src/`, `ui/`); the dependencies cannot follow them.
 - **Create, read and update only: no delete**, with one exception: `delete_work_unit`, only for a plan in planning.
 - **The database files and the models in them are apart**: `infrastructure/storage/` holds the database files (where they are, made, opened, their tables made from the list its caller gives, their encryption, the lists of ids, `DbError`) and knows no model; the store of each object holds the model in them.
 - **One store per model** (`<object>_store.rs`), with its tables and those of its functions `create_<model>`, `read_<model>`, `update_<model>` that are called; the tables of each database are listed in `objects/schema.rs`, the help for the lists of ids is `infrastructure/storage/lists.rs`.
-- **SQL lives only in `infrastructure/storage/` and the stores** (checked by `architecture_tests.rs`). Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`.
+- **SQL lives only in `infrastructure/storage/` and the stores**. Columns read by name, statements with several parameters name them, one transaction per operation, a value the program never writes is `DbError::Corrupt`.
 - `infrastructure/storage/encryption/` holds the encryption of the databases, moved unchanged from the earlier program; the user audits it later.
 
 ## The AI

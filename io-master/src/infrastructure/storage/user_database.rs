@@ -58,9 +58,8 @@ impl UserDatabase {
     }
 
     /// The connection, for SQL. **Only the stores reach it**
-    /// (CLAUDE.md, "The database"): checked by `architecture_tests.rs`
-    /// (`the_sql_is_only_in_the_store`), since the models in the databases
-    /// are no longer below this folder.
+    /// (CLAUDE.md, "The database"), since the models in the databases are
+    /// not below this folder.
     ///
     /// Called by: every function of the stores that runs SQL on the data of
     /// the user: `objects/ai/*/<object>_store.rs`, `objects/evaluation/*/<object>_store.rs`,

@@ -1,21 +1,23 @@
 # IO Master: the structure of the code
 
-*Where* everything is in the code and which rules keep it in order; model by model, where each is stored, processed and shown: `architecture_map.md`. **`io-master/src/main.rs` is the map**: every module, in the order of the groups, each commented; there is no `mod.rs`.
+*Where* everything is in the code and which rules keep it in order; model by model, where each is stored, processed and shown: `architecture_map.md`. **The modules follow Rust 2018** (`CLAUDE.md`, "Modules"): every folder has a file of the same name beside it (`objects.rs` for `objects/`) that declares its modules and says in its head what the folder holds; `main.rs` declares only the modules of the top; there is no `mod.rs`.
 
 ## 1. The three groups
 
 ```text
 io-master/src/
+  main.rs          the start of the program; declares the modules of the top
   checks.rs        ensure!, the check with recovery (rule 5), known in the whole program
-  infrastructure/  what belongs to no object and no panel, and knows no object
-  objects/         every model with the functions that work on it, a folder per object
-  panels/          the window: session.rs, views/ (the commands the page calls), logic/ (what a panel shows)
+  infrastructure.rs, infrastructure/  what belongs to no object and no panel, and knows no object
+  objects.rs, objects/                every model with the functions that work on it, a folder per object
+  panels.rs, panels/                  the window: session.rs, views/ (the commands the page calls), logic/ (what a panel shows)
+  test_support.rs, test_support/      help for the tests (only in the tests)
 io-master/ui/      the page (Svelte 5, TypeScript strict), a separate project
 ```
 
 **Three groups** (user, 2026-11-01), the dependencies one way: `panels/ ──► objects/ ──► infrastructure/`. Only `panels/views/` knows the window (Tauri, serde), so that another front end (an HTTPS server) would replace it alone.
 
-**The direction of the dependencies**, checked on the source by `src/architecture_tests.rs` (the tests aside):
+**The direction of the dependencies**, decided by the user and kept in the review of the code (the tests aside):
 
 | Folder | May use |
 |---|---|
@@ -28,9 +30,9 @@ io-master/ui/      the page (Svelte 5, TypeScript strict), a separate project
 | `panels::logic` | every object, but of the AI of the integration only `question.rs`, `sending.rs`, `check.rs`; `infrastructure` |
 | `panels::views` | what `panels::logic` may use, `panels::logic`, `panels::session` |
 
-**The roles of an object go one way** (`the_roles_of_an_object_go_one_way`): a file uses only the roles at or below its own, `model ◄── store ◄── rules ◄── ai`, also between objects; `objects/schema.rs` serves as a store, `objects/error.rs` and `objects/text.rs` as rules, `objects/ai_error.rs` as the AI.
+**The roles of an object go one way**: a file uses only the roles at or below its own, `model ◄── store ◄── rules ◄── ai`, also between objects; `objects/schema.rs` serves as a store, `objects/error.rs` and `objects/text.rs` as rules, `objects/ai_error.rs` as the AI.
 
-**SQL only in the store**: `rusqlite` and the connection of an open database (`.connection()`) appear only in `infrastructure/storage/` and the stores of the objects (`<object>_store.rs`), checked by `architecture_tests.rs` (`the_sql_is_only_in_the_store`).
+**SQL only in the store**: `rusqlite` and the connection of an open database (`.connection()`) appear only in `infrastructure/storage/` and the stores of the objects (`<object>_store.rs`).
 
 `panels/views/` uses `objects/ai/integration/integration_ai/sending.rs` for the one step without the database (`send`), so that the lock of the session is released while the AI answers. A panel of `panels/logic/` may use another in one direction only; a panel whose work is all on objects has no folder in `panels/logic/`.
 

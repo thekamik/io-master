@@ -53,9 +53,9 @@ impl SystemDatabase {
         Ok(SystemDatabase { connection })
     }
 
-    /// The connection, for SQL. **Only the stores reach it**: checked by
-    /// `architecture_tests.rs` (`the_sql_is_only_in_the_store`), since the
-    /// models in the databases are no longer below this folder.
+    /// The connection, for SQL. **Only the stores reach it** (CLAUDE.md, "The
+    /// database"), since the models in the databases are not below this
+    /// folder.
     ///
     /// Called by: every function of `objects/user/user_data/user_data_store.rs`,
     /// `objects/user/user_keys/user_keys_store.rs` and `objects/user/program_data/program_data_store.rs`

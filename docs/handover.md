@@ -22,7 +22,7 @@ npm ci                      # once
 npm run check               # svelte-check, must be clean
 npm run build               # builds ui/dist (needed before cargo build)
 cargo fmt --check
-cargo build && cargo test   # also the test of the architecture
+cargo build && cargo test
 cargo clippy --all-targets  # clean, pedantic included (Cargo.toml)
 ```
 

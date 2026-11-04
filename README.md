@@ -38,7 +38,7 @@ npm ci                 # once: the tools of the page
 npm run check          # svelte-check of the page
 npm run build          # the page, built into the program
 cargo build
-cargo test             # also the test of the architecture
+cargo test
 ./target/debug/io-master
 ```
 
@@ -70,7 +70,7 @@ the window    the models and    what belongs to no object: the database files an
 
 **Where a new function goes:** with the model it works on, in the file of its role. A function is never a universal helper shared by several models.
 
-`io-master/src/main.rs` is the map of every module; `io-master/src/architecture_tests.rs` checks the direction of the dependencies and that SQL is only in the stores. The rules of the code ("The Power of 10", adapted to Rust) are in `CLAUDE.md`. More: `docs/architecture.md` (what and why), `docs/data_model.md` (the models), `docs/code_structure.md` (where everything is), `docs/architecture_map.md` (each model from the database to the window).
+The modules follow Rust 2018: every folder has a file of the same name beside it (`objects.rs` for `objects/`) that declares its modules; `io-master/src/main.rs` declares the groups and starts the window. The rules of the code ("The Power of 10", adapted to Rust) are in `CLAUDE.md`. More: `docs/architecture.md` (what and why), `docs/data_model.md` (the models), `docs/code_structure.md` (where everything is), `docs/architecture_map.md` (each model from the database to the window).
 
 ## Dependencies
 
