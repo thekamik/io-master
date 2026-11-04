@@ -16,7 +16,8 @@
                          12. create evaluation scheme
                          13. the editor of a catalog
                          14. the Evaluation lab
-                         15. the view Knowledge (RAG) */
+                         15. the view Knowledge (RAG)
+                         16. the panel Reports */
 
 /* The sheets, in the order of the cascade:
    one file per part of the window. */
@@ -34,3 +35,4 @@
 @import "./styles/13-catalogs.css";
 @import "./styles/14-lab.css";
 @import "./styles/15-knowledge.css";
+@import "./styles/16-reports.css";

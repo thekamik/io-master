@@ -213,6 +213,8 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlanWorkUnits.svelte` ← `plan_get`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`
   - `views/evaluation_plan/PlansTab.svelte` ← `plan_list`, `plan_create`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`, `work_unit_save`, `work_unit_add_proof`
+  - `views/reports/EvaluationReport.svelte` ← `report_preview`, `report_export`
+  - `views/reports/ReportsTab.svelte` ← `report_list`
 
 ### `objects/evaluation/lab_proof/lab_proof_model.rs`: `LabProof`
 
@@ -242,6 +244,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation/EvaluationUnit.svelte` ← `evaluation_unit_get`
   - `views/evaluation/Evaluations.svelte` ← `evaluation_create`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `work_unit_get`, `work_unit_add_proof`
+  - `views/reports/EvaluationReport.svelte` ← `report_preview`, `report_export`
 
 ### `objects/evaluation/oscal_standard_document/oscal_standard_document_model.rs`: `OscalStandardDocument`
 
@@ -267,6 +270,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlanWorkUnits.svelte` ← `plan_get`, `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`
   - `views/evaluation_plan/StandardsTab.svelte` ← `standard_list`, `standard_import`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`, `work_unit_list`
+  - `views/reports/EvaluationReport.svelte` ← `report_preview`, `report_export`
 
 ### `objects/evaluation/product_document/product_document_model.rs`: `ProductDocument`
 
@@ -299,6 +303,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlanForm.svelte` ← `plan_get`, `plan_add_document`
   - `views/evaluation_plan/PlanWorkUnits.svelte` ← `plan_get`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`
+  - `views/reports/EvaluationReport.svelte` ← `report_preview`, `report_export`
 
 ### `objects/evaluation/report_template/report_template_model.rs`: `ReportTemplate`
 
@@ -310,6 +315,11 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 - **Commands** (`panels/views/`):
   - `reports/report.rs`: `report_preview`, `report_export`
   - `reports/templates.rs`: `report_template_list`, `report_template_create`, `report_template_get`, `report_template_save`, `report_template_import`, `report_template_export`, `report_markers`
+- **Shown** (`ui/src/`):
+  - `views/reports/EvaluationReport.svelte` ← `report_template_list`, `report_preview`, `report_export`
+  - `views/reports/TemplateEditor.svelte` ← `report_template_get`, `report_template_save`, `report_template_export`, `report_markers`
+  - `views/reports/TemplatesTab.svelte` ← `report_template_list`, `report_template_create`, `report_template_import`
+
 
 ### `objects/evaluation/work_unit/work_unit_model.rs`: `WorkUnit`, `Verdict`, `Author`, `Quote`, `ProofQuote`
 
@@ -354,6 +364,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/evaluation_plan/PlanWorkUnits.svelte` ← `plan_get`, `work_unit_list`, `work_unit_controls`, `work_unit_add`, `work_unit_add_all`, `work_unit_remove`
   - `views/evaluation_plan/PlansTab.svelte` ← `plan_create`
   - `views/evaluation_plan/WorkUnitEditor.svelte` ← `plan_get`, `work_unit_list`, `work_unit_get`, `work_unit_save`, `work_unit_add_proof`
+  - `views/reports/EvaluationReport.svelte` ← `report_preview`, `report_export`
 
 ### `objects/session/progress/progress_model.rs`: `Progress`, `Problem`
 

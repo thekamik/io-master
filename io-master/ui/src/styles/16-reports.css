@@ -1,0 +1,49 @@
+/*
+ * The panel Reports: the report shown as text, and the editor of a template
+ * with its markers beside it.
+ */
+
+.report-bar {
+    align-items: flex-end;
+}
+
+textarea.report-text {
+    min-height: 32rem;
+    white-space: pre;
+}
+
+.template-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    gap: 1rem;
+    align-items: start;
+}
+
+textarea.template-text {
+    min-height: 36rem;
+}
+
+.markers {
+    max-height: 40rem;
+    overflow-y: auto;
+    padding-top: 1.4rem;
+}
+
+.marker-group {
+    margin-bottom: 0.8rem;
+}
+
+.markers button.marker,
+.markers button.block {
+    display: block;
+    width: 100%;
+    padding: 0.15rem 0.4rem;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    text-align: left;
+    overflow-wrap: anywhere;
+}
+
+.markers button.block {
+    font-weight: 600;
+}

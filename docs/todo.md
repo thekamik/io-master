@@ -5,7 +5,6 @@ A heap of reminders, not a plan in order: the user chooses what is done next. Ev
 ## The rebuild: the parts to come back
 
 - **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then).
-- **The panel Reports** (V0.3, user 2026-11-03): the page (the list of the evaluations, the preview and the export by a template; the templates and their editor with the markers); the backend is done.
 
 ## Before the release
 

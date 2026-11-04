@@ -16,9 +16,7 @@ IO Master is installed on the computer of an evaluator, in their own Linux accou
 - **Agents.** An agent is a layer of knowledge over the model of an integration: its instructions, shared knowledge bases (`.txt`, `.md`, `.pdf`, searched on this computer), a glossary, its limits, and its own journal of every question and answer.
 - **AI settings.** Integrations with AI services (the chat completions of OpenAI, which local servers offer, or the messages of Anthropic): HTTPS with TLS 1.3, or plain HTTP only on this computer; the API key only in its header, never shown back.
 
-- **Reports** (the backend; the page comes next). A template of any text format with markers of the fields of the models (`{{work_unit.findings}}`) and blocks for the lists of an evaluation; the report of an evaluation filled from it and written into a file.
-
-Next: the page of the panel Reports (`docs/todo.md`).
+- **Reports.** The report of an evaluation written by a template: any text format (Markdown, HTML, LaTeX) with markers of the fields of the models (`{{work_unit.findings}}`) and blocks for the lists of an evaluation (the work units, with a filter of the verdict); shown in the window and exported into a file. Templates are made from the default one or imported from a file, changed in an editor that puts a marker at the cursor, and written back into a file.
 
 ## Requirements
 
