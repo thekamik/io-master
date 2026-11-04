@@ -2,12 +2,15 @@
 
 A heap of reminders, not a plan in order: the user chooses what is done next. Every step: a concept approved by the user, the code with its tests, a check, the approval, a commit. What is done leaves this list (its history is in git).
 
-## The rebuild: the parts to come back
+## Functions still open
 
-- **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then).
+- **The evaluation**: the state Report when the last work unit is assessed (and what the evaluator may still change then); today an evaluation stays in the state Evaluation, and its report is written in that state.
 
-## Before the release
+## Before version 1
 
+The beta (`V0.3`, 2026-11-04) has every function; version 1 comes after the full process of tests and verification.
+
+- **The tests and verification of the beta** (user, 2026-11-04): every panel tried on real evaluations (a CEM and an ETSI catalog, real STs, local and cloud models), the reports checked against what the laboratory hands over, the faults found mended before version 1.
 - The review of the code by the user, file by file (`review.md`); the functional hardening: a limit of failed logins, a full disk, a damaged database, the limits of the inputs measured on real documents.
 - The restriction lints of clippy in `[lints]` of `Cargo.toml` for the rules of `CLAUDE.md` (`unwrap_used`, `panic`, `indexing_slicing` and the like; `pedantic` is on).
 - **The checks with recovery** (rule 5): 212 `ensure!` in 517 functions (0.41 on average, the rule asks two), counted on 2026-11-02 after the silent defaults were replaced; added in the review file by file, only for what the types do not guarantee (the limits of an input, the state a function expects), never to fill the average.

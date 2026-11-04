@@ -5,9 +5,9 @@
 ## The project
 
 - IO Master is a desktop program (Rust 2024, Tauri 2 + Svelte 5, `io-master/`) for security evaluation laboratories: the evaluation of a product against standards kept as NIST OSCAL catalogs, with AI agents that bring their knowledge (RAG) to each work unit. What it is and why: `docs/architecture.md`; the models: `docs/data_model.md`; where everything is in the code: `docs/code_structure.md`; where each model is stored, processed and shown: `docs/architecture_map.md`.
-- **It is built on the models of `objects/`.** The earlier program is kept as a reference at the commit `0797e85` (`git show 0797e85:io-master/src/<path>`); its parts come back one by one, rewritten on the models. Nothing is moved from its databases.
+- **It is built on the models of `objects/`.** The earlier program is kept as a reference at the commit `0797e85` (`git show 0797e85:io-master/src/<path>`); its parts came back rewritten on the models. Nothing is moved from its databases.
 - **The data of the tests is temporary until version 1**: the layout of the databases changes as the code needs, with no migration; the user starts the tests anew after a change.
-- **The present stage (2026-11-03): new functionality**, on the line `V0.3`. The stage of cleaning and hardening is closed (2026-11-03), kept as `V0.2`; its open points stay in `docs/todo.md`, "Before the release".
+- **The present stage (2026-11-04): the beta, `V0.3`** (user): every function of the program is in place (the plan, the evaluation with the AI, the panel Reports), and `V0.3` is the stable beta. It is a test version, not version 1.0 (nor an alpha of it): before version 1 it passes the full process of tests and verification (`docs/todo.md`, "Before version 1"). The stage of cleaning and hardening is closed (2026-11-03), kept as `V0.2`.
 
 ## Working with the user
 
@@ -21,7 +21,7 @@
 ### Branches and commits
 
 - Work is committed to **`test_branch`** as it goes, each piece once checked, and pushed to `origin` without asking.
-- **`main` and `V0.3`** (the version of the present stage) are brought to the state of `test_branch` only when the user approves it, never on our own, not even with a question. `V0.1` and `V0.2` (the stable state of the stage of cleaning and hardening, closed on 2026-11-03) are closed snapshots, never committed to. No other branches; the version of the program stays 0.1.0.
+- **`main` and `V0.3`** (the stable beta) are brought to the state of `test_branch` only when the user approves it, never on our own, not even with a question. `V0.1` and `V0.2` (the stable state of the stage of cleaning and hardening, closed on 2026-11-03) are closed snapshots, never committed to. No other branches; the version of the program stays 0.1.0.
 - Before every commit: `cargo fmt` (`rustfmt.toml`, 120 characters), `cargo clippy --all-targets` and `npm run check`, all clean; `cargo test`.
 
 ### The documents

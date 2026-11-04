@@ -10,9 +10,11 @@ The flow of the work:
 
 ```text
 standards (OSCAL catalogs) ──► plan (work units, their parameters, agents) ──copy──► evaluation of one product ──► report
-                                     ▲                                                     ▲
-                       agent of the planner ("Fill with AI")              the agent of each work unit
+                                     ▲                                                     ▲                        ▲
+                       agent of the planner ("Fill with AI")              the agent of each work unit   a template of the laboratory
 ```
+
+**The report** is the evaluation written by a template of the laboratory (panel Reports): a text of any format with markers of the fields of the models, filled by the program and exported into a file; the program writes no format of its own into it (`data_model.md`, section 7).
 
 ## 2. Principles
 
@@ -33,7 +35,7 @@ standards (OSCAL catalogs) ──► plan (work units, their parameters, agents)
 ## 4. The window
 
 - **A desktop window** (Tauri 2, a page in Svelte 5) is the only interface. The page is built into the program and calls a fixed list of commands; **no network port is opened**. The program is started without parameters.
-- One dark theme; the panels in a side bar: **Evaluation plan**, **Evaluation**, **Agents**, **Chat**, **AI settings**, **Account**.
+- One dark theme; the panels in a side bar: **Evaluation plan**, **Evaluation**, **Reports**, **Agents**, **Chat**, **AI settings**, **Account**.
 
 ## 5. Secrets and encryption
 
@@ -95,5 +97,5 @@ The requirements of a standard are **NIST OSCAL 1.2.3 catalogs**, checked agains
 
 - **Debian 13 (trixie)**, the target system and the only one tested; XFCE on X11. The packages: `README.md`.
 - Few resources: the virtual machines of a laboratory get little (8 GB RAM or less).
-- Poppler (`pdfinfo`, `pdftotext`) reads the PDFs of the knowledge bases.
+- Poppler (`pdfinfo`, `pdftotext`) reads the PDFs of the knowledge bases and of the documents of the product.
 - The decrypted data is only in RAM: **the swap encrypted (or none), and no hibernation** on the computer of an evaluator.

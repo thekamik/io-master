@@ -4,19 +4,18 @@
 
 IO Master is installed on the computer of an evaluator, in their own Linux account, and used through one desktop window. It knows no particular standard: a standard is an **OSCAL 1.2.3 catalog**, checked against the JSON schema of NIST (Common Criteria with the CEM and ETSI EN 303 645 first).
 
-**Status:** early development, rebuilt on a new data model. The work goes to `test_branch`; `main` is brought to its state from time to time; the earlier program is kept at the commit `0797e85`. No releases; the data of the tests is not kept between versions until version 1.
+**Status: beta, `V0.3` (2026-11-04).** Every function of the program is in place: the plan, the evaluation with the AI, the report. It is a test version, not a release: before version 1 it must pass the full process of tests and verification (`docs/todo.md`), and the data of the tests is not kept between versions until then. The work goes to `test_branch`; `main` and `V0.3` (the stable beta) are brought to its state when it is approved; `V0.1` and `V0.2` are closed snapshots of earlier stages. The number of the program stays 0.1.0.
 
-## What works today
+## What the beta does
 
 - **First start and login.** One Linux account, one installation, one user. The data is in a database encrypted with SQLCipher, its key opened by the password (Argon2id); a recovery code, shown once, is a second key: it sets a new password when the password is forgotten.
 - **Account.** The change of the password and a new recovery code, each with the present password; each makes a new code and the old one stops working.
 - **Evaluation plan.** Standards imported as OSCAL catalogs; plans that name their standards and the places of the documents of the product; work units made from the controls, with their dependencies, documents, proofs of the laboratory, guidance and the agent that will assess them; the order of the work and the cycles of dependencies found (Kahn's algorithm). **Fill with AI:** the agent of the planner fills the parameters, then the dependencies, of every work unit.
 - **Evaluation.** An evaluation begins on a copy of a plan, with the identification of the product, the client and the evaluator, and the agent of the evaluation. The documents of the product (PDF or text) and the proofs of the laboratory are given once and then frozen; the assessment does not start while one that a work unit needs is missing. **Assess with AI:** every work unit in the order of the work, autonomously (it may run overnight), with a preview of the questions and "Stop"; each question carries the work unit, the results of its dependencies, its documents (whole, or the passages that fit it best) and its proofs. The program checks every quote word for word in its document and warns of each dependency that did not pass; the verdict is the model's. The list of the work units with filters and pages; a work unit with its results, which the evaluator may correct (then the AI never writes them again), and the last question and answer of the AI.
+- **Reports.** The report of an evaluation written by a template: any text format (Markdown, HTML, LaTeX) with markers of the fields of the models (`{{work_unit.findings}}`) and blocks for the lists of an evaluation (the work units in the order of the work, with a filter of the verdict); shown in the window and exported into a file. Templates are made from the default one or imported from a file, changed in an editor that puts a marker at the cursor, and written back into a file.
+- **Agents.** An agent is a layer of knowledge over the model of an integration: its role (evaluator, planner or chat), its instructions, shared knowledge bases (`.txt`, `.md`, `.pdf`, searched on this computer), a glossary, its limits, the templates of every text of its questions, and its own journal of every question and answer.
 - **Chat.** A conversation with an agent chosen by the user, its knowledge searched for each question, the answer streamed into the window and stopped at once on "Stop"; a long chat leaves its oldest messages out of the question. Chats are kept, never removed.
-- **Agents.** An agent is a layer of knowledge over the model of an integration: its instructions, shared knowledge bases (`.txt`, `.md`, `.pdf`, searched on this computer), a glossary, its limits, and its own journal of every question and answer.
 - **AI settings.** Integrations with AI services (the chat completions of OpenAI, which local servers offer, or the messages of Anthropic): HTTPS with TLS 1.3, or plain HTTP only on this computer; the API key only in its header, never shown back.
-
-- **Reports.** The report of an evaluation written by a template: any text format (Markdown, HTML, LaTeX) with markers of the fields of the models (`{{work_unit.findings}}`) and blocks for the lists of an evaluation (the work units, with a filter of the verdict); shown in the window and exported into a file. Templates are made from the default one or imported from a file, changed in an editor that puts a marker at the cursor, and written back into a file.
 
 ## Requirements
 
@@ -112,6 +111,7 @@ io-master/          the program (Rust, Tauri 2 + Svelte 5)
   src/              infrastructure/, objects/, panels/
   ui/               the page of the window, a separate project
   oscal/            the JSON schemas of OSCAL 1.2.3 and example documents of NIST
+  report_templates/ the default template of a report (Markdown), a new template's text
 docs/
   architecture.md   what the program is and why: the user, the keys, the AI, the standards
   data_model.md     the models, their links and their rules
