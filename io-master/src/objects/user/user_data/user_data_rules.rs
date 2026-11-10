@@ -11,9 +11,16 @@
 //!   system.v2.db made ── the installation (16 random bytes) ── the user
 //!   the key of the database: 32 random bytes                              (RAM only)
 //!   key ──password (password::wrap)──► WrappedKey ─┐
-//!   key ──recovery code (recovery::wrap)──► RecoveryWrappedKey ─┴──► user_keys (system.v2.db)
-//!   users/<id>.v2.db made with the key, its settings ── the key wiped
+//!   key ──recovery code (recovery::wrap)──► RecoveryWrappedKey ─┤
+//!   users/<id>.v2.db made with the key, its settings              │
+//!   user_keys (system.v2.db) written last ◄────────────────────────┘   ── the key wiped
 //!   ◄── the user, the open database, the recovery code (shown once, kept nowhere)
+//!
+//! The keys are the last thing a first start writes, so a user with keys is
+//! a first start that ended. One cut off before that (the program killed, the
+//! power lost) left a user nobody can log in as: it counts as not installed
+//! ([`installed_user`]), and the next first start removes what it left
+//! ([`clear_unfinished`]).
 //!
 //! log_in(name, password)
 //!   the user by its name ── its WrappedKey ──password (password::unwrap)──► the key
@@ -211,7 +218,7 @@ fn install(
 }
 
 /// The second half of [`install`]: the key of the database, its two copies,
-/// the database of the user with its settings.
+/// the database of the user with its settings, and last the copies written.
 ///
 /// Input: `system`, the new system database; `data_dir`, the data folder;
 /// `user`, the user written; `password`, the password, checked.
@@ -222,8 +229,8 @@ fn install(
 /// Calls: `infrastructure/storage/encryption/generate_key.rs`: `generate_database_key`;
 /// `objects/user/user_keys/user_keys_rules/recovery.rs`: `new_code`, `wrap`;
 /// `objects/user/user_keys/user_keys_rules/password.rs`: `wrap`; [`binding`];
-/// `objects/user/user_keys/user_keys_store.rs`: `create_user_keys`; `infrastructure/storage/user_database.rs`:
-/// `create`; `objects/user/program_data/program_data_store.rs`: `create_settings`.
+/// `infrastructure/storage/user_database.rs`: `create`; `objects/user/program_data/program_data_store.rs`:
+/// `create_settings`; `objects/user/user_keys/user_keys_store.rs`: `create_user_keys`.
 fn keys_and_database(
     system: &SystemDatabase,
     data_dir: &Path,
@@ -239,14 +246,30 @@ fn keys_and_database(
         password: password::wrap(&key, password, &binding(user.id))?,
         recovery: recovery::wrap(&key, &code, &binding(user.id))?,
     };
-
-    create_user_keys(system, &keys)?;
-
     let database = user_database::create(data_dir, user.id, &key, &USER_TABLES)?;
 
     create_settings(&database, &Settings { active_integration: None })?;
 
+    // The copies of the key last: once they are written the first start has
+    // ended, and until then it can be made anew ([`clear_unfinished`]).
+    create_user_keys(system, &keys)?;
+
     Ok(OpenedAccount { user, database, code })
+}
+
+/// Removes the file `path` a first start made; a missing file is no error.
+///
+/// Input: `path`, the system database or the database of a user.
+/// Output: nothing; `AccountError::Key` naming the file when it cannot be
+/// removed.
+///
+/// Called by: [`removed`], [`clear_unfinished`].
+fn remove_leftover(path: &Path) -> Result<(), AccountError> {
+    match fs::remove_file(path) {
+        Ok(()) => Ok(()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(error) => Err(AccountError::Key(format!("the file {} could not be removed: {error}", path.display()))),
+    }
 }
 
 /// Removes a file of a first start that failed, so that the first start can
@@ -254,23 +277,73 @@ fn keys_and_database(
 ///
 /// Input: `path`, a file the first start made; `failure`, why it failed.
 /// Output: the failure; with what went wrong added when the file cannot be
-/// removed. A missing file is no error.
+/// removed.
 ///
 /// Called by: [`create_account`].
+/// Calls: [`remove_leftover`].
 fn removed(path: &Path, failure: AccountError) -> AccountError {
-    match fs::remove_file(path) {
+    match remove_leftover(path) {
         Ok(()) => failure,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => failure,
-        Err(error) => {
-            AccountError::Key(format!("{failure}; the file {} could not be removed: {error}", path.display()))
-        }
+        Err(error) => AccountError::Key(format!("{failure}; {error}")),
     }
+}
+
+/// The user of the installation whose first start ended: the first user
+/// with the copies of its key, which a first start writes last.
+///
+/// Input: `system`, the open system database.
+/// Output: the user (`Some(User { name: "Kamil", .. })`); `None` without a
+/// user, or with one that has no keys (a first start cut off); an error of
+/// the database.
+///
+/// Called by: [`installed_user`], [`clear_unfinished`].
+/// Calls: `objects/user/user_data/user_data_store.rs`: `read_users`;
+/// `objects/user/user_keys/user_keys_store.rs`: `read_user_keys`.
+fn finished_user(system: &SystemDatabase) -> Result<Option<User>, AccountError> {
+    let Some(user) = read_users(system)?.into_iter().next() else {
+        return Ok(None);
+    };
+
+    match read_user_keys(system, user.id) {
+        Ok(_) => Ok(Some(user)),
+        Err(DbError::NoRow { .. }) => Ok(None),
+        Err(error) => Err(error.into()),
+    }
+}
+
+/// Removes what a first start cut off half way left in the data folder
+/// `data_dir`: the system database, and the database of its user, which no
+/// key was written for, so that nobody could ever open it.
+///
+/// Input: `data_dir`, the data folder, its system database existing.
+/// Output: nothing, the two files removed; `AccountError::AlreadyInstalled`
+/// when the first start ended (a user with keys: nothing is removed), an
+/// error of the database or of a file that cannot be removed.
+///
+/// Called by: [`create_account`].
+/// Calls: [`open_installed`], [`finished_user`]; `objects/user/user_data/user_data_store.rs`: `read_users`;
+/// `infrastructure/storage/user_database.rs`: `path`; `infrastructure/storage/system_database.rs`: `path`;
+/// [`remove_leftover`].
+fn clear_unfinished(data_dir: &Path) -> Result<(), AccountError> {
+    let system = open_installed(data_dir)?;
+
+    ensure!(finished_user(&system)?.is_none(), AccountError::AlreadyInstalled);
+
+    // The users are bounded by their store; a first start writes one.
+    for user in read_users(&system)? {
+        remove_leftover(&user_database::path(data_dir, user.id))?;
+    }
+
+    drop(system);
+
+    remove_leftover(&system_database::path(data_dir))
 }
 
 /// The first start: makes the data folder (private to the user of the
 /// computer), the installation, its one user `name` with the password
 /// `password` (given twice), and the database of the user. When it fails
-/// half way, the files it made are removed.
+/// half way, the files it made are removed; what a first start cut off left
+/// behind is removed before it starts.
 ///
 /// Input: `data_dir`, the data folder of the program; `name`, the name typed
 /// ("Kamil"); `password`, `repeated`, the password given twice.
@@ -282,7 +355,7 @@ fn removed(path: &Path, failure: AccountError) -> AccountError {
 /// Called by: `panels/views/program_start/installation.rs`: `installation_create`.
 /// Calls: `objects/user/user_keys/user_keys_rules/password.rs`: `check_password`;
 /// `infrastructure/storage/system_database.rs`: `create`, `path`; `infrastructure/storage/user_database.rs`:
-/// `path`; [`install`], [`removed`].
+/// `path`; [`clear_unfinished`], [`install`], [`removed`].
 pub fn create_account(
     data_dir: &Path,
     name: &str,
@@ -301,7 +374,12 @@ pub fn create_account(
 
     let system = match system_database::create(data_dir, &SYSTEM_TABLES) {
         Ok(system) => system,
-        Err(DbError::Exists(_)) => return Err(AccountError::AlreadyInstalled),
+        // The file exists: an installation (refused), or what a first start
+        // cut off left, removed so that the database is made anew.
+        Err(DbError::Exists(_)) => {
+            clear_unfinished(data_dir)?;
+            system_database::create(data_dir, &SYSTEM_TABLES)?
+        }
         Err(error) => return Err(error.into()),
     };
     let (user, result) = install(&system, data_dir, name, password);
@@ -325,12 +403,11 @@ pub fn create_account(
 ///
 /// Input: `data_dir`, the data folder of the program.
 /// Output: the user (`Some(User { name: "Kamil", .. })`); `None` when the
-/// program is not installed yet, so that the window shows the first start;
-/// an error of the database.
+/// program is not installed yet, or its first start was cut off half way, so
+/// that the window shows the first start; an error of the database.
 ///
 /// Called by: `panels/views/program_start/login.rs`: `login_get`.
-/// Calls: `infrastructure/storage/system_database.rs`: `open`; `objects/user/user_data/user_data_store.rs`:
-/// `read_users`.
+/// Calls: `infrastructure/storage/system_database.rs`: `open`; [`finished_user`].
 pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
     let system = match system_database::open(data_dir, &SYSTEM_TABLES) {
         Ok(system) => system,
@@ -338,7 +415,7 @@ pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
         Err(error) => return Err(error.into()),
     };
 
-    Ok(read_users(&system)?.into_iter().next())
+    finished_user(&system)
 }
 
 /// Opens the system database of an installed program.
@@ -348,7 +425,7 @@ pub fn installed_user(data_dir: &Path) -> Result<Option<User>, AccountError> {
 /// Output: the open system database; `AccountError::NotInstalled` before
 /// the first start, or an error of the database.
 ///
-/// Called by: [`log_in`], [`recover`], [`open_with_password`].
+/// Called by: [`clear_unfinished`], [`log_in`], [`recover`], [`open_with_password`].
 /// Calls: `infrastructure/storage/system_database.rs`: `open`.
 fn open_installed(data_dir: &Path) -> Result<SystemDatabase, AccountError> {
     match system_database::open(data_dir, &SYSTEM_TABLES) {
@@ -545,7 +622,8 @@ pub fn new_recovery_code(data_dir: &Path, user: i64, password: &str) -> Result<R
 #[cfg(test)]
 mod tests {
     //! Tests of the account: the first start, the login, the checks, a
-    //! first start that fails half way leaving nothing behind, the recovery
+    //! first start that fails half way leaving nothing behind, one cut off
+    //! half way made anew, the recovery
     //! with the code, the change of the password and a new code.
 
     use super::*;
@@ -607,6 +685,28 @@ mod tests {
         assert!(installed_user(directory.path()).unwrap().is_none());
 
         create_account(directory.path(), "Kamil", PASSWORD, PASSWORD).unwrap();
+    }
+
+    #[test]
+    fn a_first_start_cut_off_half_way_is_made_anew() {
+        let directory = TempDir::new();
+
+        // What a first start killed while Argon2id ran leaves: the system
+        // database with its user and no keys, and here also the file of the
+        // database of that user.
+        let system = system_database::create(directory.path(), &SYSTEM_TABLES).unwrap();
+        let id = create_user(&system, &User { id: 0, name: "Kamil".to_owned(), created: 1 }).unwrap();
+        let key = generate_database_key().unwrap();
+
+        drop(user_database::create(directory.path(), id, &key, &USER_TABLES).unwrap());
+        drop(system);
+
+        assert!(installed_user(directory.path()).unwrap().is_none());
+
+        let created = create_account(directory.path(), "Anna", PASSWORD, PASSWORD).unwrap();
+        let (logged, _database) = log_in(directory.path(), "anna", PASSWORD).unwrap();
+
+        assert_eq!(logged, created.user);
     }
 
     const NEW_PASSWORD: &str = "another long password";

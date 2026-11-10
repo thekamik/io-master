@@ -232,7 +232,7 @@ impl Session {
     /// Output: nothing; `SessionBroken` when a lock of the session is broken.
     ///
     /// Called by: `panels/views/program_start/login.rs`: `login_log_out`; `main.rs`:
-    /// `tauri_startup` (the end of the program, however it ends).
+    /// `run_window` (the end of the program, however it ends).
     /// Calls: [`Session::lock`].
     pub fn log_out(&self) -> Result<(), SessionBroken> {
         *self.user.lock().map_err(|_| SessionBroken)? = None;

@@ -96,7 +96,7 @@ impl ViewError {
                 AccountError::PasswordsDiffer
                 | AccountError::WeakPassword(_)
                 | AccountError::Code(_)
-                | AccountError::Db(_),
+                | AccountError::Db(DbError::Inconsistent(_)),
             )
             | ViewError::Domain(
                 DomainError::Refused(_)
@@ -116,7 +116,7 @@ impl ViewError {
             )
             | ViewError::Evaluation(EvaluationError::Db(DbError::Inconsistent(_)))
             | ViewError::Invalid(_) => "invalid",
-            ViewError::Account(AccountError::Key(_))
+            ViewError::Account(AccountError::Key(_) | AccountError::Db(_))
             | ViewError::Session
             | ViewError::Evaluation(EvaluationError::Db(_))
             | ViewError::Domain(DomainError::Db(_))

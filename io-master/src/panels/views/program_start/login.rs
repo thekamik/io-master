@@ -34,7 +34,7 @@ pub struct ProgramView {
 /// logged in.
 ///
 /// Input: `session`, the session of the window.
-/// Output: the state (`{"installed": true, "user": "Kamil", "loggedIn": false}`);
+/// Output: the state (`{"installed": true, "loggedIn": "Kamil"}`, `"loggedIn": null` at the login);
 /// an error of the system database or the session.
 ///
 /// Called by: `ui/src/lib/api/program_start.ts`: `loginGet`, from `ui/src/App.svelte`, when the window opens and

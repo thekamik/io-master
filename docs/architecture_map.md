@@ -405,7 +405,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`user_data_store.rs`): `create_user`, `read_users`
 - **Processed, the rules of the data**:
-  - `objects/user/user_data/user_data_rules.rs`: `install`, `installed_user`, `keys_and_database`, `find_user`, `log_in`, `recover`
+  - `objects/user/user_data/user_data_rules.rs`: `install`, `installed_user`, `finished_user`, `clear_unfinished`, `keys_and_database`, `find_user`, `log_in`, `recover`
 - **Processed, the session**:
   - `panels/session.rs`: `log_in`, `user_id`
 - **Commands** (`panels/views/`):
@@ -423,7 +423,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`user_keys_store.rs`): `create_user_keys`, `read_user_keys`, `update_user_keys`
 - **Processed, the rules of the data**:
-  - `objects/user/user_data/user_data_rules.rs`: `keys_and_database`, `log_in`, `recover`, `open_with_password`
+  - `objects/user/user_data/user_data_rules.rs`: `keys_and_database`, `finished_user`, `log_in`, `recover`, `open_with_password`
   - `objects/user/user_keys/user_keys_rules/password.rs`: `unwrap`, `wrap`
   - `objects/user/user_keys/user_keys_rules/recovery.rs`: `unwrap`, `wrap`
   - `objects/user/user_keys/user_keys_rules/renewal.rs`: `renew_keys`

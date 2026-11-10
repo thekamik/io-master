@@ -70,6 +70,8 @@ key of the database ┤                                                         
 
 At the first start the program makes a **recovery code** (160 random bits, written in groups without 0, O, 1 and I, with a check sum) and wraps the key a second time with it. The code is shown **once**, confirmed by typing one of its groups, and kept outside the computer. A lost password *and* a lost code mean lost data.
 
+The two copies of the key are the last thing a first start writes: a user with keys is a first start that ended. A first start cut off before that (the program killed, the power lost) counts as not installed, and the next one removes what it left (`objects/user/user_data/user_data_rules.rs`: `clear_unfinished`). A stored copy that names a cost of Argon2id over its limits (1 GiB, 16 passes) is refused as damaged before any memory is taken: the system database is not encrypted.
+
 ```text
 recovery (login screen):   name + code ──recovery::unwrap──► key ── the database opened with it ──┐
 change of the password:    present password ──password::unwrap──► key ───────────────────────────┤

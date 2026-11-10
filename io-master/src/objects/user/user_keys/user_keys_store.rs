@@ -106,7 +106,7 @@ pub fn create_user_keys(system: &SystemDatabase, keys: &UserKeys) -> Result<(), 
 ///
 /// Output: the two copies; `DbError::NoRow` when the user has none.
 ///
-/// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`, `recover`,
+/// Called by: `objects/user/user_data/user_data_rules.rs`: `finished_user`, `log_in`, `recover`,
 /// `open_with_password`.
 pub fn read_user_keys(system: &SystemDatabase, user: i64) -> Result<UserKeys, DbError> {
     let connection = system.connection();

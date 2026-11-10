@@ -1,10 +1,10 @@
-// The errors of the commands (src/views/error.rs), and the sentence to show
+// The errors of the commands (src/panels/views/error.rs), and the sentence to show
 // for one. The type mirrors the error of the program; a change there needs
 // the same change here.
 
-/** An error of a command (src/views/error.rs). */
+/** An error of a command (src/panels/views/error.rs: `ViewError::kind`). */
 export interface ViewError {
-  kind: "not_installed" | "already_installed" | "wrong_credentials" | "invalid" | "failed";
+  kind: "not_installed" | "already_installed" | "wrong_credentials" | "not_logged_in" | "invalid" | "failed";
   message: string;
 }
 

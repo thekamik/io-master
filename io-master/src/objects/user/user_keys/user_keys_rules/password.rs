@@ -49,6 +49,13 @@ const ARGON2_MEMORY_KIB: u32 = 64 * 1024;
 /// Passes of Argon2id over the memory.
 const ARGON2_ITERATIONS: u32 = 3;
 
+/// The most memory and passes of Argon2id a stored copy of a key may name.
+/// The copy lies in the system database, which is not encrypted: a changed
+/// file must not make the program take any amount of memory or time (rule 3
+/// of CLAUDE.md). 1 GiB and 16 passes leave room to raise the cost later.
+const MAX_ARGON2_MEMORY_KIB: u32 = 1024 * 1024;
+const MAX_ARGON2_ITERATIONS: u32 = 16;
+
 /// What the HKDF derivation is for. A different text gives an
 /// unrelated key, so a key made for one purpose never serves
 /// another.
@@ -196,7 +203,7 @@ pub fn wrap(key: &DatabaseKey, password: &str, binding: &[u8]) -> Result<Wrapped
 /// typed; `binding`, the binding of the account.
 /// Output: the key of the database; [`KeyError::WrongPassword`] when the
 /// password or `binding` does not fit, `KeyError::Damaged` for a copy of
-/// another form.
+/// another form, or one that names a cost of Argon2id over its limits.
 ///
 /// Called by: `objects/user/user_data/user_data_rules.rs`: `log_in`, `open_with_password`.
 /// Calls: [`unlocking_key`]; `infrastructure/storage/encryption/database_key.rs`: `DatabaseKey::fill_with`.
@@ -204,9 +211,14 @@ pub fn unwrap(wrapped: &WrappedKey, password: &str, binding: &[u8]) -> Result<Da
     let nonce: [u8; NONCE_LENGTH] = wrapped.nonce.as_slice().try_into().map_err(|_| KeyError::Damaged)?;
     let tag: [u8; TAG_LENGTH] = wrapped.tag.as_slice().try_into().map_err(|_| KeyError::Damaged)?;
 
-    if wrapped.ciphertext.len() != DATABASE_KEY_LENGTH || wrapped.salt.len() != SALT_LENGTH {
-        return Err(KeyError::Damaged);
-    }
+    ensure!(wrapped.ciphertext.len() == DATABASE_KEY_LENGTH && wrapped.salt.len() == SALT_LENGTH, KeyError::Damaged);
+    // The cost is read from a file anyone with the disk can change: within
+    // its limits before any memory is taken for it.
+    ensure!(
+        (1..=MAX_ARGON2_MEMORY_KIB).contains(&wrapped.memory_kib)
+            && (1..=MAX_ARGON2_ITERATIONS).contains(&wrapped.iterations),
+        KeyError::Damaged
+    );
 
     let unlocking = unlocking_key(password, &wrapped.salt, wrapped.memory_kib, wrapped.iterations)?;
     let cipher = Aes256Gcm::new(&Key::<Aes256Gcm>::from(*unlocking));
@@ -285,6 +297,16 @@ mod tests {
 
         // A changed bit is detected, not turned into a wrong key.
         assert_eq!(unwrap(&changed, PASSWORD, b"anna").unwrap_err(), KeyError::WrongPassword);
+
+        // A cost of Argon2id over its limits is refused before any memory is
+        // taken for it: the copy lies in a file that is not encrypted.
+        let mut costly = wrap(&database_key(), PASSWORD, b"anna").unwrap();
+        costly.memory_kib = u32::MAX;
+        assert_eq!(unwrap(&costly, PASSWORD, b"anna").unwrap_err(), KeyError::Damaged);
+
+        costly.memory_kib = ARGON2_MEMORY_KIB;
+        costly.iterations = 0;
+        assert_eq!(unwrap(&costly, PASSWORD, b"anna").unwrap_err(), KeyError::Damaged);
     }
 
     #[test]
