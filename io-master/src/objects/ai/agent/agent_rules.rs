@@ -36,9 +36,11 @@ const MAX_TERM: usize = 500;
 /// passage would give nothing whole.
 pub const MIN_CHARACTERS: u32 = 1500;
 
-/// The limits of a new agent: a few passages, a few pages of text.
+/// The limits of a new agent: a few passages, a few pages of text; the
+/// characters hold each passage of the length a new base cuts
+/// (`objects/ai/rag/rag_store.rs`: `PASSAGE_CHARS`) with the one that follows it.
 const NEW_PASSAGES: u32 = 8;
-const NEW_CHARACTERS: u32 = 12_000;
+const NEW_CHARACTERS: u32 = 24_000;
 
 /// The longest answer a new agent asks for, in tokens, and the shortest one
 /// an agent may ask for: less leaves no room for an assessment.

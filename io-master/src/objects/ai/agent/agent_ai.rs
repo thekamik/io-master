@@ -7,6 +7,7 @@
 //! a question ──► the words of the question, widened by the meanings of the terms of the glossary
 //!            ──► read_passages in the bases of the agent, at most max_passages
 //!            ──► the best first, as many as fit in max_characters (a passage never shortened)
+//!            ──► in the room that is left, each followed by the passage after it in its source
 //!
 //! agent_question ──► system_template of the agent: {instructions}, {knowledge}, {task} + the messages ──► Question
 //!
@@ -18,7 +19,7 @@ use crate::objects::ai::agent::agent_model::GlossaryEntry;
 use crate::objects::ai::agent::agent_store::read_agent;
 use crate::objects::ai::chat::chat_model::Message;
 use crate::objects::ai::integration::integration_ai::question::Question;
-use crate::objects::ai::rag::rag_store::{MAX_FOUND, read_passages};
+use crate::objects::ai::rag::rag_store::{FoundPassage, MAX_FOUND, read_passages};
 use crate::objects::ai_error::AiError;
 
 /// The value of the placeholder that `text` starts with, just after its `{`
@@ -184,10 +185,53 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
     widened
 }
 
+/// The passages of `found` that fit in `limit` characters, the best first,
+/// then, in the room they leave, each followed by the passage after it in
+/// its source: what a passage says often goes on there, but it never takes
+/// the place of a passage found. A passage is never shortened: one that
+/// does not fit is left out.
+///
+/// Input: `found`, the passages found, the best first; `limit`, the
+/// `max_characters` of the agent.
+/// Output: the passages given, each with the name of its source
+/// (`[("CEM.pdf", "ADV_ARC.1-1 The evaluator ...\nWith respect to ...")]`).
+///
+/// Called by: [`agent_knowledge`].
+fn within(found: Vec<FoundPassage>, limit: usize) -> Vec<(String, String)> {
+    let mut kept = Vec::with_capacity(found.len());
+    let mut characters = 0;
+
+    for (_, source, passage, next) in found {
+        let length = passage.chars().count();
+
+        if characters + length <= limit {
+            characters += length;
+            kept.push((source, passage, next));
+        }
+    }
+
+    let mut given = Vec::with_capacity(kept.len());
+
+    for (source, mut passage, next) in kept {
+        // The line between the two passages is counted as well.
+        if let Some(next) = next
+            && characters + next.chars().count() < limit
+        {
+            characters += next.chars().count() + 1;
+            passage.push('\n');
+            passage.push_str(&next);
+        }
+
+        given.push((source, passage));
+    }
+
+    given
+}
+
 /// The knowledge the agent `agent` gives with the question `question`: the
 /// passages of its bases that fit it best, at most its `max_passages`, as
-/// many of them, the best first, as fit in its `max_characters`. A passage
-/// is never shortened: one that does not fit is left out.
+/// many of them, the best first, as fit in its `max_characters`, each
+/// followed by the passage after it in its source while there is room.
 ///
 /// Input: `agent`, the id of a stored agent; `question`, what the knowledge
 /// is looked for with ("ADV_ARC.1-1 The developer shall ...").
@@ -199,7 +243,7 @@ fn widened(question: &str, glossary: &[GlossaryEntry]) -> String {
 /// Called by: [`agent_question`]; `panels/views/agents/agent.rs`:
 /// `agent_knowledge_test`.
 /// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; [`widened`]; `objects/ai/rag/rag_store.rs`:
-/// `read_passages`; [`filled`].
+/// `read_passages`; [`within`], [`filled`].
 pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<Vec<String>, AiError> {
     let agent = read_agent(db, agent)?;
     // The limits were checked when the agent was written
@@ -212,16 +256,10 @@ pub fn agent_knowledge(db: &UserDatabase, agent: i64, question: &str) -> Result<
     ensure!(count <= MAX_FOUND, AiError::Refused(format!("the agent has {count} passages, over {MAX_FOUND}")));
     let found = read_passages(db, &agent.knowledge_bases, &widened(question, &agent.glossary), count)?;
     let mut given = Vec::with_capacity(found.len());
-    let mut characters = 0;
 
     // The limit counts the text of the passages, not their templates.
-    for (source, passage) in found {
-        let length = passage.chars().count();
-
-        if characters + length <= limit {
-            characters += length;
-            given.push(filled(&agent.passage_template, &[("source", source.as_str()), ("text", passage.as_str())]));
-        }
+    for (source, passage) in within(found, limit) {
+        given.push(filled(&agent.passage_template, &[("source", source.as_str()), ("text", passage.as_str())]));
     }
 
     Ok(given)
@@ -324,6 +362,26 @@ mod tests {
         assert_eq!(found.len(), 1);
         assert!(found[0].contains(paragraph));
         assert!(found.iter().map(String::len).sum::<usize>() <= 12_000);
+    }
+
+    #[test]
+    fn a_passage_is_followed_by_the_next_one_only_in_the_room_left() {
+        let found = |next: &str| {
+            vec![
+                (1, "CEM".to_owned(), "aaaa".to_owned(), Some(next.to_owned())),
+                (5, "CEM".to_owned(), "bbbbbbbbb".to_owned(), None),
+                (7, "CEM".to_owned(), "cccc".to_owned(), None),
+            ]
+        };
+        let given = |next: &str, limit: usize| -> Vec<String> {
+            within(found(next), limit).into_iter().map(|(_, passage)| passage).collect()
+        };
+
+        // 4 + 4 characters found (the second does not fit), 3 left: a line
+        // and two characters.
+        assert_eq!(given("xx", 11), ["aaaa\nxx", "cccc"]);
+        assert_eq!(given("xxx", 11), ["aaaa", "cccc"]);
+        assert_eq!(given("xx", 17), ["aaaa", "bbbbbbbbb", "cccc"]);
     }
 
     #[test]

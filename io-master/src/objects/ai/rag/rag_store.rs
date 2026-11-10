@@ -9,11 +9,21 @@
 //! over the stop words of the bases searched.
 //!
 //! ```text
+//! a text ──► passages: whole paragraphs joined while they fit, in the order of the text
+//!
+//! a question ──► query_of: its words, each once, but the stop words        ──► the passages by BM25
+//!            ──► identifiers_of: its identifiers as phrases ("ADV_ARC.1-1") ──► those that name one come first
+//!            ──► each passage once, with the passage that follows it in its source
+//! ```
+//!
+//! ```text
 //! knowledge_bases            id, name (unique), description, passage_characters
 //! knowledge_base_stop_words  (base, position, word)   stop_words
 //! knowledge_sources          id, knowledge_base, name, text
 //! knowledge_passages   the index (FTS5): text, source; made from the text of the sources
 //! ```
+
+use std::collections::HashSet;
 
 use rusqlite::{Connection, Row, named_params};
 
@@ -47,6 +57,20 @@ pub const MAX_SOURCE_CHARS: usize = 20_000_000;
 
 /// The most passages a search gives.
 pub const MAX_FOUND: usize = 50;
+
+/// The most identifiers of a question looked for as phrases: a bound of the
+/// memory (rule 3); a requirement names a few.
+const MAX_IDENTIFIERS: usize = 50;
+
+/// A source without its text: its id, its name and the characters of its
+/// text (`(12, "CEM.pdf", 1200000)`).
+pub type SourceRecord = (i64, String, u64);
+
+/// A passage found: its row in the index, the name of its source, its text,
+/// and the passage that follows it in its source, when there is one and it
+/// is not found itself (`(7, "CEM.pdf", "ADV_ARC.1-1 The evaluator ...",
+/// Some("With respect to ..."))`).
+pub type FoundPassage = (i64, String, String, Option<String>);
 
 /// The most words of a question a search looks for: a bound of the memory
 /// (rule 3), far above the words of a requirement with its guidance and the
@@ -372,71 +396,116 @@ fn passage_limit(connection: &Connection, base: i64) -> Result<usize, DbError> {
     usize::try_from(limit).map_err(|error| DbError::Inconsistent(error.to_string()))
 }
 
+/// The characters of a paragraph as a passage holds it: its words, one space
+/// between them.
+///
+/// Called by: [`passages`].
+fn paragraph_length(paragraph: &str) -> usize {
+    let mut length = 0;
+
+    for word in paragraph.split_whitespace() {
+        length += word.chars().count() + 1;
+    }
+
+    length.saturating_sub(1)
+}
+
 /// Cuts a text into passages of at most `limit` characters, for the
 /// index: whole paragraphs (parted by an empty line) joined while they fit,
-/// a longer paragraph cut between words, a word longer than a passage cut
-/// where it reaches the limit. The spaces between the words become one.
+/// so that a passage ends where a paragraph ends; a paragraph longer than a
+/// passage cut between words, a word longer than a passage cut where it
+/// reaches the limit. The spaces between the words become one.
 ///
 /// Input: `text`, the text of a source or of a document of the product, its
 /// length checked by its caller; `limit`, the longest passage (the
 /// `passage_characters` of a base, or [`PASSAGE_CHARS`] for a document of
 /// the product), at least 1.
 ///
-/// Output: the passages in the order of the text (a text of 4000 characters
-/// in paragraphs of 1000 → `["<paragraphs 1 and 2>", "<paragraph 3>",
-/// "<paragraph 4>"]`); none for an empty text.
+/// Output: the passages in the order of the text (four paragraphs of 600
+/// characters and a limit of 1500 → `["<paragraphs 1 and 2>", "<paragraphs 3
+/// and 4>"]`); none for an empty text.
 ///
 /// Called by: [`write_passages`]; `objects/evaluation/product_document/product_document_store.rs`:
 /// `write_passages` (the index of a document of the product).
-/// Calls: [`push_passage`].
+/// Calls: [`paragraph_length`], [`push_passage`], [`add_words`].
 pub(in crate::objects) fn passages(text: &str, limit: usize) -> Vec<String> {
     let mut passages = Vec::new();
     let mut current = String::new();
 
     for paragraph in text.split("\n\n") {
-        // A new paragraph starts on a new line of the passage being made.
-        if !current.is_empty() && !current.ends_with('\n') {
-            current.push('\n');
+        let length = paragraph_length(paragraph);
+
+        if length == 0 {
+            continue;
         }
 
-        for word in paragraph.split_whitespace() {
-            let mut rest: Vec<char> = word.chars().collect();
-
-            // Each turn places the word, closes the passage, or takes a
-            // passage of a word longer than one: at most one turn a character.
-            for _ in 0..=rest.len() {
-                let room = limit.saturating_sub(current.chars().count() + 1);
-
-                // The word fits the passage being made (or starts an empty
-                // one): it is added, after a space.
-                if rest.len() <= room || (current.is_empty() && rest.len() <= limit) {
-                    if !current.is_empty() && !current.ends_with('\n') {
-                        current.push(' ');
-                    }
-
-                    current.extend(rest.drain(..));
-                    break;
-                }
-
-                // It does not fit: the passage is closed, and the word tried
-                // again in an empty one.
-                if !current.is_empty() {
-                    push_passage(&mut passages, &mut current);
-                    continue;
-                }
-
-                // A word longer than a whole passage: its first part is a
-                // passage of its own, the rest tried again.
-                current.extend(rest.drain(..limit.min(rest.len())));
+        // The paragraph goes whole into the passage being made, on a new
+        // line, when it fits there; otherwise that passage is closed, and
+        // the paragraph starts the next one.
+        if !current.is_empty() {
+            if current.chars().count() + 1 + length > limit {
                 push_passage(&mut passages, &mut current);
+            } else {
+                current.push('\n');
             }
         }
+
+        add_words(&mut passages, &mut current, paragraph, limit);
     }
 
     // The last passage, still open when the text ends.
     push_passage(&mut passages, &mut current);
 
     passages
+}
+
+/// Adds the words of one paragraph to the passage being made; a paragraph
+/// longer than a passage closes passages on its way, between words, and a
+/// word longer than a passage is cut where it reaches the limit.
+///
+/// Input: `passages`, the passages closed so far; `current`, the passage
+/// being made; `paragraph`, a paragraph of the text; `limit`, the longest
+/// passage.
+///
+/// Output: nothing; `current` ends with the last words of the paragraph.
+///
+/// Called by: [`passages`].
+/// Calls: [`push_passage`].
+fn add_words(passages: &mut Vec<String>, current: &mut String, paragraph: &str, limit: usize) {
+    for word in paragraph.split_whitespace() {
+        let mut rest: Vec<char> = word.chars().collect();
+
+        // Each turn places the word, closes the passage, or takes a
+        // passage of a word longer than one: at most one turn a character.
+        for _ in 0..=rest.len() {
+            // A space parts the word from the one before it, none at the
+            // start of a passage or of a line.
+            let space = !current.is_empty() && !current.ends_with('\n');
+            let room = limit.saturating_sub(current.chars().count() + usize::from(space));
+
+            // The word fits the passage being made: it is added.
+            if rest.len() <= room {
+                if space {
+                    current.push(' ');
+                }
+
+                current.extend(rest.drain(..));
+                break;
+            }
+
+            // It does not fit: the passage is closed, and the word tried
+            // again in an empty one.
+            if !current.is_empty() {
+                push_passage(passages, current);
+                continue;
+            }
+
+            // A word longer than a whole passage: its first part is a
+            // passage of its own, the rest tried again.
+            current.extend(rest.drain(..limit.min(rest.len())));
+            push_passage(passages, current);
+        }
+    }
 }
 
 /// Closes the passage being made: adds it to `passages` without the spaces
@@ -448,7 +517,7 @@ pub(in crate::objects) fn passages(text: &str, limit: usize) -> Vec<String> {
 /// Output: nothing; `passages` holds one more passage unless `current` was
 /// empty, and `current` is empty.
 ///
-/// Called by: [`passages`].
+/// Called by: [`passages`], [`add_words`].
 fn push_passage(passages: &mut Vec<String>, current: &mut String) {
     let passage = current.trim();
 
@@ -548,7 +617,7 @@ pub fn create_source(db: &UserDatabase, source: &Source) -> Result<i64, DbError>
 
 /// The model of one row of `knowledge_sources`.
 ///
-/// Called by: [`read_source`], [`read_sources`].
+/// Called by: [`read_source`].
 fn source_of(row: &Row<'_>) -> Result<Source, DbError> {
     Ok(Source {
         id: row.get("id")?,
@@ -564,8 +633,7 @@ fn source_of(row: &Row<'_>) -> Result<Source, DbError> {
 ///
 /// Output: the source; `DbError::NoRow` when there is none.
 ///
-/// Called by: `objects/ai/rag/rag_rules.rs`: `rename_source`,
-/// `replace_source_text`.
+/// Called by: `objects/ai/rag/rag_rules.rs`: `replace_source_text`.
 /// Calls: [`source_of`].
 pub fn read_source(db: &UserDatabase, id: i64) -> Result<Source, DbError> {
     let connection = db.connection();
@@ -579,23 +647,23 @@ pub fn read_source(db: &UserDatabase, id: i64) -> Result<Source, DbError> {
     source_of(row)
 }
 
-/// Reads every source of a knowledge base, with their texts, by their
-/// names.
+/// Reads every source of a knowledge base without its text, by their
+/// names: what a list of the sources shows, and how many they are.
 ///
 /// Input: `db`, the open database of the user; `base`, the id of the
 /// knowledge base.
 ///
-/// Output: the sources, ordered by name; an error when the base has more
-/// than [`MAX_SOURCES`] (a database the program did not write).
+/// Output: the sources, ordered by name, each with the characters of its
+/// text (`[(12, "CEM.pdf", 1200000)]`); an error when the base has more than
+/// [`MAX_SOURCES`] (a database the program did not write).
 ///
 /// Called by: `objects/ai/rag/rag_rules.rs`: `add_source`;
 /// `panels/views/agents/knowledge.rs`: `knowledge_base_list`,
 /// `knowledge_source_list`.
-/// Calls: [`source_of`].
-pub fn read_sources(db: &UserDatabase, base: i64) -> Result<Vec<Source>, DbError> {
-    let connection = db.connection();
-    let mut statement = connection.prepare(
-        "SELECT id, knowledge_base, name, text FROM knowledge_sources WHERE knowledge_base = :base ORDER BY name",
+pub fn read_source_records(db: &UserDatabase, base: i64) -> Result<Vec<SourceRecord>, DbError> {
+    let mut statement = db.connection().prepare_cached(
+        "SELECT id, name, length(text) AS characters FROM knowledge_sources
+         WHERE knowledge_base = :base ORDER BY name",
     )?;
     let mut rows = statement.query(named_params! { ":base": base })?;
     let mut sources = Vec::new();
@@ -605,10 +673,40 @@ pub fn read_sources(db: &UserDatabase, base: i64) -> Result<Vec<Source>, DbError
             return Ok(sources);
         };
 
-        sources.push(source_of(row)?);
+        let characters: i64 = row.get("characters")?;
+        let characters = u64::try_from(characters).map_err(|_| DbError::Corrupt {
+            table: "knowledge_sources",
+            column: "text",
+            value: characters.to_string(),
+        })?;
+
+        sources.push((row.get("id")?, row.get("name")?, characters));
     }
 
     Err(DbError::Inconsistent(format!("more than {MAX_SOURCES} sources of a knowledge base in the database")))
+}
+
+/// Writes the name of the source `id` anew; its text and the index of its
+/// passages stay as they are.
+///
+/// Input: `db`, the open database of the user; `id`, the id of a stored
+/// source; `name`, its new name, not empty.
+///
+/// Output: nothing; `DbError::Inconsistent` for an empty name,
+/// `DbError::NoRow` when there is no source `id`.
+///
+/// Called by: `objects/ai/rag/rag_rules.rs`: `rename_source`.
+pub fn update_source_name(db: &UserDatabase, id: i64, name: &str) -> Result<(), DbError> {
+    ensure!(!name.is_empty(), DbError::Inconsistent("a source without a name".to_owned()));
+
+    let changed = db.connection().execute(
+        "UPDATE knowledge_sources SET name = :name WHERE id = :id",
+        named_params! { ":id": id, ":name": name },
+    )?;
+
+    ensure!(changed == 1, DbError::NoRow { table: "knowledge_sources", id });
+
+    Ok(())
 }
 
 /// Writes the source `source.id` anew (its base, its name, its text) with
@@ -620,8 +718,7 @@ pub fn read_sources(db: &UserDatabase, base: i64) -> Result<Vec<Source>, DbError
 /// Output: nothing; an error as [`create_source`], or `DbError::NoRow` when
 /// there is no source `source.id`; nothing is then written.
 ///
-/// Called by: `objects/ai/rag/rag_rules.rs`: `rename_source`,
-/// `replace_source_text`.
+/// Called by: `objects/ai/rag/rag_rules.rs`: `replace_source_text`.
 /// Calls: [`check_source`], [`passage_limit`], [`write_passages`].
 pub fn update_source(db: &UserDatabase, source: &Source) -> Result<(), DbError> {
     check_source(source)?;
@@ -683,8 +780,10 @@ fn stop_words_of(connection: &Connection, bases: &str) -> Result<Vec<String>, Db
 }
 
 /// The query of FTS5 for a question: its words but the stop words
-/// `stop_words`, each quoted (so that no word is read as an operator of
-/// FTS5), any of them.
+/// `stop_words`, each once and quoted (so that no word is read as an
+/// operator of FTS5), any of them. A word the question repeats ("evaluator"
+/// in every sentence of a requirement) would otherwise weigh as many times
+/// and find passages by itself.
 ///
 /// Input: `question`, the text to look for ("What is the TSF of the TOE?");
 /// `stop_words`, the words passed over, in lower case (those of the bases
@@ -695,7 +794,9 @@ fn stop_words_of(connection: &Connection, bases: &str) -> Result<Vec<String>, Db
 ///
 /// Called by: [`read_passages`]; `objects/evaluation/product_document/product_document_store.rs`:
 /// `read_document_passages` (the search in the documents of the product).
+/// Calls: [`is_stop_word`].
 pub(in crate::objects) fn query_of<S: AsRef<str>>(question: &str, stop_words: &[S]) -> Option<String> {
+    let mut seen = HashSet::new();
     let mut words = Vec::new();
 
     // The closure tells `split` where a word ends: at every sign that is no
@@ -703,7 +804,12 @@ pub(in crate::objects) fn query_of<S: AsRef<str>>(question: &str, stop_words: &[
     for word in question.split(|character: char| !character.is_alphanumeric()).take(MAX_WORDS * 4) {
         let lower = word.to_lowercase();
 
-        if !word.is_empty() && words.len() < MAX_WORDS && !is_stop_word(&lower, stop_words) {
+        if word.is_empty() || words.len() >= MAX_WORDS || is_stop_word(&lower, stop_words) {
+            continue;
+        }
+
+        // `insert` tells whether the word is new: a second "TSF" is left out.
+        if seen.insert(lower) {
             words.push(format!("\"{word}\""));
         }
     }
@@ -711,10 +817,152 @@ pub(in crate::objects) fn query_of<S: AsRef<str>>(question: &str, stop_words: &[
     if words.is_empty() { None } else { Some(words.join(" OR ")) }
 }
 
+/// Whether `word` is an identifier: several parts of letters and digits
+/// joined by `_`, `.` or `-`, a digit among them, with a letter or at least
+/// three parts ("ADV_ARC.1-1", "`FCS_COP.1`", "5.3-1", "SHA-256"; not "3.1",
+/// "e.g" or "well-known").
+///
+/// Input: `word`, a word of a question without the signs around it.
+/// Output: `true` for an identifier.
+///
+/// Called by: [`identifiers_of`].
+fn is_identifier(word: &str) -> bool {
+    let mut parts = 0;
+    let mut letter = false;
+    let mut digit = false;
+
+    for part in word.split(['_', '.', '-']) {
+        // Two joiners in a row, or another sign: no identifier.
+        if part.is_empty() || !part.chars().all(char::is_alphanumeric) {
+            return false;
+        }
+
+        parts += 1;
+        letter = letter || part.chars().any(char::is_alphabetic);
+        digit = digit || part.chars().any(char::is_numeric);
+    }
+
+    parts >= 2 && digit && (letter || parts >= 3)
+}
+
+/// The query of FTS5 for the identifiers of a question: each as a phrase,
+/// any of them. The words of a question alone find "ADV_ARC.1-1" by "ADV",
+/// "ARC" and "1" apart, which other work units hold as well; the phrase
+/// finds only the passages that name it.
+///
+/// Input: `question`, the text to look for ("ADV_ARC.1-1 The evaluator
+/// shall ...").
+///
+/// Output: the query (`"\"ADV_ARC.1-1\""`), each identifier once, at most
+/// [`MAX_IDENTIFIERS`]; `None` for a question that names none.
+///
+/// Called by: [`read_passages`].
+/// Calls: [`is_identifier`].
+fn identifiers_of(question: &str) -> Option<String> {
+    let mut seen = HashSet::new();
+    let mut phrases = Vec::new();
+
+    for word in question.split_whitespace().take(MAX_WORDS * 4) {
+        // The signs around a word ("(FCS_COP.1)," or "ADV_ARC.1-1:") are no
+        // part of it; the closure is asked for by `trim_matches`.
+        let word = word.trim_matches(|character: char| !character.is_alphanumeric());
+
+        if phrases.len() < MAX_IDENTIFIERS && is_identifier(word) && seen.insert(word.to_lowercase()) {
+            phrases.push(format!("\"{word}\""));
+        }
+    }
+
+    if phrases.is_empty() { None } else { Some(phrases.join(" OR ")) }
+}
+
+/// The passages of the bases `bases` that match the query `query`, the best
+/// first (BM25 of FTS5), each with the name of its source.
+///
+/// Input: `connection`, the open database; `query`, a query of FTS5 made by
+/// [`query_of`] and [`identifiers_of`]; `bases`, the ids of the bases as one
+/// JSON array ("[2,5]"); `wanted`, the most passages, at most [`MAX_FOUND`].
+///
+/// Output: at most `wanted` passages, none of them with the passage that
+/// follows it yet (`[(7, "CEM.pdf", "The TSF shall ...", None)]`); an error
+/// of SQLite.
+///
+/// Called by: [`read_passages`].
+fn matching(connection: &Connection, query: &str, bases: &str, wanted: usize) -> Result<Vec<FoundPassage>, DbError> {
+    ensure!(wanted <= MAX_FOUND, DbError::Inconsistent(format!("more than {MAX_FOUND} passages wanted")));
+
+    let mut statement = connection.prepare_cached(
+        "SELECT knowledge_passages.rowid AS passage, knowledge_sources.name AS source, knowledge_passages.text AS text
+         FROM knowledge_passages JOIN knowledge_sources ON knowledge_sources.id = knowledge_passages.source
+         WHERE knowledge_passages MATCH :query
+           AND knowledge_sources.knowledge_base IN (SELECT value FROM json_each(:bases))
+         ORDER BY bm25(knowledge_passages) LIMIT :wanted",
+    )?;
+    let mut rows = statement.query(named_params! {
+        ":query": query,
+        ":bases": bases,
+        ":wanted": i64::try_from(wanted).map_err(|error| DbError::Inconsistent(error.to_string()))?,
+    })?;
+    let mut found = Vec::with_capacity(wanted);
+
+    for _ in 0..wanted {
+        let Some(row) = rows.next()? else { break };
+
+        found.push((row.get("passage")?, row.get("source")?, row.get("text")?, None));
+    }
+
+    Ok(found)
+}
+
+/// Whether the passage of the row `row`, or one of the same text, is among
+/// `found`: a text kept in two bases is given once.
+///
+/// Called by: [`read_passages`], [`following`].
+fn is_found(found: &[FoundPassage], row: i64, text: &str) -> bool {
+    for (other, _, other_text, _) in found {
+        if *other == row || other_text == text {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// The passage that follows the row `row` in its source: a passage ends
+/// where its length ends, and what it says often goes on in the next one
+/// (the guidance under a work unit of the CEM). The passages of a source
+/// are written one after another, so the next row of the index is the next
+/// passage of the text, unless it belongs to another source.
+///
+/// Input: `connection`, the open database; `found`, the passages found;
+/// `row`, the row of one of them.
+///
+/// Output: the text of the next passage of the same source; `None` at the
+/// end of a source, or when that passage is among `found` already.
+///
+/// Called by: [`read_passages`].
+/// Calls: [`is_found`].
+fn following(connection: &Connection, found: &[FoundPassage], row: i64) -> Result<Option<String>, DbError> {
+    let mut statement = connection.prepare_cached(
+        "SELECT next.text AS text FROM knowledge_passages AS next
+         JOIN knowledge_passages AS this ON this.rowid = :row
+         WHERE next.rowid = :row + 1 AND next.source = this.source",
+    )?;
+    let mut rows = statement.query(named_params! { ":row": row })?;
+    let Some(next) = rows.next()? else {
+        return Ok(None);
+    };
+    let text: String = next.get("text")?;
+
+    Ok(if is_found(found, row + 1, &text) { None } else { Some(text) })
+}
+
 /// Finds the passages of the knowledge bases of an agent that fit a
 /// question best (BM25 of FTS5), the best first, each with the name of its
-/// source, so that the model and the user know where a passage comes from;
-/// the stop words of the bases are passed over.
+/// source, so that the model and the user know where a passage comes from,
+/// and with the passage that follows it in its source. The passages that
+/// name an identifier of the question ("ADV_ARC.1-1") come before the
+/// others; the stop words of the bases are passed over; a passage is given
+/// once, also when two sources hold its text.
 ///
 /// Input:
 /// - `db`: the open database of the user.
@@ -723,20 +971,20 @@ pub(in crate::objects) fn query_of<S: AsRef<str>>(question: &str, stop_words: &[
 /// - `question`: the text to look for.
 /// - `count`: the most passages wanted (the limit of the agent).
 ///
-/// Output: at most `count` and at most [`MAX_FOUND`] passages with their
-/// sources (`[("CC interpretation 12.pdf", "The TSF shall ...")]`); none when
-/// the question has no word to look for. An error when there are too many
-/// bases.
+/// Output: at most `count` and at most [`MAX_FOUND`] passages
+/// (`[(7, "CC interpretation 12.pdf", "The TSF shall ...", Some("It
+/// follows ..."))]`); none when the question has no word to look for. An
+/// error when there are too many bases.
 ///
 /// Called by: `objects/ai/agent/agent_ai.rs`: `agent_knowledge`;
 /// `objects/ai/rag/rag_rules.rs`: `search_base`.
-/// Calls: [`stop_words_of`], [`query_of`].
+/// Calls: [`stop_words_of`], [`query_of`], [`identifiers_of`], [`matching`], [`is_found`], [`following`].
 pub fn read_passages(
     db: &UserDatabase,
     bases: &[i64],
     question: &str,
     count: usize,
-) -> Result<Vec<(String, String)>, DbError> {
+) -> Result<Vec<FoundPassage>, DbError> {
     ensure!(bases.len() <= MAX_BASES, DbError::Inconsistent(format!("more than {MAX_BASES} knowledge bases")));
 
     // The bases are given to SQL as one JSON array ("[2,5]"), read by
@@ -753,24 +1001,33 @@ pub fn read_passages(
         return Ok(Vec::new());
     };
     let wanted = count.min(MAX_FOUND);
-    let mut statement = connection.prepare(
-        "SELECT knowledge_sources.name AS source, knowledge_passages.text AS text
-         FROM knowledge_passages JOIN knowledge_sources ON knowledge_sources.id = knowledge_passages.source
-         WHERE knowledge_passages MATCH :query
-           AND knowledge_sources.knowledge_base IN (SELECT value FROM json_each(:bases))
-         ORDER BY bm25(knowledge_passages) LIMIT :wanted",
-    )?;
-    let mut rows = statement.query(named_params! {
-        ":query": query,
-        ":bases": bases,
-        ":wanted": i64::try_from(wanted).map_err(|error| DbError::Inconsistent(error.to_string()))?,
-    })?;
-    let mut found = Vec::with_capacity(wanted);
+    // First the passages that name an identifier of the question, ordered
+    // by all its words; then the best by the words alone.
+    let mut matches = match identifiers_of(question) {
+        Some(identifiers) => matching(connection, &format!("({identifiers}) AND ({query})"), &bases, wanted)?,
+        None => Vec::new(),
+    };
 
-    for _ in 0..wanted {
-        let Some(row) = rows.next()? else { break };
+    matches.extend(matching(connection, &query, &bases, wanted)?);
 
-        found.push((row.get("source")?, row.get("text")?));
+    let mut found: Vec<FoundPassage> = Vec::with_capacity(wanted);
+
+    for passage in matches {
+        if found.len() < wanted && !is_found(&found, passage.0, &passage.2) {
+            found.push(passage);
+        }
+    }
+
+    // Every passage is found before the one that follows it is read, so
+    // that none is given twice.
+    let mut next = Vec::with_capacity(found.len());
+
+    for passage in &found {
+        next.push(following(connection, &found, passage.0)?);
+    }
+
+    for (passage, next) in found.iter_mut().zip(next) {
+        passage.3 = next;
     }
 
     Ok(found)
@@ -784,6 +1041,10 @@ mod tests {
     use super::*;
 
     use crate::test_support::database::{database, knowledge_base};
+
+    fn texts(found: &[FoundPassage]) -> Vec<&str> {
+        found.iter().map(|passage| passage.2.as_str()).collect()
+    }
 
     fn source(base: i64, text: &str) -> Source {
         Source { id: 0, knowledge_base: base, name: "Router X, 2025".to_owned(), text: text.to_owned() }
@@ -805,12 +1066,16 @@ mod tests {
         stored.text = "The firmware is signed.".to_owned();
         update_source(&db, &stored).unwrap();
 
-        assert_eq!(read_sources(&db, id).unwrap(), vec![stored]);
+        assert_eq!(read_source(&db, source_id).unwrap(), stored);
+        assert_eq!(read_source_records(&db, id).unwrap(), vec![(source_id, "Router X, 2025".to_owned(), 23)]);
         assert!(read_passages(&db, &[id], "keys", 8).unwrap().is_empty());
-        assert_eq!(
-            read_passages(&db, &[id], "signed firmware", 8).unwrap(),
-            vec![("Router X, 2025".to_owned(), "The firmware is signed.".to_owned())]
-        );
+        assert_eq!(texts(&read_passages(&db, &[id], "signed firmware", 8).unwrap()), ["The firmware is signed."]);
+
+        update_source_name(&db, source_id, "Router X, 2026").unwrap();
+
+        assert_eq!(read_passages(&db, &[id], "signed", 8).unwrap()[0].1, "Router X, 2026");
+        assert!(matches!(update_source_name(&db, 99, "Other"), Err(DbError::NoRow { .. })));
+        assert!(matches!(update_source_name(&db, source_id, ""), Err(DbError::Inconsistent(_))));
     }
 
     #[test]
@@ -857,6 +1122,81 @@ mod tests {
     }
 
     #[test]
+    fn a_passage_ends_where_a_paragraph_ends() {
+        let paragraph = "word ".repeat(120);
+        let four = format!("{paragraph}\n\n{paragraph}\n\n\n\n{paragraph}\n\n{paragraph}");
+        let cut = passages(&four, PASSAGE_CHARS);
+        let two = format!("{0}\n{0}", paragraph.trim());
+
+        // Two paragraphs of 599 characters fit a passage of 1500, a third
+        // does not: it starts the next passage whole.
+        assert_eq!(cut, [two.clone(), two]);
+        // A paragraph that fills a passage to its last character stays in it.
+        assert_eq!(passages("aaaa\n\nbbb cc", 11), ["aaaa\nbbb cc"]);
+        assert_eq!(passages("aaaa\n\nbbb ccc", 11), ["aaaa", "bbb ccc"]);
+    }
+
+    #[test]
+    fn a_word_of_a_question_is_looked_for_once_and_an_identifier_as_a_phrase() {
+        let none: [&str; 0] = [];
+
+        assert_eq!(query_of("The TSF and the tsf of the TOE", &["the", "and", "of"]).unwrap(), "\"TSF\" OR \"TOE\"");
+        assert!(query_of("the of", &["the", "of"]).is_none());
+        assert_eq!(query_of("a-b a", &none).unwrap(), "\"a\" OR \"b\"");
+
+        for word in ["ADV_ARC.1-1", "FCS_COP.1", "5.3-1", "SHA-256", "TLS1.3"] {
+            assert!(is_identifier(word), "{word}");
+        }
+
+        for word in ["3.1", "e.g", "well-known", "TOE", "42", "a..1", "a_1\"b", ""] {
+            assert!(!is_identifier(word), "{word}");
+        }
+
+        assert_eq!(
+            identifiers_of("ADV_ARC.1-1: see (FCS_COP.1), version 3.1 and adv_arc.1-1.").unwrap(),
+            "\"ADV_ARC.1-1\" OR \"FCS_COP.1\""
+        );
+        assert!(identifiers_of("The evaluator shall examine the ST.").is_none());
+    }
+
+    #[test]
+    fn a_passage_that_names_the_identifier_comes_first_with_the_one_that_follows_it() {
+        let (_directory, db) = database();
+        let mut base = knowledge_base("CEM");
+
+        base.passage_characters = MIN_PASSAGE_CHARS;
+
+        let id = create_knowledge_base(&db, &base).unwrap();
+        let target = "ADV_ARC.1-1 The evaluator shall examine the security architecture description to determine \
+                      that it is presented at a level of detail commensurate with the abstractions.";
+        let guidance = "With respect to this work unit, commensurate means that the description of the domain \
+                        separation and of the initialisation is no less detailed than the design.";
+        let other = "ADV_FSP.1-1 The evaluator shall examine the functional specification of the architecture. \
+                     See 1 and 1 and ARC, and version 1 of 1 of the ADV class.";
+        let text = format!("{other}\n\n{target}\n\n{guidance}");
+
+        create_source(&db, &source(id, &text)).unwrap();
+        // The same text in a second source: its passages are given once.
+        create_source(&db, &source(id, &text)).unwrap();
+
+        // The work unit named comes before the one that holds more of the
+        // words; the guidance, which holds none of them, follows it.
+        let found = read_passages(&db, &[id], "ADV_ARC.1-1 The evaluator shall examine the architecture", 8).unwrap();
+
+        assert_eq!(texts(&found), [target, other]);
+        assert_eq!(found[0].3.as_deref(), Some(guidance));
+        assert_eq!(found[1].3, None);
+
+        // The guidance found itself is given once, not after its work unit.
+        let both = read_passages(&db, &[id], "ADV_ARC.1-1 initialisation", 8).unwrap();
+
+        assert_eq!(texts(&both), [target, guidance, other]);
+        assert_eq!(both[0].3, None);
+        // The last passage of a source is followed by none of the next source.
+        assert_eq!(read_passages(&db, &[id], "initialisation", 1).unwrap()[0].3, None);
+    }
+
+    #[test]
     fn a_search_looks_only_in_the_bases_it_is_given() {
         let (_directory, db) = database();
         let one = create_knowledge_base(&db, &knowledge_base("One")).unwrap();
@@ -865,7 +1205,7 @@ mod tests {
         create_source(&db, &source(one, "Generated keys are stored encrypted.")).unwrap();
         create_source(&db, &source(two, "The key of the door.")).unwrap();
 
-        assert_eq!(read_passages(&db, &[one], "key", 8).unwrap()[0].1, "Generated keys are stored encrypted.");
+        assert_eq!(texts(&read_passages(&db, &[one], "key", 8).unwrap()), ["Generated keys are stored encrypted."]);
         assert_eq!(read_passages(&db, &[one, two], "key", 8).unwrap().len(), 2);
         assert!(read_passages(&db, &[one], "\"OR NOT(", 8).unwrap().is_empty());
         // "What is the" are passed over: only "key" is looked for.

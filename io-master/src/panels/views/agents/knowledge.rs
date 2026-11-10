@@ -7,7 +7,7 @@
 //! KnowledgeBases.svelte ──knowledge_base_list()───────► the bases, their sources counted ──► [BaseView]
 //!                       ──knowledge_base_create(...)──► add_base ──► id
 //!                       ──knowledge_base_save(...)────► change_base
-//! BaseEditor.svelte     ──knowledge_source_list(base)─► read_sources ──► [SourceView]
+//! BaseEditor.svelte     ──knowledge_source_list(base)─► read_source_records ──► [SourceView]
 //!                       ──knowledge_source_add(base)──► the dialog ──► source_text ──► add_source ──► id
 //!                       ──knowledge_source_replace(id)► the dialog ──► source_text ──► replace_source_text
 //!                       ──knowledge_source_rename()───► rename_source
@@ -23,7 +23,7 @@ use crate::objects::ai::rag::rag_rules::{
     add_base, add_source, change_base, rename_source, replace_source_text, search_base, source_text,
 };
 use crate::objects::ai::rag::rag_store::{
-    MAX_PASSAGE_CHARS, MAX_STOP_WORD, MAX_STOP_WORDS, MIN_PASSAGE_CHARS, read_knowledge_bases, read_sources,
+    MAX_PASSAGE_CHARS, MAX_STOP_WORD, MAX_STOP_WORDS, MIN_PASSAGE_CHARS, read_knowledge_bases, read_source_records,
 };
 use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
@@ -66,7 +66,7 @@ pub struct BaseFields {
 pub struct SourceView {
     id: i64,
     name: String,
-    characters: usize,
+    characters: u64,
 }
 
 /// Every knowledge base, by its name, its sources counted.
@@ -78,7 +78,7 @@ pub struct SourceView {
 /// Called by: `ui/src/lib/api/agents.ts`: `knowledgeBaseList`, from `ui/src/views/agents/KnowledgeBases.svelte`,
 /// when the tab opens and after a change.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
-/// `objects/ai/rag/rag_store.rs`: `read_knowledge_bases`, `read_sources`.
+/// `objects/ai/rag/rag_store.rs`: `read_knowledge_bases`, `read_source_records`.
 #[tauri::command(async)]
 pub fn knowledge_base_list(session: State<'_, Session>) -> Result<Vec<BaseView>, ViewError> {
     let opened = session.lock()?;
@@ -86,7 +86,7 @@ pub fn knowledge_base_list(session: State<'_, Session>) -> Result<Vec<BaseView>,
     let mut bases = Vec::new();
 
     for base in read_knowledge_bases(db)? {
-        let sources = read_sources(db, base.id)?.len();
+        let sources = read_source_records(db, base.id)?.len();
 
         bases.push(BaseView {
             id: base.id,
@@ -174,14 +174,14 @@ pub fn knowledge_base_save(session: State<'_, Session>, fields: BaseFields) -> R
 /// Called by: `ui/src/lib/api/agents.ts`: `knowledgeSourceList`, from `ui/src/views/agents/BaseEditor.svelte`, when
 /// a base is opened and after a change.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
-/// `objects/ai/rag/rag_store.rs`: `read_sources`.
+/// `objects/ai/rag/rag_store.rs`: `read_source_records`.
 #[tauri::command(async)]
 pub fn knowledge_source_list(session: State<'_, Session>, base: i64) -> Result<Vec<SourceView>, ViewError> {
     let opened = session.lock()?;
     let mut sources = Vec::new();
 
-    for source in read_sources(database(opened.as_ref())?, base)? {
-        sources.push(SourceView { id: source.id, name: source.name, characters: source.text.chars().count() });
+    for (id, name, characters) in read_source_records(database(opened.as_ref())?, base)? {
+        sources.push(SourceView { id, name, characters });
     }
 
     Ok(sources)
@@ -302,9 +302,10 @@ pub fn knowledge_search(session: State<'_, Session>, base: i64, question: String
     let found = search_base(database(opened.as_ref())?, base, &question)?;
     let mut views = Vec::with_capacity(found.len());
 
-    // Each passage as the model gets it from an agent
-    // (`objects/ai/agent/agent_ai.rs`: `agent_knowledge`).
-    for (source, passage) in found {
+    // Each passage as the model gets it from a new agent
+    // (`objects/ai/agent/agent_ai.rs`: `agent_knowledge`), without the
+    // passage that follows it: an agent adds that within its own limit.
+    for (_, source, passage, _) in found {
         views.push(format!("=== {source} ===\n{passage}"));
     }
 

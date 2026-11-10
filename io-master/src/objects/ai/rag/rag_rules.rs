@@ -16,9 +16,10 @@ use crate::infrastructure::pdf::poppler::{self, MAX_FILE};
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::rag::rag_model::{KnowledgeBase, Source};
 use crate::objects::ai::rag::rag_store::{
-    MAX_BASES, MAX_FOUND, MAX_PASSAGE_CHARS, MAX_SOURCE_CHARS, MAX_SOURCES, MAX_STOP_WORD, MAX_STOP_WORDS,
-    MIN_PASSAGE_CHARS, PASSAGE_CHARS, STOP_WORDS, create_knowledge_base, create_source, read_knowledge_base,
-    read_knowledge_bases, read_passages, read_source, read_sources, update_knowledge_base, update_source,
+    FoundPassage, MAX_BASES, MAX_FOUND, MAX_PASSAGE_CHARS, MAX_SOURCE_CHARS, MAX_SOURCES, MAX_STOP_WORD,
+    MAX_STOP_WORDS, MIN_PASSAGE_CHARS, PASSAGE_CHARS, STOP_WORDS, create_knowledge_base, create_source,
+    read_knowledge_base, read_knowledge_bases, read_passages, read_source, read_source_records, update_knowledge_base,
+    update_source, update_source_name,
 };
 use crate::objects::error::DomainError;
 use crate::objects::text::checked_text;
@@ -183,14 +184,14 @@ pub fn source_text(path: &Path) -> Result<String, DomainError> {
 /// database.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_add`.
-/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`, `read_sources`,
-/// `create_source`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_knowledge_base`,
+/// `read_source_records`, `create_source`.
 pub fn add_source(db: &UserDatabase, base: i64, name: &str, text: String) -> Result<i64, DomainError> {
     let name = checked_text(name, "the name of the source", MAX_NAME)?;
 
     read_knowledge_base(db, base)?;
     ensure!(
-        read_sources(db, base)?.len() < MAX_SOURCES,
+        read_source_records(db, base)?.len() < MAX_SOURCES,
         DomainError::Refused(format!("{MAX_SOURCES} sources in the base already"))
     );
 
@@ -215,24 +216,24 @@ pub fn replace_source_text(db: &UserDatabase, id: i64, text: String) -> Result<(
 /// the database for a source missing.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_source_rename`.
-/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `read_source`, `update_source`.
+/// Calls: `objects/text.rs`: `checked_text`; `objects/ai/rag/rag_store.rs`: `update_source_name`.
 pub fn rename_source(db: &UserDatabase, id: i64, name: &str) -> Result<(), DomainError> {
     let name = checked_text(name, "the name of the source", MAX_NAME)?;
-    let source = read_source(db, id)?;
 
-    Ok(update_source(db, &Source { name, ..source })?)
+    Ok(update_source_name(db, id, &name)?)
 }
 
 /// The passages of the base `base` that fit `question` best, each with the
-/// name of its source: the test of a base, at most [`MAX_FOUND`].
+/// name of its source and the passage that follows it: the test of a base,
+/// at most [`MAX_FOUND`].
 ///
 /// Input: `base`, the id of a stored base; `question`, the question typed.
-/// Output: the passages with their sources (`[("CEM.pdf", "The evaluator
-/// shall ...")]`); an error of the database for a base missing.
+/// Output: the passages (`[(7, "CEM.pdf", "The evaluator shall ...",
+/// None)]`); an error of the database for a base missing.
 ///
 /// Called by: `panels/views/agents/knowledge.rs`: `knowledge_search`.
 /// Calls: `objects/ai/rag/rag_store.rs`: `read_knowledge_base`, `read_passages`.
-pub fn search_base(db: &UserDatabase, base: i64, question: &str) -> Result<Vec<(String, String)>, DomainError> {
+pub fn search_base(db: &UserDatabase, base: i64, question: &str) -> Result<Vec<FoundPassage>, DomainError> {
     read_knowledge_base(db, base)?;
 
     Ok(read_passages(db, &[base], question, MAX_FOUND)?)

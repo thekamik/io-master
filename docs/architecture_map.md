@@ -161,7 +161,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ### `objects/ai/rag/rag_model.rs`: `KnowledgeBase`, `Source`
 
-- **Stored** (`objects/ai/rag/rag_store.rs`): `create_knowledge_base`, `read_knowledge_base`, `read_knowledge_bases`, `update_knowledge_base`, `create_source`, `read_source`, `read_sources`, `update_source`, `read_passages`
+- **Stored** (`objects/ai/rag/rag_store.rs`): `create_knowledge_base`, `read_knowledge_base`, `read_knowledge_bases`, `update_knowledge_base`, `create_source`, `read_source`, `read_source_records`, `update_source`, `update_source_name`, `read_passages`
 - **Processed, the rules of the data**:
   - `objects/ai/agent/agent_rules.rs`: `checked`
   - `objects/ai/rag/rag_rules.rs`: `add_base`, `add_source`, `change_base`, `checked_stop_words`, `rename_source`, `replace_source_text`, `search_base`

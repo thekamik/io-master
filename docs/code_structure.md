@@ -96,7 +96,8 @@ objects/ai/
   agent/         agent_model.rs (Agent, GlossaryEntry), agent_store.rs,
                  agent_rules.rs (new_agent: the default instructions and limits; change_agent; checked: a name, an
                  integration and bases that exist, limits in their ranges, the glossary),
-                 agent_ai.rs (the passages of its bases that fit a question: its glossary, its limits;
+                 agent_ai.rs (the passages of its bases that fit a question: its glossary, its limits, each followed
+                 by the next one of its source while there is room;
                  agent_question: its system_template filled with its instructions, its knowledge, the task, then
                  the messages ──► Question; filled: the placeholders of a template replaced in one pass)
   agent_roles/   agent_roles_model.rs (AgentRole: Evaluator, Planner, Chat; EvaluatorRole, PlannerRole),
@@ -113,7 +114,8 @@ objects/ai/
                  api_key_ai.rs (the key masked in every text taken from an answer and in a refusal of a rule)
   journal/       journal_model.rs (JournalEntry, Ending), journal_store.rs,
                  journal_ai.rs (record ──► Answer: the journal of the agent written before the answer is given)
-  rag/           rag_model.rs (KnowledgeBase, Source), rag_store.rs,
+  rag/           rag_model.rs (KnowledgeBase, Source), rag_store.rs (with the index of the passages: a text cut
+                 by its paragraphs, a question searched by its words and its identifiers),
                  rag_rules.rs (add_base: the passages and stop words of the program; change_base, checked_stop_words;
                  source_text: .txt, .md, .pdf within its limit; add_source,
                  replace_source_text, rename_source; search_base, the test of a base)
