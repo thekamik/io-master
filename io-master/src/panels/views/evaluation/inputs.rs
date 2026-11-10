@@ -5,6 +5,7 @@
 //!
 //! ```text
 //! EvaluationEditor.svelte ──evaluation_document_give(id, document, version)─► the dialog ──► document_file
+//!                                                                              ──► document_text (no lock held)
 //!                                                                              ──► give_document
 //!                         ──evaluation_proof_give(id, proof, ...)───────────► give_proof
 //! ```
@@ -14,7 +15,9 @@ use tauri_plugin_dialog::DialogExt;
 
 use crate::objects::evaluation::lab_proof::lab_proof_model::LabProof;
 use crate::objects::evaluation::lab_proof::lab_proof_rules::give_proof;
-use crate::objects::evaluation::product_document::product_document_rules::{document_file, give_document};
+use crate::objects::evaluation::product_document::product_document_rules::{
+    document_file, document_text, give_document,
+};
 use crate::panels::session::Session;
 use crate::panels::views::error::ViewError;
 use crate::panels::views::opened::database;
@@ -40,7 +43,8 @@ const MAX_PROOF_BYTES: usize = 4 * 1024 * 1024;
 /// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationDocumentGive`, from
 /// `ui/src/views/evaluation/EvaluationEditor.svelte`, "Give the file".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; the dialog of the system;
-/// `objects/evaluation/product_document/product_document_rules.rs`: `document_file`, `give_document`.
+/// `objects/evaluation/product_document/product_document_rules.rs`: `document_file`, `document_text`,
+/// `give_document`.
 #[tauri::command(async)]
 pub fn evaluation_document_give(
     app: AppHandle,
@@ -62,9 +66,12 @@ pub fn evaluation_document_give(
     };
     let path = file.into_path().map_err(|error| ViewError::Invalid(format!("the file chosen: {error}")))?;
     let content = document_file(&path)?;
+    // Read before the lock of the session is taken: a PDF of hundreds of
+    // pages takes its time, and the other commands of the window go on.
+    let text = document_text(&content)?;
     let opened = session.lock()?;
 
-    give_document(database(opened.as_ref())?, id, document, content, &version)?;
+    give_document(database(opened.as_ref())?, id, document, content, &text, &version)?;
 
     Ok(true)
 }
@@ -84,7 +91,7 @@ pub fn evaluation_document_give(
 /// `ui/src/views/evaluation/EvaluationEditor.svelte`, "Give the proof".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/lab_proof/lab_proof_rules.rs`: `give_proof`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_proof_give(
     session: State<'_, Session>,
     id: i64,

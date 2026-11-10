@@ -40,7 +40,7 @@ pub struct ProgramView {
 /// Called by: `ui/src/lib/api/program_start.ts`: `loginGet`, from `ui/src/App.svelte`, when the window opens and
 /// after every change.
 /// Calls: `objects/user/user_data/user_data_rules.rs`: `installed_user`; `panels/session.rs`: `Session::user_name`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn login_get(session: State<'_, Session>) -> Result<ProgramView, ViewError> {
     let installed = installed_user(session.data_folder())?.is_some();
     let logged_in = session.user_name()?;
@@ -111,7 +111,7 @@ pub fn login_recover(
 /// Called by: `ui/src/lib/api/program_start.ts`: `loginLogOut`, from the frame of the window (`ui/src/App.svelte`),
 /// "Log out".
 /// Calls: `panels/session.rs`: `Session::log_out`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn login_log_out(session: State<'_, Session>) -> Result<(), ViewError> {
     session.log_out()?;
 

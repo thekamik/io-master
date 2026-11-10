@@ -173,7 +173,7 @@ fn ending_name(ending: Ending) -> &'static str {
 /// opened and after a change.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/chat/chat_store.rs`: `read_chats`; [`agent_name`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn chat_list(session: State<'_, Session>) -> Result<Vec<ChatSummaryView>, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -199,7 +199,7 @@ pub fn chat_list(session: State<'_, Session>) -> Result<Vec<ChatSummaryView>, Vi
 /// Called by: `ui/src/lib/api/chat.ts`: `chatCreate`, from `ui/src/views/chat/ChatList.svelte`, "New chat".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/chat/chat_rules.rs`: `new_chat`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn chat_create(session: State<'_, Session>, title: String, agent: i64) -> Result<i64, ViewError> {
     ensure!(title.len() <= MAX_TITLE_BYTES, ViewError::Invalid("the title is too long".to_owned()));
 
@@ -219,7 +219,7 @@ pub fn chat_create(session: State<'_, Session>, title: String, agent: i64) -> Re
 /// opened.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/chat/chat_store.rs`: `read_chat`; [`chat_view`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn chat_get(session: State<'_, Session>, id: i64) -> Result<ChatView, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -237,7 +237,7 @@ pub fn chat_get(session: State<'_, Session>, id: i64) -> Result<ChatView, ViewEr
 /// Called by: `ui/src/lib/api/chat.ts`: `chatRename`, from `ui/src/views/chat/Conversation.svelte`, "Rename".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/chat/chat_rules.rs`: `rename_chat`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn chat_rename(session: State<'_, Session>, id: i64, title: String) -> Result<(), ViewError> {
     ensure!(title.len() <= MAX_TITLE_BYTES, ViewError::Invalid("the title is too long".to_owned()));
 
@@ -372,7 +372,7 @@ pub async fn chat_ask(
 ///
 /// Called by: `ui/src/lib/api/chat.ts`: `chatStop`, from `ui/src/views/chat/Conversation.svelte`, "Stop".
 /// Calls: `panels/session.rs`: `Session::request_stop`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn chat_stop(session: State<'_, Session>) -> Result<(), ViewError> {
     Ok(session.request_stop()?)
 }

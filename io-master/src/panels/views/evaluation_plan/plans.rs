@@ -122,7 +122,7 @@ fn verdict_of(name: &str) -> Result<Verdict, ViewError> {
 /// `ui/src/views/evaluation_plan/EvaluationPlan.svelte`, when the panel opens and after a change.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plans`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn plan_list(session: State<'_, Session>) -> Result<Vec<PlanSummaryView>, ViewError> {
     let opened = session.lock()?;
     let mut plans = Vec::new();
@@ -152,7 +152,7 @@ pub fn plan_list(session: State<'_, Session>) -> Result<Vec<PlanSummaryView>, Vi
 /// `ui/src/views/evaluation_plan/EvaluationPlan.svelte`, "New plan".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `create_plan`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn plan_create(session: State<'_, Session>, name: String, description: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
 
@@ -219,7 +219,7 @@ fn plan_view(db: &UserDatabase, plan: EvaluationPlan) -> Result<PlanView, ViewEr
 /// when a plan is chosen and after a change.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`; [`plan_view`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn plan_get(session: State<'_, Session>, id: i64) -> Result<PlanView, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -260,7 +260,7 @@ pub struct PlanFields {
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `update_plan`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn plan_save(session: State<'_, Session>, fields: PlanFields) -> Result<(), ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -295,7 +295,7 @@ pub fn plan_save(session: State<'_, Session>, fields: PlanFields) -> Result<(), 
 /// `ui/src/views/evaluation_plan/PlanForm.svelte`, "Add a document".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn plan_add_document(session: State<'_, Session>, id: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
 

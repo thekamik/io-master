@@ -126,6 +126,7 @@ They bind **our code** (`src/`, `ui/`); the dependencies cannot follow them.
 
 - **The desktop window is the only interface.** The program is started without parameters, opens no network port and is only a client of the AI services.
 - **The page and the Rust program are two separate projects** (the page: `io-master/ui/`). The page holds no secret and no state that matters; only presentation stays in it (a tab, a selection, an open form). The one secret that reaches it is the recovery code, shown once.
+- **Every command runs apart from the thread of the window**: `#[tauri::command(async)]`, or an `async fn` for one that awaits the AI; never a plain `#[tauri::command]`, which Tauri runs on the thread of the window, where a wait for the lock of the session or a slow query stops the whole window. What takes long and needs no database (the text of a PDF) is done before the lock of the session is taken.
 - **A command** is listed in three places that must agree: `tauri::generate_handler!` in `main.rs`, `build.rs` and `capabilities/default.json`. Its function on the page is in `ui/src/lib/api/<panel>.ts`, one function per command, named as the command (`agentGet` calls `agent_get`).
 - **Core logic is apart from presentation**: results and errors are plain Rust types; serialization only in `panels/views/` (the models carry no serde); long work reports its progress and can be stopped.
 

@@ -13,12 +13,18 @@
 //! no file name reaches a command line, and a PDF that comes from an
 //! imported document is never written to the disk unencrypted.
 //!
+//! A PDF comes from outside the laboratory, and the tools are large parsers:
+//! each call is bounded in time ([`TIMEOUT`]) and in what it may write
+//! ([`MAX_OUTPUT`]), so that a file made for it neither holds the program
+//! nor fills its memory ([`run`]).
+//!
 //! A PDF may have hundreds of pages, so [`text`] reads it in parts of
 //! [`PART`] pages ([`text_of_pages`]), each part one call of `pdftotext`.
 
 use std::fmt;
-use std::io::{ErrorKind, Write};
-use std::process::{Command, Output, Stdio};
+use std::io::{ErrorKind, Read, Write};
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::time::Duration;
 
 /// How many pages are read at once.
 pub const PART: u32 = 20;
@@ -31,6 +37,25 @@ pub const MAX_PAGES: u32 = 10_000;
 
 /// The most parts of [`PART`] pages a PDF of [`MAX_PAGES`] is read in.
 const MAX_PARTS: u32 = MAX_PAGES.div_ceil(PART);
+
+/// How long one call of a tool may run. A part of [`PART`] pages of a large
+/// standard is read in a few seconds; a file that keeps the tool busy longer
+/// than this is refused.
+const TIMEOUT: Duration = Duration::from_secs(120);
+
+/// How often the end of a tool is looked for, and how many times at most:
+/// [`TIMEOUT`] in all.
+const POLL: Duration = Duration::from_millis(5);
+const MAX_POLLS: u32 = 24_000;
+
+/// The most bytes one call of a tool may write on its standard output: far
+/// more than the text of [`PART`] pages, and a bound on the memory a file
+/// made for it can take.
+const MAX_OUTPUT: u64 = 64 * 1024 * 1024;
+
+/// The most bytes read of what a tool says on its standard error: its first
+/// line is shown.
+const MAX_SAID: u64 = 64 * 1024;
 
 /// What `pdfinfo` tells about a file.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,18 +93,77 @@ impl fmt::Display for PdfError {
 
 impl std::error::Error for PdfError {}
 
-/// Runs a tool of Poppler with the PDF on its standard input.
+/// Reads `source` to its end, but no more than `limit` bytes and one: the
+/// one byte over tells the caller that there was more.
+///
+/// Input: `source`, the output of a tool; `limit`, the most bytes taken.
+/// Output: the bytes read, at most `limit + 1` (`b"Pages: 471\n"`); an error
+/// of the reading.
+///
+/// Called by: [`run`], on a thread of its own for each output of the tool.
+fn read_bounded(source: impl Read, limit: u64) -> std::io::Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+
+    source.take(limit.saturating_add(1)).read_to_end(&mut bytes)?;
+
+    Ok(bytes)
+}
+
+/// Waits for the tool `child` to end, at most [`TIMEOUT`]; one that runs
+/// longer (a file made to keep it busy) is killed.
+///
+/// Input: `child`, the tool started; `tool`, its name, for the error.
+/// Output: its exit status; `PdfError::Unreadable` when it did not end in
+/// time (it is killed and awaited, so that no process is left behind), or
+/// when the system cannot tell.
+///
+/// Called by: [`run`].
+fn waited(child: &mut Child, tool: &str) -> Result<ExitStatus, PdfError> {
+    for _ in 0..MAX_POLLS {
+        match child.try_wait() {
+            Ok(Some(status)) => return Ok(status),
+            Ok(None) => std::thread::sleep(POLL),
+            Err(error) => return Err(PdfError::Unreadable(error.to_string())),
+        }
+    }
+
+    child.kill().map_err(|error| PdfError::Unreadable(format!("{tool} could not be stopped: {error}")))?;
+    child.wait().map_err(|error| PdfError::Unreadable(error.to_string()))?;
+
+    Err(PdfError::Unreadable(format!("{tool} did not end in {} seconds", TIMEOUT.as_secs())))
+}
+
+/// What a thread of [`run`] read or wrote; a thread that failed is an error.
+///
+/// Input: `joined`, the result of the thread; `tool`, the name of the tool.
+/// Output: what the thread gave; `PdfError::Unreadable` when it failed.
+///
+/// Called by: [`run`].
+fn joined<T>(joined: std::thread::Result<std::io::Result<T>>, tool: &str) -> Result<T, PdfError> {
+    match joined {
+        Ok(Ok(value)) => Ok(value),
+        Ok(Err(error)) => Err(PdfError::Unreadable(format!("{tool}: {error}"))),
+        Err(_) => Err(PdfError::Unreadable(format!("the work with {tool} failed"))),
+    }
+}
+
+/// Runs a tool of Poppler with the PDF on its standard input. The file
+/// comes from outside the laboratory (the manufacturer of the product), so
+/// the tool is bounded: it runs at most [`TIMEOUT`], and writes at most
+/// [`MAX_OUTPUT`] bytes, past which its output is closed and it ends.
 ///
 /// Input:
 /// - `tool`: the tool (`"pdfinfo"`, `"pdftotext"`).
 /// - `arguments`: its arguments, the PDF named `fd://0`.
 /// - `pdf`: the bytes of the PDF, within [`MAX_FILE`].
 ///
-/// Output: what the tool wrote; `PdfError::ToolMissing` when it is not
-/// installed, `PdfError::Unreadable` with what it said when it fails.
+/// Output: what the tool wrote on its standard output; `PdfError::ToolMissing`
+/// when it is not installed, `PdfError::Unreadable` with what it said when it
+/// fails, when it runs too long or writes too much.
 ///
 /// Called by: [`info`], [`text_of_pages`].
-fn run(tool: &'static str, arguments: &[&str], pdf: &[u8]) -> Result<Output, PdfError> {
+/// Calls: [`read_bounded`], [`waited`], [`joined`].
+fn run(tool: &'static str, arguments: &[&str], pdf: &[u8]) -> Result<Vec<u8>, PdfError> {
     let mut child = Command::new(tool)
         .args(arguments)
         .stdin(Stdio::piped())
@@ -93,23 +177,36 @@ fn run(tool: &'static str, arguments: &[&str], pdf: &[u8]) -> Result<Output, Pdf
                 PdfError::Unreadable(error.to_string())
             }
         })?;
+    // The three were asked for as pipes above, so the child has them.
+    let missing = || PdfError::Unreadable(format!("{tool} has no pipes"));
+    let mut stdin = child.stdin.take().ok_or_else(missing)?;
+    let stdout = child.stdout.take().ok_or_else(missing)?;
+    let stderr = child.stderr.take().ok_or_else(missing)?;
 
-    // The input was asked for as a pipe above, so the child has it.
-    let mut stdin = child.stdin.take().ok_or_else(|| PdfError::Unreadable(format!("{tool} has no input")))?;
-
-    // Written from another thread while the output is read here, so
-    // that neither side waits for the other with a full pipe.
-    let (written, output) = std::thread::scope(|scope| {
+    // The PDF is written and both outputs are read on threads of their own
+    // while the tool is awaited here, so that no side waits for another with
+    // a full pipe. A thread that ends drops its pipe: the tool then sees its
+    // input ended, or its output closed when it wrote past the limit.
+    let (written, output, said, status) = std::thread::scope(|scope| {
         let writer = scope.spawn(move || stdin.write_all(pdf));
-        let output = child.wait_with_output();
+        let reader = scope.spawn(move || read_bounded(stdout, MAX_OUTPUT));
+        let errors = scope.spawn(move || read_bounded(stderr, MAX_SAID));
+        let status = waited(&mut child, tool);
 
-        (writer.join(), output)
+        (writer.join(), reader.join(), errors.join(), status)
     });
-    let output = output.map_err(|error| PdfError::Unreadable(error.to_string()))?;
+    let status = status?;
+    let output = joined(output, tool)?;
+    let said = joined(said, tool)?;
 
-    // A tool that stops reading early (a broken file) breaks the pipe:
-    // that is no error here, its exit status tells. Any other failure of
-    // the writing is.
+    ensure!(
+        u64::try_from(output.len()).is_ok_and(|length| length <= MAX_OUTPUT),
+        PdfError::Unreadable(format!("{tool} wrote more than {} MiB", MAX_OUTPUT / 1024 / 1024))
+    );
+
+    // A tool that stops reading early (a broken file) breaks the pipe: that
+    // is no error here, its exit status tells. Any other failure of the
+    // writing is.
     match written {
         Ok(Ok(())) => {}
         Ok(Err(error)) if error.kind() == ErrorKind::BrokenPipe => {}
@@ -117,8 +214,8 @@ fn run(tool: &'static str, arguments: &[&str], pdf: &[u8]) -> Result<Output, Pdf
         Err(_) => return Err(PdfError::Unreadable(format!("the PDF could not be given to {tool}"))),
     }
 
-    if !output.status.success() {
-        let said = String::from_utf8_lossy(&output.stderr);
+    if !status.success() {
+        let said = String::from_utf8_lossy(&said);
         let said = said.lines().find(|line| !line.trim().is_empty()).unwrap_or("no explanation");
 
         return Err(PdfError::Unreadable(said.trim().to_owned()));
@@ -141,7 +238,7 @@ pub fn info(pdf: &[u8]) -> Result<PdfInfo, PdfError> {
     ensure!(u64::try_from(pdf.len()).is_ok_and(|size| size <= MAX_FILE), PdfError::TooLarge);
 
     let output = run("pdfinfo", &["-enc", "UTF-8", "fd://0"], pdf)?;
-    let text = String::from_utf8_lossy(&output.stdout);
+    let text = String::from_utf8_lossy(&output);
 
     let named =
         field(&text, "Pages:").ok_or_else(|| PdfError::Unreadable("pdfinfo names no number of pages".to_owned()))?;
@@ -196,7 +293,7 @@ pub fn text_of_pages(pdf: &[u8], first: u32, last: u32) -> Result<Vec<String>, P
 
     let output = run("pdftotext", &["-enc", "UTF-8", "-f", &first_text, "-l", &last_text, "fd://0", "-"], pdf)?;
 
-    let text = String::from_utf8_lossy(&output.stdout);
+    let text = String::from_utf8_lossy(&output);
     let count = usize::try_from(last - first + 1).map_err(|_| PdfError::Unreadable(format!("{last} pages")))?;
     let mut pages = Vec::with_capacity(count);
 
@@ -281,6 +378,13 @@ mod tests {
             rest,
             ["Text of page 21", "Text of page 22", "Text of page 23", "Text of page 24", "Text of page 25"]
         );
+    }
+
+    #[test]
+    fn an_output_is_read_within_its_limit_and_one_byte_tells_of_more() {
+        assert_eq!(read_bounded(&b"abc"[..], 3).unwrap(), b"abc");
+        assert_eq!(read_bounded(&b"abcdef"[..], 3).unwrap(), b"abcd");
+        assert!(read_bounded(&b""[..], 3).unwrap().is_empty());
     }
 
     #[test]

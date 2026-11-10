@@ -79,7 +79,7 @@ pub struct SourceView {
 /// when the tab opens and after a change.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/rag/rag_store.rs`: `read_knowledge_bases`, `read_sources`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn knowledge_base_list(session: State<'_, Session>) -> Result<Vec<BaseView>, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -114,7 +114,7 @@ pub fn knowledge_base_list(session: State<'_, Session>) -> Result<Vec<BaseView>,
 /// "Make the base".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/rag/rag_rules.rs`: `add_base`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn knowledge_base_create(session: State<'_, Session>, name: String, description: String) -> Result<i64, ViewError> {
     ensure!(name.len() + description.len() <= MAX_FIELD, ViewError::Invalid("the text is too long".to_owned()));
 
@@ -135,7 +135,7 @@ pub fn knowledge_base_create(session: State<'_, Session>, name: String, descript
 /// "Save".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/rag/rag_rules.rs`: `change_base`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn knowledge_base_save(session: State<'_, Session>, fields: BaseFields) -> Result<(), ViewError> {
     ensure!(
         fields.name.len() + fields.description.len() <= MAX_FIELD,
@@ -175,7 +175,7 @@ pub fn knowledge_base_save(session: State<'_, Session>, fields: BaseFields) -> R
 /// a base is opened and after a change.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/rag/rag_store.rs`: `read_sources`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn knowledge_source_list(session: State<'_, Session>, base: i64) -> Result<Vec<SourceView>, ViewError> {
     let opened = session.lock()?;
     let mut sources = Vec::new();
@@ -273,7 +273,7 @@ pub fn knowledge_source_replace(app: AppHandle, session: State<'_, Session>, id:
 /// "Rename".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/rag/rag_rules.rs`: `rename_source`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn knowledge_source_rename(session: State<'_, Session>, id: i64, name: String) -> Result<(), ViewError> {
     ensure!(name.len() <= MAX_FIELD, ViewError::Invalid("the name is too long".to_owned()));
 
@@ -294,7 +294,7 @@ pub fn knowledge_source_rename(session: State<'_, Session>, id: i64, name: Strin
 /// "Search".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/rag/rag_rules.rs`: `search_base`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn knowledge_search(session: State<'_, Session>, base: i64, question: String) -> Result<Vec<String>, ViewError> {
     ensure!(question.len() <= MAX_FIELD, ViewError::Invalid("the question is too long".to_owned()));
 

@@ -216,7 +216,7 @@ pub struct IntegrationFields {
 /// `objects/ai/integration/integration_store.rs`: `read_integrations`;
 /// `objects/user/program_data/program_data_store.rs`: `read_settings`; `objects/ai/api_key/api_key_rules.rs`:
 /// `has_key`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationView>, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -258,7 +258,7 @@ pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationVi
 /// when the form opens and when the protocol of a new integration changes.
 /// Calls: [`protocol_of`]; `objects/ai/integration/integration_rules/settings.rs`: `new_integration`;
 /// [`protocol_name`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn integration_form(protocol: Option<String>) -> Result<IntegrationFormView, ViewError> {
     let chosen = match protocol {
         Some(name) => protocol_of(&name)?,
@@ -294,7 +294,7 @@ pub fn integration_form(protocol: Option<String>) -> Result<IntegrationFormView,
 /// `ui/src/views/settings/IntegrationForm.svelte`, "Add the integration".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; [`integration_of`];
 /// `objects/ai/integration/integration_rules/settings.rs`: `add_integration`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn integration_create(session: State<'_, Session>, fields: IntegrationFields) -> Result<i64, ViewError> {
     let integration = integration_of(fields)?;
     let opened = session.lock()?;
@@ -313,7 +313,7 @@ pub fn integration_create(session: State<'_, Session>, fields: IntegrationFields
 /// "Save".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; [`integration_of`];
 /// `objects/ai/integration/integration_rules/settings.rs`: `change_integration`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn integration_save(session: State<'_, Session>, fields: IntegrationFields) -> Result<(), ViewError> {
     let integration = integration_of(fields)?;
     let opened = session.lock()?;
@@ -327,7 +327,7 @@ pub fn integration_save(session: State<'_, Session>, fields: IntegrationFields) 
 /// `ui/src/views/settings/IntegrationList.svelte`, "Make active".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn integration_activate(session: State<'_, Session>, id: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
 
@@ -341,7 +341,7 @@ pub fn integration_activate(session: State<'_, Session>, id: i64) -> Result<(), 
 /// `ui/src/views/settings/IntegrationForm.svelte`, "Store the key".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/api_key/api_key_rules.rs`: `set_key`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn integration_set_key(session: State<'_, Session>, id: i64, key: String) -> Result<(), ViewError> {
     let opened = session.lock()?;
 

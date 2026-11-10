@@ -135,7 +135,7 @@ fn summary_of(plan: EvaluationPlan) -> EvaluationSummaryView {
 /// when the panel opens and after a change.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plans`; [`summary_of`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_list(session: State<'_, Session>) -> Result<Vec<EvaluationSummaryView>, ViewError> {
     let opened = session.lock()?;
     let mut evaluations = Vec::new();
@@ -162,7 +162,7 @@ pub fn evaluation_list(session: State<'_, Session>) -> Result<Vec<EvaluationSumm
 /// `ui/src/views/evaluation/Evaluations.svelte`, "Begin the evaluation".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `new_evaluation`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_create(
     session: State<'_, Session>,
     plan: i64,
@@ -236,7 +236,7 @@ fn input_views(db: &UserDatabase, id: i64) -> Result<(Vec<DocumentInputView>, Ve
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`; [`input_views`];
 /// `objects/ai/agent/agent_store.rs`: `read_agents`; [`summary_of`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_get(session: State<'_, Session>, id: i64) -> Result<EvaluationView, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -269,7 +269,7 @@ pub fn evaluation_get(session: State<'_, Session>, id: i64) -> Result<Evaluation
 /// `ui/src/views/evaluation/EvaluationEditor.svelte`, the choice of the agent.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `change_agent`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_set_agent(session: State<'_, Session>, id: i64, agent: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
 

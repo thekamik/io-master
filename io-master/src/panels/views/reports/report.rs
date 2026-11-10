@@ -69,7 +69,7 @@ fn summary_of(plan: EvaluationPlan) -> ReportSummaryView {
 /// the panel opens.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plans`; [`summary_of`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn report_list(session: State<'_, Session>) -> Result<Vec<ReportSummaryView>, ViewError> {
     let opened = session.lock()?;
     let mut evaluations = Vec::new();
@@ -95,7 +95,7 @@ pub fn report_list(session: State<'_, Session>) -> Result<Vec<ReportSummaryView>
 /// when an evaluation and a template are chosen.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/report_template/report_template_rules/filling.rs`: `filled_report`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn report_preview(session: State<'_, Session>, evaluation: i64, template: i64) -> Result<String, ViewError> {
     let opened = session.lock()?;
 

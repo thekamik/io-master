@@ -73,7 +73,7 @@ pub struct MarkerGroupView {
 /// `ui/src/views/reports/ReportTemplates.svelte` and `ui/src/views/reports/Reports.svelte`, when they open.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/report_template/report_template_store.rs`: `read_report_templates`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn report_template_list(session: State<'_, Session>) -> Result<Vec<TemplateSummaryView>, ViewError> {
     let opened = session.lock()?;
     let templates = read_report_templates(database(opened.as_ref())?)?;
@@ -97,7 +97,7 @@ pub fn report_template_list(session: State<'_, Session>) -> Result<Vec<TemplateS
 /// `ui/src/views/reports/ReportTemplates.svelte`, "New template".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/report_template/report_template_rules/templates.rs`: `new_template`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn report_template_create(session: State<'_, Session>, name: String) -> Result<i64, ViewError> {
     ensure!(name.len() <= MAX_FIELD, ViewError::Invalid("the name is too long".to_owned()));
 
@@ -118,7 +118,7 @@ pub fn report_template_create(session: State<'_, Session>, name: String) -> Resu
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/report_template/report_template_store.rs`: `read_report_template`;
 /// `objects/evaluation/report_template/report_template_rules/markers.rs`: `template_warnings`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn report_template_get(session: State<'_, Session>, id: i64) -> Result<TemplateView, ViewError> {
     let opened = session.lock()?;
     let template = read_report_template(database(opened.as_ref())?, id)?;
@@ -140,7 +140,7 @@ pub fn report_template_get(session: State<'_, Session>, id: i64) -> Result<Templ
 /// `ui/src/views/reports/TemplateEditor.svelte`, "Save".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/report_template/report_template_rules/templates.rs`: `change_template`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn report_template_save(
     session: State<'_, Session>,
     id: i64,
@@ -231,7 +231,7 @@ pub fn report_template_export(app: AppHandle, session: State<'_, Session>, id: i
 /// when it opens.
 /// Calls: `objects/evaluation/report_template/report_template_rules/markers.rs`: `known_markers`,
 /// `block_tags`, `element_markers`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn report_markers() -> Vec<MarkerGroupView> {
     let mut groups = Vec::with_capacity(LISTS.len() + 1);
 

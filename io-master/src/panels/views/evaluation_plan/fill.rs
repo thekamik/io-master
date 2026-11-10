@@ -112,7 +112,7 @@ pub async fn plan_fill_dependencies(session: State<'_, Session>, plan: i64) -> R
 /// `ui/src/views/evaluation_plan/PlanFill.svelte`, before a filling starts.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillPreviewView, ViewError> {
     let opened = session.lock()?;
     let preview = fill_preview(database(opened.as_ref())?, plan)?;
@@ -127,7 +127,7 @@ pub fn plan_fill_preview(session: State<'_, Session>, plan: i64) -> Result<FillP
 /// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillProgress`, from
 /// `ui/src/views/evaluation_plan/PlanFill.svelte`, while a filling runs and when it is shown.
 /// Calls: `panels/views/progress.rs`: `progress_of`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn plan_fill_progress(session: State<'_, Session>, plan: i64) -> Result<Option<ProgressView>, ViewError> {
     progress_of(&session, plan)
 }
@@ -138,7 +138,7 @@ pub fn plan_fill_progress(session: State<'_, Session>, plan: i64) -> Result<Opti
 /// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillStop`, from
 /// `ui/src/views/evaluation_plan/PlanFill.svelte`, "Stop".
 /// Calls: `panels/session.rs`: `Session::request_stop`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn plan_fill_stop(session: State<'_, Session>) -> Result<(), ViewError> {
     Ok(session.request_stop()?)
 }

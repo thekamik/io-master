@@ -329,7 +329,7 @@ fn role_of(view: RoleView) -> Result<AgentRole, ViewError> {
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/agent/agent_store.rs`: `read_agents`; `objects/ai/integration/integration_store.rs`:
 /// `read_integration`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn agent_list(session: State<'_, Session>) -> Result<Vec<AgentSummaryView>, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -364,7 +364,7 @@ pub fn agent_list(session: State<'_, Session>) -> Result<Vec<AgentSummaryView>, 
 /// agent".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/agent/agent_rules.rs`: `new_agent`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn agent_create(
     session: State<'_, Session>,
     name: String,
@@ -397,7 +397,7 @@ pub fn agent_create(
 /// `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/integration/integration_store.rs`:
 /// `read_integrations`; `objects/ai/rag/rag_store.rs`: `read_knowledge_bases`; `objects/ai/agent/agent_rules.rs`:
 /// `agent_warnings`; [`role_view`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -515,7 +515,7 @@ fn agent_of(fields: AgentFields) -> Result<Agent, ViewError> {
 /// Called by: `ui/src/lib/api/agents.ts`: `agentSave`, from `ui/src/views/agents/AgentEditor.svelte`, "Save".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; [`agent_of`];
 /// `objects/ai/agent/agent_rules.rs`: `change_agent`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn agent_save(session: State<'_, Session>, fields: AgentFields) -> Result<(), ViewError> {
     let agent = agent_of(fields)?;
     let opened = session.lock()?;
@@ -537,7 +537,7 @@ pub fn agent_save(session: State<'_, Session>, fields: AgentFields) -> Result<()
 /// "Show the knowledge".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/agent/agent_ai.rs`: `agent_knowledge`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn agent_knowledge_test(session: State<'_, Session>, id: i64, question: String) -> Result<Vec<String>, ViewError> {
     ensure!(question.len() <= MAX_FIELD, ViewError::Invalid("the question is too long".to_owned()));
 

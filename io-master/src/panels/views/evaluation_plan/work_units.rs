@@ -106,7 +106,7 @@ fn standard_title(db: &UserDatabase, id: i64) -> Result<String, ViewError> {
 /// `ui/src/views/evaluation_plan/WorkUnitEditor.svelte` (the dependencies to choose).
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`; [`standard_title`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<WorkUnitRowView>, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -158,7 +158,7 @@ pub fn work_unit_list(session: State<'_, Session>, plan: i64) -> Result<Vec<Work
 /// `ui/src/views/evaluation_plan/PlanWorkUnits.svelte`, when a standard is chosen to add from.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `available_controls`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn work_unit_controls(
     session: State<'_, Session>,
     plan: i64,
@@ -191,7 +191,7 @@ pub fn work_unit_controls(
 /// `ui/src/views/evaluation_plan/PlanWorkUnits.svelte`, "Add" at a control.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `add_work_unit`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn work_unit_add(
     session: State<'_, Session>,
     plan: i64,
@@ -223,7 +223,7 @@ pub fn work_unit_add_all(session: State<'_, Session>, plan: i64, standard: i64) 
 /// `ui/src/views/evaluation_plan/PlanWorkUnits.svelte`, "Remove" at a work unit.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`: `remove_work_unit`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Result<(), ViewError> {
     let opened = session.lock()?;
 
@@ -244,7 +244,7 @@ pub fn work_unit_remove(session: State<'_, Session>, plan: i64, unit: i64) -> Re
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
 /// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; `objects/ai/agent/agent_store.rs`:
 /// `read_agents`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn work_unit_get(session: State<'_, Session>, unit: i64) -> Result<WorkUnitView, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -309,7 +309,7 @@ pub struct WorkUnitFields {
 /// `ui/src/views/evaluation_plan/WorkUnitEditor.svelte`, "Save".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `update_work_unit_parameters`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn work_unit_save(session: State<'_, Session>, fields: WorkUnitFields) -> Result<(), ViewError> {
     let opened = session.lock()?;
     let parameters = WorkUnitParameters {
@@ -330,7 +330,7 @@ pub fn work_unit_save(session: State<'_, Session>, fields: WorkUnitFields) -> Re
 /// `ui/src/views/evaluation_plan/WorkUnitEditor.svelte`, "Add a proof".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn work_unit_add_proof(session: State<'_, Session>, plan: i64, unit: i64, name: String) -> Result<i64, ViewError> {
     let opened = session.lock()?;
 

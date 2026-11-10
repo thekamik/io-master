@@ -38,7 +38,7 @@ pub struct StandardView {
 /// `ui/src/views/evaluation_plan/EvaluationPlan.svelte`, when the panel opens and after an import.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`: `read_oscal_standard_documents`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn standard_list(session: State<'_, Session>) -> Result<Vec<StandardView>, ViewError> {
     let opened = session.lock()?;
     let mut standards = Vec::new();

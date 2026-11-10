@@ -90,7 +90,7 @@ fn preview_view(found: Preview) -> AssessPreviewView {
 /// `ui/src/views/evaluation/EvaluationUnits.svelte`, before an assessment starts.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `preview`; [`preview_view`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_assess_preview(
     session: State<'_, Session>,
     id: i64,
@@ -140,7 +140,7 @@ pub async fn evaluation_assess(session: State<'_, Session>, id: i64, again: bool
 /// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationAssessProgress`, from
 /// `ui/src/views/evaluation/EvaluationRun.svelte`, while an assessment runs and when it is shown.
 /// Calls: `panels/views/progress.rs`: `progress_of`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_assess_progress(session: State<'_, Session>, id: i64) -> Result<Option<ProgressView>, ViewError> {
     progress_of(&session, id)
 }
@@ -151,7 +151,7 @@ pub fn evaluation_assess_progress(session: State<'_, Session>, id: i64) -> Resul
 /// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationAssessStop`, from
 /// `ui/src/views/evaluation/EvaluationUnits.svelte`, "Stop".
 /// Calls: `panels/session.rs`: `Session::request_stop`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_assess_stop(session: State<'_, Session>) -> Result<(), ViewError> {
     Ok(session.request_stop()?)
 }

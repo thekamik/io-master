@@ -186,7 +186,7 @@ fn row_of(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> Res
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `units_in_order`; [`row_of`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_unit_list(session: State<'_, Session>, id: i64) -> Result<Vec<UnitRowView>, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -319,7 +319,7 @@ fn unit_view(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> 
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`; [`unit_view`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_unit_get(session: State<'_, Session>, id: i64, unit: i64) -> Result<UnitView, ViewError> {
     let opened = session.lock()?;
     let db = database(opened.as_ref())?;
@@ -382,7 +382,7 @@ pub struct ResultsFields {
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`; `panels/session.rs`:
 /// `Session::is_working`; [`verdict_of`]; `objects/evaluation/work_unit/work_unit_rules/results.rs`:
 /// `save_results`.
-#[tauri::command]
+#[tauri::command(async)]
 pub fn evaluation_unit_save(
     session: State<'_, Session>,
     id: i64,

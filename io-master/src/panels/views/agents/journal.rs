@@ -90,7 +90,7 @@ fn row_of(entry: &JournalEntry) -> JournalRowView {
 /// an agent is opened and for "Older".
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/journal/journal_store.rs`: `read_journal_entries`; [`row_of`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn agent_journal_list(
     session: State<'_, Session>,
     agent: i64,
@@ -118,7 +118,7 @@ pub fn agent_journal_list(
 /// an entry is opened.
 /// Calls: `panels/session.rs`: `Session::lock`; `panels/views/opened.rs`: `database`;
 /// `objects/ai/journal/journal_store.rs`: `read_journal_entry`; [`row_of`].
-#[tauri::command]
+#[tauri::command(async)]
 pub fn agent_journal_get(session: State<'_, Session>, id: i64) -> Result<JournalEntryView, ViewError> {
     let opened = session.lock()?;
     let entry = read_journal_entry(database(opened.as_ref())?, id)?;

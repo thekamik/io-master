@@ -65,7 +65,8 @@ pub fn document_file(path: &Path) -> Result<Vec<u8>, DomainError> {
 /// file that is neither a PDF nor UTF-8 or holds no text,
 /// `DomainError::Pdf` for a PDF that cannot be read.
 ///
-/// Called by: [`give_document`].
+/// Called by: `panels/views/evaluation/inputs.rs`: `evaluation_document_give`, before it
+/// takes the lock of the session: a large PDF takes its time.
 /// Calls: `infrastructure/pdf/poppler.rs`: `text`.
 pub fn document_text(content: &[u8]) -> Result<String, DomainError> {
     let text = if content.starts_with(PDF_SIGNATURE) {
@@ -81,18 +82,21 @@ pub fn document_text(content: &[u8]) -> Result<String, DomainError> {
 }
 
 /// Gives the document `document` of the evaluation `evaluation` its file
-/// `content` and its version `version`.
+/// `content` with the text `text` read from it, and its version `version`.
+/// The text is read by the caller before the database is locked, so that a
+/// large PDF does not hold the other commands of the window up.
 ///
 /// Input: `evaluation`, the id of an evaluation in progress; `document`, the
 /// id of one of its places of documents; `content`, the file from
-/// [`document_file`]; `version`, the version typed ("1.2").
+/// [`document_file`]; `text`, its text from [`document_text`], not empty;
+/// `version`, the version typed ("1.2").
 /// Output: nothing; `DomainError::Refused` unless the evaluation is in
-/// progress, the place is one of its documents and the file holds a text;
+/// progress, the place is one of its documents and the text holds something;
 /// its store refuses a document given already.
 ///
 /// Called by: `panels/views/evaluation/inputs.rs`: `evaluation_document_give`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
-/// `objects/text.rs`: `checked_text`; [`document_text`];
+/// `objects/text.rs`: `checked_text`;
 /// `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
 /// `update_product_document` (which indexes the text).
 pub fn give_document(
@@ -100,8 +104,11 @@ pub fn give_document(
     evaluation: i64,
     document: i64,
     content: Vec<u8>,
+    text: &str,
     version: &str,
 ) -> Result<(), DomainError> {
+    ensure!(!text.trim().is_empty(), DomainError::Refused("the file holds no text".to_owned()));
+
     let stored = evaluation_in_progress(db, evaluation)?;
 
     ensure!(
@@ -110,11 +117,10 @@ pub fn give_document(
     );
 
     let version = checked_text(version, "the version of the document", MAX_VERSION)?;
-    let text = document_text(&content)?;
     let place = read_product_document(db, document)?;
     let given = ProductDocument { content: Some(content), version: Some(version), ..place };
 
-    Ok(update_product_document(db, &given, Some(&text))?)
+    Ok(update_product_document(db, &given, Some(text))?)
 }
 
 /// The fields of a document of the product a report writes
@@ -151,15 +157,19 @@ mod tests {
         let id = evaluation_needing_inputs(&db);
         let document = read_evaluation_plan(&db, id).unwrap().product_documents[0];
 
-        assert!(matches!(give_document(&db, id, document, vec![0xff, 0xfe], "1.0"), Err(DomainError::Refused(_))));
-        assert!(matches!(give_document(&db, id, 999, b"text".to_vec(), "1.0"), Err(DomainError::Refused(_))));
+        assert!(matches!(document_text(&[0xff, 0xfe]), Err(DomainError::Refused(_))));
+        assert!(matches!(give_document(&db, id, document, b" ".to_vec(), " ", "1.0"), Err(DomainError::Refused(_))));
+        assert!(matches!(give_document(&db, id, 999, b"text".to_vec(), "text", "1.0"), Err(DomainError::Refused(_))));
 
-        give_document(&db, id, document, pdf(&["The TOE is a router."]), " 1.3 ").unwrap();
+        let file = pdf(&["The TOE is a router."]);
+        let text = document_text(&file).unwrap();
+
+        give_document(&db, id, document, file, &text, " 1.3 ").unwrap();
 
         let given = read_product_document(&db, document).unwrap();
 
         assert_eq!(given.version.as_deref(), Some("1.3"));
         assert!(document_text(&given.content.unwrap()).unwrap().contains("The TOE is a router."));
-        assert!(matches!(give_document(&db, id, document, b"other".to_vec(), "1.4"), Err(DomainError::Db(_))));
+        assert!(matches!(give_document(&db, id, document, b"other".to_vec(), "other", "1.4"), Err(DomainError::Db(_))));
     }
 }
