@@ -27,6 +27,7 @@
 ### The documents
 
 - **The documents describe the present state of the code**, only what is; the history is in git. A change of the code changes its documents in the same commit, `docs/architecture_map.md` included.
+- `docs/changelog.md` (user, 2026-11-10) is the one document of the history: what changed on `test_branch` since the last stable version (`V0.3`), by what a tester sees, with what was tried and what was not. A change a tester would notice is added to it in its commit; it starts anew when a stable version is made.
 - `docs/todo.md` lists only the open work. `README.md` is written for programmers: the architecture in short (the three groups, the roles of the files of an object, where a new function goes), how to build and test, every dependency with why it is there.
 - Descriptions of the architecture are in `docs/`, as Markdown with schemes, never repeated over the code.
 

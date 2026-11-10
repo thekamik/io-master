@@ -10,6 +10,10 @@ Read this file, `CLAUDE.md`, `docs/data_model.md`, `docs/code_structure.md` and 
 - **The assessment by the AI** (`docs/architecture.md`, section 6): every text of a question is a template of the agent or of its role, filled in one pass (`objects/ai/agent/agent_ai.rs`: `filled`); the verdict is the model's, the quotes checked by the program, a dependency that did not pass warned of, an answer cut or refused not taken, a work unit without evidence not assessed.
 - The data of the tests is temporary until version 1: after a change of a table, remove `~/.local/share/io-master` and start anew.
 
+## Since `V0.3`
+
+`test_branch` holds the changes of the verification of 2026-11-10 (security, the first start, the assessment by the AI, the knowledge of an agent, speed), the models and the tables unchanged: `docs/changelog.md`, with what was tried in the window and what was not. Running needs the package `bubblewrap` beside `poppler-utils`.
+
 ## What comes next
 
 The tests and verification of the beta, and what the user chooses from `docs/todo.md`; the review of the code in `review.md`.
