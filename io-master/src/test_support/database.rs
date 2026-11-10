@@ -122,6 +122,7 @@ pub fn agent(integration: i64) -> Agent {
         max_passages: 8,
         max_characters: 12_000,
         max_answer_tokens: 16_000,
+        temperature: None,
         system_template: NEW_SYSTEM_TEMPLATE.to_owned(),
         knowledge_template: NEW_KNOWLEDGE_TEMPLATE.to_owned(),
         passage_template: NEW_PASSAGE_TEMPLATE.to_owned(),

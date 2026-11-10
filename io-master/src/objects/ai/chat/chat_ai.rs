@@ -267,6 +267,7 @@ mod tests {
             system: String::new(),
             messages,
             max_answer_tokens: 100,
+            temperature: None,
         };
         // 300 tokens for the question, about 900 characters: the last
         // question fits, the first question and its answer with it do not.

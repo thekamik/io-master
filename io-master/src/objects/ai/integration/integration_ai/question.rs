@@ -98,6 +98,9 @@ pub struct Question {
     /// The longest answer asked for, in tokens: that of the agent, or that
     /// of the check of an integration; asked whole, never lowered.
     pub max_answer_tokens: u32,
+    /// The temperature asked for, in hundredths (`Some(20)` is 0.2): that of
+    /// the agent; `None` asks for none.
+    pub temperature: Option<u32>,
 }
 
 /// A question ready to be sent, with what its entry of the journal needs.
@@ -195,7 +198,14 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
     let estimated_tokens = check_size(&integration, &question.system, &turns, question.max_answer_tokens)?;
 
     let time = now().map_err(|error| AiError::Refused(error.to_string()))?;
-    let body = body(integration.protocol, &integration.model, &question.system, &turns, question.max_answer_tokens);
+    let body = body(
+        integration.protocol,
+        &integration.model,
+        &question.system,
+        &turns,
+        question.max_answer_tokens,
+        question.temperature,
+    );
     let request = Request {
         url: integration.url,
         ca_certificate: integration.ca_certificate,
@@ -312,6 +322,7 @@ mod tests {
             system: "Be brief.".to_owned(),
             messages: vec![Message { speaker: Speaker::User, text: text.to_owned(), time: 0 }],
             max_answer_tokens: 100,
+            temperature: None,
         }
     }
 

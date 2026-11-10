@@ -36,6 +36,8 @@
   let maxPassages: number | null = $state(null);
   let maxCharacters: number | null = $state(null);
   let maxAnswerTokens: number | null = $state(null);
+  // As typed (0.2); the agent keeps it in hundredths. Empty: none is asked for.
+  let temperature: number | null = $state(null);
   let systemTemplate = $state("");
   let knowledgeTemplate = $state("");
   let passageTemplate = $state("");
@@ -60,6 +62,7 @@
       maxPassages = view.maxPassages;
       maxCharacters = view.maxCharacters;
       maxAnswerTokens = view.maxAnswerTokens;
+      temperature = view.temperature === null ? null : view.temperature / 100;
       systemTemplate = view.systemTemplate;
       knowledgeTemplate = view.knowledgeTemplate;
       passageTemplate = view.passageTemplate;
@@ -100,6 +103,7 @@
         maxPassages,
         maxCharacters,
         maxAnswerTokens,
+        temperature: typeof temperature === "number" ? Math.round(temperature * 100) : null,
         systemTemplate,
         knowledgeTemplate,
         passageTemplate,
@@ -213,6 +217,10 @@
             bind:value={maxAnswerTokens}
             required
           />
+        </label>
+        <label>
+          Temperature (empty: that of the service)
+          <input type="number" min="0" max={view.limits.maxTemperature / 100} step="0.01" bind:value={temperature} />
         </label>
       </div>
 

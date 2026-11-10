@@ -170,6 +170,7 @@ mod tests {
             system: "Be brief.".to_owned(),
             messages: vec![Message { speaker: Speaker::User, text: text.to_owned(), time: 0 }],
             max_answer_tokens: 16_000,
+            temperature: None,
         }
     }
 

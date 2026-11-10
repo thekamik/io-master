@@ -11,7 +11,7 @@
 //! read_event    ──►   openai.rs: read_event   anthropic.rs: read_event
 //! ```
 
-use serde_json::Value;
+use serde_json::{Value, json};
 use zeroize::Zeroizing;
 
 use crate::objects::ai::integration::integration_ai::reading::Reading;
@@ -48,17 +48,35 @@ pub fn needs_key(protocol: Protocol) -> bool {
 /// - `turns`: the conversation, starting with the user (`turns.rs`).
 /// - `answer_tokens`: the longest answer, at least 1; the chat completions
 ///   of `OpenAI` do not take it.
+/// - `temperature`: the temperature of the agent in hundredths (`Some(20)`
+///   is written 0.2); `None` writes none.
 ///
 /// Output: the body as JSON (`{"model": "llama3.1", "stream": true, ...}`).
 ///
 /// Called by: `objects/ai/integration/integration_ai/question.rs`: `prepare`.
 /// Calls: `objects/ai/integration/integration_ai/openai.rs`: `body`;
 /// `objects/ai/integration/integration_ai/anthropic.rs`: `body`.
-pub fn body(protocol: Protocol, model: &str, system: &str, turns: &[Turn], answer_tokens: u32) -> Value {
-    match protocol {
+pub fn body(
+    protocol: Protocol,
+    model: &str,
+    system: &str,
+    turns: &[Turn],
+    answer_tokens: u32,
+    temperature: Option<u32>,
+) -> Value {
+    let mut body = match protocol {
         Protocol::OpenAiChat => openai::body(model, system, turns),
         Protocol::AnthropicMessages => anthropic::body(model, system, turns, answer_tokens),
+    };
+
+    // Both protocols name it "temperature", a number; none is asked for
+    // when the agent gives none (a model that refuses the parameter). The
+    // body of either protocol is an object.
+    if let (Some(hundredths), Some(fields)) = (temperature, body.as_object_mut()) {
+        fields.insert("temperature".to_owned(), json!(f64::from(hundredths) / 100.0));
     }
+
+    body
 }
 
 /// The headers that carry the key `key` in `protocol`.
@@ -106,7 +124,8 @@ pub fn read_event(protocol: Protocol, event: &SseEvent, reading: &mut Reading) -
 
 #[cfg(test)]
 mod tests {
-    //! Tests of the choice of a protocol: the key each one needs.
+    //! Tests of the choice of a protocol: the key each one needs, the
+    //! temperature written into the body of either.
 
     use super::*;
 
@@ -122,5 +141,18 @@ mod tests {
 
         assert_eq!(openai, ["authorization"]);
         assert_eq!(anthropic, ["x-api-key", "anthropic-version"]);
+    }
+
+    #[test]
+    fn a_temperature_is_written_only_when_the_agent_gives_one() {
+        for protocol in [Protocol::OpenAiChat, Protocol::AnthropicMessages] {
+            let without = body(protocol, "m", "", &[], 100, None);
+            let with = body(protocol, "m", "", &[], 100, Some(20));
+            let zero = body(protocol, "m", "", &[], 100, Some(0));
+
+            assert!(without.get("temperature").is_none());
+            assert_eq!(with["temperature"].to_string(), "0.2");
+            assert_eq!(zero["temperature"].to_string(), "0.0");
+        }
     }
 }

@@ -14,7 +14,7 @@
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_model::{Agent, GlossaryEntry};
 use crate::objects::ai::agent::agent_store::{
-    MAX_ANSWER_TOKENS, MAX_CHARACTERS, MAX_TEMPLATE, MAX_TERMS, create_agent, read_agent, update_agent,
+    MAX_ANSWER_TOKENS, MAX_CHARACTERS, MAX_TEMPERATURE, MAX_TEMPLATE, MAX_TERMS, create_agent, read_agent, update_agent,
 };
 use crate::objects::ai::agent_roles::agent_roles_rules::{checked_role, new_role, role_warnings, template_warnings};
 use crate::objects::ai::agent_roles::agent_roles_store::role_name;
@@ -103,6 +103,7 @@ pub fn new_agent(db: &UserDatabase, name: &str, integration: i64, role: &str) ->
         max_passages: NEW_PASSAGES,
         max_characters: NEW_CHARACTERS,
         max_answer_tokens: NEW_ANSWER_TOKENS,
+        temperature: None,
         system_template: NEW_SYSTEM_TEMPLATE.to_owned(),
         knowledge_template: NEW_KNOWLEDGE_TEMPLATE.to_owned(),
         passage_template: NEW_PASSAGE_TEMPLATE.to_owned(),
@@ -206,6 +207,10 @@ fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
         (MIN_ANSWER_TOKENS..=MAX_ANSWER_TOKENS).contains(&agent.max_answer_tokens),
         DomainError::Refused(format!("the longest answer: from {MIN_ANSWER_TOKENS} to {MAX_ANSWER_TOKENS} tokens"))
     );
+    ensure!(
+        agent.temperature.is_none_or(|temperature| temperature <= MAX_TEMPERATURE),
+        DomainError::Refused("the temperature: from 0 to 2, or none".to_owned())
+    );
     read_integration(db, agent.integration)?;
 
     let mut bases = Vec::with_capacity(agent.knowledge_bases.len());
@@ -228,6 +233,7 @@ fn checked(db: &UserDatabase, agent: &Agent) -> Result<Agent, DomainError> {
         max_passages: agent.max_passages,
         max_characters: agent.max_characters,
         max_answer_tokens: agent.max_answer_tokens,
+        temperature: agent.temperature,
         system_template: checked_text(&agent.system_template, "the template of the message", MAX_TEMPLATE)?,
         knowledge_template: checked_text(&agent.knowledge_template, "the template of the knowledge", MAX_TEMPLATE)?,
         passage_template: checked_text(&agent.passage_template, "the template of a passage", MAX_TEMPLATE)?,
@@ -293,10 +299,17 @@ mod tests {
             vec![GlossaryEntry { term: "TSF".to_owned(), meaning: "TOE Security Functionality".to_owned() }]
         );
 
+        // A temperature is kept as given, and none again.
+        change_agent(&db, &Agent { temperature: Some(20), ..stored.clone() }).unwrap();
+        assert_eq!(read_agent(&db, stored.id).unwrap().temperature, Some(20));
+        change_agent(&db, &stored).unwrap();
+        assert_eq!(read_agent(&db, stored.id).unwrap().temperature, None);
+
         let refused = [
             Agent { name: " ".to_owned(), ..stored.clone() },
             Agent { max_passages: 0, ..stored.clone() },
             Agent { max_characters: 10, ..stored.clone() },
+            Agent { temperature: Some(MAX_TEMPERATURE + 1), ..stored.clone() },
             Agent { system_template: " ".to_owned(), ..stored.clone() },
             Agent { glossary: vec![GlossaryEntry { term: "ST".to_owned(), meaning: String::new() }], ..stored.clone() },
         ];

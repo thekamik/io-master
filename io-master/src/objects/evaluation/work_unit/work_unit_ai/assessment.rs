@@ -59,8 +59,10 @@ pub(in crate::objects::evaluation) fn prepared_assessment(
             // documents, and what would let it see them whole (user, 2026-11-02).
             let note = format!(
                 "The documents did not fit the context of the model (about {estimated} tokens, room for {room}): only \
-                 their passages that fit the work unit were given. Split the documents into smaller parts, or choose \
-                 a model with a larger context in the AI settings."
+                 their passages that fit the work unit were given. To be checked by the evaluator: what the model \
+                 found missing may stand in a part it did not see, so a verdict other than a pass is not to be relied \
+                 on until the documents are read. Split the documents into smaller parts, or choose a model with a \
+                 larger context in the AI settings."
             );
 
             Ok((prepare(db, &assessment_question(db, evaluation, unit, false)?)?, vec![note]))

@@ -35,6 +35,11 @@ pub const MAX_CHARACTERS: u32 = 40_000;
 /// The longest answer an agent may ask for, in tokens.
 pub const MAX_ANSWER_TOKENS: u32 = 64_000;
 
+/// The highest temperature an agent may ask for, in hundredths: 2.0, the
+/// most a service takes (the chat completions of `OpenAI`; the messages of
+/// Anthropic take up to 1.0 and refuse more themselves).
+pub const MAX_TEMPERATURE: u32 = 200;
+
 /// The longest template of an agent, in characters.
 pub const MAX_TEMPLATE: usize = 20_000;
 
@@ -48,6 +53,7 @@ pub const SCHEMA: &str = "
         max_passages      INTEGER NOT NULL,
         max_characters    INTEGER NOT NULL,
         max_answer_tokens INTEGER NOT NULL,
+        temperature       INTEGER,
         system_template    TEXT NOT NULL,
         knowledge_template TEXT NOT NULL,
         passage_template   TEXT NOT NULL,
@@ -74,7 +80,7 @@ pub const SCHEMA: &str = "
 
 /// The columns every read of an agent selects.
 const COLUMNS: &str = "id, name, integration, instructions, max_passages, max_characters, max_answer_tokens, \
-                       system_template, knowledge_template, passage_template, chat_search, role";
+                       temperature, system_template, knowledge_template, passage_template, chat_search, role";
 
 /// Refuses an agent that does not hold together: lists over their limits, no
 /// name, limits of its knowledge over the program's, a template over
@@ -104,6 +110,10 @@ fn check_agent(agent: &Agent) -> Result<(), DbError> {
     ensure!(
         (1..=MAX_ANSWER_TOKENS).contains(&agent.max_answer_tokens),
         DbError::Inconsistent(format!("an answer of an agent over {MAX_ANSWER_TOKENS} tokens, or of none"))
+    );
+    ensure!(
+        agent.temperature.is_none_or(|temperature| temperature <= MAX_TEMPERATURE),
+        DbError::Inconsistent(format!("a temperature of an agent over {MAX_TEMPERATURE} hundredths"))
     );
     check_agent_role(&agent.role)?;
 
@@ -187,9 +197,9 @@ pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
 
     transaction.execute(
         "INSERT INTO ai_agents (name, integration, instructions, max_passages, max_characters, max_answer_tokens,
-                                system_template, knowledge_template, passage_template, chat_search, role)
+                                temperature, system_template, knowledge_template, passage_template, chat_search, role)
          VALUES (:name, :integration, :instructions, :max_passages, :max_characters, :max_answer_tokens,
-                 :system_template, :knowledge_template, :passage_template, :chat_search, :role)",
+                 :temperature, :system_template, :knowledge_template, :passage_template, :chat_search, :role)",
         named_params! {
             ":name": agent.name,
             ":integration": agent.integration,
@@ -197,6 +207,7 @@ pub fn create_agent(db: &UserDatabase, agent: &Agent) -> Result<i64, DbError> {
             ":max_passages": agent.max_passages,
             ":max_characters": agent.max_characters,
             ":max_answer_tokens": agent.max_answer_tokens,
+            ":temperature": agent.temperature,
             ":system_template": agent.system_template,
             ":knowledge_template": agent.knowledge_template,
             ":passage_template": agent.passage_template,
@@ -229,6 +240,7 @@ fn agent_of(row: &Row<'_>, role: AgentRole) -> Result<Agent, DbError> {
         max_passages: row.get("max_passages")?,
         max_characters: row.get("max_characters")?,
         max_answer_tokens: row.get("max_answer_tokens")?,
+        temperature: row.get("temperature")?,
         system_template: row.get("system_template")?,
         knowledge_template: row.get("knowledge_template")?,
         passage_template: row.get("passage_template")?,
@@ -353,7 +365,8 @@ pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
     let changed = transaction.execute(
         "UPDATE ai_agents SET name = :name, integration = :integration, instructions = :instructions,
                 max_passages = :max_passages, max_characters = :max_characters,
-                max_answer_tokens = :max_answer_tokens, system_template = :system_template,
+                max_answer_tokens = :max_answer_tokens, temperature = :temperature,
+                system_template = :system_template,
                 knowledge_template = :knowledge_template, passage_template = :passage_template,
                 chat_search = :chat_search
          WHERE id = :id AND role = :role",
@@ -365,6 +378,7 @@ pub fn update_agent(db: &UserDatabase, agent: &Agent) -> Result<(), DbError> {
             ":max_passages": agent.max_passages,
             ":max_characters": agent.max_characters,
             ":max_answer_tokens": agent.max_answer_tokens,
+            ":temperature": agent.temperature,
             ":system_template": agent.system_template,
             ":knowledge_template": agent.knowledge_template,
             ":passage_template": agent.passage_template,

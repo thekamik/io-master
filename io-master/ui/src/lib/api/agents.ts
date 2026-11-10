@@ -63,6 +63,7 @@ export interface AgentLimitsView {
   maxCharacters: number;
   minAnswerTokens: number;
   maxAnswerTokens: number;
+  maxTemperature: number;
   maxDocumentPassages: number;
   maxDependencyFindings: number;
   maxSummaryCharacters: number;
@@ -91,6 +92,8 @@ export interface AgentView {
   maxPassages: number;
   maxCharacters: number;
   maxAnswerTokens: number;
+  /** In hundredths (20 is 0.2); null asks the service for none. */
+  temperature: number | null;
   systemTemplate: string;
   knowledgeTemplate: string;
   passageTemplate: string;
@@ -114,6 +117,8 @@ export interface AgentFields {
   maxPassages: number;
   maxCharacters: number;
   maxAnswerTokens: number;
+  /** In hundredths (20 is 0.2); null asks the service for none. */
+  temperature: number | null;
   systemTemplate: string;
   knowledgeTemplate: string;
   passageTemplate: string;

@@ -20,8 +20,6 @@ The beta (`V0.3`, 2026-11-04) has every function; version 1 comes after the full
 
 ## Reminders
 
-- **The temperature of an assessment** (user, 2026-11-02, put off): no `temperature` is sent, so the service answers with its default and the same evidence may get another verdict (10 of 30 work units changed between two runs, the task changed as well). A low temperature for the assessment and "Fill with AI" would make them repeatable. By P6 it is a field of the agent (`Agent`), not of the integration; first to check, with the check of a connection, whether the model takes the parameter (some recent models refuse it).
-
 - **The tokens counted by the service** (user, 2026-11-02): the program estimates the size of a question by `Integration::characters_per_token`, a guard against a local server that shortens a question in silence; after the answer it warns when the service counted fewer than half the estimate (`shortened_warning`). Where the service counts exactly (Anthropic: `/v1/messages/count_tokens`, free; llama.cpp: `/tokenize`), the count could replace the estimate; the chat completions of OpenAI have no such call.
 
 - **The documents kept by the service between the questions** (2026-11-02): every question of an assessment sends the whole ST again (about 55 000 tokens; 30 work units are 1.6 million tokens, a whole CEM many times more). The messages of Anthropic can keep a fixed beginning of the question in their cache (prompt caching, `cache_control`), paid in part: the documents of a work unit put first and marked, the work unit after them. To measure the cost first.

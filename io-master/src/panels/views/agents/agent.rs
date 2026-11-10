@@ -18,7 +18,7 @@ use crate::objects::ai::agent::agent_rules::{
     MAX_INSTRUCTIONS, MIN_ANSWER_TOKENS, MIN_CHARACTERS, agent_warnings, change_agent, new_agent,
 };
 use crate::objects::ai::agent::agent_store::{
-    MAX_ANSWER_TOKENS, MAX_CHARACTERS, MAX_TEMPLATE, read_agent, read_agents,
+    MAX_ANSWER_TOKENS, MAX_CHARACTERS, MAX_TEMPERATURE, MAX_TEMPLATE, read_agent, read_agents,
 };
 use crate::objects::ai::agent_roles::agent_roles_model::{AgentRole, EvaluatorRole, PlannerRole};
 use crate::objects::ai::agent_roles::agent_roles_store::{
@@ -101,6 +101,7 @@ pub struct AgentLimitsView {
     max_characters: u32,
     min_answer_tokens: u32,
     max_answer_tokens: u32,
+    max_temperature: u32,
     max_document_passages: u32,
     max_dependency_findings: u32,
     max_summary_characters: u32,
@@ -133,6 +134,8 @@ pub struct AgentView {
     max_passages: u32,
     max_characters: u32,
     max_answer_tokens: u32,
+    /// In hundredths (`20` is 0.2); none asks the service for none.
+    temperature: Option<u32>,
     system_template: String,
     knowledge_template: String,
     passage_template: String,
@@ -161,6 +164,8 @@ pub struct AgentFields {
     max_passages: u32,
     max_characters: u32,
     max_answer_tokens: u32,
+    /// In hundredths (`20` is 0.2); none asks the service for none.
+    temperature: Option<u32>,
     system_template: String,
     knowledge_template: String,
     passage_template: String,
@@ -431,6 +436,7 @@ pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, View
         max_passages: agent.max_passages,
         max_characters: agent.max_characters,
         max_answer_tokens: agent.max_answer_tokens,
+        temperature: agent.temperature,
         system_template: agent.system_template,
         knowledge_template: agent.knowledge_template,
         passage_template: agent.passage_template,
@@ -443,6 +449,7 @@ pub fn agent_get(session: State<'_, Session>, id: i64) -> Result<AgentView, View
             max_characters: MAX_CHARACTERS,
             min_answer_tokens: MIN_ANSWER_TOKENS,
             max_answer_tokens: MAX_ANSWER_TOKENS,
+            max_temperature: MAX_TEMPERATURE,
             max_document_passages: MAX_DOCUMENT_PASSAGES,
             max_dependency_findings: MAX_DEPENDENCY_FINDINGS,
             max_summary_characters: MAX_SUMMARY_CHARACTERS,
@@ -497,6 +504,7 @@ fn agent_of(fields: AgentFields) -> Result<Agent, ViewError> {
         max_passages: fields.max_passages,
         max_characters: fields.max_characters,
         max_answer_tokens: fields.max_answer_tokens,
+        temperature: fields.temperature,
         system_template: fields.system_template,
         knowledge_template: fields.knowledge_template,
         passage_template: fields.passage_template,

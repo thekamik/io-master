@@ -35,11 +35,13 @@ const REFUSED: &str = "the address of the integration";
 /// `objects/ai/integration/integration_ai/connection.rs`: `exchange`.
 pub fn check_address(url: &str) -> Result<(), DomainError> {
     let parsed = Url::parse(url).map_err(|error| DomainError::Refused(format!("{REFUSED}: {url}: {error}")))?;
-    let local = matches!(parsed.host_str(), Some("127.0.0.1" | "[::1]" | "localhost"));
+    // Only the addresses of this computer themselves: a name ("localhost")
+    // is what the system resolves it to, which may be another computer.
+    let local = matches!(parsed.host_str(), Some("127.0.0.1" | "[::1]"));
 
     ensure!(
         parsed.scheme() == "https" || (parsed.scheme() == "http" && local),
-        DomainError::Refused(format!("{REFUSED}: only https://, or http:// on this computer (127.0.0.1, localhost)"))
+        DomainError::Refused(format!("{REFUSED}: only https://, or http:// on this computer (127.0.0.1 or [::1])"))
     );
     ensure!(
         parsed.username().is_empty() && parsed.password().is_none(),
@@ -89,6 +91,8 @@ mod tests {
     #[test]
     fn plain_http_only_on_this_computer_and_no_password_in_the_address() {
         assert!(check_address("http://127.0.0.1:11434/v1/chat/completions").is_ok());
+        assert!(check_address("http://[::1]:11434/v1/chat/completions").is_ok());
+        assert!(check_address("http://localhost:11434/v1/chat/completions").is_err());
         assert!(check_address("http://example.com/v1/chat/completions").is_err());
         assert!(check_address("https://user:pw@example.com/v1").is_err());
         assert!(check_address("https://api.anthropic.com/v1/messages").is_ok());
@@ -107,7 +111,7 @@ mod tests {
 
         assert_eq!(
             reason,
-            "the address of the integration: only https://, or http:// on this computer (127.0.0.1, localhost)"
+            "the address of the integration: only https://, or http:// on this computer (127.0.0.1 or [::1])"
         );
     }
 }

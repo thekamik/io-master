@@ -37,6 +37,13 @@ pub struct Agent {
     /// refused (user, 2026-11-02).
     pub max_answer_tokens: u32,
 
+    /// The temperature its questions ask for, in hundredths (`Some(20)` is
+    /// 0.2): a low one makes an assessment repeatable, the same evidence
+    /// getting the same verdict. `None` sends none, and the service answers
+    /// with its own; for a model that refuses the parameter (user,
+    /// 2026-11-10).
+    pub temperature: Option<u32>,
+
     /// How its message to the model is laid out (the system prompt):
     /// `{instructions}`, `{knowledge}`, `{task}` (user, 2026-11-02).
     pub system_template: String,

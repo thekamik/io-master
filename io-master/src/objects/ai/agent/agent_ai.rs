@@ -316,6 +316,7 @@ pub fn agent_question(
         system,
         messages,
         max_answer_tokens: stored.max_answer_tokens,
+        temperature: stored.temperature,
     })
 }
 

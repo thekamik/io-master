@@ -31,6 +31,7 @@ pub fn check_question(db: &UserDatabase, id: i64) -> Result<Prepared, AiError> {
         system: String::new(),
         messages: vec![Message { speaker: Speaker::User, text: CHECK_QUESTION.to_owned(), time: 0 }],
         max_answer_tokens: CHECK_ANSWER_TOKENS,
+        temperature: None,
     };
 
     prepare(db, &question)
