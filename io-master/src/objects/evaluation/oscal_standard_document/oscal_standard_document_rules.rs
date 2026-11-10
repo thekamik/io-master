@@ -81,8 +81,10 @@ pub struct CatalogControl {
     /// The text of its part `statement` (with the parts inside it); its
     /// title when it has none.
     pub requirement: String,
-    /// The text of its part `guidance` (with the parts inside it); empty
-    /// when it has none.
+    /// The text of its part `guidance` (with the parts inside it). A
+    /// control without one gives its other parts beside the statement
+    /// here, each under its name: a standard may name its guidance its own
+    /// way ("test-units", "assessment-method"). Empty when it has neither.
     pub guidance: String,
 }
 
@@ -245,6 +247,38 @@ fn parts_named(control: &Value, name: &str) -> Result<String, OscalError> {
     Ok(texts.join("\n"))
 }
 
+/// The text of the parts of a control that are neither its statement nor
+/// its guidance, each under its title, or its name when it has none: what a
+/// standard that names no part `guidance` says about the work beside the
+/// requirement (the test units, the method of the assessment and the
+/// assignment of the verdict of a test case of ETSI TS 103 701).
+///
+/// Input: `control`, a control.
+/// Output: their text, the parts in the order of the control, parted by an
+/// empty line ("test-units:\na) For each ...\n\nassessment-method:\nThe TL
+/// examines ..."); empty when it has none; the errors of [`part_text`].
+///
+/// Called by: [`control_of`].
+/// Calls: [`part_text`].
+fn other_parts(control: &Value) -> Result<String, OscalError> {
+    let mut texts = Vec::new();
+
+    for part in control.get("parts").and_then(Value::as_array).map(Vec::as_slice).unwrap_or_default() {
+        let name = part.get("name").and_then(Value::as_str).unwrap_or_default();
+        let text = part_text(part)?;
+
+        if name == "statement" || name == "guidance" || text.trim().is_empty() {
+            continue;
+        }
+
+        let title = part.get("title").and_then(Value::as_str).unwrap_or(name);
+
+        texts.push(format!("{title}:\n{text}"));
+    }
+
+    Ok(texts.join("\n\n"))
+}
+
 /// The control of the catalog as a work unit is made from it.
 ///
 /// Input: `control`, a control of the catalog.
@@ -253,11 +287,12 @@ fn parts_named(control: &Value, name: &str) -> Result<String, OscalError> {
 /// its id, the errors of [`parts_named`].
 ///
 /// Called by: [`catalog_controls`].
-/// Calls: [`label_of`], [`parts_named`].
+/// Calls: [`label_of`], [`parts_named`], [`other_parts`].
 fn control_of(control: &Value) -> Result<CatalogControl, OscalError> {
     let id = control.get("id").and_then(Value::as_str).unwrap_or_default();
     let title = control.get("title").and_then(Value::as_str).unwrap_or_default();
     let statement = parts_named(control, "statement")?;
+    let guidance = parts_named(control, "guidance")?;
 
     ensure!(!id.is_empty(), OscalError::NotCatalog(vec!["a control without its id".to_owned()]));
 
@@ -265,7 +300,8 @@ fn control_of(control: &Value) -> Result<CatalogControl, OscalError> {
         oscal_key: id.to_owned(),
         label: label_of(control).unwrap_or(id).to_owned(),
         requirement: if statement.is_empty() { title.to_owned() } else { statement },
-        guidance: parts_named(control, "guidance")?,
+        // A standard that names its guidance its own way still gives it.
+        guidance: if guidance.is_empty() { other_parts(control)? } else { guidance },
     })
 }
 
@@ -386,6 +422,32 @@ mod tests {
         assert_eq!(controls.len(), 813);
         assert_eq!(controls[0].oscal_key, "APE_INT.1-1");
         assert!(controls[0].requirement.starts_with("The evaluator shall check"));
+    }
+
+    #[test]
+    fn a_control_without_guidance_gives_its_other_parts_under_their_names() {
+        let path =
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../testing_documents/ETSI_TS103701_V2.1.1_test_cases_catalog.json");
+        let text = std::fs::read_to_string(path).unwrap();
+        let (document, _) = check_catalog(&text).unwrap();
+        let controls = catalog_controls(&document).unwrap();
+        let case = controls.iter().find(|control| control.oscal_key == "tc-6-8-1").unwrap();
+
+        assert_eq!(controls.len(), 131);
+        assert!(case.requirement.starts_with("The purpose of this test case"));
+        assert!(case.guidance.starts_with("test-units:\na) For each personal data in IXIT 21-PersData"));
+        assert!(case.guidance.contains("\n\nassignment-of-verdict:\nThe verdict PASS is assigned if"));
+        assert!(case.guidance.contains("\n\nassessment-method:\nConceptual assessment:"));
+        assert!(!case.guidance.contains("The purpose of this test case"));
+
+        // A control with a guidance keeps it alone, and one with neither has none.
+        let with = serde_json::json!({"id": "c1", "parts": [
+            {"name": "statement", "prose": "S"}, {"name": "guidance", "prose": "G"}, {"name": "objective", "prose": "O"}
+        ]});
+        let bare = serde_json::json!({"id": "c2", "title": "T", "parts": [{"name": "overview", "title": "Overview"}]});
+
+        assert_eq!(control_of(&with).unwrap().guidance, "G");
+        assert_eq!(control_of(&bare).unwrap().guidance, "");
     }
 
     #[test]

@@ -26,8 +26,6 @@ The beta (`V0.3`, 2026-11-04) has every function; version 1 comes after the full
 
 - **The content fitted to a model of a small context** (user, 2026-11-02): a model whose context holds less than an ST of 100 pages (`objects/ai/integration/integration_ai/question.rs`: `needed_context`, 120 000 tokens at three characters of a token) gets the documents of a work unit only as the 20 passages that fit it best, and the AI settings warn of it. To make a way of fitting the content to such a model: the documents parted by their sections (the section a work unit asks about given whole), a summary of the rest, or the assessment of a work unit in several questions.
 
-- **The parts of a control beyond its statement and guidance** (2026-11-01): the catalog of ETSI TS 103 701 (`testing_documents/`) has no part `guidance`; its parts `test-units`, `assessment-method` and `assignment-of-verdict` are kept in the stored catalog but reach no work unit (`objects/evaluation/oscal_standard_document/oscal_standard_document_rules.rs`: `control_of` takes only `statement` and `guidance`). To decide whether and how a work unit shows them.
-
 - **The reading of a whole plan** (measured 2026-11-10 on the CEM, 813 work units, a debug build): `read_work_units` 90 ms with its statements kept ready (212 ms before); all the work units of a standard added in one transaction (0.8 s); a new evaluation 0.8 s; the order of the work 0.1 s (`order.rs` compares every pair of work units, clear and bounded; an index of the dependencies only if a larger catalog needs it).
 - **`IdList`** (2026-10-31): a constant per list of ids (its table, its columns, its limit) instead of three statements of SQL at its callers (`infrastructure/storage/lists.rs`); put off while the comments read well.
 

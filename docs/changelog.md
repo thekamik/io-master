@@ -32,6 +32,7 @@ What changed on `test_branch` after the stable beta `V0.3` (2026-11-04), by what
 
 - **An agent may ask for a temperature** (the editor of an agent, "Temperature"; 0 to 2, empty by default). No temperature was sent before, so the same evidence could get another verdict from one run to the next; a low one (0 to 0.2) makes the assessment and "Fill with AI" repeatable. Left empty, none is sent: some models refuse the parameter, and their service then answers with an error that names it.
 - **The note of the documents given as passages** now tells the evaluator that a verdict other than a pass is to be checked against the whole documents: what the model found missing may stand in a part it did not see.
+- **A work unit of a standard without a part `guidance` has its guidance** (ETSI TS 103 701): the other parts of its control (the test units, the assignment of the verdict, the method of the assessment), each under its name. Before, such a work unit had an empty guidance, and the model judged without the method of the standard. The work units already in a plan keep what they have: add them to a plan again.
 - **An answer is not taken** when it gives a verdict without an analysis, or a field that is no text. Before, such an answer was written as a result.
 - **A quote too long is left out and told in the notes**; before, it was cut to the limit and kept as if the model had quoted that much.
 - **A result written by the evaluator is never written over by the AI**: checked when the work units of an assessment are chosen, and again when each answer is written. That the evaluation is in progress is checked there as well.
@@ -66,7 +67,7 @@ Measured on the CEM (813 work units), a debug build:
 
 ## What was tried, and what was not
 
-- **Tried by the unit tests** (215, all passing), `cargo clippy --all-targets` at the pedantic level and `svelte-check`, both clean: every change above.
+- **Tried by the unit tests** (216, all passing), `cargo clippy --all-targets` at the pedantic level and `svelte-check`, both clean: every change above.
 - **Tried in the window on a private display**, after the commit `a97db6f`: the first start with its recovery code, every panel opened, the login again.
 - **Not tried in the window**: the field of the temperature in the editor of an agent and a question sent with it to a real service, an assessment with a real model, "Stop" in the middle of an answer, the export of a report with escaped values, a PDF read through the sandbox, the search of a real knowledge base (the CEM). These are the first things to test.
 - **Not measured**: whether the new search of the knowledge finds the right passages on a real evaluation. The rules of the search were tried on small texts written for the tests.

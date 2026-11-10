@@ -93,7 +93,7 @@ The key of the database never changes, so the database itself is not touched. A 
 
 ## 7. Standards
 
-The requirements of a standard are **NIST OSCAL 1.2.3 catalogs**, checked against the JSON schema of NIST (`io-master/oscal/`) when imported. A plan names the standards it uses; each work unit is a control of one of them (its label, its key, its requirement and guidance). The plan and the evaluation are the program's own model, linked to the catalogs by their ids; nothing of ours is written into an OSCAL document.
+The requirements of a standard are **NIST OSCAL 1.2.3 catalogs**, checked against the JSON schema of NIST (`io-master/oscal/`) when imported. A plan names the standards it uses; each work unit is a control of one of them (its label, its key, its requirement and guidance). The requirement is the part `statement` of the control, the guidance its part `guidance`; a control without one gives its other parts as the guidance, each under its name, so that a standard that names its guidance its own way fills the same work unit (a test case of ETSI TS 103 701: `test-units`, `assignment-of-verdict`, `assessment-method`), with no flow of its own (`oscal_standard_document_rules.rs`: `other_parts`). The plan and the evaluation are the program's own model, linked to the catalogs by their ids; nothing of ours is written into an OSCAL document.
 
 ## 8. System requirements
 
