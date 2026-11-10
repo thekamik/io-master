@@ -21,7 +21,9 @@ use crate::objects::evaluation::oscal_standard_document::oscal_standard_document
 };
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::read_oscal_standard_document;
 use crate::objects::evaluation::work_unit::work_unit_model::WorkUnit;
-use crate::objects::evaluation::work_unit::work_unit_store::{create_work_unit, delete_work_unit, read_work_units};
+use crate::objects::evaluation::work_unit::work_unit_store::{
+    create_work_unit, create_work_units, delete_work_unit, read_work_units,
+};
 
 /// The controls of the standard `standard`, one of the standards of `plan`.
 ///
@@ -166,21 +168,20 @@ pub fn add_work_unit(db: &UserDatabase, plan: i64, standard: i64, oscal_key: &st
 /// Called by: `panels/views/evaluation_plan/work_units.rs`: `work_unit_add_all`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `plan_in_planning`;
 /// [`controls_of`], [`holds`], [`unit_of`]; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`,
-/// `create_work_unit`.
+/// `create_work_units` (all of them in one transaction).
 pub fn add_all_work_units(db: &UserDatabase, plan: i64, standard: i64) -> Result<usize, DomainError> {
     let stored = plan_in_planning(db, plan)?;
     let controls = controls_of(db, &stored, standard)?;
     let units = read_work_units(db, plan)?;
-    let mut added = 0;
+    let mut new = Vec::with_capacity(controls.len());
 
     for control in &controls {
         if !holds(&units, standard, &control.oscal_key) {
-            create_work_unit(db, plan, &unit_of(standard, control))?;
-            added += 1;
+            new.push(unit_of(standard, control));
         }
     }
 
-    Ok(added)
+    Ok(create_work_units(db, plan, &new)?)
 }
 
 /// Removes the work unit `unit` from the plan `plan` in planning, with the

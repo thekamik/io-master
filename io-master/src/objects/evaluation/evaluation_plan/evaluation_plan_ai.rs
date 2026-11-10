@@ -8,7 +8,8 @@
 //!                     then those whose dependencies are assessed); a work unit of author User never,
 //!                     one with a verdict only with "again"
 //! preview         ──► how many questions go to which agents; every document and proof they need that is
-//!                     not given: the assessment does not start while one is missing
+//!                     not given: the assessment does not start while one is missing (each document, proof
+//!                     and agent read once, not once for each work unit: a document is read with its file)
 //! units_ready     ──► the work units to assess, refused while an input is missing
 //! assess_evaluation ──► for each: work_unit_ai/assessment.rs: assess_work_unit ──► record_step (the progress)
 //!
@@ -27,7 +28,10 @@ use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_store::read_agent;
 use crate::objects::ai::integration::integration_store::read_integration;
 use crate::objects::ai_error::AiError;
-use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::evaluation_in_progress;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::EvaluationPlan;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::{
+    evaluation_in_progress, needed_proofs,
+};
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::order::work_order;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::planning::plan_to_fill;
 use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
@@ -127,43 +131,125 @@ fn count(counted: &mut Vec<(String, usize)>, name: String) {
     counted.push((name, 1));
 }
 
-/// The inputs the work unit `unit` needs and that are not given, by their
-/// names; a work unit that names no document and no proof needs one.
+/// An input of an evaluation as an assessment looks at it: its id, its name
+/// as a missing input is told ("the document ST"), and whether it is given.
+type Input = (i64, String, bool);
+
+/// The documents of the evaluation `evaluation` and the proofs its work units
+/// `units` need, each read once for the whole assessment and not once for
+/// each work unit that names it: the file of a document is read with it.
 ///
-/// Input: `unit`, a work unit of an evaluation.
-/// Output: the names (`["the document ST v1.2", "the proof Test 3"]`,
-/// `["a document or a proof of ASE_INT.1-1"]`); an error of the database for
-/// a document or a proof missing.
+/// Input: `evaluation`, an evaluation; `units`, its work units to assess.
+/// Output: the documents and the proofs (`([(3, "the document ST", true)],
+/// [(6, "the proof Scan", false)])`); an error of the database for one
+/// missing.
 ///
 /// Called by: [`preview`].
 /// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `needed_proofs`;
 /// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
-fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, AiError> {
+fn inputs_of(
+    db: &UserDatabase,
+    evaluation: &EvaluationPlan,
+    units: &[WorkUnit],
+) -> Result<(Vec<Input>, Vec<Input>), AiError> {
+    let proof_ids = needed_proofs(units);
+    let mut documents = Vec::with_capacity(evaluation.product_documents.len());
+    let mut proofs = Vec::with_capacity(proof_ids.len());
+
+    for id in &evaluation.product_documents {
+        let document = read_product_document(db, *id)?;
+
+        documents.push((*id, format!("the document {}", document.name), document.content.is_some()));
+    }
+
+    for id in proof_ids {
+        let proof = read_lab_proof(db, id)?;
+
+        proofs.push((id, format!("the proof {}", proof.name), proof.proof.is_some()));
+    }
+
+    Ok((documents, proofs))
+}
+
+/// Adds to `missing` the name of the input `id` among `inputs` when it is not
+/// given.
+///
+/// Input: `inputs`, the documents or the proofs of an evaluation
+/// ([`inputs_of`]); `id`, one a work unit names; `label`, the label of that
+/// work unit, for the error; `missing`, the names found so far.
+/// Output: nothing; `AiError::Refused` when the work unit names an input
+/// that is none of its evaluation.
+///
+/// Called by: [`missing_inputs`].
+fn note_missing(inputs: &[Input], id: i64, label: &str, missing: &mut Vec<String>) -> Result<(), AiError> {
+    for (input, name, given) in inputs {
+        if *input == id {
+            if !given {
+                missing.push(name.clone());
+            }
+
+            return Ok(());
+        }
+    }
+
+    Err(AiError::Refused(format!("{label} names a document or a proof that is none of its evaluation")))
+}
+
+/// The inputs the work unit `unit` needs and that are not given, by their
+/// names; a work unit that names no document and no proof needs one.
+///
+/// Input: `unit`, a work unit of an evaluation; `documents`, `proofs`, the
+/// inputs of its evaluation ([`inputs_of`]).
+/// Output: the names (`["the document ST", "the proof Test 3"]`,
+/// `["a document or a proof of ASE_INT.1-1"]`); `AiError::Refused` for an
+/// input that is none of the evaluation.
+///
+/// Called by: [`preview`].
+/// Calls: [`note_missing`].
+fn missing_inputs(unit: &WorkUnit, documents: &[Input], proofs: &[Input]) -> Result<Vec<String>, AiError> {
+    let needed_proofs = unit.input_functional.as_deref().unwrap_or_default();
     let mut missing = Vec::new();
 
     // Without evidence the work unit would be judged on nothing; the plan is
     // corrected before the assessment starts (user, 2026-11-02).
-    if unit.input_product_documents.is_empty() && unit.input_functional.as_deref().unwrap_or_default().is_empty() {
+    if unit.input_product_documents.is_empty() && needed_proofs.is_empty() {
         missing.push(format!("a document or a proof of {}", unit.label));
     }
 
     for id in &unit.input_product_documents {
-        let document = read_product_document(db, *id)?;
-
-        if document.content.is_none() {
-            missing.push(format!("the document {}", document.name));
-        }
+        note_missing(documents, *id, &unit.label, &mut missing)?;
     }
 
-    for id in unit.input_functional.as_deref().unwrap_or_default() {
-        let proof = read_lab_proof(db, *id)?;
-
-        if proof.proof.is_none() {
-            missing.push(format!("the proof {}", proof.name));
-        }
+    for id in needed_proofs {
+        note_missing(proofs, *id, &unit.label, &mut missing)?;
     }
 
     Ok(missing)
+}
+
+/// The name of the agent `id`, read once for the whole assessment: most work
+/// units are assessed by the agent of their evaluation.
+///
+/// Input: `names`, the names read so far, at most one for each agent of the
+/// user; `id`, the id of an agent.
+/// Output: its name ("Evaluator"); an error of the database for an agent
+/// missing.
+///
+/// Called by: [`preview`].
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`.
+fn agent_name(db: &UserDatabase, names: &mut Vec<(i64, String)>, id: i64) -> Result<String, AiError> {
+    for (known, name) in names.iter() {
+        if *known == id {
+            return Ok(name.clone());
+        }
+    }
+
+    let name = read_agent(db, id)?.name;
+
+    names.push((id, name.clone()));
+
+    Ok(name)
 }
 
 /// What the assessment of the evaluation `evaluation` would ask, counted
@@ -178,17 +264,19 @@ fn missing_inputs(db: &UserDatabase, unit: &WorkUnit) -> Result<Vec<String>, AiE
 /// `evaluation_assess_preview`.
 /// Calls: [`units_to_assess`]; `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`:
 /// `evaluation_in_progress`; `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`;
-/// `objects/ai/agent/agent_store.rs`: `read_agent`; [`missing_inputs`], [`count`].
+/// [`inputs_of`], [`agent_name`], [`missing_inputs`], [`count`].
 pub fn preview(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Preview, AiError> {
     let units = units_to_assess(db, evaluation, again)?;
     let stored = evaluation_in_progress(db, evaluation)?;
+    let (documents, proofs) = inputs_of(db, &stored, &units)?;
+    let mut names = Vec::new();
     let mut found = Preview { units: Vec::with_capacity(units.len()), agents: Vec::new(), missing: Vec::new() };
 
     for unit in &units {
         found.units.push(unit.id);
-        count(&mut found.agents, read_agent(db, assessing_agent(&stored, unit)?)?.name);
+        count(&mut found.agents, agent_name(db, &mut names, assessing_agent(&stored, unit)?)?);
 
-        for name in missing_inputs(db, unit)? {
+        for name in missing_inputs(unit, &documents, &proofs)? {
             count(&mut found.missing, name);
         }
     }

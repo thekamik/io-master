@@ -149,18 +149,49 @@ fn author_name(author: Author) -> &'static str {
     }
 }
 
+/// The name of the agent `id`, read once for the whole list: most work units
+/// are assessed by the agent of their evaluation, and the list is read again
+/// after each step of an assessment.
+///
+/// Input: `names`, the names read so far, at most one for each agent of the
+/// user; `id`, the id of an agent.
+/// Output: its name ("Evaluator"); an error of the database for an agent
+/// missing.
+///
+/// Called by: [`row_of`].
+/// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`.
+fn agent_name(db: &UserDatabase, names: &mut Vec<(i64, String)>, id: i64) -> Result<String, ViewError> {
+    for (known, name) in names.iter() {
+        if *known == id {
+            return Ok(name.clone());
+        }
+    }
+
+    let name = read_agent(db, id)?.name;
+
+    names.push((id, name.clone()));
+
+    Ok(name)
+}
+
 /// The row of the work unit `unit` of the evaluation `evaluation`.
 ///
 /// Input: `db`, the open database; `evaluation`, the evaluation; `unit`,
-/// one of its work units.
+/// one of its work units; `names`, the names of the agents read so far for
+/// the list.
 /// Output: its row with its agent (`UnitRowView { label: "ADV_ARC.1-1", .. }`);
 /// an error for a work unit without an agent or a database failed.
 ///
 /// Called by: [`evaluation_unit_list`].
 /// Calls: `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`;
-/// `objects/ai/agent/agent_store.rs`: `read_agent`; [`author_name`].
-fn row_of(db: &UserDatabase, evaluation: &EvaluationPlan, unit: WorkUnit) -> Result<UnitRowView, ViewError> {
-    let agent = read_agent(db, assessing_agent(evaluation, &unit)?)?.name;
+/// [`agent_name`], [`author_name`].
+fn row_of(
+    db: &UserDatabase,
+    evaluation: &EvaluationPlan,
+    unit: WorkUnit,
+    names: &mut Vec<(i64, String)>,
+) -> Result<UnitRowView, ViewError> {
+    let agent = agent_name(db, names, assessing_agent(evaluation, &unit)?)?;
 
     Ok(UnitRowView {
         id: unit.id,
@@ -193,9 +224,10 @@ pub fn evaluation_unit_list(session: State<'_, Session>, id: i64) -> Result<Vec<
     let evaluation = read_evaluation_plan(db, id)?;
     let units = units_in_order(db, id)?;
     let mut rows = Vec::with_capacity(units.len());
+    let mut names = Vec::new();
 
     for unit in units {
-        rows.push(row_of(db, &evaluation, unit)?);
+        rows.push(row_of(db, &evaluation, unit, &mut names)?);
     }
 
     Ok(rows)

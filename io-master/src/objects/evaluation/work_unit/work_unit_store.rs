@@ -381,7 +381,7 @@ pub(in crate::objects::evaluation) fn write_dependencies(
 /// and nothing is then written.
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`:
-/// `add_all_work_units`, `add_work_unit`.
+/// `add_work_unit`.
 /// Calls: [`insert_work_unit`].
 pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result<i64, DbError> {
     let transaction = db.connection().unchecked_transaction()?;
@@ -390,6 +390,38 @@ pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result
     transaction.commit()?;
 
     Ok(id)
+}
+
+/// Stores the new work units `units` as the last of their plan, in their
+/// order, all in one transaction: every control of a standard added at once
+/// is one operation, written whole or not at all, and committed once (813
+/// work units of the CEM, not 813 commits).
+///
+/// Input: `db`, the open database of the user; `plan`, the id of their plan;
+/// `units`, the new work units, the `id` of each 0; within
+/// [`MAX_WORK_UNITS`] with those of the plan.
+///
+/// Output: how many were written (`813`); an error as [`insert_work_unit`],
+/// and nothing is then written.
+///
+/// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_rules/work_units.rs`:
+/// `add_all_work_units`.
+/// Calls: [`insert_work_unit`].
+pub fn create_work_units(db: &UserDatabase, plan: i64, units: &[WorkUnit]) -> Result<usize, DbError> {
+    ensure!(
+        units.len() <= MAX_WORK_UNITS,
+        DbError::Inconsistent(format!("more than {MAX_WORK_UNITS} work units in a plan"))
+    );
+
+    let transaction = db.connection().unchecked_transaction()?;
+
+    for unit in units {
+        insert_work_unit(&transaction, plan, unit)?;
+    }
+
+    transaction.commit()?;
+
+    Ok(units.len())
 }
 
 /// Writes a new work unit as the last of its plan, with its lists, and
@@ -404,7 +436,8 @@ pub fn create_work_unit(db: &UserDatabase, plan: i64, unit: &WorkUnit) -> Result
 /// [`MAX_WORK_UNITS`] already, or when its control is in the plan already
 /// (`UNIQUE`).
 ///
-/// Called by: [`create_work_unit`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `create_evaluation`.
+/// Called by: [`create_work_unit`], [`create_work_units`];
+/// `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `create_evaluation`.
 /// Calls: [`check_lists`], [`check_links`], [`verdict_name`], [`author_name`], [`write_lists`].
 pub(in crate::objects::evaluation) fn insert_work_unit(
     connection: &Connection,
@@ -512,8 +545,9 @@ fn unit_of(row: &Row<'_>) -> Result<WorkUnit, DbError> {
 ///
 /// Called by: [`read_lists`].
 fn read_quotes(connection: &Connection, id: i64) -> Result<Vec<Quote>, DbError> {
-    let mut statement = connection
-        .prepare("SELECT product_document, text FROM work_unit_quotes WHERE work_unit = :id ORDER BY position")?;
+    let mut statement = connection.prepare_cached(
+        "SELECT product_document, text FROM work_unit_quotes WHERE work_unit = :id ORDER BY position",
+    )?;
     let mut rows = statement.query(named_params! { ":id": id })?;
     let mut quotes = Vec::new();
 
@@ -538,7 +572,7 @@ fn read_quotes(connection: &Connection, id: i64) -> Result<Vec<Quote>, DbError> 
 /// Called by: [`read_lists`].
 fn read_proof_quotes(connection: &Connection, id: i64) -> Result<Vec<ProofQuote>, DbError> {
     let mut statement = connection
-        .prepare("SELECT lab_proof, text FROM work_unit_proof_quotes WHERE work_unit = :id ORDER BY position")?;
+        .prepare_cached("SELECT lab_proof, text FROM work_unit_proof_quotes WHERE work_unit = :id ORDER BY position")?;
     let mut rows = statement.query(named_params! { ":id": id })?;
     let mut quotes = Vec::new();
 
@@ -615,7 +649,7 @@ fn read_lists(connection: &Connection, unit: &mut WorkUnit) -> Result<(), DbErro
 /// Calls: [`unit_of`], [`read_lists`].
 pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
     let connection = db.connection();
-    let mut statement = connection.prepare(&format!("SELECT {COLUMNS} FROM work_units WHERE id = :id"))?;
+    let mut statement = connection.prepare_cached(&format!("SELECT {COLUMNS} FROM work_units WHERE id = :id"))?;
     let mut rows = statement.query(named_params! { ":id": id })?;
     let Some(row) = rows.next()? else {
         return Err(DbError::NoRow { table: "work_units", id });
@@ -628,7 +662,8 @@ pub fn read_work_unit(db: &UserDatabase, id: i64) -> Result<WorkUnit, DbError> {
 }
 
 /// Reads every work unit of a plan with its lists, in the order of the
-/// plan, one by one (five queries each).
+/// plan, one by one (five queries each, their statements kept ready by the
+/// connection, so that none is parsed anew for each work unit).
 ///
 /// Input: `db`, the open database of the user; `plan`, the id of the plan.
 ///
@@ -672,7 +707,7 @@ pub fn read_work_units(db: &UserDatabase, plan: i64) -> Result<Vec<WorkUnit>, Db
 ///
 /// Called by: [`update_work_unit`], [`delete_work_unit`].
 fn plan_of(connection: &Connection, id: i64) -> Result<i64, DbError> {
-    let mut statement = connection.prepare("SELECT evaluation_plan FROM work_units WHERE id = :id")?;
+    let mut statement = connection.prepare_cached("SELECT evaluation_plan FROM work_units WHERE id = :id")?;
     let mut rows = statement.query(named_params! { ":id": id })?;
     let Some(row) = rows.next()? else {
         return Err(DbError::NoRow { table: "work_units", id });

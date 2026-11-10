@@ -226,7 +226,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`
   - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`
 - **Processed, the AI**:
-  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `inputs_of`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `proofs_text`, `unit_json`
   - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `chosen_proofs`, `current_parameters`, `proof_named`
 - **Processed, the panels (`panels/logic/`)**:
@@ -282,7 +282,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/evaluation/work_unit/work_unit_rules/fields.rs`: `work_unit_fields`, `document_name`
   - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`
 - **Processed, the AI**:
-  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `inputs_of`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`, `unit_json`
   - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`
 - **Processed, the panels (`panels/logic/`)**:
@@ -324,7 +324,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ### `objects/evaluation/work_unit/work_unit_model.rs`: `WorkUnit`, `Verdict`, `Author`, `Quote`, `ProofQuote`
 
-- **Stored** (`objects/evaluation/work_unit/work_unit_store.rs`): `create_work_unit`, `read_work_unit`, `read_work_units`, `update_work_unit`, `delete_work_unit`
+- **Stored** (`objects/evaluation/work_unit/work_unit_store.rs`): `create_work_unit`, `create_work_units`, `read_work_unit`, `read_work_units`, `update_work_unit`, `delete_work_unit`
 - **Processed, the rules of the data**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `needed_proofs`
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/order.rs`: `check_order`, `links`, `outside`, `taken_in_order`, `unit_at`, `work_order`
@@ -336,7 +336,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`, `update_work_unit_parameters`
   - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_proof_quotes`, `check_quotes`, `place_of`, `quote_sources`, `quotes_found`, `save_results`, `stands_in`
 - **Processed, the AI**:
-  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`, `units_in_order`, `units_to_assess`
+  - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `inputs_of`, `missing_inputs`, `units_in_order`, `units_to_assess`
   - `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assess_work_unit`, `prepared_question`, `written`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`, `dependency_warnings`, `verdict_of`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`, `assessment_question`, `dependencies_text`, `documents_text`, `proofs_text`, `question_of`, `unit_json`, `verdict_name`

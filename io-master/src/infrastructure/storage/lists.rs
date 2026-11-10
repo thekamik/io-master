@@ -97,7 +97,7 @@ pub fn read_id_list(connection: &Connection, sql: &str, owner: i64, max: usize) 
     ensure!(sql.contains(":owner"), DbError::Inconsistent("a list read without its owner".to_owned()));
 
     // The rows of the owner, in the order the SELECT gives them.
-    let mut statement = connection.prepare(sql)?;
+    let mut statement = connection.prepare_cached(sql)?;
     let mut rows = statement.query(named_params! { ":owner": owner })?;
     let mut ids = Vec::new();
 
