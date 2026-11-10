@@ -29,7 +29,7 @@ use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_rules::oscal_standard_document_fields;
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::read_oscal_standard_document;
 use crate::objects::evaluation::product_document::product_document_rules::product_document_fields;
-use crate::objects::evaluation::product_document::product_document_store::read_product_document;
+use crate::objects::evaluation::product_document::product_document_store::read_document_record;
 use crate::objects::evaluation::report_template::report_template_rules::escaping::{Escape, escape_of, escaped};
 use crate::objects::evaluation::report_template::report_template_rules::markers::{
     EVALUATION_PLAN, Filter, List, Segment, element_model, marker, replaced, segments,
@@ -144,7 +144,7 @@ fn units_in_order(units: &[WorkUnit]) -> Result<Vec<WorkUnit>, DomainError> {
 /// Called by: [`filled_report`].
 /// Calls: `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
 /// `read_oscal_standard_document`; `objects/evaluation/product_document/product_document_store.rs`:
-/// `read_product_document`; `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`:
+/// `read_document_record`; `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`:
 /// `needed_proofs`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; the fields of
 /// each (`oscal_standard_document_fields`, `product_document_fields`, `lab_proof_fields`,
 /// `work_unit_fields`); [`element_of`].
@@ -163,7 +163,7 @@ fn lists_of(
         standards.push(read_oscal_standard_document(db, *id)?);
     }
     for id in &plan.product_documents {
-        documents.push(read_product_document(db, *id)?);
+        documents.push(read_document_record(db, *id)?.0);
     }
     for id in proof_ids {
         proofs.push(read_lab_proof(db, id)?);

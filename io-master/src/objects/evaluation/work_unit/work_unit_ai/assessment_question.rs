@@ -41,7 +41,7 @@ use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::read_eva
 use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::read_oscal_standard_document;
 use crate::objects::evaluation::product_document::product_document_store::{
-    read_document_passages, read_document_text, read_product_document,
+    read_document_passages, read_document_record, read_document_text,
 };
 use crate::objects::evaluation::work_unit::work_unit_model::{Verdict, WorkUnit};
 use crate::objects::evaluation::work_unit::work_unit_store::read_work_unit;
@@ -104,7 +104,7 @@ pub fn assessing_agent(evaluation: &EvaluationPlan, unit: &WorkUnit) -> Result<i
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
 /// `read_oscal_standard_document`; `objects/evaluation/product_document/product_document_store.rs`:
-/// `read_product_document`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
+/// `read_document_record`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn unit_json(db: &UserDatabase, unit: &WorkUnit, dependencies: &[WorkUnit]) -> Result<Value, AiError> {
     let mut labels = Vec::with_capacity(dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
@@ -114,7 +114,7 @@ fn unit_json(db: &UserDatabase, unit: &WorkUnit, dependencies: &[WorkUnit]) -> R
     }
 
     for id in &unit.input_product_documents {
-        documents.push(read_product_document(db, *id)?.name);
+        documents.push(read_document_record(db, *id)?.0.name);
     }
 
     let proofs = match &unit.input_functional {
@@ -184,7 +184,7 @@ fn dependencies_text(dependencies: &[WorkUnit], role: &EvaluatorRole, limit: usi
 /// the database.
 ///
 /// Called by: [`question_of`].
-/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_document_record`,
 /// `read_document_text`, `read_document_passages`; [`search_values`]; `objects/ai/agent/agent_ai.rs`:
 /// `filled`.
 fn documents_text(
@@ -198,7 +198,7 @@ fn documents_text(
 
     if whole {
         for id in &unit.input_product_documents {
-            let document = read_product_document(db, *id)?;
+            let (document, _) = read_document_record(db, *id)?;
             let values = [
                 ("name", document.name),
                 ("version", document.version.unwrap_or_default()),
@@ -211,7 +211,7 @@ fn documents_text(
         let wanted = filled(&role.document_search, &search_values(unit));
 
         for (id, passage) in read_document_passages(db, &unit.input_product_documents, &wanted, passages)? {
-            let values = [("name", read_product_document(db, id)?.name), ("text", passage)];
+            let values = [("name", read_document_record(db, id)?.0.name), ("text", passage)];
 
             written.push(filled(&role.document_passage_template, &values));
         }

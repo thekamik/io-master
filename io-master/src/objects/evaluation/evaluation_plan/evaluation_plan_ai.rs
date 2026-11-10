@@ -9,7 +9,7 @@
 //!                     one with a verdict only with "again"
 //! preview         ──► how many questions go to which agents; every document and proof they need that is
 //!                     not given: the assessment does not start while one is missing (each document, proof
-//!                     and agent read once, not once for each work unit: a document is read with its file)
+//!                     and agent read once, not once for each work unit)
 //! units_ready     ──► the work units to assess, refused while an input is missing
 //! assess_evaluation ──► for each: work_unit_ai/assessment.rs: assess_work_unit ──► record_step (the progress)
 //!
@@ -35,7 +35,7 @@ use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluati
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::order::work_order;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::planning::plan_to_fill;
 use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
-use crate::objects::evaluation::product_document::product_document_store::read_product_document;
+use crate::objects::evaluation::product_document::product_document_store::read_document_record;
 use crate::objects::evaluation::work_unit::work_unit_ai::assessment::assess_work_unit;
 use crate::objects::evaluation::work_unit::work_unit_ai::assessment_question::assessing_agent;
 use crate::objects::evaluation::work_unit::work_unit_ai::filling::{FillTask, fill_work_unit};
@@ -137,7 +137,7 @@ type Input = (i64, String, bool);
 
 /// The documents of the evaluation `evaluation` and the proofs its work units
 /// `units` need, each read once for the whole assessment and not once for
-/// each work unit that names it: the file of a document is read with it.
+/// each work unit that names it.
 ///
 /// Input: `evaluation`, an evaluation; `units`, its work units to assess.
 /// Output: the documents and the proofs (`([(3, "the document ST", true)],
@@ -145,7 +145,7 @@ type Input = (i64, String, bool);
 /// missing.
 ///
 /// Called by: [`preview`].
-/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_document_record`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `needed_proofs`;
 /// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn inputs_of(
@@ -158,9 +158,9 @@ fn inputs_of(
     let mut proofs = Vec::with_capacity(proof_ids.len());
 
     for id in &evaluation.product_documents {
-        let document = read_product_document(db, *id)?;
+        let (document, bytes) = read_document_record(db, *id)?;
 
-        documents.push((*id, format!("the document {}", document.name), document.content.is_some()));
+        documents.push((*id, format!("the document {}", document.name), bytes.is_some()));
     }
 
     for id in proof_ids {

@@ -95,16 +95,11 @@ pub(in crate::objects::evaluation) fn insert_product_document(
 /// Output: the document (its file `None` while the place is only reserved);
 /// `DbError::NoRow` when there is none.
 ///
-/// Called by: [`update_product_document`]; `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`:
-/// `copied_places`; `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`;
-/// `objects/evaluation/product_document/product_document_rules.rs`: `give_document`;
-/// `panels/logic/evaluation/inputs.rs`: `inputs`;
-/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`, `unit_json`;
-/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes`;
-/// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`;
+/// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `copied_places`;
 /// `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `names_of`;
-/// `panels/views/evaluation/work_units.rs`: `needs_of`;
-/// `panels/views/evaluation_plan/plans.rs`: `plan_view`.
+/// `panels/views/evaluation_plan/plans.rs`: `plan_view` (the places of a plan, which hold no
+/// file). Where a document of an evaluation is read for its name, its version or whether it is
+/// given, [`read_document_record`] reads it without its file.
 pub fn read_product_document(db: &UserDatabase, id: i64) -> Result<ProductDocument, DbError> {
     let connection = db.connection();
     let mut statement =
@@ -120,6 +115,55 @@ pub fn read_product_document(db: &UserDatabase, id: i64) -> Result<ProductDocume
         content: row.get("content")?,
         version: row.get("version")?,
     })
+}
+
+/// A document without its file, and the size of that file in bytes: `None`
+/// while the place is only reserved.
+pub type DocumentRecord = (ProductDocument, Option<u64>);
+
+/// Reads the document `id` without its file (user, 2026-11-10): its name,
+/// its version, and the size of its file, which tells whether it is given.
+/// The file of a document may hold 256 MiB, and most readers ask only for
+/// its name: the question of each work unit, a work unit shown, a report.
+///
+/// Input: `db`, the open database of the user; `id`, the id of the document
+/// (3).
+///
+/// Output: the document, its `content` always `None` (the file is not
+/// read), and the size of its file (`(ProductDocument { name: "ST", .. },
+/// Some(5242880))`), `None` while the place is only reserved;
+/// `DbError::NoRow` when there is none.
+///
+/// Called by: [`update_product_document`];
+/// `objects/evaluation/product_document/product_document_rules.rs`: `give_document`;
+/// `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `inputs_of`;
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`, `unit_json`;
+/// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`;
+/// `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`;
+/// `panels/logic/evaluation/inputs.rs`: `inputs`; `panels/views/evaluation/work_units.rs`: `needs_of`.
+pub fn read_document_record(db: &UserDatabase, id: i64) -> Result<DocumentRecord, DbError> {
+    let connection = db.connection();
+    // `length` of a file is told by the head of its row: SQLite does not
+    // read the file for it.
+    let mut statement = connection
+        .prepare_cached("SELECT id, name, version, length(content) AS bytes FROM product_documents WHERE id = :id")?;
+    let mut rows = statement.query(named_params! { ":id": id })?;
+    let Some(row) = rows.next()? else {
+        return Err(DbError::NoRow { table: "product_documents", id });
+    };
+    let bytes = match row.get::<_, Option<i64>>("bytes")? {
+        Some(bytes) => Some(u64::try_from(bytes).map_err(|_| DbError::Corrupt {
+            table: "product_documents",
+            column: "content",
+            value: bytes.to_string(),
+        })?),
+        None => None,
+    };
+
+    Ok((
+        ProductDocument { id: row.get("id")?, name: row.get("name")?, content: None, version: row.get("version")? },
+        bytes,
+    ))
 }
 
 /// Indexes the text of a document passage by passage, each with its place.
@@ -172,7 +216,7 @@ fn write_passages(connection: &Connection, id: i64, text: &str) -> Result<(), Db
 /// then written.
 ///
 /// Called by: `objects/evaluation/product_document/product_document_rules.rs`: `give_document`.
-/// Calls: [`read_product_document`], [`write_passages`].
+/// Calls: [`read_document_record`], [`write_passages`].
 pub fn update_product_document(
     db: &UserDatabase,
     document: &ProductDocument,
@@ -184,10 +228,10 @@ pub fn update_product_document(
         DbError::Inconsistent("a file is given with its text, a place without one".to_owned())
     );
 
-    let stored = read_product_document(db, document.id)?;
+    let (stored, bytes) = read_document_record(db, document.id)?;
 
     ensure!(
-        stored.content.is_none(),
+        bytes.is_none(),
         DbError::Inconsistent(format!("the document {} is given already: it is never changed", stored.name))
     );
 
@@ -347,7 +391,8 @@ pub fn read_document_passages(
 #[cfg(test)]
 mod tests {
     //! Tests of the documents of the product: the place reserved, the file
-    //! given, read back as it was and never changed again.
+    //! given, read back as it was (and without its file) and never changed
+    //! again.
 
     use super::*;
 
@@ -363,6 +408,7 @@ mod tests {
         let id = create_product_document(&db, &place()).unwrap();
 
         assert_eq!(read_product_document(&db, id).unwrap(), ProductDocument { id, ..place() });
+        assert_eq!(read_document_record(&db, id).unwrap(), (ProductDocument { id, ..place() }, None));
 
         let given = ProductDocument {
             id,
@@ -375,6 +421,12 @@ mod tests {
         update_product_document(&db, &given, Some("The TOE is a router.\n\nIts TSF   filters packets.")).unwrap();
 
         assert_eq!(read_product_document(&db, id).unwrap(), given);
+        // Without its file: the same document, and the size of the file.
+        assert_eq!(
+            read_document_record(&db, id).unwrap(),
+            (ProductDocument { content: None, ..given.clone() }, Some(5))
+        );
+        assert!(matches!(read_document_record(&db, id + 1), Err(DbError::NoRow { .. })));
         assert!(matches!(
             update_product_document(
                 &db,

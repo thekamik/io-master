@@ -21,7 +21,7 @@ use crate::objects::evaluation::evaluation_plan::evaluation_plan_model::Evaluati
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::read_evaluation_plan;
 use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::read_oscal_standard_document;
-use crate::objects::evaluation::product_document::product_document_store::read_product_document;
+use crate::objects::evaluation::product_document::product_document_store::read_document_record;
 use crate::objects::evaluation::work_unit::work_unit_ai::assessment_question::{assessing_agent, verdict_name};
 use crate::objects::evaluation::work_unit::work_unit_model::{Author, ProofQuote, Quote, Verdict, WorkUnit};
 use crate::objects::evaluation::work_unit::work_unit_rules::results::{Results, save_results};
@@ -242,7 +242,7 @@ pub fn evaluation_unit_list(session: State<'_, Session>, id: i64) -> Result<Vec<
 ///
 /// Called by: [`unit_view`].
 /// Calls: `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`;
-/// `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// `objects/evaluation/product_document/product_document_store.rs`: `read_document_record`;
 /// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
 fn needs_of(db: &UserDatabase, unit: &WorkUnit) -> Result<Needs, ViewError> {
     let mut dependencies = Vec::with_capacity(unit.dependencies.len());
@@ -256,7 +256,7 @@ fn needs_of(db: &UserDatabase, unit: &WorkUnit) -> Result<Needs, ViewError> {
     }
 
     for id in &unit.input_product_documents {
-        let document = read_product_document(db, *id)?;
+        let (document, _) = read_document_record(db, *id)?;
 
         documents.push(NamedView { id: *id, name: document.name, detail: document.version });
     }

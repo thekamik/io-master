@@ -21,7 +21,7 @@ use crate::objects::error::DomainError;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::evaluation_in_progress;
 use crate::objects::evaluation::product_document::product_document_model::ProductDocument;
 use crate::objects::evaluation::product_document::product_document_store::{
-    read_product_document, update_product_document,
+    read_document_record, update_product_document,
 };
 use crate::objects::text::checked_text;
 
@@ -97,7 +97,7 @@ pub fn document_text(content: &[u8]) -> Result<String, DomainError> {
 /// Called by: `panels/views/evaluation/inputs.rs`: `evaluation_document_give`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
 /// `objects/text.rs`: `checked_text`;
-/// `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
+/// `objects/evaluation/product_document/product_document_store.rs`: `read_document_record`,
 /// `update_product_document` (which indexes the text).
 pub fn give_document(
     db: &UserDatabase,
@@ -117,7 +117,7 @@ pub fn give_document(
     );
 
     let version = checked_text(version, "the version of the document", MAX_VERSION)?;
-    let place = read_product_document(db, document)?;
+    let (place, _) = read_document_record(db, document)?;
     let given = ProductDocument { content: Some(content), version: Some(version), ..place };
 
     Ok(update_product_document(db, &given, Some(text))?)
@@ -147,6 +147,7 @@ mod tests {
     use super::*;
 
     use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::read_evaluation_plan;
+    use crate::objects::evaluation::product_document::product_document_store::read_product_document;
     use crate::test_support::database::database;
     use crate::test_support::evaluation::evaluation_needing_inputs;
     use crate::test_support::pdf::pdf;

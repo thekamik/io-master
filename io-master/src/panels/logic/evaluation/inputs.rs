@@ -13,8 +13,7 @@ use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluati
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::read_evaluation_plan;
 use crate::objects::evaluation::lab_proof::lab_proof_model::LabProof;
 use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
-use crate::objects::evaluation::product_document::product_document_model::ProductDocument;
-use crate::objects::evaluation::product_document::product_document_store::read_product_document;
+use crate::objects::evaluation::product_document::product_document_store::{DocumentRecord, read_document_record};
 use crate::objects::evaluation::work_unit::work_unit_model::WorkUnit;
 use crate::objects::evaluation::work_unit::work_unit_store::read_work_units;
 use crate::panels::logic::evaluation::error::EvaluationError;
@@ -27,7 +26,9 @@ pub struct Needed<T> {
 
 /// Every place of input of an evaluation.
 pub struct Inputs {
-    pub documents: Vec<Needed<ProductDocument>>,
+    /// Each document without its file, with the size of that file (`None`
+    /// while it is not given).
+    pub documents: Vec<Needed<DocumentRecord>>,
     pub proofs: Vec<Needed<LabProof>>,
 }
 
@@ -68,7 +69,7 @@ fn needing(units: &[WorkUnit], id: i64, document: bool) -> usize {
 /// Called by: `panels/views/evaluation/evaluations.rs`: `input_views`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
-/// `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
+/// `objects/evaluation/product_document/product_document_store.rs`: `read_document_record`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `needed_proofs`;
 /// `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`needing`].
 pub fn inputs(db: &UserDatabase, evaluation: i64) -> Result<Inputs, EvaluationError> {
@@ -83,7 +84,7 @@ pub fn inputs(db: &UserDatabase, evaluation: i64) -> Result<Inputs, EvaluationEr
     for id in &stored.product_documents {
         let work_units = needing(&units, *id, true);
 
-        found.documents.push(Needed { input: read_product_document(db, *id)?, work_units });
+        found.documents.push(Needed { input: read_document_record(db, *id)?, work_units });
     }
 
     for id in &proofs {

@@ -274,7 +274,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 ### `objects/evaluation/product_document/product_document_model.rs`: `ProductDocument`
 
-- **Stored** (`objects/evaluation/product_document/product_document_store.rs`): `create_product_document`, `read_product_document`, `update_product_document`, `read_document_text`, `read_document_passages`
+- **Stored** (`objects/evaluation/product_document/product_document_store.rs`): `create_product_document`, `read_product_document`, `read_document_record`, `update_product_document`, `read_document_text`, `read_document_passages`
 - **Processed, the rules of the data**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_rules/planning.rs`: `add_document_place`
   - `objects/evaluation/product_document/product_document_rules.rs`: `give_document`, `product_document_fields`

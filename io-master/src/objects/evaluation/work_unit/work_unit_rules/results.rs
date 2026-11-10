@@ -19,7 +19,7 @@ use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::error::DomainError;
 use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::evaluation_in_progress;
 use crate::objects::evaluation::lab_proof::lab_proof_store::read_lab_proof;
-use crate::objects::evaluation::product_document::product_document_store::{read_document_text, read_product_document};
+use crate::objects::evaluation::product_document::product_document_store::{read_document_record, read_document_text};
 use crate::objects::evaluation::work_unit::work_unit_model::{Author, ProofQuote, Quote, Verdict, WorkUnit};
 use crate::objects::evaluation::work_unit::work_unit_store::{MAX_QUOTES, read_work_unit, update_work_unit};
 use crate::objects::text::check_length;
@@ -60,7 +60,7 @@ fn spaced(text: &str) -> String {
 /// text; an error of the database.
 ///
 /// Called by: [`quotes_found`], [`save_results`] (once for all the quotes of the evaluator).
-/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
+/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_document_record`,
 /// `read_document_text`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`spaced`].
 fn quote_sources(db: &UserDatabase, unit: &WorkUnit) -> Result<(Vec<QuoteSource>, Vec<QuoteSource>), DomainError> {
     let proofs = unit.input_functional.as_deref().unwrap_or_default();
@@ -68,7 +68,7 @@ fn quote_sources(db: &UserDatabase, unit: &WorkUnit) -> Result<(Vec<QuoteSource>
     let mut texts = Vec::with_capacity(proofs.len());
 
     for id in &unit.input_product_documents {
-        documents.push((*id, read_product_document(db, *id)?.name, spaced(&read_document_text(db, *id)?)));
+        documents.push((*id, read_document_record(db, *id)?.0.name, spaced(&read_document_text(db, *id)?)));
     }
 
     for id in proofs {

@@ -60,7 +60,7 @@ pub struct DocumentInputView {
     /// `None` while it is not given.
     version: Option<String>,
     /// The size of its file, 0 while it is not given.
-    bytes: usize,
+    bytes: u64,
     needed_by: usize,
 }
 
@@ -195,13 +195,13 @@ fn input_views(db: &UserDatabase, id: i64) -> Result<(Vec<DocumentInputView>, Ve
     let mut proofs = Vec::with_capacity(found.proofs.len());
 
     for needed in found.documents {
-        let document = needed.input;
+        let (document, bytes) = needed.input;
 
         documents.push(DocumentInputView {
             id: document.id,
             name: document.name,
             version: document.version,
-            bytes: document.content.map_or(0, |content| content.len()),
+            bytes: bytes.unwrap_or(0),
             needed_by: needed.work_units,
         });
     }
