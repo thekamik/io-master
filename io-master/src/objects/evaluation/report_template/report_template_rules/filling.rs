@@ -7,6 +7,7 @@
 //! an evaluation, a template ──► filled_report
 //!   the evaluation ──► evaluation_plan_fields ──► the values of {{evaluation_plan.*}}
 //!   its standards, documents, proofs, work units ──► <object>_fields ──► the values of each element
+//!   each value made harmless in the language of the file of the template (escaping.rs: escaped)
 //!   segments(template) ──► report_text: a text replaced, a block for each element its filter takes
 //!   ──► the report, at most MAX_REPORT bytes ──► write_report ──► the file
 //! ```
@@ -29,6 +30,7 @@ use crate::objects::evaluation::oscal_standard_document::oscal_standard_document
 use crate::objects::evaluation::oscal_standard_document::oscal_standard_document_store::read_oscal_standard_document;
 use crate::objects::evaluation::product_document::product_document_rules::product_document_fields;
 use crate::objects::evaluation::product_document::product_document_store::read_product_document;
+use crate::objects::evaluation::report_template::report_template_rules::escaping::{Escape, escape_of, escaped};
 use crate::objects::evaluation::report_template::report_template_rules::markers::{
     EVALUATION_PLAN, Filter, List, Segment, element_model, marker, replaced, segments,
 };
@@ -58,26 +60,36 @@ struct Lists {
 }
 
 /// The markers of the fields `fields` of the model `model` with their
-/// values `values`, each field with the value at its place.
+/// values `values`, each field with the value at its place, written as the
+/// file of the report holds a text (`escape`).
 ///
 /// Input: `model`, the name of a model (`"work_unit"`); `fields`, its fields;
-/// `values`, their values in the same order.
+/// `values`, their values in the same order; `escape`, how the report writes
+/// a value.
 /// Output: the pairs (`[("{{work_unit.id}}", "31"), ...]`).
 ///
 /// Called by: [`filled_report`], [`element_of`].
-/// Calls: `objects/evaluation/report_template/report_template_rules/markers.rs`: `marker`.
-fn values_of<const N: usize>(model: &str, fields: &[&str; N], values: [String; N]) -> Vec<(String, String)> {
+/// Calls: `objects/evaluation/report_template/report_template_rules/markers.rs`: `marker`;
+/// `objects/evaluation/report_template/report_template_rules/escaping.rs`: `escaped`.
+fn values_of<const N: usize>(
+    model: &str,
+    fields: &[&str; N],
+    values: [String; N],
+    escape: Escape,
+) -> Vec<(String, String)> {
     let mut pairs = Vec::with_capacity(N);
 
     for (field, value) in fields.iter().zip(values) {
-        pairs.push((marker(model, field), value));
+        pairs.push((marker(model, field), escaped(value, escape)));
     }
 
     pairs
 }
 
 /// An element of the list `list` with the values `values` of its fields,
-/// to which the values of the evaluation are added.
+/// written as the file of the report holds a text (`escape`). The values of
+/// the evaluation are not copied into each element: [`report_text`] gives
+/// them beside it.
 ///
 /// Called by: [`lists_of`].
 /// Calls: `objects/evaluation/report_template/report_template_rules/markers.rs`: `element_model`; [`values_of`].
@@ -85,17 +97,14 @@ fn element_of<const N: usize>(
     list: List,
     verdict: Option<Verdict>,
     values: [String; N],
-    plan_values: &[(String, String)],
+    escape: Escape,
 ) -> Result<Element, DomainError> {
     let (model, fields) = element_model(list);
     let Ok(fields) = <&[&str; N]>::try_from(fields) else {
         return Err(DomainError::Refused(format!("the fields of {model} are not {N}")));
     };
-    let mut values = values_of(model, fields, values);
 
-    values.extend_from_slice(plan_values);
-
-    Ok(Element { verdict, values })
+    Ok(Element { verdict, values: values_of(model, fields, values, escape) })
 }
 
 /// The work units `units` of an evaluation in the order of the work.
@@ -125,11 +134,11 @@ fn units_in_order(units: &[WorkUnit]) -> Result<Vec<WorkUnit>, DomainError> {
 
 /// The lists of the evaluation `plan`: its standards, its documents, the
 /// proofs its work units need and its work units, each element with its
-/// values and those of the evaluation `plan_values`.
+/// values.
 ///
 /// Input: `db`, the open database of the user; `plan`, an evaluation;
-/// `units`, its work units in the order of the work; `plan_values`, the
-/// values of the markers of the evaluation.
+/// `units`, its work units in the order of the work; `escape`, how the report
+/// writes a value.
 /// Output: the lists; an error when an object is missing.
 ///
 /// Called by: [`filled_report`].
@@ -143,7 +152,7 @@ fn lists_of(
     db: &UserDatabase,
     plan: &EvaluationPlan,
     units: &[WorkUnit],
-    plan_values: &[(String, String)],
+    escape: Escape,
 ) -> Result<Lists, DomainError> {
     let mut standards = Vec::with_capacity(plan.oscal_documents.len());
     let mut documents = Vec::with_capacity(plan.product_documents.len());
@@ -170,18 +179,18 @@ fn lists_of(
     for standard in &standards {
         let values = oscal_standard_document_fields(standard);
 
-        lists.oscal_documents.push(element_of(List::OscalDocuments, None, values, plan_values)?);
+        lists.oscal_documents.push(element_of(List::OscalDocuments, None, values, escape)?);
     }
     for document in &documents {
         lists.product_documents.push(element_of(
             List::ProductDocuments,
             None,
             product_document_fields(document),
-            plan_values,
+            escape,
         )?);
     }
     for proof in &proofs {
-        lists.lab_proofs.push(element_of(List::LabProofs, None, lab_proof_fields(proof), plan_values)?);
+        lists.lab_proofs.push(element_of(List::LabProofs, None, lab_proof_fields(proof), escape)?);
     }
 
     let named = Named { units, standards: &standards, documents: &documents, proofs: &proofs };
@@ -189,7 +198,7 @@ fn lists_of(
     for unit in units {
         let values = work_unit_fields(db, unit, &named)?;
 
-        lists.work_units.push(element_of(List::WorkUnits, unit.verdict, values, plan_values)?);
+        lists.work_units.push(element_of(List::WorkUnits, unit.verdict, values, escape)?);
     }
 
     Ok(lists)
@@ -210,7 +219,8 @@ fn push_bounded(report: &mut String, text: &str) -> Result<(), DomainError> {
 
 /// The report of the parts `parts` of a template: each text with the
 /// markers of the evaluation replaced, each block written for every element
-/// of its list its filter takes.
+/// of its list its filter takes, with the markers of the element and of the
+/// evaluation replaced.
 ///
 /// Input: `parts`, the parts of a template; `plan_values`, the values of the
 /// markers of the evaluation; `lists`, its lists.
@@ -225,7 +235,7 @@ fn report_text(parts: &[Segment<'_>], plan_values: &[(String, String)], lists: &
     for part in parts {
         let (list, filter, body) = match *part {
             Segment::Text(text) => {
-                push_bounded(&mut report, &replaced(text, plan_values))?;
+                push_bounded(&mut report, &replaced(text, plan_values, &[]))?;
                 continue;
             }
             Segment::Block { list, filter, body } => (list, filter, body),
@@ -239,7 +249,7 @@ fn report_text(parts: &[Segment<'_>], plan_values: &[(String, String)], lists: &
 
         for element in elements {
             if filter == Filter::All || filter == Filter::Verdict(element.verdict) {
-                push_bounded(&mut report, &replaced(body, &element.values))?;
+                push_bounded(&mut report, &replaced(body, &element.values, plan_values))?;
             }
         }
     }
@@ -252,7 +262,9 @@ fn report_text(parts: &[Segment<'_>], plan_values: &[(String, String)], lists: &
 ///
 /// Input: `db`, the open database of the user; `evaluation`, the id of an
 /// evaluation (in evaluation or a report); `template`, the id of a template.
-/// Output: the report ("# Router R7\n..."); `DomainError::Refused` for a plan
+/// Output: the report ("# Router R7\n..."), its values written as the
+/// language of the extension of the template holds a text (HTML, LaTeX;
+/// `escaping.rs`); `DomainError::Refused` for a plan
 /// in planning, a template whose blocks are wrong, a report past
 /// [`MAX_REPORT`]; an error of the database.
 ///
@@ -262,6 +274,7 @@ fn report_text(parts: &[Segment<'_>], plan_values: &[(String, String)], lists: &
 /// `objects/evaluation/report_template/report_template_rules/markers.rs`: `segments`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
 /// `objects/evaluation/evaluation_plan/evaluation_plan_rules/fields.rs`: `evaluation_plan_fields`;
+/// `objects/evaluation/report_template/report_template_rules/escaping.rs`: `escape_of`;
 /// [`values_of`], [`units_in_order`], [`lists_of`], [`report_text`].
 pub fn filled_report(db: &UserDatabase, evaluation: i64, template: i64) -> Result<String, DomainError> {
     let plan = read_evaluation_plan(db, evaluation)?;
@@ -271,8 +284,11 @@ pub fn filled_report(db: &UserDatabase, evaluation: i64, template: i64) -> Resul
     let template = read_report_template(db, template)?;
     let parts = segments(&template.text)?;
     let units = units_in_order(&read_work_units(db, evaluation)?)?;
-    let plan_values = values_of(EVALUATION_PLAN, &EVALUATION_PLAN_FIELDS, evaluation_plan_fields(db, &plan)?);
-    let lists = lists_of(db, &plan, &units, &plan_values)?;
+    // A value is a text of the evaluation, never a part of the template: it
+    // is written as the language of the file holds a text.
+    let escape = escape_of(&template.extension);
+    let plan_values = values_of(EVALUATION_PLAN, &EVALUATION_PLAN_FIELDS, evaluation_plan_fields(db, &plan)?, escape);
+    let lists = lists_of(db, &plan, &units, escape)?;
 
     report_text(&parts, &plan_values, &lists)
 }
@@ -297,7 +313,8 @@ pub fn write_report(db: &UserDatabase, evaluation: i64, template: i64, path: &Pa
 mod tests {
     //! Tests of a report: the markers of the evaluation and of its work units
     //! replaced, a block written for each element its filter takes, in the
-    //! order of the work; a plan in planning has none.
+    //! order of the work; a value kept as text in a report of HTML; a plan in
+    //! planning has none.
 
     use super::*;
 
@@ -348,6 +365,33 @@ mod tests {
                 second.label
             )
         );
+    }
+
+    #[test]
+    fn a_value_stays_text_in_a_report_of_html() {
+        let (_directory, db) = database();
+        let (id, first, _) = evaluation(&db);
+
+        write(
+            &db,
+            &WorkUnit {
+                verdict: Some(Verdict::Fail),
+                findings: "<script>alert(1)</script>".to_owned(),
+                ..read_work_unit(&db, first).unwrap()
+            },
+        );
+
+        let page = ReportTemplate {
+            id: 0,
+            name: "ETR page".to_owned(),
+            extension: "html".to_owned(),
+            text: "{{#evaluation_plan.work_units verdict=fail}}<p>{{work_unit.findings}}</p>{{/evaluation_plan.work_units}}"
+                .to_owned(),
+        };
+        let report = filled_report(&db, id, create_report_template(&db, &page).unwrap()).unwrap();
+
+        // The template is HTML, the value only its text.
+        assert_eq!(report, "<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>");
     }
 
     #[test]

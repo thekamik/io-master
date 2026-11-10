@@ -287,18 +287,20 @@ fn value_at<'a, 'b>(text: &'b str, values: &'a [(String, String)]) -> Option<(&'
     None
 }
 
-/// The text `text` with each marker of `values` replaced by its value, in
-/// one pass: a marker inside a value (findings that write
+/// The text `text` with each marker of `values` or of `shared` replaced by
+/// its value, in one pass: a marker inside a value (findings that write
 /// `{{work_unit.label}}`) is never replaced again, and a marker the program
 /// does not know stays as it is written.
 ///
 /// Input: `text`, a part of a template; `values`, the markers with their
-/// values (`[("{{work_unit.verdict}}", "Pass")]`).
+/// values (`[("{{work_unit.verdict}}", "Pass")]`), looked at first; `shared`,
+/// the markers every part of the report knows (those of the evaluation),
+/// empty when `values` are those already.
 /// Output: the text ("Verdict: Pass").
 ///
 /// Called by: `objects/evaluation/report_template/report_template_rules/filling.rs`: `report_text`.
 /// Calls: [`value_at`].
-pub fn replaced(text: &str, values: &[(String, String)]) -> String {
+pub fn replaced(text: &str, values: &[(String, String)], shared: &[(String, String)]) -> String {
     let mut written = String::with_capacity(text.len());
     let mut rest = text;
 
@@ -312,7 +314,12 @@ pub fn replaced(text: &str, values: &[(String, String)]) -> String {
 
         written.push_str(before);
 
-        if let Some((value, after)) = value_at(from_marker, values) {
+        let found = match value_at(from_marker, values) {
+            Some(found) => Some(found),
+            None => value_at(from_marker, shared),
+        };
+
+        if let Some((value, after)) = found {
             written.push_str(value);
             rest = after;
         } else {
@@ -401,7 +408,7 @@ mod tests {
         ];
 
         assert_eq!(
-            replaced("{{work_unit.label}}: {{work_unit.findings}} {{x}} {{", &values),
+            replaced("{{work_unit.label}}: {{work_unit.findings}} {{x}} {{", &values, &[]),
             "ASE_INT.1-1: it writes {{work_unit.label}} {{x}} {{"
         );
     }

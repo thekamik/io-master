@@ -159,6 +159,8 @@ objects/evaluation/
                    markers.rs: marker (a field of a model ──► "{{work_unit.findings}}"), segments (the texts
                    and the blocks of a template, never nested), replaced (the markers replaced in one pass),
                    template_warnings (the unknown markers)
+                   escaping.rs: escape_of (the extension of a template ──► how its report writes a value),
+                   escaped (a value kept as text in HTML, XML and LaTeX)
                    filling.rs: filled_report (the fields of an evaluation and of each element of its lists
                    ──► the template filled, at most MAX_REPORT), write_report
                    templates.rs: new_template (io-master/report_templates/default_report.md), change_template,

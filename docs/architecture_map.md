@@ -309,6 +309,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
 
 - **Stored** (`objects/evaluation/report_template/report_template_store.rs`): `create_report_template`, `read_report_template`, `read_report_templates`, `update_report_template`
 - **Processed, the rules of the data**:
+  - `objects/evaluation/report_template/report_template_rules/escaping.rs`: `escape_of` (its extension)
   - `objects/evaluation/report_template/report_template_rules/filling.rs`: `filled_report`, `write_report`
   - `objects/evaluation/report_template/report_template_rules/markers.rs`: `segments`, `template_warnings` (the markers and blocks of its text)
   - `objects/evaluation/report_template/report_template_rules/templates.rs`: `change_template`, `import_template`, `new_template`, `write_template`
