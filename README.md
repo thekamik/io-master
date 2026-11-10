@@ -23,7 +23,7 @@ Debian 13 (trixie), the target system and the only one tested, with a graphical 
 
 | Needed for | Debian 13 (`apt`) |
 |---|---|
-| running | `poppler-utils` |
+| running | `poppler-utils bubblewrap` |
 | building | `build-essential pkg-config libglib2.0-dev libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev libdbus-1-dev nodejs npm` |
 | tests in the window | `xvfb xclip imagemagick x11-utils libxtst6 python3` |
 
@@ -102,7 +102,7 @@ Few, well known, pinned; each explained where it is declared (`io-master/Cargo.t
 | `typescript`, `svelte-check`, `@tsconfig/svelte` | 5.9.3, 4.7.6, 5.0.8 | TypeScript strict, checked before every commit |
 | `@tauri-apps/cli` | 2.12.3 | the tools of Tauri |
 
-The system packages are in **Requirements** above; Poppler (`pdfinfo`, `pdftotext`) is run as another program to read PDFs.
+The system packages are in **Requirements** above; Poppler (`pdfinfo`, `pdftotext`) is run as another program to read PDFs, each call in a sandbox of `bubblewrap` (`bwrap`: no network, no home folder, the system read-only), since the PDFs come from outside the laboratory (`io-master/src/infrastructure/pdf/poppler.rs`).
 
 ## The repository
 

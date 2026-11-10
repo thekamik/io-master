@@ -18,6 +18,18 @@
 //! ([`MAX_OUTPUT`]), so that a file made for it neither holds the program
 //! nor fills its memory ([`run`]).
 //!
+//! **Each tool runs in a sandbox** (user, 2026-11-10): `bwrap` (the package
+//! `bubblewrap`) starts it in namespaces of its own ([`SANDBOX_ARGUMENTS`]),
+//! where it sees the programs and libraries of the system read-only and
+//! nothing else: no home folder, no data of the program, no network, no
+//! other process. A fault of the parser a file was made for then reaches
+//! neither the databases nor the keys. The PDF and the text pass through the
+//! pipes alone.
+//!
+//! ```text
+//! bwrap <SANDBOX_ARGUMENTS> -- pdftotext -enc UTF-8 -f A -l B fd://0 -
+//! ```
+//!
 //! A PDF may have hundreds of pages, so [`text`] reads it in parts of
 //! [`PART`] pages ([`text_of_pages`]), each part one call of `pdftotext`.
 
@@ -57,6 +69,59 @@ const MAX_OUTPUT: u64 = 64 * 1024 * 1024;
 /// line is shown.
 const MAX_SAID: u64 = 64 * 1024;
 
+/// The program that starts a tool in its sandbox (the package `bubblewrap`).
+const SANDBOX: &str = "bwrap";
+
+/// The sandbox of a tool, as `bwrap` is told it:
+///
+/// - every namespace of its own (`--unshare-all`): no network, no other
+///   process seen, no shared memory with the session of the user;
+/// - ended with the program (`--die-with-parent`), no way to the terminal
+///   (`--new-session`), no capability (`--cap-drop ALL`), no variable of the
+///   environment but `PATH` (`--clearenv`);
+/// - of the file system only the programs and libraries of the system,
+///   read-only (`/usr`, and `/lib`, `/lib64`, `/bin` where a system has
+///   them apart), a `/proc` and a `/dev` of its own and an empty `/tmp`: no
+///   home folder, no data folder of the program.
+const SANDBOX_ARGUMENTS: [&str; 33] = [
+    "--unshare-all",
+    "--die-with-parent",
+    "--new-session",
+    "--cap-drop",
+    "ALL",
+    "--clearenv",
+    "--setenv",
+    "PATH",
+    "/usr/bin:/bin",
+    "--ro-bind",
+    "/usr",
+    "/usr",
+    "--ro-bind-try",
+    "/lib",
+    "/lib",
+    "--ro-bind-try",
+    "/lib64",
+    "/lib64",
+    "--ro-bind-try",
+    "/bin",
+    "/bin",
+    "--ro-bind-try",
+    "/etc/ld.so.cache",
+    "/etc/ld.so.cache",
+    "--proc",
+    "/proc",
+    "--dev",
+    "/dev",
+    "--tmpfs",
+    "/tmp",
+    "--chdir",
+    "/",
+    "--",
+];
+
+/// What `bwrap` says when the tool it is to start is not installed.
+const SANDBOX_NO_TOOL: &str = "bwrap: execvp";
+
 /// What `pdfinfo` tells about a file.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PdfInfo {
@@ -68,7 +133,7 @@ pub struct PdfInfo {
 /// Why the text of a file could not be read.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PdfError {
-    /// `pdfinfo` or `pdftotext` is not installed.
+    /// `pdfinfo`, `pdftotext` or `bwrap` (their sandbox) is not installed.
     ToolMissing(&'static str),
     /// The file is larger than [`MAX_FILE`].
     TooLarge,
@@ -82,7 +147,8 @@ impl fmt::Display for PdfError {
             PdfError::ToolMissing(tool) => {
                 write!(
                     formatter,
-                    "{tool} is not installed; install the package poppler-utils (Debian) or poppler (Arch)"
+                    "{tool} is not installed; install the packages poppler-utils and bubblewrap (Debian) or poppler and \
+                     bubblewrap (Arch)"
                 )
             }
             PdfError::TooLarge => write!(formatter, "the file is larger than {} MiB", MAX_FILE / 1024 / 1024),
@@ -147,9 +213,10 @@ fn joined<T>(joined: std::thread::Result<std::io::Result<T>>, tool: &str) -> Res
     }
 }
 
-/// Runs a tool of Poppler with the PDF on its standard input. The file
-/// comes from outside the laboratory (the manufacturer of the product), so
-/// the tool is bounded: it runs at most [`TIMEOUT`], and writes at most
+/// Runs a tool of Poppler in its sandbox ([`SANDBOX_ARGUMENTS`]) with the
+/// PDF on its standard input. The file comes from outside the laboratory
+/// (the manufacturer of the product), so the tool sees nothing of the user,
+/// and is bounded: it runs at most [`TIMEOUT`], and writes at most
 /// [`MAX_OUTPUT`] bytes, past which its output is closed and it ends.
 ///
 /// Input:
@@ -158,13 +225,15 @@ fn joined<T>(joined: std::thread::Result<std::io::Result<T>>, tool: &str) -> Res
 /// - `pdf`: the bytes of the PDF, within [`MAX_FILE`].
 ///
 /// Output: what the tool wrote on its standard output; `PdfError::ToolMissing`
-/// when it is not installed, `PdfError::Unreadable` with what it said when it
+/// when it or `bwrap` is not installed, `PdfError::Unreadable` with what it said when it
 /// fails, when it runs too long or writes too much.
 ///
 /// Called by: [`info`], [`text_of_pages`].
 /// Calls: [`read_bounded`], [`waited`], [`joined`].
 fn run(tool: &'static str, arguments: &[&str], pdf: &[u8]) -> Result<Vec<u8>, PdfError> {
-    let mut child = Command::new(tool)
+    let mut child = Command::new(SANDBOX)
+        .args(SANDBOX_ARGUMENTS)
+        .arg(tool)
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -172,7 +241,7 @@ fn run(tool: &'static str, arguments: &[&str], pdf: &[u8]) -> Result<Vec<u8>, Pd
         .spawn()
         .map_err(|error| {
             if error.kind() == ErrorKind::NotFound {
-                PdfError::ToolMissing(tool)
+                PdfError::ToolMissing(SANDBOX)
             } else {
                 PdfError::Unreadable(error.to_string())
             }
@@ -216,6 +285,10 @@ fn run(tool: &'static str, arguments: &[&str], pdf: &[u8]) -> Result<Vec<u8>, Pd
 
     if !status.success() {
         let said = String::from_utf8_lossy(&said);
+
+        // The sandbox started and found no tool to start in it.
+        ensure!(!said.starts_with(SANDBOX_NO_TOOL), PdfError::ToolMissing(tool));
+
         let said = said.lines().find(|line| !line.trim().is_empty()).unwrap_or("no explanation");
 
         return Err(PdfError::Unreadable(said.trim().to_owned()));
@@ -385,6 +458,21 @@ mod tests {
         assert_eq!(read_bounded(&b"abc"[..], 3).unwrap(), b"abc");
         assert_eq!(read_bounded(&b"abcdef"[..], 3).unwrap(), b"abcd");
         assert!(read_bounded(&b""[..], 3).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_tool_sees_no_home_folder_and_a_missing_one_is_told() {
+        // The sandbox holds the system and nothing of the user.
+        let Err(PdfError::Unreadable(said)) = run("ls", &["/home"], b"") else {
+            panic!("the home folders are seen from the sandbox");
+        };
+
+        assert!(said.contains("/home"), "{said}");
+        assert!(run("ls", &["/usr/bin"], b"").is_ok());
+        assert_eq!(
+            run("no-such-tool-of-poppler", &[], b"").unwrap_err(),
+            PdfError::ToolMissing("no-such-tool-of-poppler")
+        );
     }
 
     #[test]

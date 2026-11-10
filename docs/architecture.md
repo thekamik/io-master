@@ -99,5 +99,5 @@ The requirements of a standard are **NIST OSCAL 1.2.3 catalogs**, checked agains
 
 - **Debian 13 (trixie)**, the target system and the only one tested; XFCE on X11. The packages: `README.md`.
 - Few resources: the virtual machines of a laboratory get little (8 GB RAM or less).
-- Poppler (`pdfinfo`, `pdftotext`) reads the PDFs of the knowledge bases and of the documents of the product. A PDF comes from outside the laboratory, so each call of a tool is bounded: 120 seconds, 64 MiB of output (`infrastructure/pdf/poppler.rs`: `run`); the tools still run with the rights of the user (a sandbox for them: `docs/todo.md`).
+- Poppler (`pdfinfo`, `pdftotext`) reads the PDFs of the knowledge bases and of the documents of the product. A PDF comes from outside the laboratory, so each call of a tool is bounded (120 seconds, 64 MiB of output) and runs in a sandbox of `bubblewrap`: namespaces of its own, no network, no home folder and no data of the program, the programs and libraries of the system read-only (`infrastructure/pdf/poppler.rs`: `run`, `SANDBOX_ARGUMENTS`). A fault of the parser a file was made for reaches neither the databases nor the keys.
 - The decrypted data is only in RAM: **the swap encrypted (or none), and no hibernation** on the computer of an evaluator.
