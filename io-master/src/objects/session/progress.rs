@@ -1,5 +1,6 @@
 //! The progress of the long work of the AI: a step written into it; the
-//! locks of the session as a long work takes them.
+//! locks of the session as a long work takes them; a question of the work
+//! that the "Stop" of the user ends.
 
 pub mod progress_ai;
 pub mod progress_model;

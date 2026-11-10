@@ -5,7 +5,7 @@
 //!
 //! ```text
 //! fill_work_unit ──► prepared_question  (the lock of the database held)  parameters_question / dependencies_question
-//!                ──► send_whole         (released)                        the answer of the AI
+//!                ──► send_until_stopped (released)                        the answer of the AI, ended by "Stop"
 //!                ──► written            (held)                            record (the journal of the agent),
 //!                                        applied: read_* and apply_* ──► filled, the notes
 //! ```
@@ -18,8 +18,8 @@ use std::sync::Mutex;
 
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::integration::integration_ai::question::{Prepared, prepare};
-use crate::objects::ai::integration::integration_ai::sending::{Sent, send_whole};
-use crate::objects::ai::journal::journal_ai::record;
+use crate::objects::ai::integration::integration_ai::sending::Sent;
+use crate::objects::ai::journal::journal_ai::{record, why_not_taken};
 use crate::objects::ai_error::AiError;
 use crate::objects::evaluation::work_unit::work_unit_ai::proposal::{
     apply_dependencies, apply_parameters, dependencies_question, parameters_question, read_dependencies,
@@ -27,6 +27,8 @@ use crate::objects::evaluation::work_unit::work_unit_ai::proposal::{
 };
 use crate::objects::evaluation::work_unit::work_unit_store::read_work_unit;
 use crate::objects::session::progress::progress_ai::lock::{lock_database, open_database};
+use crate::objects::session::progress::progress_ai::stop::send_until_stopped;
+use crate::objects::session::progress::progress_model::Progress;
 
 /// The task of a filling.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -98,12 +100,14 @@ fn applied(db: &UserDatabase, task: FillTask, plan: i64, unit: i64, answer: &str
 /// Input: `database`, the lock of the open database of the session; `step`,
 /// the task and the ids of the plan and of the work unit; `prepared`, the
 /// question as it was sent; `sent`, its answer.
-/// Output: whether it was filled and the notes (`(true, [])`); an error when
-/// the session or the database fails.
+/// Output: whether it was filled and the notes (`(true, [])`): an answer
+/// that failed, or did not end by itself (cut, refused, stopped), is not
+/// taken; a question the service seems to have shortened is taken with the
+/// warning among its notes; an error when the session or the database fails.
 ///
 /// Called by: [`fill_work_unit`].
 /// Calls: `objects/session/progress/progress_ai/lock.rs`: `lock_database`, `open_database`;
-/// `objects/ai/journal/journal_ai.rs`: `record`; [`applied`].
+/// `objects/ai/journal/journal_ai.rs`: `record`, `why_not_taken`; [`applied`].
 fn written(
     database: &Mutex<Option<UserDatabase>>,
     step: (FillTask, i64, i64),
@@ -119,8 +123,15 @@ fn written(
         return Ok((false, vec![error.to_string()]));
     }
 
+    if let Some(why) = why_not_taken(answer.ending) {
+        return Ok((false, vec![format!("The answer was not taken: {why}.")]));
+    }
+
     Ok(match applied(db, task, plan, unit, &answer.text) {
-        Ok(notes) => (true, notes),
+        Ok(mut notes) => {
+            notes.extend(answer.shortened);
+            (true, notes)
+        }
         Err(error) => (false, vec![error.to_string()]),
     })
 }
@@ -131,6 +142,8 @@ fn written(
 ///
 /// Input:
 /// - `database`: the lock of the open database of the session.
+/// - `progress`: the lock of the progress of the session: a "Stop" of the
+///   user ends the answer awaited.
 /// - `task`: the parameters, or the dependencies.
 /// - `plan`: a plan in planning with an agent of the planner; `unit`: one of
 ///   its work units.
@@ -140,9 +153,11 @@ fn written(
 /// (`("1.1.1", true, [])`). An error when the session or the database fails.
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_plan`.
-/// Calls: [`prepared_question`]; `objects/ai/integration/integration_ai/sending.rs`: `send_whole`; [`written`].
+/// Calls: [`prepared_question`]; `objects/session/progress/progress_ai/stop.rs`: `send_until_stopped`;
+/// [`written`].
 pub async fn fill_work_unit(
     database: &Mutex<Option<UserDatabase>>,
+    progress: &Mutex<Progress>,
     task: FillTask,
     plan: i64,
     unit: i64,
@@ -152,7 +167,7 @@ pub async fn fill_work_unit(
         Ok(prepared) => prepared,
         Err(reason) => return Ok((label, false, vec![reason])),
     };
-    let sent = send_whole(&prepared).await;
+    let sent = send_until_stopped(&prepared, progress).await;
     let (filled, notes) = written(database, (task, plan, unit), prepared, sent)?;
 
     Ok((label, filled, notes))

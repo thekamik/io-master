@@ -167,7 +167,7 @@ objects/session/
   progress/      progress_model.rs (Progress, Problem: a helper model, never kept),
                  progress_ai/ step.rs (record_step: a step of a long work written into it),
                  lock.rs (the locks of the session as a long work takes them: the database only for the short
-                 steps)
+                 steps), stop.rs (send_until_stopped: a question of a long work that "Stop" ends)
 objects/user/
   program_data/  program_data_model.rs (Installation, Settings), program_data_store.rs
   user_data/     user_data_model.rs (User), user_data_store.rs,

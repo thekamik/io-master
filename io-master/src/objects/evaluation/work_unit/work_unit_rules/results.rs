@@ -46,7 +46,7 @@ type QuoteSource = (i64, String, String);
 /// `text` with every run of spaces, tabs and line ends made one space, so
 /// that a quote is found however the lines of its document were broken.
 ///
-/// Called by: [`quotes_found`].
+/// Called by: [`quote_sources`], [`quotes_found`], [`stands_in`].
 fn spaced(text: &str) -> String {
     text.split_whitespace().collect::<Vec<&str>>().join(" ")
 }
@@ -59,7 +59,7 @@ fn spaced(text: &str) -> String {
 /// [(6, "Scan", "port 22 closed")])`); a proof not given yet has an empty
 /// text; an error of the database.
 ///
-/// Called by: [`quotes_found`].
+/// Called by: [`quotes_found`], [`save_results`] (once for all the quotes of the evaluator).
 /// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`,
 /// `read_document_text`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`spaced`].
 fn quote_sources(db: &UserDatabase, unit: &WorkUnit) -> Result<(Vec<QuoteSource>, Vec<QuoteSource>), DomainError> {
@@ -120,8 +120,7 @@ fn place_of(sources: &[QuoteSource], name: &str, wanted: &str) -> Option<i64> {
 /// [Quote { product_document: 3, .. }], proofs_found: [], missing: [("IXIT",
 /// "...")] }`). An error when the database fails.
 ///
-/// Called by: [`check_quote`]; `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`:
-/// `apply_assessment`.
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`.
 /// Calls: [`quote_sources`], [`spaced`], [`place_of`].
 pub fn quotes_found(
     db: &UserDatabase,
@@ -135,7 +134,10 @@ pub fn quotes_found(
     for (name, text) in proposed {
         let wanted = spaced(text);
 
-        if let Some(product_document) = place_of(&documents, name, &wanted) {
+        // An empty quote quotes nothing: it stands in no source.
+        if wanted.is_empty() {
+            quotes.missing.push((name.clone(), text.clone()));
+        } else if let Some(product_document) = place_of(&documents, name, &wanted) {
             quotes.found.push(Quote { product_document, text: text.clone() });
         } else if let Some(lab_proof) = place_of(&proofs, name, &wanted) {
             quotes.proofs_found.push(ProofQuote { lab_proof, text: text.clone() });
@@ -147,19 +149,28 @@ pub fn quotes_found(
     Ok(quotes)
 }
 
-/// Whether the quote `text` of the document `document` stands word for word
-/// in it, for the work unit `unit`.
+/// Whether the quote `text` stands word for word in the source `id` among
+/// `sources`, the spaces and line ends passed over. An empty quote stands
+/// nowhere: it quotes nothing.
 ///
-/// Input: `unit`, a work unit; `document`, the name of one of its documents;
-/// `text`, the text quoted.
-/// Output: `true` when it is found; an error of the database.
+/// Input: `sources`, the documents or the proofs of a work unit, from
+/// [`quote_sources`]; `id`, the id of the document or proof quoted; `text`,
+/// the text quoted.
+/// Output: the name of the source and whether the quote stands in it
+/// (`Some(("ST", true))`); `None` when no source has the id.
 ///
-/// Called by: [`check_quotes`].
-/// Calls: [`quotes_found`].
-fn check_quote(db: &UserDatabase, unit: &WorkUnit, document: &str, text: &str) -> Result<bool, DomainError> {
-    let quotes = quotes_found(db, unit, &[(document.to_owned(), text.to_owned())])?;
+/// Called by: [`check_quotes`], [`check_proof_quotes`].
+/// Calls: [`spaced`].
+fn stands_in<'a>(sources: &'a [QuoteSource], id: i64, text: &str) -> Option<(&'a str, bool)> {
+    let wanted = spaced(text);
 
-    Ok(!quotes.found.is_empty())
+    for (source, name, content) in sources {
+        if *source == id {
+            return Some((name.as_str(), !wanted.is_empty() && content.contains(&wanted)));
+        }
+    }
+
+    None
 }
 
 /// The results of a work unit as the evaluator gives them.
@@ -175,63 +186,49 @@ pub struct Results {
     pub verdict: Option<Verdict>,
 }
 
-/// Refuses a quote of the work unit `unit` that is not of one of its
-/// documents, or that is not found in it word for word.
+/// Refuses a quote that is not of one of the documents of the work unit, or
+/// that is not found in it word for word.
 ///
-/// Input: `unit`, the work unit as stored; `quotes`, the quotes the
-/// evaluator gives.
+/// Input: `documents`, the documents of the work unit with their texts, from
+/// [`quote_sources`]; `quotes`, the quotes the evaluator gives.
 /// Output: nothing; `DomainError::Refused` for more than `MAX_QUOTES`, a
-/// quote of another document or one not found, an error of the database.
+/// quote of another document, an empty one or one not found.
 ///
 /// Called by: [`save_results`].
-/// Calls: `objects/evaluation/product_document/product_document_store.rs`: `read_product_document`;
-/// [`check_quote`].
-fn check_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[Quote]) -> Result<(), DomainError> {
+/// Calls: [`stands_in`].
+fn check_quotes(documents: &[QuoteSource], quotes: &[Quote]) -> Result<(), DomainError> {
     ensure!(quotes.len() <= MAX_QUOTES, DomainError::Refused(format!("more than {MAX_QUOTES} quotes")));
 
     for quote in quotes {
-        ensure!(
-            unit.input_product_documents.contains(&quote.product_document),
-            DomainError::Refused("a quote of a document the work unit does not need".to_owned())
-        );
+        let Some((name, found)) = stands_in(documents, quote.product_document, &quote.text) else {
+            return Err(DomainError::Refused("a quote of a document the work unit does not need".to_owned()));
+        };
 
-        let name = read_product_document(db, quote.product_document)?.name;
-
-        ensure!(
-            check_quote(db, unit, &name, &quote.text)?,
-            DomainError::Refused(format!("the quote is not found in {name}: \"{}\"", quote.text))
-        );
+        ensure!(found, DomainError::Refused(format!("the quote is not found in {name}: \"{}\"", quote.text)));
     }
 
     Ok(())
 }
 
-/// Refuses a quote of a proof of the work unit `unit` that is not of one of
-/// its proofs, or that is not found in it word for word.
+/// Refuses a quote of a proof that is not of one of the proofs of the work
+/// unit, or that is not found in it word for word.
 ///
-/// Input: `unit`, the work unit as stored; `quotes`, the quotes of proofs the
-/// evaluator gives.
+/// Input: `proofs`, the proofs of the work unit with their texts, from
+/// [`quote_sources`]; `quotes`, the quotes of proofs the evaluator gives.
 /// Output: nothing; `DomainError::Refused` for more than `MAX_QUOTES`, a
-/// quote of another proof or one not found, an error of the database.
+/// quote of another proof, an empty one or one not found.
 ///
 /// Called by: [`save_results`].
-/// Calls: `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`quotes_found`].
-fn check_proof_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[ProofQuote]) -> Result<(), DomainError> {
+/// Calls: [`stands_in`].
+fn check_proof_quotes(proofs: &[QuoteSource], quotes: &[ProofQuote]) -> Result<(), DomainError> {
     ensure!(quotes.len() <= MAX_QUOTES, DomainError::Refused(format!("more than {MAX_QUOTES} quotes of proofs")));
 
     for quote in quotes {
-        ensure!(
-            unit.input_functional.as_deref().unwrap_or_default().contains(&quote.lab_proof),
-            DomainError::Refused("a quote of a proof the work unit does not need".to_owned())
-        );
+        let Some((name, found)) = stands_in(proofs, quote.lab_proof, &quote.text) else {
+            return Err(DomainError::Refused("a quote of a proof the work unit does not need".to_owned()));
+        };
 
-        let name = read_lab_proof(db, quote.lab_proof)?.name;
-        let found = quotes_found(db, unit, &[(name.clone(), quote.text.clone())])?;
-
-        ensure!(
-            found.proofs_found.contains(quote),
-            DomainError::Refused(format!("the quote is not found in {name}: \"{}\"", quote.text))
-        );
+        ensure!(found, DomainError::Refused(format!("the quote is not found in {name}: \"{}\"", quote.text)));
     }
 
     Ok(())
@@ -250,7 +247,7 @@ fn check_proof_quotes(db: &UserDatabase, unit: &WorkUnit, quotes: &[ProofQuote])
 /// Called by: `panels/views/evaluation/work_units.rs`: `evaluation_unit_save`.
 /// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; `objects/text.rs`:
-/// `check_length`; [`check_quotes`], [`check_proof_quotes`].
+/// `check_length`; [`quote_sources`], [`check_quotes`], [`check_proof_quotes`].
 pub fn save_results(db: &UserDatabase, evaluation: i64, unit: i64, results: &Results) -> Result<(), DomainError> {
     let stored = evaluation_in_progress(db, evaluation)?;
     let this = read_work_unit(db, unit)?;
@@ -267,8 +264,11 @@ pub fn save_results(db: &UserDatabase, evaluation: i64, unit: i64, results: &Res
     check_length(&results.analysis, "the analysis", MAX_RESULT)?;
     check_length(&results.vulnerability_notes, "the vulnerability notes", MAX_RESULT)?;
     check_length(&results.notes, "the notes", MAX_RESULT)?;
-    check_quotes(db, &this, &results.quotes)?;
-    check_proof_quotes(db, &this, &results.proof_quotes)?;
+    // The documents and proofs are read once for all the quotes.
+    let (documents, proofs) = quote_sources(db, &this)?;
+
+    check_quotes(&documents, &results.quotes)?;
+    check_proof_quotes(&proofs, &results.proof_quotes)?;
 
     let written = WorkUnit {
         findings: results.findings.trim().to_owned(),
@@ -288,7 +288,8 @@ pub fn save_results(db: &UserDatabase, evaluation: i64, unit: i64, results: &Res
 #[cfg(test)]
 mod tests {
     //! Tests of the results of the evaluator: written as of author User, a
-    //! quote not found and a verdict of no plan refused; a quote found.
+    //! quote not found, an empty one and a verdict of no plan refused; a quote
+    //! found.
 
     use super::*;
 
@@ -319,6 +320,14 @@ mod tests {
         let stored = read_work_unit(&db, first).unwrap();
 
         assert_eq!((stored.author, stored.analysis.as_str()), (Some(Author::User), "The ST names the TOE."));
+
+        // An empty quote quotes nothing, and stands in no document.
+        let empty = Quote { product_document: st, text: " \n".to_owned() };
+
+        assert!(matches!(
+            save_results(&db, id, first, &Results { quotes: vec![empty], ..results.clone() }),
+            Err(DomainError::Refused(_))
+        ));
 
         let invented = Quote { product_document: st, text: "The TOE is a firewall".to_owned() };
 

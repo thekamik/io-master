@@ -33,8 +33,8 @@ pub struct Sent(pub(in crate::objects::ai) Received);
 /// Output: the answer as it came, readable only through
 /// `objects/ai/journal/journal_ai.rs`: `record`.
 ///
-/// Called by: [`send_whole`]; `panels/views/chat/chats.rs`: `forwarded`, the
-/// lock of the session released.
+/// Called by: [`send_whole`]; `objects/session/progress/progress_ai/stop.rs`: `send_until_stopped`;
+/// `panels/views/chat/chats.rs`: `forwarded`; the lock of the session released.
 /// Calls: `objects/ai/integration/integration_ai/connection.rs`: `send`.
 pub async fn send(prepared: &Prepared, pieces: &mpsc::Sender<String>) -> Sent {
     Sent(connection::send(&prepared.request, pieces).await)
@@ -47,10 +47,9 @@ pub async fn send(prepared: &Prepared, pieces: &mpsc::Sender<String>) -> Sent {
 /// Output: the answer as it came, readable only through
 /// `objects/ai/journal/journal_ai.rs`: `record`.
 ///
-/// Called by: `panels/views/settings/integrations.rs`: `integration_check`;
-/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `fill_work_unit`;
-/// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assess_work_unit`; the
-/// lock of the session released.
+/// Called by: `panels/views/settings/integrations.rs`: `integration_check`, the lock of
+/// the session released. A long work of the AI, which the user may stop, sends with
+/// `objects/session/progress/progress_ai/stop.rs`: `send_until_stopped`.
 /// Calls: [`send`].
 pub async fn send_whole(prepared: &Prepared) -> Sent {
     let (pieces, mut receiver) = mpsc::channel::<String>(64);

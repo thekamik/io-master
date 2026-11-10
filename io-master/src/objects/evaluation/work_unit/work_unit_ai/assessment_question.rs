@@ -28,6 +28,7 @@
 use crate::objects::ai_error::AiError;
 use serde_json::{Value, json};
 
+use crate::infrastructure::clock::date_of;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::agent::agent_ai::{agent_question, filled};
 use crate::objects::ai::agent::agent_store::read_agent;
@@ -43,7 +44,7 @@ use crate::objects::evaluation::product_document::product_document_store::{
     read_document_passages, read_document_text, read_product_document,
 };
 use crate::objects::evaluation::work_unit::work_unit_model::{Verdict, WorkUnit};
-use crate::objects::evaluation::work_unit::work_unit_store::{read_work_unit, read_work_units};
+use crate::objects::evaluation::work_unit::work_unit_store::read_work_unit;
 
 /// The form of the answer the program reads (user, 2026-11-02): only the
 /// fields of its JSON and their order, the verdict last; what each field holds
@@ -91,43 +92,25 @@ pub fn assessing_agent(evaluation: &EvaluationPlan, unit: &WorkUnit) -> Result<i
     }
 }
 
-/// The label of the work unit `id` among `units`.
-///
-/// Input: `units`, the work units of the evaluation; `id`, the id of one of
-/// them.
-/// Output: its label ("ADV_ARC.1-1"); "work unit 12" when none of `units`
-/// has the id.
-///
-/// Called by: [`unit_json`], [`dependencies_text`].
-fn label_of(units: &[WorkUnit], id: i64) -> String {
-    for unit in units {
-        if unit.id == id {
-            return unit.label.clone();
-        }
-    }
-
-    format!("work unit {id}")
-}
-
 /// The work unit `unit` as JSON, but its id, author, agent and cross
 /// reference, every id written as a name (user, 2026-10-30).
 ///
-/// Input: `unit`, the work unit assessed; `units`, the work units of its
-/// evaluation.
+/// Input: `unit`, the work unit assessed; `dependencies`, its dependencies,
+/// in their order.
 /// Output: the JSON without the results of the work unit (`{"label":
 /// "ADV_ARC.1-1", "standard": "CEM", "dependencies": [...], ...}`); an error
 /// of the database for a standard, a document or a proof missing.
 ///
 /// Called by: [`question_of`].
 /// Calls: `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`:
-/// `read_oscal_standard_document`; [`label_of`]; `objects/evaluation/product_document/product_document_store.rs`:
+/// `read_oscal_standard_document`; `objects/evaluation/product_document/product_document_store.rs`:
 /// `read_product_document`; `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`.
-fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<Value, AiError> {
-    let mut dependencies = Vec::with_capacity(unit.dependencies.len());
+fn unit_json(db: &UserDatabase, unit: &WorkUnit, dependencies: &[WorkUnit]) -> Result<Value, AiError> {
+    let mut labels = Vec::with_capacity(dependencies.len());
     let mut documents = Vec::with_capacity(unit.input_product_documents.len());
 
-    for id in &unit.dependencies {
-        dependencies.push(label_of(units, *id));
+    for dependency in dependencies {
+        labels.push(dependency.label.as_str());
     }
 
     for id in &unit.input_product_documents {
@@ -153,47 +136,37 @@ fn unit_json(db: &UserDatabase, unit: &WorkUnit, units: &[WorkUnit]) -> Result<V
         "oscal_key": unit.oscal_key,
         "requirement": unit.requirement,
         "guidance": unit.guidance,
-        "dependencies": dependencies,
+        "dependencies": labels,
         "input_product_documents": documents,
         "input_functional": proofs,
     }))
 }
 
-/// The dependencies of the work unit `unit`, each written by the
+/// The dependencies of a work unit, each written by the
 /// `dependency_template` of the agent: its label, its verdict and its
 /// findings (at most `limit` characters, the agent's).
 ///
-/// Input: `unit`, the work unit assessed; `units`, the work units of its
-/// evaluation; `role`, the evaluator role of its agent; `limit`,
+/// Input: `dependencies`, the dependencies of the work unit assessed, in
+/// their order; `role`, the evaluator role of its agent; `limit`,
 /// `EvaluatorRole::dependency_findings`.
 /// Output: the text ("ADV_ARC.1-1: pass\n..."); `EvaluatorRole::nothing_text`
 /// without dependencies; a dependency not assessed has
 /// `EvaluatorRole::not_assessed_text` for its verdict.
 ///
 /// Called by: [`question_of`].
-/// Calls: [`label_of`], [`verdict_name`]; `objects/ai/agent/agent_ai.rs`: `filled`.
-fn dependencies_text(unit: &WorkUnit, units: &[WorkUnit], role: &EvaluatorRole, limit: usize) -> String {
-    let mut written = Vec::with_capacity(unit.dependencies.len());
+/// Calls: [`verdict_name`]; `objects/ai/agent/agent_ai.rs`: `filled`.
+fn dependencies_text(dependencies: &[WorkUnit], role: &EvaluatorRole, limit: usize) -> String {
+    let mut written = Vec::with_capacity(dependencies.len());
 
-    for id in &unit.dependencies {
-        for other in units {
-            if other.id == *id {
-                let findings: String = other.findings.chars().take(limit).collect();
-                let values = [
-                    ("label", label_of(units, *id)),
-                    (
-                        "verdict",
-                        match other.verdict {
-                            Some(verdict) => verdict_name(verdict).to_owned(),
-                            None => role.not_assessed_text.clone(),
-                        },
-                    ),
-                    ("findings", findings),
-                ];
+    for dependency in dependencies {
+        let verdict = match dependency.verdict {
+            Some(verdict) => verdict_name(verdict),
+            None => role.not_assessed_text.as_str(),
+        };
+        let findings: String = dependency.findings.chars().take(limit).collect();
+        let values = [("label", dependency.label.as_str()), ("verdict", verdict), ("findings", findings.as_str())];
 
-                written.push(filled(&role.dependency_template, &values));
-            }
-        }
+        written.push(filled(&role.dependency_template, &values));
     }
 
     if written.is_empty() { role.nothing_text.clone() } else { written.join("\n\n") }
@@ -255,38 +228,19 @@ fn search_values(unit: &WorkUnit) -> [(&str, &str); 3] {
     [("label", &unit.label), ("requirement", &unit.requirement), ("guidance", &unit.guidance)]
 }
 
-/// The day of `seconds` since 1970 (UTC), as YYYY-MM-DD (the civil calendar
-/// of the days since 1970, H. Hinnant): `day_of(1793577600)` is "2026-11-02".
-///
-/// Input: `seconds`, a time written by the program.
-/// Output: its day ("2026-11-02").
-///
-/// Called by: [`proofs_text`].
-fn day_of(seconds: i64) -> String {
-    let days = seconds.div_euclid(86_400) + 719_468;
-    let era = days.div_euclid(146_097);
-    let of_era = days - era * 146_097;
-    let year_of_era = (of_era - of_era / 1460 + of_era / 36_524 - of_era / 146_096) / 365;
-    let of_year = of_era - (365 * year_of_era + year_of_era / 4 - year_of_era / 100);
-    let month_index = (5 * of_year + 2) / 153;
-    let day = of_year - (153 * month_index + 2) / 5 + 1;
-    let month = if month_index < 10 { month_index + 3 } else { month_index - 9 };
-    let year = year_of_era + era * 400 + i64::from(month <= 2);
-
-    format!("{year:04}-{month:02}-{day:02}")
-}
-
 /// The proofs of the work unit `unit`, each with the record of its test, by
 /// the `proof_template` of the agent.
 ///
 /// Input: `unit`, the work unit assessed; `role`, the evaluator role of its
 /// agent.
 /// Output: the text ("=== Test 3 (performed 2026-10-30 by K. K. with ...)
-/// ===\n..."); `EvaluatorRole::nothing_text` without proofs; an error of the
-/// database for a proof missing.
+/// ===\n..."); `EvaluatorRole::nothing_text` without proofs;
+/// `AiError::Refused` for a proof not given yet, which has no day of its
+/// test (the model is never told a day the evaluator did not record), an
+/// error of the database for a proof missing.
 ///
 /// Called by: [`question_of`].
-/// Calls: `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; [`day_of`];
+/// Calls: `objects/evaluation/lab_proof/lab_proof_store.rs`: `read_lab_proof`; `infrastructure/clock.rs`: `date_of`;
 /// `objects/ai/agent/agent_ai.rs`: `filled`.
 fn proofs_text(db: &UserDatabase, unit: &WorkUnit, role: &EvaluatorRole) -> Result<String, AiError> {
     let ids = unit.input_functional.as_deref().unwrap_or_default();
@@ -294,9 +248,12 @@ fn proofs_text(db: &UserDatabase, unit: &WorkUnit, role: &EvaluatorRole) -> Resu
 
     for id in ids {
         let proof = read_lab_proof(db, *id)?;
+        let Some(performed) = proof.performed else {
+            return Err(AiError::Refused(format!("the proof {} is not given: it has no day of its test", proof.name)));
+        };
         let values = [
             ("name", proof.name),
-            ("date", day_of(proof.performed.unwrap_or_default())),
+            ("date", date_of(performed)),
             ("tester", proof.tester.unwrap_or_default()),
             ("equipment", proof.equipment.unwrap_or_default()),
             ("text", proof.proof.unwrap_or_default()),
@@ -353,7 +310,7 @@ fn task_of(evaluation: &EvaluationPlan, unit: &WorkUnit, role: &EvaluatorRole) -
 ///
 /// Called by: [`assessment_question`].
 /// Calls: `objects/ai/agent/agent_store.rs`: `read_agent`; `objects/ai/agent_roles/agent_roles_rules.rs`:
-/// `evaluator_of`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_units`;
+/// `evaluator_of`; `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit` (each dependency);
 /// `objects/evaluation/oscal_standard_document/oscal_standard_document_store.rs`: `read_oscal_standard_document`;
 /// [`unit_json`], [`dependencies_text`], [`documents_text`], [`proofs_text`], [`task_of`],
 /// [`search_values`]; `objects/ai/agent/agent_ai.rs`: `filled`, `agent_question`.
@@ -364,18 +321,25 @@ fn question_of(
     agent: i64,
     whole: bool,
 ) -> Result<Question, AiError> {
-    let units = read_work_units(db, evaluation.id)?;
     let stored = read_agent(db, agent)?;
     let role = evaluator_of(&stored.role, &stored.name)?;
     let findings = usize::try_from(role.dependency_findings).map_err(|error| AiError::Refused(error.to_string()))?;
     let passages = usize::try_from(role.document_passages).map_err(|error| AiError::Refused(error.to_string()))?;
+    // Only the dependencies of the work unit are read, never every work
+    // unit of the evaluation: an assessment asks once for each of them.
+    let mut dependencies = Vec::with_capacity(unit.dependencies.len());
+
+    for id in &unit.dependencies {
+        dependencies.push(read_work_unit(db, *id)?);
+    }
+
     let values = [
-        ("work_unit", unit_json(db, unit, &units)?.to_string()),
+        ("work_unit", unit_json(db, unit, &dependencies)?.to_string()),
         ("label", unit.label.clone()),
         ("standard", read_oscal_standard_document(db, unit.reference)?.title),
         ("requirement", unit.requirement.clone()),
         ("guidance", unit.guidance.clone()),
-        ("dependencies", dependencies_text(unit, &units, role, findings)),
+        ("dependencies", dependencies_text(&dependencies, role, findings)),
         ("documents", documents_text(db, unit, role, whole, passages)?),
         ("proofs", proofs_text(db, unit, role)?),
     ];
@@ -436,8 +400,10 @@ mod tests {
     use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::{
         create_evaluation, create_evaluation_plan,
     };
+    use crate::objects::evaluation::lab_proof::lab_proof_model::LabProof;
+    use crate::objects::evaluation::lab_proof::lab_proof_rules::give_proof;
     use crate::objects::evaluation::work_unit::work_unit_model::Author;
-    use crate::objects::evaluation::work_unit::work_unit_store::create_work_unit;
+    use crate::objects::evaluation::work_unit::work_unit_store::{create_work_unit, read_work_units};
     use crate::test_support::database::{database, plan, unit};
     use crate::test_support::evaluation::{evaluation, evaluation_needing_inputs, write};
 
@@ -485,11 +451,32 @@ mod tests {
     fn a_functional_test_is_asked_about_its_proofs_and_a_unit_without_evidence_is_refused() {
         let (_directory, db) = database();
         let needing = evaluation_needing_inputs(&db);
-        let functional = read_work_units(&db, needing).unwrap()[0].id;
+        let functional = read_work_units(&db, needing).unwrap().remove(0);
+        let scan = functional.input_functional.unwrap()[0];
+        let functional = functional.id;
+
+        // A proof not given has no day of its test: the model is not told one.
+        assert!(matches!(assessment_question(&db, needing, functional, true), Err(AiError::Refused(_))));
+
+        let given = LabProof {
+            id: scan,
+            name: String::new(),
+            proof: Some("port 22 closed".to_owned()),
+            performed: Some(1_793_000_000),
+            tester: Some("K. K.".to_owned()),
+            equipment: Some("nmap 7.95".to_owned()),
+        };
+
+        give_proof(&db, needing, &given).unwrap();
+
         let question = assessment_question(&db, needing, functional, true).unwrap();
 
         assert!(question.system.contains("the proofs of the laboratory show"));
-        assert!(question.messages[0].text.contains("Its proofs of the laboratory:\n=== Scan"));
+        assert!(
+            question.messages[0]
+                .text
+                .contains("Its proofs of the laboratory:\n=== Scan (performed 2026-10-26 by K. K. with nmap 7.95) ===")
+        );
 
         // A plan whose work unit names no document and no proof, begun as an
         // evaluation: its planning is frozen there.
@@ -504,12 +491,5 @@ mod tests {
         let unit_of_empty = read_work_units(&db, empty).unwrap()[0].id;
 
         assert!(matches!(assessment_question(&db, empty, unit_of_empty, true), Err(AiError::Refused(_))));
-    }
-
-    #[test]
-    fn a_day_is_written_from_its_seconds() {
-        assert_eq!(day_of(0), "1970-01-01");
-        assert_eq!(day_of(1_793_000_000), "2026-10-26");
-        assert_eq!(day_of(951_782_400), "2000-02-29");
     }
 }

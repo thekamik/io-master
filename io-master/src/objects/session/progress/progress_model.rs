@@ -14,7 +14,8 @@ pub struct Progress {
     /// A long work of the AI runs.
     pub running: bool,
 
-    /// The user asked it to stop after its present step.
+    /// The user asked it to stop: the answer it awaits ends at once, and no
+    /// further step begins.
     pub stop: bool,
 
     /// The plan or the evaluation it works on (`EvaluationPlan`); `None`

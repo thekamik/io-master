@@ -210,7 +210,7 @@ export function evaluationAssessProgress(id: number): Promise<ProgressView | nul
   return invoke("evaluation_assess_progress", { id });
 }
 
-/** Asks the assessment to stop after its present work unit. Called by EvaluationRun.svelte. */
+/** Asks the assessment to stop: the answer awaited ends at once, not taken. Called by EvaluationRun.svelte. */
 export function evaluationAssessStop(): Promise<void> {
   return invoke("evaluation_assess_stop");
 }

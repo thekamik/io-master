@@ -147,7 +147,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/ai/chat/chat_ai.rs`: `kept_text`
   - `objects/ai/integration/integration_ai/anthropic.rs`: `ending_of`
   - `objects/ai/integration/integration_ai/openai.rs`: `ending_of`
-  - `objects/ai/journal/journal_ai.rs`: `record`, `write_entry`
+  - `objects/ai/journal/journal_ai.rs`: `record`, `why_not_taken`, `write_entry`
 - **Commands** (`panels/views/`):
   - `agents/journal.rs`: `agent_journal_list`, `agent_journal_get`
   - `chat/chats.rs`: `chat_ask`
@@ -224,7 +224,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`
   - `objects/evaluation/work_unit/work_unit_rules/fields.rs`: `work_unit_fields`, `proof_name`
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`
-  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_proof_quotes`, `quote_sources`
+  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`
 - **Processed, the AI**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `proofs_text`, `unit_json`
@@ -280,7 +280,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/evaluation/product_document/product_document_rules.rs`: `give_document`, `product_document_fields`
   - `objects/evaluation/report_template/report_template_rules/filling.rs`: `lists_of`
   - `objects/evaluation/work_unit/work_unit_rules/fields.rs`: `work_unit_fields`, `document_name`
-  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_quotes`, `quote_sources`
+  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quote_sources`
 - **Processed, the AI**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `documents_text`, `unit_json`
@@ -333,12 +333,12 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/evaluation/report_template/report_template_rules/filling.rs`: `filled_report`, `units_in_order`, `lists_of`
   - `objects/evaluation/work_unit/work_unit_rules/fields.rs`: `work_unit_fields`, `label_of`, `verdict_text`
   - `objects/evaluation/work_unit/work_unit_rules/parameters.rs`: `add_proof_place`, `update_work_unit_parameters`
-  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_proof_quotes`, `check_quote`, `check_quotes`, `place_of`, `quote_sources`, `quotes_found`, `save_results`
+  - `objects/evaluation/work_unit/work_unit_rules/results.rs`: `check_proof_quotes`, `check_quotes`, `place_of`, `quote_sources`, `quotes_found`, `save_results`, `stands_in`
 - **Processed, the AI**:
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `missing_inputs`, `units_in_order`, `units_to_assess`
   - `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assess_work_unit`, `prepared_question`, `written`
   - `objects/evaluation/work_unit/work_unit_ai/assessment_answer.rs`: `apply_assessment`, `dependency_warnings`, `verdict_of`
-  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`, `assessment_question`, `dependencies_text`, `documents_text`, `label_of`, `proofs_text`, `question_of`, `unit_json`, `verdict_name`
+  - `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `assessing_agent`, `assessment_question`, `dependencies_text`, `documents_text`, `proofs_text`, `question_of`, `unit_json`, `verdict_name`
   - `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `prepared_question`
   - `objects/evaluation/work_unit/work_unit_ai/proposal.rs`: `apply_dependencies`, `apply_parameters`, `chosen_proofs`, `current_parameters`, `dependencies_question`, `labels`, `parameters_question`, `proof_named`, `question_of`, `summary`
   - `objects/session/progress/progress_ai/step.rs`: `record_step`
@@ -373,6 +373,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/session/progress/progress_ai/lock.rs`: `lock_progress`
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `assess_evaluation`, `fill_plan`
   - `objects/session/progress/progress_ai/step.rs`: `record_step`
+  - `objects/session/progress/progress_ai/stop.rs`: `goes_on`, `send_until_stopped`
 - **Processed, the session**:
   - `panels/session.rs`: `begin_work`, `locks`, `new`, `progress`
 - **Commands** (`panels/views/`):

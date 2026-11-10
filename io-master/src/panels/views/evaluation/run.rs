@@ -10,7 +10,7 @@
 //!                          Session::begin_work, then objects/evaluation/evaluation_plan/evaluation_plan_ai.rs:
 //!                          assess_evaluation (each work unit assessed, its step written into the progress)
 //!                      ──evaluation_assess_progress(id)────► progress_of ──► ProgressView
-//!                      ──evaluation_assess_stop()──────────► the assessment ends after its present work unit
+//!                      ──evaluation_assess_stop()──────────► the answer awaited ends, not taken; no further work unit
 //! ```
 //!
 //! Only one long work of the AI runs at a time (`Session::begin_work`); a
@@ -145,7 +145,8 @@ pub fn evaluation_assess_progress(session: State<'_, Session>, id: i64) -> Resul
     progress_of(&session, id)
 }
 
-/// Asks the assessment that runs to stop after its present work unit.
+/// Asks the assessment that runs to stop: the answer it awaits ends at once and is
+/// not taken, no further work unit is begun.
 ///
 /// Called by: `ui/src/lib/api/evaluation.ts`: `evaluationAssessStop`, from
 /// `ui/src/views/evaluation/EvaluationUnits.svelte`, "Stop".

@@ -224,7 +224,7 @@ export function planFillProgress(plan: number): Promise<ProgressView | null> {
   return invoke("plan_fill_progress", { plan });
 }
 
-/** Asks the filling to stop after its present work unit. Called by PlanFill.svelte. */
+/** Asks the filling to stop: the answer awaited ends at once, not taken. Called by PlanFill.svelte. */
 export function planFillStop(): Promise<void> {
   return invoke("plan_fill_stop");
 }

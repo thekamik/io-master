@@ -11,7 +11,7 @@
   (evaluation_assess_progress), so that an assessment that runs shows its bar
   after the evaluator left the panel (user, 2026-11-01); each step gone
   through is told (onstep, so that the list is read again). "Stop" ends it
-  after its present work unit.
+  at once: the answer awaited is not taken.
 -->
 <script lang="ts">
   import { sentence } from "../../lib/api/errors";

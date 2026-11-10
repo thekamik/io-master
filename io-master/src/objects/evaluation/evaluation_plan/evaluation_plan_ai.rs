@@ -277,8 +277,8 @@ pub fn units_ready(db: &UserDatabase, evaluation: i64, again: bool) -> Result<Ve
 
 /// Assesses the work units `units` of the evaluation `evaluation`, one after
 /// the other in the order given (the order of the work, [`units_ready`]),
-/// writing each step into `progress`; stops before a work unit when the
-/// user asked it to stop.
+/// writing each step into `progress`; when the user asks it to stop, the
+/// answer awaited ends (not taken) and no further work unit is begun.
 ///
 /// Input:
 /// - `database`: the lock of the open database of the session, taken only
@@ -309,7 +309,7 @@ pub async fn assess_evaluation(
             break;
         }
 
-        let (label, verdict, notes) = assess_work_unit(database, evaluation, *unit).await?;
+        let (label, verdict, notes) = assess_work_unit(database, progress, evaluation, *unit).await?;
 
         record_step(&mut *lock_progress(progress)?, label, verdict.is_some(), verdict, notes);
     }
@@ -319,8 +319,8 @@ pub async fn assess_evaluation(
 
 /// Fills the work units `units` of the plan `plan` with the task `task`, one
 /// after the other in the order of the plan ([`fill_units`]), writing each
-/// step into `progress`; stops before a work unit when the user asked it to
-/// stop.
+/// step into `progress`; when the user asks it to stop, the answer awaited
+/// ends (not taken) and no further work unit is begun.
 ///
 /// Input: as [`assess_evaluation`]; `plan` a plan in planning with an agent
 /// of the planner, `units` its work units.
@@ -347,7 +347,7 @@ pub async fn fill_plan(
             break;
         }
 
-        let (label, filled, notes) = fill_work_unit(database, task, plan, *unit).await?;
+        let (label, filled, notes) = fill_work_unit(database, progress, task, plan, *unit).await?;
 
         record_step(&mut *lock_progress(progress)?, label, filled, None, notes);
     }

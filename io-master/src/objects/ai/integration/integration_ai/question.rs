@@ -8,6 +8,8 @@
 //!               ├► read_integration, read_api_key       (the integration and its key)
 //!               ├► check_address, turns, check_size      (refused, never shortened)
 //!               └► protocol.rs: body                     (the body of the request)
+//! Prepared, the tokens the service counted ──► shortened_warning   (a question it shortened in silence;
+//!                                                                    journal_ai.rs: record, Answer::shortened)
 //! ```
 //!
 //! The steps are apart because the database is not used while the answer
@@ -56,6 +58,12 @@ const OTHER_PAGES: u64 = 2;
 /// assessment, beside the pages.
 const TASK_TOKENS: u64 = 2000;
 
+/// How many times fewer tokens than the estimate the service must count for
+/// [`shortened_warning`] to warn: the estimate is rough (a tokenizer counts
+/// from two to five characters a token), a question cut to a small context
+/// is counted many times lower.
+const SHORTENED_RATIO: u64 = 2;
+
 /// The context a model needs for a question of [`DOCUMENT_PAGES`] and
 /// [`OTHER_PAGES`] pages and its longest answer, in tokens, counted as
 /// [`prepare`] counts, by the characters of a token of the integration.
@@ -102,6 +110,9 @@ pub struct Prepared {
     pub(in crate::objects::ai) agent: Option<i64>,
     pub(in crate::objects::ai) work_unit: Option<i64>,
     pub(in crate::objects::ai) time: i64,
+    /// The tokens of the question as [`check_size`] estimated them, to be
+    /// held against what the service counted ([`shortened_warning`]).
+    pub(in crate::objects::ai) estimated_tokens: u64,
 }
 
 /// Refuses a question that does not fit into the context of the model
@@ -118,11 +129,11 @@ pub struct Prepared {
 ///
 /// Input: `integration`, the integration asked; `system`, the instructions;
 /// `turns`, the conversation; `limit`, the longest answer asked for.
-/// Output: nothing when it fits; `AiError::TooLong` with the estimate and the
-/// room (`{ estimated: 9000, room: 6000 }`) when it does not.
+/// Output: the estimate when it fits (`9000`); `AiError::TooLong` with the
+/// estimate and the room (`{ estimated: 9000, room: 6000 }`) when it does not.
 ///
 /// Called by: [`prepare`].
-fn check_size(integration: &Integration, system: &str, turns: &[Turn], limit: u32) -> Result<(), AiError> {
+fn check_size(integration: &Integration, system: &str, turns: &[Turn], limit: u32) -> Result<u64, AiError> {
     let mut characters = system.chars().count();
 
     for turn in turns {
@@ -141,7 +152,7 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn], limit: u3
 
     ensure!(estimated <= room, AiError::TooLong { estimated, room });
 
-    Ok(())
+    Ok(estimated)
 }
 
 /// Prepares the question `question`: reads its integration and its key,
@@ -181,7 +192,7 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
     let key = read_api_key(db, integration.id)?;
 
     ensure!(key.is_some() || !needs_key(integration.protocol), AiError::NoKey);
-    check_size(&integration, &question.system, &turns, question.max_answer_tokens)?;
+    let estimated_tokens = check_size(&integration, &question.system, &turns, question.max_answer_tokens)?;
 
     let time = now().map_err(|error| AiError::Refused(error.to_string()))?;
     let body = body(integration.protocol, &integration.model, &question.system, &turns, question.max_answer_tokens);
@@ -202,7 +213,39 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
         agent: question.agent,
         work_unit: question.work_unit,
         time,
+        estimated_tokens,
     })
+}
+
+/// The warning about a question the service seems to have shortened: it
+/// counted fewer than half the tokens the program estimated. A local server
+/// (Ollama, llama.cpp) cuts a question to its own context in silence, which
+/// may be smaller than the one written in the integration; the model then
+/// judged a document it did not read whole. Only what the service counts
+/// can show it, after the answer.
+///
+/// Input: `prepared`, the question as it was sent; `counted`, the tokens of
+/// the question as the service counted them (`Reading::input_tokens`), 0
+/// when it did not.
+/// Output: the warning ("The service counted 4096 tokens of a question
+/// estimated at 30000 ..."); `None` when the service did not count, or
+/// counted at least half the estimate.
+///
+/// Called by: `objects/ai/journal/journal_ai.rs`: `record`.
+pub fn shortened_warning(prepared: &Prepared, counted: u32) -> Option<String> {
+    let counted = u64::from(counted);
+    let estimated = prepared.estimated_tokens;
+
+    if counted == 0 || counted.saturating_mul(SHORTENED_RATIO) >= estimated {
+        return None;
+    }
+
+    Some(format!(
+        "The service counted {counted} tokens of a question estimated at {estimated}: it may have shortened the \
+         question to a context smaller than that of the integration {}, so the model may not have read all it was \
+         given. Check the context of the model on its server and in the AI settings.",
+        prepared.integration_name
+    ))
 }
 
 /// The warning about a model whose context is too small for the documents
@@ -241,7 +284,8 @@ pub fn context_warning(integration: &Integration) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    //! Tests of the question prepared: its size and its last message.
+    //! Tests of the question prepared: its size and its last message, and
+    //! the warning about a question the service shortened.
 
     use super::*;
 
@@ -269,6 +313,21 @@ mod tests {
             messages: vec![Message { speaker: Speaker::User, text: text.to_owned(), time: 0 }],
             max_answer_tokens: 100,
         }
+    }
+
+    #[test]
+    fn a_question_the_service_counted_far_shorter_is_warned_of() {
+        let (_directory, db) = database();
+        let id = create_integration(&db, &Integration { context_size: 400, ..integration() }).unwrap();
+        // 889 characters with the instructions: 297 tokens estimated.
+        let prepared = prepare(&db, &question(id, &"x".repeat(880))).unwrap();
+
+        assert!(
+            shortened_warning(&prepared, 148).unwrap().contains("counted 148 tokens of a question estimated at 297")
+        );
+        assert!(shortened_warning(&prepared, 149).is_none());
+        // A service that counts no tokens tells nothing.
+        assert!(shortened_warning(&prepared, 0).is_none());
     }
 
     #[test]

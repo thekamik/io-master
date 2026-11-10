@@ -13,7 +13,7 @@
 //!                     evaluation_plan_ai.rs: fill_plan (each work unit filled, its step
 //!                     written into the progress)
 //!                 ──plan_fill_progress(plan)──► progress_of ──► ProgressView
-//!                 ──plan_fill_stop()──► the session asked to stop: the filling ends after its present step
+//!                 ──plan_fill_stop()──► the session asked to stop: the answer awaited ends, not taken
 //! ```
 //!
 //! Only one filling runs at a time (`Session::begin_work`). A work unit the
@@ -132,7 +132,8 @@ pub fn plan_fill_progress(session: State<'_, Session>, plan: i64) -> Result<Opti
     progress_of(&session, plan)
 }
 
-/// Asks the filling that runs to stop after its present work unit.
+/// Asks the filling that runs to stop: the answer it awaits ends at once and is not
+/// taken, no further work unit is begun.
 ///
 /// Called by: `ui/src/lib/api/evaluation_plan.ts`: `planFillStop`, from
 /// `ui/src/views/evaluation_plan/PlanFill.svelte`, "Stop".

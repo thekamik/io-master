@@ -11,7 +11,7 @@
 //! The caller holds the lock of the session for it, as for `prepare`.
 
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::ai::integration::integration_ai::question::Prepared;
+use crate::objects::ai::integration::integration_ai::question::{Prepared, shortened_warning};
 use crate::objects::ai::integration::integration_ai::sending::Sent;
 use crate::objects::ai::journal::journal_model::{Ending, JournalEntry};
 use crate::objects::ai::journal::journal_store::create_journal_entry;
@@ -35,6 +35,30 @@ pub struct Answer {
     /// them.
     pub input_tokens: u32,
     pub output_tokens: u32,
+    /// The warning when the service counted far fewer tokens than the
+    /// question was estimated at: it may have shortened the question in
+    /// silence (`integration_ai/question.rs`: `shortened_warning`).
+    pub shortened: Option<String>,
+}
+
+/// Why a work of the AI does not take an answer that ended as `ending`: a
+/// cut answer may hold a whole JSON object with half an analysis, so only an
+/// answer the model ended itself is taken (user, 2026-11-02).
+///
+/// Input: `ending`, how the answer ended (`Answer::ending`).
+/// Output: the reason ("it was cut at its largest length"); `None` for a
+/// complete answer.
+///
+/// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `written`;
+/// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `written`.
+pub fn why_not_taken(ending: Ending) -> Option<&'static str> {
+    match ending {
+        Ending::Complete => None,
+        Ending::Cut => Some("it was cut at its largest length"),
+        Ending::Refused => Some("the model declined to answer"),
+        Ending::Stopped => Some("it was stopped"),
+        Ending::Failed => Some("it failed"),
+    }
 }
 
 /// Writes the question of the agent `agent` and its answer into the
@@ -87,7 +111,7 @@ fn write_entry(db: &UserDatabase, prepared: Prepared, agent: i64, answer: &Answe
 /// `objects/evaluation/work_unit/work_unit_ai/filling.rs`: `written`;
 /// `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `written`;
 /// `panels/views/chat/chats.rs`: `written`.
-/// Calls: [`write_entry`].
+/// Calls: `objects/ai/integration/integration_ai/question.rs`: `shortened_warning`; [`write_entry`].
 pub fn record(db: &UserDatabase, prepared: Prepared, sent: Sent) -> Result<Answer, AiError> {
     let Sent(received) = sent;
     let reading = received.reading;
@@ -104,6 +128,7 @@ pub fn record(db: &UserDatabase, prepared: Prepared, sent: Sent) -> Result<Answe
         error: received.error,
         input_tokens: reading.input_tokens,
         output_tokens: reading.output_tokens,
+        shortened: shortened_warning(&prepared, reading.input_tokens),
     };
 
     if let Some(agent) = prepared.agent {

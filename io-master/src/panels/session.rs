@@ -205,7 +205,8 @@ impl Session {
         Ok(self.progress()?.running)
     }
 
-    /// Asks the long work that runs to stop after its present step.
+    /// Asks the long work that runs to stop: the answer it awaits ends at once, as
+    /// stopped and not taken, and no further step begins.
     ///
     /// Called by: `panels/views/evaluation_plan/fill.rs`: `plan_fill_stop`;
     /// `panels/views/evaluation/run.rs`: `evaluation_assess_stop`;

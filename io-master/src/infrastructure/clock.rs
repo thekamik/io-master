@@ -46,7 +46,8 @@ pub fn now() -> Result<i64, ClockError> {
 /// Output: the day, year-month-day (`"2026-11-03"`).
 ///
 /// Called by: `objects/evaluation/evaluation_plan/evaluation_plan_rules/fields.rs`: `evaluation_plan_fields`;
-/// `objects/evaluation/lab_proof/lab_proof_rules.rs`: `lab_proof_fields`.
+/// `objects/evaluation/lab_proof/lab_proof_rules.rs`: `lab_proof_fields`;
+/// `objects/evaluation/work_unit/work_unit_ai/assessment_question.rs`: `proofs_text`.
 pub fn date_of(seconds: i64) -> String {
     // The days since 1970 counted from 1 March of the year 0, in eras of 400
     // years of 146 097 days each (H. Hinnant, "chrono-Compatible Low-Level
@@ -80,6 +81,7 @@ mod tests {
     fn a_time_gives_its_day() {
         assert_eq!(date_of(0), "1970-01-01");
         assert_eq!(date_of(1_790_812_800), "2026-10-01");
+        assert_eq!(date_of(1_793_000_000), "2026-10-26");
         assert_eq!(date_of(1_709_164_800 + 86_399), "2024-02-29");
         assert_eq!(date_of(951_782_400), "2000-02-29");
         assert_eq!(date_of(-1), "1969-12-31");

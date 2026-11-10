@@ -9,7 +9,7 @@
   the list: the planner decides. The progress is asked for while the
   filling runs, and when the editor is opened again (plan_fill_progress), so
   that a filling that runs shows its bar after the planner left the panel
-  (user, 2026-11-01); "Stop" ends the filling after its present work unit. Before a filling starts, the
+  (user, 2026-11-01); "Stop" ends the filling at once: the answer awaited is not taken. Before a filling starts, the
   planner confirms it: how many questions go to which integration, counted
   by the program when the button is pressed (plan_fill_preview). Tells the
   editor after the

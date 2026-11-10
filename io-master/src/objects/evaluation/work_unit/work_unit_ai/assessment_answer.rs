@@ -2,8 +2,10 @@
 //! and written into the work unit as the results of the AI.
 //!
 //! ```text
-//! read_assessment ──► Assessment: the verdict, the findings, analysis, vulnerability notes, notes, the quotes
+//! read_assessment ──► Assessment: the verdict, the findings, analysis, vulnerability notes, notes, the quotes;
+//!                     an answer without an analysis is not taken; a quote left out is told in the notes
 //! apply_assessment:
+//!   the evaluator    a work unit whose results the evaluator wrote is never written again (P1)
 //!   the verdict      one of the plan, else the answer is not taken
 //!   each quote       of a document of the work unit, found in its text word for word (the spaces passed over;
 //!                    work_unit_rules/results.rs: quotes_found): kept as a Quote; otherwise written into the notes
@@ -21,7 +23,7 @@ use crate::objects::ai_error::AiError;
 use serde_json::Value;
 
 use crate::infrastructure::storage::user_database::UserDatabase;
-use crate::objects::evaluation::evaluation_plan::evaluation_plan_store::read_evaluation_plan;
+use crate::objects::evaluation::evaluation_plan::evaluation_plan_rules::evaluation::evaluation_in_progress;
 use crate::objects::evaluation::work_unit::work_unit_ai::assessment_question::verdict_name;
 use crate::objects::evaluation::work_unit::work_unit_model::{Author, Verdict, WorkUnit};
 use crate::objects::evaluation::work_unit::work_unit_rules::results::quotes_found;
@@ -43,6 +45,9 @@ pub struct Assessment {
     pub notes: String,
     /// The name of a document and the text quoted from it.
     pub quotes: Vec<(String, String)>,
+    /// What was left out of the answer when it was read (a quote too long,
+    /// quotes over their number), told in the notes.
+    pub left_out: Vec<String>,
 }
 
 /// The JSON object of an answer: a fence of Markdown or words around it are
@@ -71,12 +76,17 @@ fn answer_object(answer: &str) -> Result<Value, AiError> {
 /// The text of the field `field` of the answer, trimmed.
 ///
 /// Input: `value`, the object of the answer; `field`, a field ("findings").
-/// Output: its text, empty when it has none; `AiError::Refused` over
-/// [`MAX_RESULT`] characters.
+/// Output: its text, empty when the answer has no such field (or `null`);
+/// `AiError::Refused` for a field that is no text (a number, a list), or one
+/// over [`MAX_RESULT`] characters.
 ///
 /// Called by: [`read_assessment`].
 fn text_of(value: &Value, field: &str) -> Result<String, AiError> {
-    let text = value.get(field).and_then(Value::as_str).unwrap_or_default().trim();
+    let text = match value.get(field) {
+        None | Some(Value::Null) => "",
+        Some(Value::String(text)) => text.trim(),
+        Some(_) => return Err(AiError::Refused(format!("the {field} of the answer is no text"))),
+    };
 
     ensure!(
         text.chars().count() <= MAX_RESULT,
@@ -86,40 +96,84 @@ fn text_of(value: &Value, field: &str) -> Result<String, AiError> {
     Ok(text.to_owned())
 }
 
+/// The quotes read from an answer (the name of a document or a proof and the
+/// text quoted), and the notes of those left out.
+type QuotesRead = (Vec<(String, String)>, Vec<String>);
+
+/// The quotes of the answer, and what was left out of them: nothing of an
+/// answer is dropped in silence.
+///
+/// Input: `value`, the object of the answer.
+/// Output: the quotes, the name of a document or a proof and the text
+/// (`[("ST", "The TOE is ...")]`), at most `MAX_QUOTES`, each at most
+/// [`MAX_QUOTE`] characters; and a note for the quotes over `MAX_QUOTES` and
+/// for each quote too long, which are left out (`["A quote of ST over 5000
+/// characters was left out"]`). `AiError::Refused` when "quotes" is no list.
+///
+/// Called by: [`read_assessment`].
+fn quotes_of(value: &Value) -> Result<QuotesRead, AiError> {
+    let items = match value.get("quotes") {
+        None | Some(Value::Null) => return Ok((Vec::new(), Vec::new())),
+        Some(Value::Array(items)) => items,
+        Some(_) => return Err(AiError::Refused("the quotes of the answer are no list".to_owned())),
+    };
+    let mut quotes = Vec::with_capacity(items.len().min(MAX_QUOTES));
+    let mut left_out = Vec::new();
+
+    for item in items.iter().take(MAX_QUOTES) {
+        let document = item.get("document").and_then(Value::as_str).unwrap_or_default().trim();
+        let text = item.get("text").and_then(Value::as_str).unwrap_or_default().trim();
+
+        if text.is_empty() {
+            continue;
+        }
+
+        // A quote cut short would stand in its document and still not be
+        // what the model quoted: it is left out and told.
+        if text.chars().count() > MAX_QUOTE {
+            left_out.push(format!("A quote of {document} over {MAX_QUOTE} characters was left out"));
+        } else {
+            quotes.push((document.to_owned(), text.to_owned()));
+        }
+    }
+
+    if items.len() > MAX_QUOTES {
+        left_out.push(format!("Of {} quotes only the first {MAX_QUOTES} were read", items.len()));
+    }
+
+    Ok((quotes, left_out))
+}
+
 /// The assessment an answer proposes, before it is checked against the work
 /// unit.
 ///
 /// Input: `answer`, the text of the answer of the AI.
-/// Output: the assessment, at most `MAX_QUOTES` quotes, each cut to
-/// [`MAX_QUOTE`] characters (`Assessment { verdict: "Pass", .. }`); the
-/// refusals of [`answer_object`] and [`text_of`].
+/// Output: the assessment (`Assessment { verdict: "Pass", .. }`);
+/// `AiError::Refused` for an answer without an analysis (a verdict that is
+/// not justified is not taken), the refusals of [`answer_object`],
+/// [`text_of`] and [`quotes_of`].
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assessed`.
-/// Calls: [`answer_object`], [`text_of`].
+/// Calls: [`answer_object`], [`text_of`], [`quotes_of`].
 pub fn read_assessment(answer: &str) -> Result<Assessment, AiError> {
     let value = answer_object(answer)?;
-    let mut quotes = Vec::new();
+    let analysis = text_of(&value, "analysis")?;
+    let (quotes, left_out) = quotes_of(&value)?;
 
-    if let Some(items) = value.get("quotes").and_then(Value::as_array) {
-        for item in items.iter().take(MAX_QUOTES) {
-            let document = item.get("document").and_then(Value::as_str).unwrap_or_default().trim();
-            let text = item.get("text").and_then(Value::as_str).unwrap_or_default().trim();
-
-            if !text.is_empty() {
-                quotes.push((document.to_owned(), text.chars().take(MAX_QUOTE).collect()));
-            }
-        }
-    }
+    // The verdict is the model's, and the evaluator must be able to follow
+    // it: an answer that gives a verdict and no analysis is not taken.
+    ensure!(!analysis.is_empty(), AiError::Refused("the answer gives no analysis for its verdict".to_owned()));
 
     Ok(Assessment {
         // "Not applicable" and "not-applicable" are the verdict the plan
         // names "not_applicable".
         verdict: text_of(&value, "verdict")?.to_lowercase().replace([' ', '-'], "_"),
         findings: text_of(&value, "findings")?,
-        analysis: text_of(&value, "analysis")?,
+        analysis,
         vulnerability_notes: text_of(&value, "vulnerability_notes")?,
         notes: text_of(&value, "notes")?,
         quotes,
+        left_out,
     })
 }
 
@@ -205,11 +259,12 @@ fn joined(first: &str, more: &[String]) -> String {
 /// passages), kept with the results.
 /// Output: the notes written beside the model's own (`["The AI quoted a text
 /// not found in ST: ...", "Its dependency ADV_ARC.1-1 failed"]`);
-/// `AiError::Refused` for a work unit not of the evaluation or a verdict none
-/// of the plan, an error of the database.
+/// `AiError::Refused` for an evaluation not in progress, a work unit not of
+/// the evaluation or written by the evaluator, or a verdict none of the plan,
+/// an error of the database.
 ///
 /// Called by: `objects/evaluation/work_unit/work_unit_ai/assessment.rs`: `assessed`.
-/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_store.rs`: `read_evaluation_plan`;
+/// Calls: `objects/evaluation/evaluation_plan/evaluation_plan_rules/evaluation.rs`: `evaluation_in_progress`;
 /// `objects/evaluation/work_unit/work_unit_store.rs`: `read_work_unit`, `update_work_unit`; [`verdict_of`];
 /// `objects/evaluation/work_unit/work_unit_rules/results.rs`: `quotes_found`; [`dependency_warnings`], [`joined`].
 pub fn apply_assessment(
@@ -219,21 +274,32 @@ pub fn apply_assessment(
     assessment: &Assessment,
     context: &[String],
 ) -> Result<Vec<String>, AiError> {
-    let stored = read_evaluation_plan(db, evaluation)?;
+    let stored = evaluation_in_progress(db, evaluation)?;
     let this = read_work_unit(db, unit)?;
 
     ensure!(
         stored.work_units.contains(&unit),
         AiError::Refused("the work unit is not one of the evaluation".to_owned())
     );
+    // The evaluator decides (P1): checked here, at the writing itself, and
+    // not only when the work units of an assessment are chosen.
+    ensure!(
+        this.author != Some(Author::User),
+        AiError::Refused(format!(
+            "the evaluator wrote the results of {}: the AI does not write them again",
+            this.label
+        ))
+    );
 
     let Some(verdict) = verdict_of(&assessment.verdict, &stored.possible_verdicts) else {
         return Err(AiError::Refused(format!("the verdict \"{}\" is none of the plan", assessment.verdict)));
     };
     let quotes = quotes_found(db, &this, &assessment.quotes)?;
-    let mut added = Vec::with_capacity(context.len() + quotes.missing.len() + this.dependencies.len());
+    let mut added =
+        Vec::with_capacity(context.len() + assessment.left_out.len() + quotes.missing.len() + this.dependencies.len());
 
     added.extend_from_slice(context);
+    added.extend_from_slice(&assessment.left_out);
 
     // A quote not found is only told: a quote points to the evidence, it is
     // no condition of the verdict (user, 2026-11-02).
@@ -319,6 +385,47 @@ mod tests {
         assert_eq!(stored.verdict, Some(Verdict::Pass));
         assert!(stored.findings.is_empty());
         assert_eq!(stored.notes, "Its dependency ASE_INT.1-1 failed");
+    }
+
+    #[test]
+    fn an_answer_without_an_analysis_or_with_a_field_that_is_no_text_is_not_taken() {
+        assert!(matches!(read_assessment("{\"verdict\": \"pass\"}"), Err(AiError::Refused(_))));
+        assert!(matches!(
+            read_assessment("{\"verdict\": \"pass\", \"analysis\": [\"The ST names the TOE.\"]}"),
+            Err(AiError::Refused(_))
+        ));
+        assert!(matches!(
+            read_assessment("{\"verdict\": \"pass\", \"analysis\": \"Met.\", \"quotes\": \"none\"}"),
+            Err(AiError::Refused(_))
+        ));
+    }
+
+    #[test]
+    fn a_quote_too_long_is_left_out_and_told() {
+        let (_directory, db) = database();
+        let (id, first, _) = evaluation(&db);
+        let long = "x".repeat(MAX_QUOTE + 1);
+        let assessment =
+            read_assessment(&answer("pass", &format!("{{\"document\": \"ST\", \"text\": \"{long}\"}}"))).unwrap();
+
+        assert!(assessment.quotes.is_empty());
+        apply_assessment(&db, id, first, &assessment, &[]).unwrap();
+        assert!(read_work_unit(&db, first).unwrap().notes.contains("A quote of ST over 5000 characters was left out"));
+    }
+
+    #[test]
+    fn the_results_of_the_evaluator_are_never_written_again() {
+        let (_directory, db) = database();
+        let (id, first, _) = evaluation(&db);
+        let written = WorkUnit { author: Some(Author::User), ..read_work_unit(&db, first).unwrap() };
+
+        update_work_unit(&db, &written).unwrap();
+
+        assert!(matches!(
+            apply_assessment(&db, id, first, &read_assessment(&answer("pass", "")).unwrap(), &[]),
+            Err(AiError::Refused(_))
+        ));
+        assert_eq!(read_work_unit(&db, first).unwrap().verdict, None);
     }
 
     #[test]
