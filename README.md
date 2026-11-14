@@ -15,7 +15,7 @@ IO Master is installed on the computer of an evaluator, in their own Linux accou
 - **Reports.** The report of an evaluation written by a template: any text format (Markdown, HTML, LaTeX) with markers of the fields of the models (`{{work_unit.findings}}`) and blocks for the lists of an evaluation (the work units in the order of the work, with a filter of the verdict); shown in the window and exported into a file. Templates are made from the default one or imported from a file, changed in an editor that puts a marker at the cursor, and written back into a file.
 - **Agents.** An agent is a layer of knowledge over the model of an integration: its role (evaluator, planner or chat), its instructions, shared knowledge bases (`.txt`, `.md`, `.pdf`, searched on this computer), a glossary, its limits, the templates of every text of its questions, and its own journal of every question and answer.
 - **Chat.** A conversation with an agent chosen by the user, its knowledge searched for each question, the answer streamed into the window and stopped at once on "Stop"; a long chat leaves its oldest messages out of the question. Chats are kept, never removed.
-- **AI settings.** Integrations with AI services (the chat completions of OpenAI, which local servers offer, or the messages of Anthropic): HTTPS with TLS 1.3, or plain HTTP only on this computer; the API key only in its header, never shown back.
+- **AI settings.** Integrations with AI services (the chat completions of OpenAI, which local servers offer, the messages of Anthropic, or a custom format: the JSON of a service's own, written by the user with placeholders): HTTPS with TLS 1.3, or plain HTTP only on this computer; the API key only in its header, never shown back.
 
 ## Requirements
 

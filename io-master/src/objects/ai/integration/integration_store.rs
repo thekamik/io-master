@@ -4,7 +4,7 @@
 //! (`objects/ai/api_key/api_key_store.rs`).
 //!
 //! ```text
-//! ai_integrations   id, name (unique), url, model, protocol, ca_certificate, context_size, characters_per_token,
+//! ai_integrations   id, name (unique), url, model, protocol, custom_format, ca_certificate, context_size, characters_per_token,
 //!                   connect_timeout_seconds, stream_silence_seconds
 //! ```
 
@@ -33,7 +33,8 @@ pub const SCHEMA: &str = "
         name           TEXT NOT NULL UNIQUE,
         url            TEXT NOT NULL,
         model          TEXT NOT NULL,
-        protocol       TEXT NOT NULL CHECK (protocol IN ('openai_chat', 'anthropic_messages')),
+        protocol       TEXT NOT NULL CHECK (protocol IN ('openai_chat', 'anthropic_messages', 'custom')),
+        custom_format  INTEGER REFERENCES ai_custom_formats(id),
         ca_certificate TEXT,
         context_size   INTEGER NOT NULL,
         characters_per_token INTEGER NOT NULL,
@@ -43,7 +44,7 @@ pub const SCHEMA: &str = "
 ";
 
 /// The columns every read selects.
-const COLUMNS: &str = "id, name, url, model, protocol, ca_certificate, context_size, characters_per_token, \
+const COLUMNS: &str = "id, name, url, model, protocol, custom_format, ca_certificate, context_size, characters_per_token, \
                        connect_timeout_seconds, stream_silence_seconds";
 
 /// The name of a protocol in the column `protocol` (`Protocol::OpenAiChat` →
@@ -54,6 +55,7 @@ fn protocol_name(protocol: Protocol) -> &'static str {
     match protocol {
         Protocol::OpenAiChat => "openai_chat",
         Protocol::AnthropicMessages => "anthropic_messages",
+        Protocol::Custom => "custom",
     }
 }
 
@@ -66,6 +68,7 @@ fn protocol_of(name: &str) -> Result<Protocol, DbError> {
     match name {
         "openai_chat" => Ok(Protocol::OpenAiChat),
         "anthropic_messages" => Ok(Protocol::AnthropicMessages),
+        "custom" => Ok(Protocol::Custom),
         _ => Err(DbError::Corrupt { table: "ai_integrations", column: "protocol", value: name.to_owned() }),
     }
 }
@@ -84,6 +87,12 @@ fn check_integration(integration: &Integration) -> Result<(), DbError> {
     ensure!(!integration.name.is_empty(), DbError::Inconsistent("an integration without a name".to_owned()));
     ensure!(!integration.url.is_empty(), DbError::Inconsistent("an integration without an address".to_owned()));
     ensure!(integration.context_size > 0, DbError::Inconsistent("an integration without a context".to_owned()));
+    ensure!(
+        integration.custom_format.is_some() == (integration.protocol == Protocol::Custom),
+        DbError::Inconsistent(
+            "a custom format is named by an integration of the custom protocol, and only by it".to_owned()
+        )
+    );
     ensure!(
         (1..=MAX_CHARACTERS_PER_TOKEN).contains(&integration.characters_per_token),
         DbError::Inconsistent(format!("characters of a token out of 1 to {MAX_CHARACTERS_PER_TOKEN}"))
@@ -125,15 +134,16 @@ pub fn create_integration(db: &UserDatabase, integration: &Integration) -> Resul
     );
 
     connection.execute(
-        "INSERT INTO ai_integrations (name, url, model, protocol, ca_certificate, context_size, characters_per_token,
-                                      connect_timeout_seconds, stream_silence_seconds)
-         VALUES (:name, :url, :model, :protocol, :ca_certificate, :context_size, :characters_per_token,
-                 :connect_timeout_seconds, :stream_silence_seconds)",
+        "INSERT INTO ai_integrations (name, url, model, protocol, custom_format, ca_certificate, context_size,
+                                      characters_per_token, connect_timeout_seconds, stream_silence_seconds)
+         VALUES (:name, :url, :model, :protocol, :custom_format, :ca_certificate, :context_size,
+                 :characters_per_token, :connect_timeout_seconds, :stream_silence_seconds)",
         named_params! {
             ":name": integration.name,
             ":url": integration.url,
             ":model": integration.model,
             ":protocol": protocol_name(integration.protocol),
+            ":custom_format": integration.custom_format,
             ":ca_certificate": integration.ca_certificate,
             ":context_size": integration.context_size,
             ":characters_per_token": integration.characters_per_token,
@@ -158,6 +168,7 @@ fn integration_of(row: &Row<'_>) -> Result<Integration, DbError> {
         url: row.get("url")?,
         model: row.get("model")?,
         protocol: protocol_of(&protocol)?,
+        custom_format: row.get("custom_format")?,
         ca_certificate: row.get("ca_certificate")?,
         context_size: row.get("context_size")?,
         characters_per_token: row.get("characters_per_token")?,
@@ -240,6 +251,7 @@ pub fn update_integration(db: &UserDatabase, integration: &Integration) -> Resul
 
     let changed = db.connection().execute(
         "UPDATE ai_integrations SET name = :name, url = :url, model = :model, protocol = :protocol,
+                custom_format = :custom_format,
                 ca_certificate = :ca_certificate, context_size = :context_size,
                 characters_per_token = :characters_per_token, connect_timeout_seconds = :connect_timeout_seconds,
                 stream_silence_seconds = :stream_silence_seconds
@@ -250,6 +262,7 @@ pub fn update_integration(db: &UserDatabase, integration: &Integration) -> Resul
             ":url": integration.url,
             ":model": integration.model,
             ":protocol": protocol_name(integration.protocol),
+            ":custom_format": integration.custom_format,
             ":ca_certificate": integration.ca_certificate,
             ":context_size": integration.context_size,
             ":characters_per_token": integration.characters_per_token,

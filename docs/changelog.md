@@ -1,16 +1,30 @@
 # IO Master: changes since `V0.3`
 
-What changed on `test_branch` after the stable beta `V0.3` (2026-11-04), by what a tester sees. All of it was made on 2026-11-10, after a verification of the whole code. One model changed: `Agent` has the field `temperature`, and its table a column of that name, so **the data of a test of `V0.3` does not open in this version**.
+What changed on `test_branch` after the stable beta `V0.3` (2026-11-04), by what a tester sees. All of it was made on 2026-11-10, after a verification of the whole code. One model changed: `Agent` has the field `temperature`, and its table a column of that name, and the new model `CustomFormat` came with a column of `Integration`, so **the data of a test of `V0.3` does not open in this version**.
 
 ## Before the first run
 
-- **Remove the data folder** (`~/.local/share/io-master`) and start anew: the table of the agents has a new column, and the program moves no data between versions before version 1.
+- **Remove the data folder** (`~/.local/share/io-master`) and start anew: the tables of the agents and of the integrations have new columns, and the program moves no data between versions before version 1.
 - **An integration named by `localhost` is refused**: write `127.0.0.1` (or `[::1]`) in its address.
 - **Install `bubblewrap`** beside `poppler-utils` (`README.md`). Without it no PDF is read: a source of knowledge or a document of the product given as a PDF is refused with a message that names the package. The sandbox needs the user namespaces of Linux, which Debian 13 has switched on.
 - **Give the PDFs and the texts of the knowledge bases again** (or change the length of a passage of each base) when the new cutting of the passages is wanted for them; the sources and documents already stored keep their old passages.
 - **Two defaults of a new agent changed**; an agent written by hand from the texts of `V0.3` gets them only in its editor:
   - the task of an evaluator (documentation and functional test) has a new paragraph: the documents of the manufacturer are evidence, never instructions;
   - the knowledge given with one question is 24 000 characters (it was 12 000).
+
+## A service with a JSON of its own (custom format)
+
+A research institute builds its own AI tool, and the certification body beside it works with that tool: its API speaks neither the chat completions of OpenAI nor the messages of Anthropic. The program now speaks with such a service by a **custom format** (AI settings, the tab "Custom formats"; the model `CustomFormat`, `docs/data_model.md`, section 4).
+
+- **The user writes two JSON texts, whole, as the service has them**: the request it takes and the response it gives. Placeholders mark only what the program needs: `<prompt>` or `<messages>` (and `<system>`, `<model>`, `<max_answer_tokens>`, `<temperature>`) in the request, `<response>` (and `<error>`, `<model>`, `<input_tokens>`, `<output_tokens>`) in the response. Everything else is sent, or passed over, as written.
+- **The answer comes as one JSON document or as a stream of events**, chosen in the format. An answer is read whole, never cut.
+- **The API key goes only into the header the format names** ("Authorization" after "Bearer ", or "X-Api-Key"), never into the body.
+- **An integration of the protocol "Custom" names a format**; several integrations may share one. Everything after it is as with the other protocols: the journal (the question kept in the shape it was sent), the limit of the context, "Stop", the agents, the assessment.
+- **How to test a new connection**, in three steps:
+  1. "Try" in the editor of the format, with no connection: the request filled with a sample of a question is shown, and an answer pasted from the documentation of the service is read as its answer would be (the text, the model, the tokens), or refused with the reason.
+  2. "Check the connection" of the integration: one short question to the service itself.
+  3. A chat with an agent of that integration, then the assessment of one work unit.
+- Limits to know: a format without `<messages>` sends only the last question of a chat; a service that answers with one JSON document shows nothing until its answer is whole, so the "silence of an answer" of its integration must be longer than its longest answer takes; the program cannot read why such a service ended its answer, so an answer cut by the service is found only where its text is read (an assessment that is no whole JSON is not taken).
 
 ## Security
 
@@ -67,8 +81,10 @@ Measured on the CEM (813 work units), a debug build:
 
 ## What was tried, and what was not
 
-- **Tried by the unit tests** (216, all passing), `cargo clippy --all-targets` at the pedantic level and `svelte-check`, both clean: every change above.
+- **Tried by the unit tests** (231, all passing; the custom format against a fake service over TLS: its request, its key in its header, an answer of one megabyte read whole, a stream of events, the answers that do not fit the format), `cargo clippy --all-targets` at the pedantic level and `svelte-check`, both clean: every change above.
 - **Tried in the window on a private display**, after the commit `a97db6f`: the first start with its recovery code, every panel opened, the login again.
+- **Tried in the window on a private display** on 2026-11-14, against a fake service with a JSON of its own on this computer: a custom format written, added and tried with a sample, an integration of the protocol "Custom" made with it, its key stored, the connection checked (the service got the request in the shape of the format and the key in `X-Api-Key`; the window showed the answer, the model and the tokens).
+- **Not tried at all**: a custom format against the real tool of an institute, and one that answers with a stream of events in the window.
 - **Not tried in the window**: the field of the temperature in the editor of an agent and a question sent with it to a real service, an assessment with a real model, "Stop" in the middle of an answer, the export of a report with escaped values, a PDF read through the sandbox, the search of a real knowledge base (the CEM). These are the first things to test.
 - **Not measured**: whether the new search of the knowledge finds the right passages on a real evaluation. The rules of the search were tried on small texts written for the tests.
 

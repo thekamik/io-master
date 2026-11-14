@@ -10,6 +10,7 @@ use crate::objects::ai::agent::agent_rules::{
     NEW_CHAT_SEARCH, NEW_KNOWLEDGE_TEMPLATE, NEW_PASSAGE_TEMPLATE, NEW_SYSTEM_TEMPLATE,
 };
 use crate::objects::ai::agent_roles::agent_roles_rules::new_role;
+use crate::objects::ai::custom_format::custom_format_model::{CustomFormat, ResponseKind};
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 use crate::objects::ai::rag::rag_model::KnowledgeBase;
 use crate::objects::ai::rag::rag_store::{PASSAGE_CHARS, STOP_WORDS};
@@ -81,6 +82,19 @@ pub fn unit(plan: &EvaluationPlan, label: &str) -> WorkUnit {
     }
 }
 
+/// A custom format of the smallest shapes, not stored yet.
+pub fn custom_format() -> CustomFormat {
+    CustomFormat {
+        id: 0,
+        name: "The institute".to_owned(),
+        request: r#"{"engine": "<model>", "system": "<system>", "prompt": "<prompt>"}"#.to_owned(),
+        response: r#"{"response": "<response>"}"#.to_owned(),
+        response_kind: ResponseKind::Whole,
+        key_header: "Authorization".to_owned(),
+        key_prefix: "Bearer ".to_owned(),
+    }
+}
+
 /// An integration with a local model, not stored yet.
 pub fn integration() -> Integration {
     Integration {
@@ -89,6 +103,7 @@ pub fn integration() -> Integration {
         url: "http://127.0.0.1:11434/v1/chat/completions".to_owned(),
         model: "llama3.1".to_owned(),
         protocol: Protocol::OpenAiChat,
+        custom_format: None,
         ca_certificate: None,
         context_size: 32_768,
         characters_per_token: 3,

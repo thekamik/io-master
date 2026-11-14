@@ -12,7 +12,7 @@ Read this file, `CLAUDE.md`, `docs/data_model.md`, `docs/code_structure.md` and 
 
 ## Since `V0.3`
 
-`test_branch` holds the changes of the verification of 2026-11-10 (security, the first start, the assessment by the AI, the knowledge of an agent, speed) and one change of a model (`Agent::temperature`, so the data of a test of `V0.3` is removed and the tests start anew): `docs/changelog.md`, with what was tried in the window and what was not. Running needs the package `bubblewrap` beside `poppler-utils`.
+`test_branch` holds the changes of the verification of 2026-11-10 (security, the first start, the assessment by the AI, the knowledge of an agent, speed) the custom formats of the services with a JSON of their own (the new model `CustomFormat`, 2026-11-14) and one more change of a model (`Agent::temperature`, so the data of a test of `V0.3` is removed and the tests start anew): `docs/changelog.md`, with what was tried in the window and what was not. Running needs the package `bubblewrap` beside `poppler-utils`.
 
 ## What comes next
 

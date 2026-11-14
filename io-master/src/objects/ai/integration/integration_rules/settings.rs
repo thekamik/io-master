@@ -9,6 +9,7 @@
 //! integration made becomes the active one.
 
 use crate::infrastructure::storage::user_database::UserDatabase;
+use crate::objects::ai::custom_format::custom_format_store::read_custom_format;
 use crate::objects::ai::integration::integration_model::{Integration, Protocol};
 use crate::objects::ai::integration::integration_rules::address::{check_address, check_certificate};
 use crate::objects::ai::integration::integration_store::{
@@ -55,6 +56,9 @@ const NEW_ANTHROPIC_URL: &str = "https://api.anthropic.com/v1/messages";
 const NEW_ANTHROPIC_MODEL: &str = "claude-haiku-5-5";
 const NEW_ANTHROPIC_CONTEXT: u32 = 1_000_000;
 
+/// The name a new integration with a custom service starts from.
+const NEW_CUSTOM_NAME: &str = "Custom service";
+
 /// Where a new integration of the protocol `protocol` starts: the name,
 /// address, model and context its service most often has, and the estimate
 /// and the waits of every integration; the form shows them to be corrected.
@@ -70,6 +74,8 @@ pub fn new_integration(protocol: Protocol) -> Integration {
         Protocol::AnthropicMessages => {
             (NEW_ANTHROPIC_NAME, NEW_ANTHROPIC_URL, NEW_ANTHROPIC_MODEL, NEW_ANTHROPIC_CONTEXT)
         }
+        // A custom service has no usual address or model: the user gives both.
+        Protocol::Custom => (NEW_CUSTOM_NAME, "", "", NEW_OPENAI_CONTEXT),
     };
 
     Integration {
@@ -78,6 +84,7 @@ pub fn new_integration(protocol: Protocol) -> Integration {
         url: url.to_owned(),
         model: model.to_owned(),
         protocol,
+        custom_format: None,
         ca_certificate: None,
         context_size,
         characters_per_token: NEW_CHARACTERS_PER_TOKEN,
@@ -97,8 +104,9 @@ pub fn new_integration(protocol: Protocol) -> Integration {
 /// address or a certificate refused.
 ///
 /// Called by: [`add_integration`], [`change_integration`].
-/// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`, `check_certificate`.
-fn checked(integration: &Integration) -> Result<Integration, DomainError> {
+/// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`, `check_certificate`;
+/// `objects/ai/custom_format/custom_format_store.rs`: `read_custom_format`.
+fn checked(db: &UserDatabase, integration: &Integration) -> Result<Integration, DomainError> {
     let name = integration.name.trim();
     let certificate = integration.ca_certificate.as_deref().unwrap_or_default().trim();
 
@@ -123,6 +131,23 @@ fn checked(integration: &Integration) -> Result<Integration, DomainError> {
     );
     check_address(integration.url.trim())?;
 
+    // A custom service is spoken with by a stored format; the two protocols
+    // of the program name none.
+    match (integration.protocol, integration.custom_format) {
+        (Protocol::Custom, Some(format)) => {
+            read_custom_format(db, format)?;
+        }
+        (Protocol::Custom, None) => {
+            return Err(DomainError::Refused("the custom protocol needs a custom format".to_owned()));
+        }
+        (Protocol::OpenAiChat | Protocol::AnthropicMessages, format) => {
+            ensure!(
+                format.is_none(),
+                DomainError::Refused("only the custom protocol names a custom format".to_owned())
+            );
+        }
+    }
+
     if !certificate.is_empty() {
         check_certificate(certificate)?;
     }
@@ -133,6 +158,7 @@ fn checked(integration: &Integration) -> Result<Integration, DomainError> {
         url: integration.url.trim().to_owned(),
         model: integration.model.trim().to_owned(),
         protocol: integration.protocol,
+        custom_format: integration.custom_format,
         ca_certificate: if certificate.is_empty() { None } else { Some(certificate.to_owned()) },
         context_size: integration.context_size,
         characters_per_token: integration.characters_per_token,
@@ -153,7 +179,7 @@ fn checked(integration: &Integration) -> Result<Integration, DomainError> {
 pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i64, DomainError> {
     ensure!(integration.id == 0, DomainError::Refused("a new integration has an id already".to_owned()));
 
-    let id = create_integration(db, &checked(integration)?)?;
+    let id = create_integration(db, &checked(db, integration)?)?;
 
     if read_settings(db)?.active_integration.is_none() {
         update_settings(db, &Settings { active_integration: Some(id) })?;
@@ -175,7 +201,7 @@ pub fn add_integration(db: &UserDatabase, integration: &Integration) -> Result<i
 pub fn change_integration(db: &UserDatabase, integration: &Integration) -> Result<(), DomainError> {
     read_integration(db, integration.id)?;
 
-    Ok(update_integration(db, &checked(integration)?)?)
+    Ok(update_integration(db, &checked(db, integration)?)?)
 }
 
 /// Makes the integration `id` the active one: the one asked where no agent
@@ -196,9 +222,10 @@ mod tests {
 
     use super::*;
 
+    use crate::objects::ai::custom_format::custom_format_store::create_custom_format;
     use crate::objects::user::program_data::program_data_store::create_settings;
     use crate::test_support::TempDir;
-    use crate::test_support::database::{database, integration};
+    use crate::test_support::database::{custom_format, database, integration};
 
     /// A new database with the settings of a new account (no active
     /// integration), as `create_account` makes it.
@@ -250,9 +277,37 @@ mod tests {
 
     #[test]
     fn a_new_integration_starts_from_its_protocol_and_is_accepted() {
+        let (_directory, db) = database();
         let anthropic = new_integration(Protocol::AnthropicMessages);
 
         assert_eq!((anthropic.model.as_str(), anthropic.context_size), ("claude-haiku-5-5", 1_000_000));
-        assert!(checked(&anthropic).is_ok() && checked(&new_integration(NEW_PROTOCOL)).is_ok());
+        assert!(checked(&db, &anthropic).is_ok() && checked(&db, &new_integration(NEW_PROTOCOL)).is_ok());
+    }
+
+    #[test]
+    fn the_custom_protocol_names_a_stored_format_and_the_others_none() {
+        let (_directory, db) = database_with_settings();
+        let format = create_custom_format(&db, &custom_format()).unwrap();
+        let custom = Integration {
+            name: "The institute".to_owned(),
+            url: "https://ai.institute.example/api/ask".to_owned(),
+            model: "institute-7".to_owned(),
+            protocol: Protocol::Custom,
+            custom_format: Some(format),
+            ..integration()
+        };
+        let id = add_integration(&db, &custom).unwrap();
+
+        assert_eq!(read_integration(&db, id).unwrap().custom_format, Some(format));
+
+        for refused in [
+            Integration { custom_format: None, ..custom.clone() },
+            Integration { custom_format: Some(99), name: "Other".to_owned(), ..custom.clone() },
+            Integration { custom_format: Some(format), ..integration() },
+        ] {
+            assert!(add_integration(&db, &refused).is_err());
+        }
+
+        assert_eq!(new_integration(Protocol::Custom).custom_format, None);
     }
 }

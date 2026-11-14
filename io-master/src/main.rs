@@ -23,6 +23,7 @@ mod panels;
 #[cfg(test)]
 mod test_support;
 
+use std::path::PathBuf;
 use std::process::ExitCode;
 
 use infrastructure::data_folder::default_data_folder;
@@ -45,6 +46,32 @@ fn main() -> ExitCode {
     tauri_startup()
 }
 
+/// The data folder of the program, with the memory dumps of the process
+/// forbidden: what must hold before the window is built. A failure is told
+/// in the terminal.
+///
+/// Output: the data folder (`~/.local/share/io-master`); `None` when it
+/// cannot be found or the dumps cannot be forbidden.
+///
+/// Called by: [`tauri_startup`].
+/// Calls: `infrastructure/data_folder.rs`: `default_data_folder`; `infrastructure/security/process.rs`:
+/// `forbid_memory_dumps`.
+fn ready_data_folder() -> Option<PathBuf> {
+    let Some(data_folder) = default_data_folder() else {
+        eprintln!("Error: the data folder of IO Master cannot be found: neither XDG_DATA_HOME nor HOME is set.");
+        return None;
+    };
+
+    // The decrypted data is only in RAM: the system must never write the
+    // memory of the process into a file (infrastructure/security/process.rs).
+    if let Err(error) = infrastructure::security::process::forbid_memory_dumps() {
+        eprintln!("Error: the memory dumps of the program could not be forbidden: {error}");
+        return None;
+    }
+
+    Some(data_folder)
+}
+
 /// Opens the window and runs until it is closed. Returns the exit code of
 /// the program; every failure is told in the terminal.
 ///
@@ -55,19 +82,11 @@ fn main() -> ExitCode {
 /// `capabilities/default.json`; the three lists name the same commands.
 ///
 /// Called by: [`main`].
-/// Calls: [`run_window`].
+/// Calls: [`ready_data_folder`], [`run_window`].
 fn tauri_startup() -> ExitCode {
-    let Some(data_folder) = default_data_folder() else {
-        eprintln!("Error: the data folder of IO Master cannot be found: neither XDG_DATA_HOME nor HOME is set.");
+    let Some(data_folder) = ready_data_folder() else {
         return ExitCode::FAILURE;
     };
-
-    // The decrypted data is only in RAM: the system must never write the
-    // memory of the process into a file (infrastructure/security/process.rs).
-    if let Err(error) = infrastructure::security::process::forbid_memory_dumps() {
-        eprintln!("Error: the memory dumps of the program could not be forbidden: {error}");
-        return ExitCode::FAILURE;
-    }
 
     let built = tauri::Builder::default()
         // The dialogs of the system, used only from Rust.
@@ -116,6 +135,11 @@ fn tauri_startup() -> ExitCode {
             panels::views::evaluation::work_units::evaluation_unit_list,
             panels::views::evaluation::work_units::evaluation_unit_get,
             panels::views::evaluation::work_units::evaluation_unit_save,
+            panels::views::settings::custom_formats::custom_format_list,
+            panels::views::settings::custom_formats::custom_format_new,
+            panels::views::settings::custom_formats::custom_format_create,
+            panels::views::settings::custom_formats::custom_format_save,
+            panels::views::settings::custom_formats::custom_format_try,
             panels::views::settings::integrations::integration_list,
             panels::views::settings::integrations::integration_form,
             panels::views::settings::integrations::integration_create,

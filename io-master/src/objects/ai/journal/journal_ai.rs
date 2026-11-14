@@ -152,13 +152,15 @@ mod tests {
     use crate::objects::ai::api_key::api_key_model::ApiKey;
     use crate::objects::ai::api_key::api_key_store::update_api_key;
     use crate::objects::ai::chat::chat_model::{Message, Speaker};
+    use crate::objects::ai::custom_format::custom_format_model::CustomFormat;
+    use crate::objects::ai::custom_format::custom_format_store::create_custom_format;
     use crate::objects::ai::integration::integration_ai::question::{Question, prepare};
     use crate::objects::ai::integration::integration_ai::sending::send;
     use crate::objects::ai::integration::integration_model::{Integration, Protocol};
     use crate::objects::ai::integration::integration_store::{create_integration, update_integration};
     use crate::objects::ai::journal::journal_store::{read_journal_entries, read_journal_entry};
     use crate::test_support::ai_service::{FakeAnswer, FakeService, anthropic_events, openai_events};
-    use crate::test_support::database::{agent, database, integration};
+    use crate::test_support::database::{agent, custom_format, database, integration};
 
     /// A question of the agent `agent` (none with `None`) to the
     /// integration `integration`.
@@ -210,6 +212,41 @@ mod tests {
 
         assert_eq!((unkept.text.as_str(), unkept.journal), ("PASS", None));
         assert_eq!(read_journal_entries(&db, asking, None).unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn a_question_to_a_custom_service_goes_the_same_way_into_the_journal() {
+        let answer = r#"{"result": {"output": "PASS"}, "usage": {"in": 40, "out": 2}, "engine": "institute-7"}"#;
+        let service = FakeService::start(FakeAnswer::Json(200, answer.to_owned())).await;
+        let (_directory, db) = database();
+        let format = CustomFormat {
+            request: r#"{"engine": "<model>", "ask": {"system": "<system>", "chat": "<messages>"}, "top_k": 40}"#
+                .to_owned(),
+            response:
+                r#"{"result": {"output": "<response>"}, "usage": {"in": "<input_tokens>", "out": "<output_tokens>"},
+                "engine": "<model>"}"#
+                    .to_owned(),
+            ..custom_format()
+        };
+        let custom = Integration {
+            name: "The institute".to_owned(),
+            url: format!("{}/api/ask", service.url),
+            ca_certificate: service.ca_pem.clone(),
+            protocol: Protocol::Custom,
+            custom_format: Some(create_custom_format(&db, &format).unwrap()),
+            ..integration()
+        };
+        let id = create_integration(&db, &custom).unwrap();
+        let asking = create_agent(&db, &agent(id)).unwrap();
+        let answer = ask(&db, &question(id, Some(asking), "Is it so?")).await.unwrap();
+        let entry = read_journal_entry(&db, answer.journal.unwrap()).unwrap();
+
+        assert_eq!((answer.text.as_str(), answer.ending), ("PASS", Ending::Complete));
+        assert_eq!((entry.answer.as_str(), entry.model.as_str()), ("PASS", "institute-7"));
+        assert_eq!((entry.input_tokens, entry.output_tokens), (40, 2));
+        // The journal keeps the question as it was sent: in the shape of the format.
+        assert!(entry.request.contains("\"top_k\":40") && entry.request.contains("Is it so?"));
+        assert_eq!(service.received()[0].body["ask"]["chat"][0]["content"], "Is it so?");
     }
 
     #[tokio::test]

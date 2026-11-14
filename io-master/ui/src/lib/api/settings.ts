@@ -6,7 +6,10 @@
 import { invoke } from "@tauri-apps/api/core";
 
 /** The way the program speaks with an AI service. */
-export type ProtocolName = "openai_chat" | "anthropic_messages";
+export type ProtocolName = "openai_chat" | "anthropic_messages" | "custom";
+
+/** How the answer of a custom service comes: one JSON document, or a stream of events. */
+export type ResponseKindName = "whole" | "events";
 
 /** How an answer of the AI ended (also the entries of a journal). */
 export type EndingName = "complete" | "cut" | "stopped" | "refused" | "failed";
@@ -18,6 +21,8 @@ export interface IntegrationView {
   url: string;
   model: string;
   protocol: ProtocolName;
+  /** The custom format it is spoken with; given for the protocol "custom" alone. */
+  customFormat: number | null;
   caCertificate: string;
   contextSize: number;
   /** The characters of a token, by which a question is measured. */
@@ -38,6 +43,8 @@ export interface IntegrationFields {
   url: string;
   model: string;
   protocol: ProtocolName;
+  /** The custom format it is spoken with; given for the protocol "custom" alone. */
+  customFormat: number | null;
   caCertificate: string;
   contextSize: number;
   charactersPerToken: number;
@@ -72,6 +79,57 @@ export interface CheckView {
   outputTokens: number;
   /** Why the context of the integration is too small for an ST of 100 pages; null when it is not. */
   contextWarning: string | null;
+}
+
+/** A custom format, both its JSON texts whole; `id` 0 for one not stored
+ * yet (custom_formats.rs, CustomFormatView). */
+export interface CustomFormatView {
+  id: number;
+  name: string;
+  /** The JSON of a question, with the placeholders of a request. */
+  request: string;
+  /** The JSON of an answer, with the placeholders of a response. */
+  response: string;
+  responseKind: ResponseKindName;
+  keyHeader: string;
+  keyPrefix: string;
+}
+
+/** What a trial of a format gives (custom_formats.rs, TrialView). */
+export interface TrialView {
+  /** The request as it would be sent, filled with a sample of a question. */
+  request: string;
+  /** Whether a sample of an answer was given and read. */
+  read: boolean;
+  text: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
+/** Every custom format, by its name. */
+export function customFormatList(): Promise<CustomFormatView[]> {
+  return invoke("custom_format_list");
+}
+
+/** Where a new custom format starts. */
+export function customFormatNew(): Promise<CustomFormatView> {
+  return invoke("custom_format_new");
+}
+
+/** Stores a new custom format; gives its id. */
+export function customFormatCreate(fields: CustomFormatView): Promise<number> {
+  return invoke("custom_format_create", { fields });
+}
+
+/** Writes a stored custom format anew. */
+export function customFormatSave(fields: CustomFormatView): Promise<void> {
+  return invoke("custom_format_save", { fields });
+}
+
+/** Tries a format as typed, without storing it and without any connection. */
+export function customFormatTry(fields: CustomFormatView, sample: string): Promise<TrialView> {
+  return invoke("custom_format_try", { fields, sample });
 }
 
 /** Every integration, the active one marked. */

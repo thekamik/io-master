@@ -79,6 +79,11 @@ The integration knows of the other objects only the API key (masked in its error
 objects/
   schema.rs, error.rs, ai_error.rs, text.rs
 objects/ai/
+  custom_format/ custom_format_model.rs (CustomFormat, ResponseKind), custom_format_store.rs,
+                 custom_format_rules.rs (both JSON texts checked; places_of: the path of each placeholder of a
+                 response; text_leaves: every text of a JSON with its path, walked with a bounded stack),
+                 custom_format_ai.rs (custom_body: the request filled; read_whole, read_custom_event: the answer
+                 read at the places of the response; tried: a format tried without a connection)
   integration/   integration_model.rs (Integration, Protocol), integration_store.rs,
                  integration_rules/ address.rs (the address and the CA certificate the program sends to),
                  settings.rs (checked, add_integration, change_integration, activate_integration: the first one

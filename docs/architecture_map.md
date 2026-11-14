@@ -115,6 +115,23 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `views/chat/Conversation.svelte` ← `chat_get`, `chat_rename`, `chat_ask`
   - `views/settings/IntegrationForm.svelte` ← `integration_check`
 
+### `objects/ai/custom_format/custom_format_model.rs`: `CustomFormat`, `ResponseKind`
+
+- **Stored** (`objects/ai/custom_format/custom_format_store.rs`): `create_custom_format`, `read_custom_format`, `read_custom_formats`, `update_custom_format`
+- **Processed, the rules of the data**:
+  - `objects/ai/custom_format/custom_format_rules.rs`: `add_format`, `change_format`, `check_request`, `checked`, `json_of`, `new_format`, `places_of`, `text_leaves`
+  - `objects/ai/integration/integration_rules/settings.rs`: `checked`
+- **Processed, the AI**:
+  - `objects/ai/custom_format/custom_format_ai.rs`: `custom_body`, `custom_exchange`, `read_answer`, `read_custom_event`, `read_whole`, `tried`
+  - `objects/ai/integration/integration_ai/connection.rs`: `read_whole_answer`
+  - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `read_event`
+  - `objects/ai/integration/integration_ai/question.rs`: `prepare`
+- **Commands** (`panels/views/`):
+  - `settings/custom_formats.rs`: `custom_format_list`, `custom_format_new`, `custom_format_create`, `custom_format_save`, `custom_format_try`
+- **Shown** (`ui/src/`):
+  - `views/settings/CustomFormats.svelte` ← `custom_format_list`, `custom_format_new`, `custom_format_create`, `custom_format_save`, `custom_format_try`
+  - `views/settings/IntegrationForm.svelte` ← `custom_format_list`
+
 ### `objects/ai/integration/integration_model.rs`: `Integration`, `Protocol`
 
 - **Stored** (`objects/ai/integration/integration_store.rs`): `create_integration`, `read_integration`, `read_integrations`, `update_integration`
@@ -123,7 +140,7 @@ A function of `panels/views/` that only prepares a view, and the tests, are left
   - `objects/ai/api_key/api_key_rules.rs`: `set_key`
   - `objects/ai/integration/integration_rules/settings.rs`: `activate_integration`, `add_integration`, `change_integration`, `checked`, `new_integration`
 - **Processed, the AI**:
-  - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`
+  - `objects/ai/integration/integration_ai/connection.rs`: `read_stream`, `read_whole_answer`
   - `objects/ai/integration/integration_ai/protocol.rs`: `body`, `key_headers`, `needs_key`, `read_event`
   - `objects/ai/integration/integration_ai/question.rs`: `answer_tokens`, `check_size`, `context_warning`, `needed_context`, `prepare`
   - `objects/evaluation/evaluation_plan/evaluation_plan_ai.rs`: `fill_preview`

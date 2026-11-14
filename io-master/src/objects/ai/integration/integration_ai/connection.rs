@@ -19,8 +19,10 @@
 //!
 //! ```text
 //! send ──► exchange ──► http_client, the POST ──► an answer that is no success ──► read_error ──► AiError
-//!                                              └► read_stream ──► SseDecoder ──► protocol.rs: read_event
-//!                                                                                  └► the pieces, into the channel
+//!                                              ├► read_stream ──► SseDecoder ──► protocol.rs: read_event
+//!                                              │                                   └► the pieces, into the channel
+//!                                              └► read_whole_answer (a custom service that answers with one
+//!                                                 JSON document) ──► custom_format_ai.rs: read_whole
 //! ```
 
 use std::time::Duration;
@@ -33,11 +35,13 @@ use tokio::sync::mpsc;
 use zeroize::Zeroizing;
 
 use crate::objects::ai::api_key::api_key_ai::masked;
+use crate::objects::ai::custom_format::custom_format_ai::{CustomExchange, read_whole};
 use crate::objects::ai::integration::integration_ai::protocol::{key_headers, read_event};
 use crate::objects::ai::integration::integration_ai::reading::Reading;
 use crate::objects::ai::integration::integration_ai::sse::SseDecoder;
 use crate::objects::ai::integration::integration_model::Protocol;
 use crate::objects::ai::integration::integration_rules::address::{certificates, check_address};
+use crate::objects::ai::journal::journal_model::Ending;
 use crate::objects::ai_error::{AiError, from_status};
 
 /// The most bytes of a streamed answer: far more than any answer (its
@@ -64,6 +68,9 @@ pub struct Request {
     pub ca_certificate: Option<String>,
     /// The way the program speaks with the service.
     pub protocol: Protocol,
+    /// How a custom service is spoken with (the header of its key, how its
+    /// answer comes and where it is read); given for `Protocol::Custom`.
+    pub custom: Option<CustomExchange>,
     /// The API key; `None` for a local service without one.
     pub key: Option<Zeroizing<String>>,
     /// The body (JSON); the key is never in it.
@@ -128,7 +135,7 @@ pub async fn send(request: &Request, pieces: &mpsc::Sender<String>) -> Received 
 ///
 /// Called by: [`send`].
 /// Calls: `objects/ai/integration/integration_rules/address.rs`: `check_address`; [`http_client`], [`post`],
-/// [`read_error`], [`read_stream`]; `objects/ai_error.rs`: `from_status`.
+/// [`read_error`], [`read_whole_answer`], [`read_stream`]; `objects/ai_error.rs`: `from_status`.
 async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mut Reading) -> Result<bool, AiError> {
     check_address(&request.url)?;
 
@@ -146,9 +153,20 @@ async fn exchange(request: &Request, pieces: &mpsc::Sender<String>, reading: &mu
         return Err(from_status(status.as_u16(), &body));
     }
 
-    match read_stream(&mut response, request.protocol, pieces, reading).await? {
+    // A custom service may give its answer whole, as one JSON document.
+    if let Some(custom) = request.custom.as_ref().filter(|custom| !custom.events) {
+        return read_whole_answer(&mut response, custom, pieces, reading).await;
+    }
+
+    match read_stream(&mut response, request, pieces, reading).await? {
         StreamEnd::Done => Ok(false),
         StreamEnd::Stopped => Ok(true),
+        // The stream of a custom service has no mark of its end the program
+        // could ask for: one that the connection closed in order is whole.
+        StreamEnd::Closed if request.custom.is_some() => {
+            reading.ending.get_or_insert(Ending::Complete);
+            Ok(false)
+        }
         StreamEnd::Closed => {
             ensure!(reading.ending.is_some(), AiError::NoConnection("the answer broke off".to_owned()));
             Ok(false)
@@ -197,7 +215,7 @@ fn http_client(request: &Request) -> Result<Client, AiError> {
 /// Called by: [`exchange`].
 /// Calls: `objects/ai/integration/integration_ai/protocol.rs`: `key_headers`; [`explain`].
 async fn post(client: &Client, request: &Request) -> Result<Response, AiError> {
-    let headers = key_headers(request.protocol, request.key.as_deref().map(String::as_str))?;
+    let headers = key_headers(request.protocol, request.key.as_deref().map(String::as_str), request.custom.as_ref())?;
     let mut builder = client.post(&request.url).header("content-type", "application/json");
 
     for (name, value) in &headers {
@@ -205,17 +223,57 @@ async fn post(client: &Client, request: &Request) -> Result<Response, AiError> {
             .map_err(|_| AiError::Address(format!("the header {name} cannot be sent (a character of the key)")))?;
 
         value.set_sensitive(true);
-        builder = builder.header(*name, value);
+        builder = builder.header(name.as_str(), value);
     }
 
     builder.body(request.body.clone()).send().await.map_err(|error| AiError::NoConnection(explain(&error)))
 }
 
+/// Reads the answer of a custom service that comes whole: every byte of its
+/// body up to [`MAX_STREAM`], then the one JSON document it is, read by the
+/// format. Nothing of it is cut: a body over the limit is an error.
+///
+/// Input: `response`, a response with a success status; `custom`, how the
+/// service is spoken with; `pieces`, where the text goes, in one piece;
+/// `reading`, empty.
+/// Output: `true` when the caller stopped the answer before it was whole
+/// (nothing is read then), `false` when it was read; an error for a broken
+/// connection, a body over [`MAX_STREAM`], the errors of the reading.
+///
+/// Called by: [`exchange`].
+/// Calls: `objects/ai/custom_format/custom_format_ai.rs`: `read_whole`; [`explain`].
+async fn read_whole_answer(
+    response: &mut Response,
+    custom: &CustomExchange,
+    pieces: &mpsc::Sender<String>,
+    reading: &mut Reading,
+) -> Result<bool, AiError> {
+    let mut body = Vec::new();
+
+    for _ in 0..MAX_CHUNKS {
+        let chunk = tokio::select! {
+            chunk = response.chunk() => chunk,
+            () = pieces.closed() => return Ok(true),
+        };
+        let Some(bytes) = chunk.map_err(|error| AiError::NoConnection(explain(&error)))? else {
+            let text = read_whole(&body, custom, reading)?;
+
+            // A receiver gone by now is a caller that stopped the answer.
+            return Ok(pieces.send(text).await.is_err());
+        };
+
+        ensure!(body.len() + bytes.len() <= MAX_STREAM, AiError::UnexpectedAnswer("an answer over 32 MiB".to_owned()));
+        body.extend_from_slice(&bytes);
+    }
+
+    Err(AiError::UnexpectedAnswer("an answer in too many pieces".to_owned()))
+}
+
 /// Reads a streamed answer up to its end, passing each piece of text on.
 ///
-/// Input: `response`, a response with a success status; `protocol`, the
-/// protocol of the integration; `pieces`, where each piece goes; `reading`,
-/// what was read so far.
+/// Input: `response`, a response with a success status; `request`, the
+/// request it answers (its protocol, and its custom exchange when it has
+/// one); `pieces`, where each piece goes; `reading`, what was read so far.
 /// Output: how the stream ended (`StreamEnd::Done`); an error for a broken
 /// connection, an answer over [`MAX_STREAM`] or in more than [`MAX_CHUNKS`]
 /// pieces, an event that cannot be read, an error the service reports.
@@ -225,7 +283,7 @@ async fn post(client: &Client, request: &Request) -> Result<Response, AiError> {
 /// `objects/ai/integration/integration_ai/protocol.rs`: `read_event`; [`explain`].
 async fn read_stream(
     response: &mut Response,
-    protocol: Protocol,
+    request: &Request,
     pieces: &mpsc::Sender<String>,
     reading: &mut Reading,
 ) -> Result<StreamEnd, AiError> {
@@ -245,7 +303,7 @@ async fn read_stream(
         ensure!(received <= MAX_STREAM, AiError::UnexpectedAnswer("an answer over 32 MiB".to_owned()));
 
         for event in decoder.push(&bytes)? {
-            if let Some(piece) = read_event(protocol, &event, reading)?
+            if let Some(piece) = read_event(request.protocol, &event, reading, request.custom.as_ref())?
                 && pieces.send(piece).await.is_err()
             {
                 return Ok(StreamEnd::Stopped);
@@ -321,8 +379,13 @@ mod tests {
     use serde_json::json;
 
     use crate::objects::ai::api_key::api_key_ai::MASK;
+    use crate::objects::ai::chat::chat_model::Speaker;
+    use crate::objects::ai::custom_format::custom_format_ai::{custom_body, custom_exchange};
+    use crate::objects::ai::custom_format::custom_format_model::{CustomFormat, ResponseKind};
+    use crate::objects::ai::integration::integration_ai::turns::Turn;
     use crate::objects::ai::journal::journal_model::Ending;
     use crate::test_support::ai_service::{FakeAnswer, FakeService, anthropic_events, openai_events, sse};
+    use crate::test_support::database::custom_format;
 
     const KEY: &str = "sk-test-secret-key";
 
@@ -331,6 +394,7 @@ mod tests {
             url: format!("{}/v1/endpoint", service.url),
             ca_certificate: service.ca_pem.clone(),
             protocol,
+            custom: None,
             key: Some(Zeroizing::new(KEY.to_owned())),
             body: json!({"model": "m", "messages": [{"role": "user", "content": "Hi"}]}).to_string(),
             connect_timeout: Duration::from_secs(15),
@@ -372,6 +436,94 @@ mod tests {
         assert_eq!(sent.header("authorization"), Some(format!("Bearer {KEY}").as_str()));
         assert_eq!(sent.header("content-type"), Some("application/json"));
         assert!(!sent.body.to_string().contains(KEY));
+    }
+
+    /// A request to a custom service that speaks by `format`, the key in
+    /// the header "X-Api-Key" after "Token ".
+    fn custom_request(service: &FakeService, format: &CustomFormat) -> Request {
+        let format =
+            CustomFormat { key_header: "X-Api-Key".to_owned(), key_prefix: "Token ".to_owned(), ..format.clone() };
+        let turns = [Turn { speaker: Speaker::User, text: "Hi".to_owned() }];
+
+        Request {
+            custom: Some(custom_exchange(&format).unwrap()),
+            body: custom_body(&format, "institute-7", "You assess.", &turns, 100, None).unwrap().to_string(),
+            ..request(service, Protocol::Custom)
+        }
+    }
+
+    #[tokio::test]
+    async fn a_custom_service_is_asked_by_its_request_and_its_whole_answer_read_by_its_response() {
+        let answer = r#"{"response": "PASS, with a long analysis.", "trace": {"id": 7}}"#;
+        let service = FakeService::start(FakeAnswer::Json(200, answer.to_owned())).await;
+        let (received, pieces) = send_collecting(&custom_request(&service, &custom_format())).await;
+
+        assert!(received.error.is_none() && !received.stopped);
+        assert_eq!(pieces, ["PASS, with a long analysis."]);
+        assert_eq!(received.reading.text, "PASS, with a long analysis.");
+        assert_eq!(received.reading.ending, Some(Ending::Complete));
+
+        // The question went in the shape of the format, the key only in its header.
+        let sent = &service.received()[0];
+
+        assert_eq!(sent.body, json!({"engine": "institute-7", "system": "You assess.", "prompt": "Hi"}));
+        assert_eq!(sent.header("x-api-key"), Some(format!("Token {KEY}").as_str()));
+        assert_eq!(sent.header("authorization"), None);
+        assert!(!sent.body.to_string().contains(KEY));
+    }
+
+    #[tokio::test]
+    async fn a_custom_answer_of_a_megabyte_is_read_whole() {
+        let long = "analysis ".repeat(120_000);
+        let service = FakeService::start(FakeAnswer::Json(200, json!({"response": long}).to_string())).await;
+        let (received, _) = send_collecting(&custom_request(&service, &custom_format())).await;
+
+        assert!(received.error.is_none());
+        assert_eq!(received.reading.text.len(), long.len());
+    }
+
+    #[tokio::test]
+    async fn a_custom_stream_is_read_event_by_event_to_its_end() {
+        let format = CustomFormat {
+            response: r#"{"delta": "<response>", "fault": "<error>"}"#.to_owned(),
+            response_kind: ResponseKind::Events,
+            ..custom_format()
+        };
+        let events = vec![
+            sse("", &json!({"delta": "PA"})),
+            sse("", &json!({"status": "busy"})),
+            sse("", &json!({"delta": "SS"})),
+        ];
+        let service = FakeService::start(FakeAnswer::Stream(events)).await;
+        let (received, pieces) = send_collecting(&custom_request(&service, &format)).await;
+
+        // The stream has no mark of its end: closed in order, it is whole.
+        assert!(received.error.is_none() && !received.stopped);
+        assert_eq!(pieces, ["PA", "SS"]);
+        assert_eq!((received.reading.text.as_str(), received.reading.ending), ("PASS", Some(Ending::Complete)));
+
+        let failing = vec![sse("", &json!({"delta": "PA"})), sse("", &json!({"fault": "the model fell over"}))];
+        let service = FakeService::start(FakeAnswer::Stream(failing)).await;
+        let (received, _) = send_collecting(&custom_request(&service, &format)).await;
+
+        assert!(matches!(received.error, Some(AiError::Reported(said)) if said == "the model fell over"));
+        assert_eq!(received.reading.text, "PA");
+    }
+
+    #[tokio::test]
+    async fn a_custom_answer_that_does_not_fit_its_format_is_told() {
+        for body in ["<html>busy</html>", r#"{"other": "shape"}"#, r#"{"response": 7}"#] {
+            let service = FakeService::start(FakeAnswer::Json(200, body.to_owned())).await;
+            let (received, pieces) = send_collecting(&custom_request(&service, &custom_format())).await;
+
+            assert!(matches!(received.error, Some(AiError::UnexpectedAnswer(_))), "{body}");
+            assert!(pieces.is_empty() && received.reading.text.is_empty());
+        }
+
+        let service = FakeService::start(FakeAnswer::Json(503, r#"{"detail": "down"}"#.to_owned())).await;
+        let (received, _) = send_collecting(&custom_request(&service, &custom_format())).await;
+
+        assert!(matches!(received.error, Some(AiError::ServiceFailed(503, _))));
     }
 
     #[tokio::test]

@@ -2,7 +2,8 @@
   One integration with an AI service (its commands integration_form,
   integration_create, integration_save, integration_set_key and
   integration_check in
-  src/panels/views/settings/integrations.rs): its data, its API key and the
+  src/panels/views/settings/integrations.rs; custom_format_list in
+  custom_formats.rs for the format of the protocol "custom"): its data, its API key and the
   check of the connection. The key is only written: the program never gives
   it back, the form shows only whether one is stored. A stored integration
   whose address changed needs its key given anew (the key is bound to its
@@ -18,12 +19,14 @@
   import SaveStatus from "../../components/save_status/SaveStatus.svelte";
   import { sentence } from "../../lib/api/errors";
   import {
+    customFormatList,
     integrationCheck,
     integrationCreate,
     integrationForm,
     integrationSave,
     integrationSetKey,
     type CheckView,
+    type CustomFormatView,
     type IntegrationFormView,
     type IntegrationView,
     type ProtocolName,
@@ -51,6 +54,9 @@
   let connectTimeoutSeconds: number | null = $state(start?.connectTimeoutSeconds ?? null);
   let streamSilenceSeconds: number | null = $state(start?.streamSilenceSeconds ?? null);
   let form: IntegrationFormView | null = $state(null);
+  // The custom format of the protocol "custom", and the formats to choose from.
+  let customFormat: number | null = $state(start?.customFormat ?? null);
+  let formats: CustomFormatView[] = $state([]);
   let caCertificate = $state(start?.caCertificate ?? "");
   let key = $state("");
   let check: CheckView | null = $state(null);
@@ -64,6 +70,7 @@
   async function loadForm() {
     try {
       form = await integrationForm(protocol);
+      formats = await customFormatList();
 
       if (start === null) {
         name = form.name;
@@ -138,12 +145,20 @@
       return;
     }
 
+    // The select of the format shows its first line until one is chosen.
+    if (protocol === "custom" && customFormat === null) {
+      problem = "Choose the custom format of the service.";
+      return;
+    }
+
     const fields = {
       id: integration?.id ?? 0,
       name,
       url,
       model,
       protocol,
+      // Only the protocol "custom" names a format.
+      customFormat: protocol === "custom" ? customFormat : null,
       caCertificate,
       contextSize,
       charactersPerToken,
@@ -200,8 +215,21 @@
           <select bind:value={protocol} onchange={changeProtocol}>
             <option value="openai_chat">OpenAI chat (Ollama, llama.cpp, vLLM)</option>
             <option value="anthropic_messages">Anthropic messages</option>
+            <option value="custom">Custom (a JSON of the service's own)</option>
           </select>
         </label>
+        {#if protocol === "custom"}
+          <label>
+            Custom format
+            <span class="note">Written in the tab "Custom formats".</span>
+            <select bind:value={customFormat}>
+              <option value={null} disabled>Choose a format</option>
+              {#each formats as format (format.id)}
+                <option value={format.id}>{format.name}</option>
+              {/each}
+            </select>
+          </label>
+        {/if}
       </div>
       <label>Address <input class="mono" bind:value={url} required /></label>
       <div class="row">

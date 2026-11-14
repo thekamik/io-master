@@ -54,8 +54,10 @@ pub struct IntegrationView {
     name: String,
     url: String,
     model: String,
-    /// `"openai_chat"`, `"anthropic_messages"`.
+    /// `"openai_chat"`, `"anthropic_messages"`, `"custom"`.
     protocol: &'static str,
+    /// The custom format it is spoken with; given for `"custom"` alone.
+    custom_format: Option<i64>,
     /// Empty: the trusted certificates of the system.
     ca_certificate: String,
     context_size: u32,
@@ -117,6 +119,7 @@ fn protocol_name(protocol: Protocol) -> &'static str {
     match protocol {
         Protocol::OpenAiChat => "openai_chat",
         Protocol::AnthropicMessages => "anthropic_messages",
+        Protocol::Custom => "custom",
     }
 }
 
@@ -131,6 +134,7 @@ fn protocol_of(name: &str) -> Result<Protocol, ViewError> {
     match name {
         "openai_chat" => Ok(Protocol::OpenAiChat),
         "anthropic_messages" => Ok(Protocol::AnthropicMessages),
+        "custom" => Ok(Protocol::Custom),
         _ => Err(ViewError::Invalid(format!("no protocol \"{name}\""))),
     }
 }
@@ -176,6 +180,7 @@ fn integration_of(fields: IntegrationFields) -> Result<Integration, ViewError> {
         url: fields.url,
         model: fields.model,
         protocol: protocol_of(&fields.protocol)?,
+        custom_format: fields.custom_format,
         ca_certificate: Some(fields.ca_certificate),
         context_size: fields.context_size,
         characters_per_token: fields.characters_per_token,
@@ -194,6 +199,7 @@ pub struct IntegrationFields {
     url: String,
     model: String,
     protocol: String,
+    custom_format: Option<i64>,
     ca_certificate: String,
     context_size: u32,
     characters_per_token: u32,
@@ -233,6 +239,7 @@ pub fn integration_list(session: State<'_, Session>) -> Result<Vec<IntegrationVi
             url: integration.url,
             model: integration.model,
             protocol: protocol_name(integration.protocol),
+            custom_format: integration.custom_format,
             ca_certificate: integration.ca_certificate.unwrap_or_default(),
             context_size: integration.context_size,
             characters_per_token: integration.characters_per_token,

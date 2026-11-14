@@ -21,6 +21,11 @@ pub struct Integration {
     /// The way the program speaks with the service.
     pub protocol: Protocol,
 
+    /// The custom format the service is spoken with (`CustomFormat` of
+    /// `objects/ai/custom_format/custom_format_model.rs`): given for the
+    /// protocol `Protocol::Custom`, and only for it (user, 2026-11-14).
+    pub custom_format: Option<i64>,
+
     /// The CA certificate (PEM) that alone is trusted for the service;
     /// `None`: the trusted certificates of the system.
     pub ca_certificate: Option<String>,
@@ -56,4 +61,7 @@ pub enum Protocol {
     OpenAiChat,
     /// The messages of Anthropic (`/v1/messages`).
     AnthropicMessages,
+    /// A JSON of the service's own, as the custom format of the integration
+    /// writes it: the tool of a research institute.
+    Custom,
 }

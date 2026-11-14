@@ -25,6 +25,8 @@ use crate::infrastructure::clock::now;
 use crate::infrastructure::storage::user_database::UserDatabase;
 use crate::objects::ai::api_key::api_key_store::read_api_key;
 use crate::objects::ai::chat::chat_model::{Message, Speaker};
+use crate::objects::ai::custom_format::custom_format_ai::custom_exchange;
+use crate::objects::ai::custom_format::custom_format_store::read_custom_format;
 use crate::objects::ai::integration::integration_ai::connection::Request;
 use crate::objects::ai::integration::integration_ai::protocol::{body, needs_key};
 use crate::objects::ai::integration::integration_ai::turns::{Turn, turns};
@@ -176,7 +178,9 @@ fn check_size(integration: &Integration, system: &str, turns: &[Turn], limit: u3
 /// Calls: `objects/ai/integration/integration_store.rs`: `read_integration`; `objects/ai/api_key/api_key_store.rs`:
 /// `read_api_key`; `objects/ai/integration/integration_rules/address.rs`: `check_address`;
 /// `objects/ai/integration/integration_ai/turns.rs`: `turns`; [`check_size`];
-/// `objects/ai/integration/integration_ai/protocol.rs`: `needs_key`, `body`; `infrastructure/clock.rs`: `now`.
+/// `objects/ai/integration/integration_ai/protocol.rs`: `needs_key`, `body`; `infrastructure/clock.rs`: `now`;
+/// `objects/ai/custom_format/custom_format_store.rs`: `read_custom_format`;
+/// `objects/ai/custom_format/custom_format_ai.rs`: `custom_exchange` (an integration of the custom protocol).
 pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiError> {
     ensure!(
         question.messages.len() <= MAX_MESSAGES,
@@ -198,6 +202,15 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
     let estimated_tokens = check_size(&integration, &question.system, &turns, question.max_answer_tokens)?;
 
     let time = now().map_err(|error| AiError::Refused(error.to_string()))?;
+    // A custom service is spoken with by the format its integration names.
+    let format = match integration.custom_format {
+        Some(format) => Some(read_custom_format(db, format)?),
+        None => None,
+    };
+    let custom = match &format {
+        Some(format) => Some(custom_exchange(format)?),
+        None => None,
+    };
     let body = body(
         integration.protocol,
         &integration.model,
@@ -205,11 +218,13 @@ pub fn prepare(db: &UserDatabase, question: &Question) -> Result<Prepared, AiErr
         &turns,
         question.max_answer_tokens,
         question.temperature,
-    );
+        format.as_ref(),
+    )?;
     let request = Request {
         url: integration.url,
         ca_certificate: integration.ca_certificate,
         protocol: integration.protocol,
+        custom,
         key: key.map(|key| Zeroizing::new(key.key.as_str().to_owned())),
         body: body.to_string(),
         connect_timeout: Duration::from_secs(u64::from(integration.connect_timeout_seconds)),
